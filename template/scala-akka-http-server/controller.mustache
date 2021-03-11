@@ -1,0 +1,24 @@
+package {{invokerPackage}}
+
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.server.Route
+{{#apiInfo}}{{#apis}}{{#operations}}import {{package}}.{{classname}}
+{{/operations}}{{/apis}}{{/apiInfo}}
+import akka.http.scaladsl.server.Directives._
+import akka.actor.ActorSystem
+
+class Controller({{#apiInfo}}{{#apis}}{{#operations}}{{classVarName}}: {{classname}}{{^-last}}, {{/-last}}{{/operations}}{{/apis}}{{/apiInfo}})(implicit system: ActorSystem) {
+
+  lazy val routes: Route = pathPrefix("{{projectName}}" / "{{appVersion}}") {
+     {{#apiInfo}}{{#apis}}{{#operations}}{{classVarName}}.route {{^-last}} ~ {{/-last}}{{/operations}}{{/apis}}{{/apiInfo}} ~ getFromResourceDirectory("swagger-ui") ~ getFromResource("interface-specification.yml")
+  }
+
+/*
+  val bindingFuture = Http().
+      newServerAt(
+        {{#serverBindingAddress}}"{{serverBindingAddress}}"{{/serverBindingAddress}}{{^serverBindingAddress}}"0.0.0.0"{{/serverBindingAddress}},
+        {{#serverBindingPort}}"{{serverBindingPort}}"{{/serverBindingPort}}{{^serverBindingPort}}8088{{/serverBindingPort}},
+      ).
+      bind(routes)
+*/
+}
