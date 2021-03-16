@@ -19,12 +19,15 @@ object Dependencies {
   private[this] object pagopa {
 
     lazy val namespace = "it.pagopa"
-
     lazy val partyManagementClient =
       namespace %% "pdnd-interop-uservice-party-management-client" % partyManagementClientVersion
-
     lazy val partyProxyClient =
       namespace %% "pdnd-interop-uservice-party-registry-proxy-client" % partyProxyClientVersion
+  }
+
+  private[this] object javax {
+    lazy val namespace = "com.sun.mail"
+    lazy val mail      = namespace % "javax.mail" % "1.6.2"
   }
 
   private[this] object json4s {
@@ -65,6 +68,7 @@ object Dependencies {
       akka.http                    % Compile,
       akka.httpJson                % Compile,
       akka.management              % Compile,
+      javax.mail                   % Compile,
       pagopa.partyManagementClient % Compile,
       pagopa.partyProxyClient      % Compile,
       logback.classic              % Compile,
