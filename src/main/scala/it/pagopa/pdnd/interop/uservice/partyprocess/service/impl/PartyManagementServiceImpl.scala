@@ -14,13 +14,13 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
 ) extends PartyManagementService {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  override def getPerson(taxCode: String): Future[Person] = {
+  override def retrievePerson(taxCode: String): Future[Person] = {
     val request: ApiRequest[Person] = api.getPerson(taxCode)
     invoker
       .execute[Person](request)
       .map { x =>
         logger.info(s"Retrieving person ${x.code}")
-        logger.info(s"Retrieving organization ${x.content}")
+        logger.info(s"Retrieving person ${x.content}")
         x.content
       }
       .recoverWith { case ex =>
@@ -29,7 +29,7 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  override def getOrganization(organizationId: String): Future[Organization] = {
+  override def retrieveOrganization(organizationId: String): Future[Organization] = {
     val request: ApiRequest[Organization] = api.getOrganization(organizationId)
     logger.info(s"Retrieving organization $organizationId")
     logger.info(s"Retrieving organization ${request.toString}")
@@ -48,7 +48,17 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
 
   override def createPerson(person: PersonSeed): Future[Person] = {
     val request: ApiRequest[Person] = api.createPerson(person)
-    invoker.execute(request).map(_.content)
+    invoker
+      .execute(request)
+      .map { x =>
+        logger.info(s"Create person ${x.code}")
+        logger.info(s"Create person ${x.content}")
+        x.content
+      }
+      .recoverWith { case ex =>
+        logger.error(s"Create person ${ex.getMessage}")
+        Future.failed(ex)
+      }
   }
 
   override def createOrganization(organization: OrganizationSeed): Future[Organization] = {
@@ -56,19 +66,20 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
     invoker
       .execute(request)
       .map { x =>
-        logger.info(s"Create Organization ${x.code}")
-        logger.info(s"Create Organization ${x.content}")
+        logger.info(s"Create organization ${x.code}")
+        logger.info(s"Create organization ${x.content}")
         x.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Create Organization ${ex.getMessage}")
+        logger.error(s"Create organization ${ex.getMessage}")
         Future.failed(ex)
       }
   }
 
-  override def createRelationShip(taxCode: String, organizationId: String, role: Role): Future[Unit] = {
-    logger.info(s"Creating relationShip $taxCode/$organizationId/${role.toString}")
-    val partyRelationShip: PartyRelationShip = PartyRelationShip(from = taxCode, to = organizationId, role = role)
+  override def createRelationShip(taxCode: String, organizationId: String, role: String): Future[Unit] = {
+    logger.info(s"Creating relationShip $taxCode/$organizationId/$role")
+    val roleEnum                             = Role(RoleEnums.Value.withName(role))
+    val partyRelationShip: PartyRelationShip = PartyRelationShip(from = taxCode, to = organizationId, role = roleEnum)
     val request: ApiRequest[Unit]            = api.createRelationShip(partyRelationShip)
     invoker
       .execute(request)
@@ -90,11 +101,11 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
 
   }
 
-  override def createToken(from: UUID, to: UUID, role: Role): Future[TokenText] = {
-    logger.info(s"Creating Token ${from.toString}/${to.toString}/${role.toString}")
-
+  override def createToken(from: String, to: String, role: String): Future[TokenText] = {
+    logger.info(s"Creating token $from/$to/$role")
+    val roleEnum = Role(RoleEnums.Value.withName(role))
     val tokenSeed: TokenSeed =
-      TokenSeed(from = from.toString, to = to.toString, role = role, seed = UUID.randomUUID().toString)
+      TokenSeed(from = from, to = to, role = roleEnum, seed = UUID.randomUUID().toString)
 
     val request = api.createToken(tokenSeed)
     invoker

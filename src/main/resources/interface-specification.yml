@@ -51,6 +51,34 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /onboarding/tokens:
+    post:
+      #      security:
+      #        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: try to consume a token
+      description: Return ok
+      operationId: getToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/NewToken'
+        '400':
+          description: Invalid ID supplied
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /onboarding/tokens/{token}:
     post:
       #      security:
@@ -139,6 +167,29 @@ components:
         - taxCode
         - institutionId
         - role
+    TokenRequest:
+      properties:
+        taxCode:
+          type: string
+        institutionId:
+          type: string
+        role:
+          type: string
+          enum: [ ManagerOf, Delegate, Operator, ]
+      additionalProperties: false
+      required:
+        - taxCode
+        - institutionId
+        - role
+    NewToken:
+      properties:
+        token:
+          maxLength: 4096
+          pattern: '^.{0,1024}$'
+          type: string
+      additionalProperties: false
+      required:
+        - token
     Problem:
       properties:
         detail:
