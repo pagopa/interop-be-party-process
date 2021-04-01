@@ -25,6 +25,13 @@ object Dependencies {
       namespace %% "pdnd-interop-uservice-party-registry-proxy-client" % partyProxyClientVersion
   }
 
+  private[this] object courier {
+
+    lazy val namespace = "com.github.daddykotex"
+    lazy val mail      = namespace %% "courier" % courierVersion
+
+  }
+
   private[this] object javax {
     lazy val namespace = "com.sun.mail"
     lazy val mail      = namespace % "javax.mail" % "1.6.2"
@@ -62,6 +69,7 @@ object Dependencies {
       "javax.annotation" % "javax.annotation-api" % "1.3.2" % "compile",
       //
       akka.actorTyped              % Compile,
+      "ch.megard"                 %% "akka-http-cors" % "1.1.1" % Compile,
       akka.actor                   % Compile,
       akka.persistence             % Compile,
       akka.stream                  % Compile,
@@ -71,6 +79,7 @@ object Dependencies {
       javax.mail                   % Compile,
       pagopa.partyManagementClient % Compile,
       pagopa.partyProxyClient      % Compile,
+      courier.mail                 % Compile,
       logback.classic              % Compile,
       akka.slf4j                   % Compile,
       kamon.bundle                 % Compile,

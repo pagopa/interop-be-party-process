@@ -3,6 +3,7 @@ object Versions {
   lazy val akkaHttpVersion              = "10.2.3"
   lazy val partyManagementClientVersion = "develop"
   lazy val partyProxyClientVersion      = "develop"
+  lazy val courierVersion               = "3.0.0-M2a"
   lazy val camundaExternalTaskVersion   = "1.4.1"
   lazy val kamonVersion                 = "2.1.12"
   lazy val logbackVersion               = "1.2.3"

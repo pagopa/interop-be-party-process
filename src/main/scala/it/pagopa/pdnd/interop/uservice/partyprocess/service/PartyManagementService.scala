@@ -10,7 +10,8 @@ trait PartyManagementService {
   def createPerson(person: PersonSeed): Future[Person]
   def createOrganization(organization: OrganizationSeed): Future[Organization]
   def createRelationShip(taxCode: String, organizationId: String, role: String): Future[Unit]
-  def createToken(from: String, to: String, role: String): Future[TokenText]
+  def retrieveRelationship(from: String): Future[RelationShips]
+  def createToken(manager: TokenUser, delegate: TokenUser): Future[TokenText]
   def consumeToken(token: String): Future[Unit]
   def invalidateToken(token: String): Future[Unit]
 }

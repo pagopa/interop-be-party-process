@@ -4,7 +4,7 @@ import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.Instituti
 
 import scala.concurrent.Future
 
-trait PartyProcessService {
+trait PartyRegistryService {
   def getInstitution(institutionId: String): Future[Institution]
 
   def searchInstitution(text: String, offset: Int, limit: Int): Future[List[Institution]]

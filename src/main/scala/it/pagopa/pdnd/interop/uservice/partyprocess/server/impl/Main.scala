@@ -3,6 +3,7 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.server.impl
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.directives.SecurityDirectives
 import akka.management.scaladsl.AkkaManagement
+import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{
   HealthApiMarshallerImpl,
@@ -13,12 +14,12 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.{HealthApi, ProcessApi}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{Authenticator, classicActorSystem, executionContext}
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
-import it.pagopa.pdnd.interop.uservice.partyprocess.service.impl.{PartyManagementServiceImpl, PartyProcessServiceImpl}
+import it.pagopa.pdnd.interop.uservice.partyprocess.service.impl.{PartyManagementServiceImpl, PartyRegistryServiceImpl}
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.{
   PartyManagementInvoker,
   PartyManagementService,
-  PartyProcessService,
-  PartyProxyInvoker
+  PartyProxyInvoker,
+  PartyRegistryService
 }
 import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.api.InstitutionApi
 import kamon.Kamon
@@ -38,7 +39,7 @@ object Main extends App {
   final val partyManagementService: PartyManagementService =
     PartyManagementServiceImpl(partyManagementInvoker, partyApi)
 
-  final val partyProcessService: PartyProcessService = PartyProcessServiceImpl(partyProxyInvoker, institutionApi)
+  final val partyProcessService: PartyRegistryService = PartyRegistryServiceImpl(partyProxyInvoker, institutionApi)
 
   val processApi: ProcessApi = new ProcessApi(
     new ProcessApiServiceImpl(partyManagementService, partyProcessService),
@@ -60,6 +61,6 @@ object Main extends App {
   val controller: Controller = new Controller(healthApi, processApi)
 
   val bindingFuture: Future[Http.ServerBinding] =
-    Http().newServerAt("0.0.0.0", 8089).bind(controller.routes)
+    Http().newServerAt("0.0.0.0", 8089).bind(cors()(controller.routes))
 
 }

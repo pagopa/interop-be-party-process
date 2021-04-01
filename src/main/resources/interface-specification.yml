@@ -27,15 +27,68 @@ tags:
       description: Find out more
       url: http://swagger.io
 paths:
-  /onboarding/requests:
-    post:
-#      security:
-#        - bearerAuth: [ ]
+  /onboarding/{taxCode}:
+    get:
+      #      security:
+      #        - bearerAuth: [ ]
       tags:
         - process
       summary: create an onboarding entry
       description: Return ok
-      operationId: createOnBoarding
+      operationId: getOnboardingInfo
+      parameters:
+        - name: taxCode
+          in: path
+          description: The tax code to get onboarding info
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnBoardingInfo'
+        '400':
+          description: Invalid ID supplied
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /onboarding/legals:
+    post:
+      #      security:
+      #        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: create an onboarding entry
+      description: Return ok
+      operationId: createLegals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnBoardingRequest'
+      responses:
+        '201':
+          description: successful operation
+        '400':
+          description: Invalid ID supplied
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /onboarding/operators:
+    post:
+      #      security:
+      #        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: create an onboarding entry
+      description: Return ok
+      operationId: createOperators
       requestBody:
         required: true
         content:
@@ -70,7 +123,7 @@ paths:
         '200':
           description: successful operation
           content:
-            application/problem+json:
+            application/json:
               schema:
                 $ref: '#/components/schemas/NewToken'
         '400':
@@ -131,8 +184,8 @@ paths:
 
   /status:
     get:
-#      security:
-#        - bearerAuth: [ ]
+      #      security:
+      #        - bearerAuth: [ ]
       tags:
         - health
       summary: Health status endpoint
@@ -149,38 +202,34 @@ components:
   schemas:
     OnBoardingRequest:
       properties:
-        name:
-          type: string
-        surname:
-          type: string
-        taxCode:
-          type: string
+        manager:
+          $ref: '#/components/schemas/User'
+        delegate:
+          $ref: '#/components/schemas/User'
+        operators:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
         institutionId:
           type: string
-        role:
-          type: string
-          enum: [ ManagerOf, Delegate, Operator, ]
       additionalProperties: false
       required:
-        - name
-        - surname
-        - taxCode
+        - manager
+        - operators
         - institutionId
-        - role
     TokenRequest:
       properties:
-        taxCode:
-          type: string
+        manager:
+          $ref: '#/components/schemas/User'
+        delegate:
+          $ref: '#/components/schemas/User'
         institutionId:
           type: string
-        role:
-          type: string
-          enum: [ ManagerOf, Delegate, Operator, ]
       additionalProperties: false
       required:
-        - taxCode
+        - manager
+        - delegate
         - institutionId
-        - role
     NewToken:
       properties:
         token:
@@ -190,6 +239,60 @@ components:
       additionalProperties: false
       required:
         - token
+    User:
+      properties:
+        name:
+          type: string
+        surname:
+          type: string
+        taxCode:
+          type: string
+      additionalProperties: false
+      required:
+        - name
+        - surname
+        - taxCode
+    PersonInfo:
+      properties:
+        name:
+          type: string
+        surname:
+          type: string
+        taxCode:
+          type: string
+      additionalProperties: false
+      required:
+        - name
+        - surname
+        - taxCode
+    InstitutionInfo:
+      properties:
+        institutionId:
+          type: string
+        description:
+          type: string
+        digitalAddress:
+          type: string
+        status:
+          type: string
+      additionalProperties: false
+      required:
+        - institutionId
+        - description
+        - digitalAddress
+        - status
+    OnBoardingInfo:
+      properties:
+        person:
+          $ref: '#/components/schemas/PersonInfo'
+        institutions:
+          type: array
+          items:
+            $ref: '#/components/schemas/InstitutionInfo'
+      additionalProperties: false
+      required:
+        - person
+        - institutions
     Problem:
       properties:
         detail:

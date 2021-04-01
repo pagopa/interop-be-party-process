@@ -29,6 +29,21 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
+  def retrieveRelationship(from: String): Future[RelationShips] = {
+    val request: ApiRequest[RelationShips] = api.getRelationShips(from)
+    invoker
+      .execute[RelationShips](request)
+      .map { x =>
+        logger.info(s"Retrieving relationShips ${x.code}")
+        logger.info(s"Retrieving relationShips ${x.content}")
+        x.content
+      }
+      .recoverWith { case ex =>
+        logger.error(s"Retrieving relationShips ${ex.getMessage}")
+        Future.failed(ex)
+      }
+  }
+
   override def retrieveOrganization(organizationId: String): Future[Organization] = {
     val request: ApiRequest[Organization] = api.getOrganization(organizationId)
     logger.info(s"Retrieving organization $organizationId")
@@ -78,9 +93,9 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
 
   override def createRelationShip(taxCode: String, organizationId: String, role: String): Future[Unit] = {
     logger.info(s"Creating relationShip $taxCode/$organizationId/$role")
-    val roleEnum                             = Role(RoleEnums.Value.withName(role))
-    val partyRelationShip: PartyRelationShip = PartyRelationShip(from = taxCode, to = organizationId, role = roleEnum)
-    val request: ApiRequest[Unit]            = api.createRelationShip(partyRelationShip)
+    val roleEnum                            = Role(RoleEnums.Value.withName(role))
+    val partyRelationShip: RelationShipSeed = RelationShipSeed(from = taxCode, to = organizationId, role = roleEnum)
+    val request: ApiRequest[Unit]           = api.createRelationShip(partyRelationShip)
     invoker
       .execute(request)
       .map { x =>
@@ -101,11 +116,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
 
   }
 
-  override def createToken(from: String, to: String, role: String): Future[TokenText] = {
-    logger.info(s"Creating token $from/$to/$role")
-    val roleEnum = Role(RoleEnums.Value.withName(role))
+  override def createToken(manager: TokenUser, delegate: TokenUser): Future[TokenText] = {
+    logger.info(s"Creating token for: ${manager.toString}/${delegate.toString}")
     val tokenSeed: TokenSeed =
-      TokenSeed(from = from, to = to, role = roleEnum, seed = UUID.randomUUID().toString)
+      TokenSeed(seed = UUID.randomUUID().toString, manager = manager, delegate = delegate)
 
     val request = api.createToken(tokenSeed)
     invoker

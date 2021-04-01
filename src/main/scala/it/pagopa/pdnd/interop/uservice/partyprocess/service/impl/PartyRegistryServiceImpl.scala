@@ -1,6 +1,6 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
-import it.pagopa.pdnd.interop.uservice.partyprocess.service.{PartyProcessService, PartyProxyInvoker}
+import it.pagopa.pdnd.interop.uservice.partyprocess.service.{PartyRegistryService, PartyProxyInvoker}
 import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.api.InstitutionApi
 import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.invoker.ApiRequest
 import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.{Institution, Institutions}
@@ -8,8 +8,9 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-final case class PartyProcessServiceImpl(invoker: PartyProxyInvoker, api: InstitutionApi)(implicit ec: ExecutionContext)
-    extends PartyProcessService {
+final case class PartyRegistryServiceImpl(invoker: PartyProxyInvoker, api: InstitutionApi)(implicit
+  ec: ExecutionContext
+) extends PartyRegistryService {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
