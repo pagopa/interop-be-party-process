@@ -19,7 +19,7 @@ spec:
         - name: regcred
       containers:
         - name: {{name}}
-          image: gateway.pdnd.dev/services/{{name}}:{{version}}
+          image: gateway.interop.pdnd.dev/services/{{name}}:{{version}}
           imagePullPolicy: Always
           readinessProbe:
             httpGet:
