@@ -50,7 +50,7 @@ pipeline {
 
             sh '''#!/bin/bash
             export DOCKER_REPO=$NEXUS
-            export MAVEN_REPO=$NEXUS
+            export MAVEN_REPO=${NEXUS}
             echo "realm=Sonatype Nexus Repository Manager\nhost=${NEXUS}\nuser=${NEXUS_CREDENTIALS_USR}\npassword=${NEXUS_CREDENTIALS_PSW}" > /home/sbtuser/.sbt/.credentials
             sbt -Djavax.net.ssl.trustStore=./PDNDTrustStore -Djavax.net.ssl.trustStorePassword=${PDND_TRUST_STORE_PSW} generateCode "project root" docker:publish
             '''
