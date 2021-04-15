@@ -42,7 +42,7 @@ object Dependencies {
 
   private[this] object json4s {
     lazy val namespace = "org.json4s"
-    lazy val jackson   = namespace %% "json4s-jackson" % "3.6.101
+    lazy val jackson   = namespace %% "json4s-jackson" % "3.6.11"
   }
 
   private[this] object logback {
