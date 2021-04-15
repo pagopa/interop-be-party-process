@@ -61,6 +61,6 @@ object Main extends App {
   val controller: Controller = new Controller(healthApi, processApi)
 
   val bindingFuture: Future[Http.ServerBinding] =
-    Http().newServerAt("0.0.0.0", 8089).bind(cors()(controller.routes))
+    Http().newServerAt("0.0.0.0", 8088).bind(cors()(controller.routes))
 
 }
