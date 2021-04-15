@@ -11,8 +11,8 @@ object Dependencies {
     lazy val stream      = namespace                       %% "akka-stream"            % akkaVersion
     lazy val http        = namespace                       %% "akka-http"              % akkaHttpVersion
     lazy val httpJson    = namespace                       %% "akka-http-spray-json"   % akkaHttpVersion
-    lazy val httpJson4s  = "de.heikoseeberger"             %% "akka-http-json4s"       % "1.35.3"
-    lazy val management  = "com.lightbend.akka.management" %% "akka-management"        % "1.0.9"
+    lazy val httpJson4s  = "de.heikoseeberger"             %% "akka-http-json4s"       % "1.36.0"
+    lazy val management  = "com.lightbend.akka.management" %% "akka-management"        % "1.0.10"
     lazy val slf4j       = namespace                       %% "akka-slf4j"             % akkaVersion
   }
 
@@ -42,7 +42,7 @@ object Dependencies {
 
   private[this] object json4s {
     lazy val namespace = "org.json4s"
-    lazy val jackson   = namespace %% "json4s-jackson" % "3.6.10"
+    lazy val jackson   = namespace %% "json4s-jackson" % "3.6.101
   }
 
   private[this] object logback {
