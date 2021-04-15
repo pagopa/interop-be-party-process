@@ -9,6 +9,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
+@SuppressWarnings(Array("org.wartremover.warts.StringPlusAny"))
 final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api: PartyApi)(implicit
   ec: ExecutionContext
 ) extends PartyManagementService {

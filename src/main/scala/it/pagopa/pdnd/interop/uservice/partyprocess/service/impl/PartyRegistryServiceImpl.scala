@@ -8,6 +8,7 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.{ExecutionContext, Future}
 
+@SuppressWarnings(Array("org.wartremover.warts.StringPlusAny"))
 final case class PartyRegistryServiceImpl(invoker: PartyProxyInvoker, api: InstitutionApi)(implicit
   ec: ExecutionContext
 ) extends PartyRegistryService {

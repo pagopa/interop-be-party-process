@@ -19,10 +19,13 @@ object Dependencies {
   private[this] object pagopa {
 
     lazy val namespace = "it.pagopa"
+
     lazy val partyManagementClient =
-      namespace %% "pdnd-interop-uservice-party-management-client" % partyManagementClientVersion
+      namespace %% "pdnd-interop-uservice-party-management" % partyManagementClientVersion
+
     lazy val partyProxyClient =
-      namespace %% "pdnd-interop-uservice-party-registry-proxy-client" % partyProxyClientVersion
+      namespace %% "pdnd-interop-uservice-party-registry-proxy" % partyProxyClientVersion
+
   }
 
   private[this] object courier {
