@@ -5,6 +5,7 @@ object Versions {
   lazy val partyProxyClientVersion      = "0.1.0-SNAPSHOT"
   lazy val courierVersion               = "3.0.0-RC1"
   lazy val camundaExternalTaskVersion   = "1.4.1"
+  lazy val json4sVersion                = "3.6.11"
   lazy val kamonVersion                 = "2.1.15"
   lazy val logbackVersion               = "1.2.3"
   lazy val scalatestVersion             = "3.2.7"

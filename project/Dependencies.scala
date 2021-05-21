@@ -42,7 +42,8 @@ object Dependencies {
 
   private[this] object json4s {
     lazy val namespace = "org.json4s"
-    lazy val jackson   = namespace %% "json4s-jackson" % "3.6.11"
+    lazy val jackson   = namespace %% "json4s-jackson" % json4sVersion
+    lazy val ext       = namespace %% "json4s-ext"     % json4sVersion
   }
 
   private[this] object logback {
@@ -91,6 +92,12 @@ object Dependencies {
       scalamock.core               % Test
     )
     lazy val client: Seq[ModuleID] =
-      Seq(akka.stream % Compile, akka.http % Compile, akka.httpJson4s % Compile, json4s.jackson % Compile)
+      Seq(
+        akka.stream     % Compile,
+        akka.http       % Compile,
+        akka.httpJson4s % Compile,
+        json4s.jackson  % Compile,
+        json4s.ext      % Compile
+      )
   }
 }
