@@ -1,5 +1,3 @@
-
-
 ThisBuild / scalaVersion := "2.13.5"
 ThisBuild / organization := "it.pagopa"
 ThisBuild / organizationName := "Pagopa S.p.A."
@@ -71,7 +69,6 @@ lazy val client = project
       else
         m
     ),
-
     updateOptions := updateOptions.value.withGigahorse(false),
     publishTo := {
       val nexus = s"https://${System.getenv("MAVEN_REPO")}/nexus/repository/"
@@ -95,12 +92,12 @@ lazy val root = (project in file("."))
     dockerExposedPorts in Docker := Seq(8080),
     dockerBaseImage in Docker := "openjdk:11-jre-alpine",
     dockerUpdateLatest in Docker := true,
-    mappings in Universal += file("PDNDTrustStore") -> "PDNDTrustStore",
-    bashScriptExtraDefines += """addJava "-Djavax.net.ssl.trustStore=./PDNDTrustStore -Djavax.net.ssl.trustStorePassword=${PDND_TRUST_STORE_PSW}"""",
+    mappings in Universal += file("PDNDTrustStore") -> "security/PDNDTrustStore",
+    bashScriptExtraDefines += s"""addJava "-Djavax.net.ssl.trustStore=../security/PDNDTrustStore -Djavax.net.ssl.trustStorePassword=${System
+      .getenv("PDND_TRUST_STORE_PSW")}"""",
     wartremoverErrors ++= Warts.unsafe,
     scalafmtOnCompile := true
   )
   .aggregate(client)
   .dependsOn(generated)
   .enablePlugins(AshScriptPlugin, DockerPlugin)
-
