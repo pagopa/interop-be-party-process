@@ -92,9 +92,6 @@ lazy val root = (project in file("."))
     dockerExposedPorts in Docker := Seq(8080),
     dockerBaseImage in Docker := "openjdk:11-jre-alpine",
     dockerUpdateLatest in Docker := true,
-    mappings in Universal += file("PDNDTrustStore") -> "security/PDNDTrustStore",
-    bashScriptExtraDefines += s"""addJava "-Djavax.net.ssl.trustStore=../security/PDNDTrustStore -Djavax.net.ssl.trustStorePassword=${System
-      .getenv("PDND_TRUST_STORE_PSW")}"""",
     wartremoverErrors ++= Warts.unsafe,
     scalafmtOnCompile := true
   )
