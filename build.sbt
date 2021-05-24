@@ -1,5 +1,4 @@
-import sbt.Credentials
-import sbt.Keys.credentials
+
 
 ThisBuild / scalaVersion := "2.13.5"
 ThisBuild / organization := "it.pagopa"
@@ -96,6 +95,8 @@ lazy val root = (project in file("."))
     dockerExposedPorts in Docker := Seq(8080),
     dockerBaseImage in Docker := "openjdk:11-jre-alpine",
     dockerUpdateLatest in Docker := true,
+    mappings in Universal += file("PDNDTrustStore") -> "PDNDTrustStore",
+    bashScriptExtraDefines += """addJava "-Djavax.net.ssl.trustStore=./PDNDTrustStore -Djavax.net.ssl.trustStorePassword=${PDND_TRUST_STORE_PSW}"""",
     wartremoverErrors ++= Warts.unsafe,
     scalafmtOnCompile := true
   )
