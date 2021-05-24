@@ -10,7 +10,7 @@ class HealthCheck() extends (() => Future[Boolean]) {
   private val log = LoggerFactory.getLogger(getClass)
 
   override def apply(): Future[Boolean] = {
-    log.info("HealthCheck called")
+    log.debug("HealthCheck called")
     Future.successful(true)
   }
 }
@@ -20,7 +20,7 @@ class LiveCheck() extends (() => Future[Boolean]) {
   private val log = LoggerFactory.getLogger(getClass)
 
   override def apply(): Future[Boolean] = {
-    log.info("LiveCheck called")
+    log.debug("LiveCheck called")
     Future.successful(true)
   }
 }

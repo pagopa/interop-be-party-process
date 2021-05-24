@@ -18,7 +18,7 @@
         <appender-ref ref="ASYNC"/>
     </root>
 
-    <logger name="oshi.hardware.platform.mac.MacHWDiskStore" level="OFF"/>
+    <logger name="oshi" level="OFF"/>
     <logger name="akka.persistence.typed.internal.EventSourcedBehaviorImpl" level="WARN"/>
 
 </configuration>
