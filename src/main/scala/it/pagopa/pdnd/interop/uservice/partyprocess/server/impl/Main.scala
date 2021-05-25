@@ -3,6 +3,7 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.server.impl
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.directives.SecurityDirectives
 import akka.management.scaladsl.AkkaManagement
+import com.typesafe.config.{Config, ConfigFactory}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{
   HealthApiMarshallerImpl,
@@ -34,11 +35,16 @@ object Main extends App with CorsSupport {
 
   Kamon.init()
 
+  lazy val config: Config = ConfigFactory.load()
+
+  val partyManagementUrl: String = config.getString("services.party-management")
+  val partyProxyUrl: String      = config.getString("services.party-proxy")
+
   final val partyManagementInvoker: PartyManagementInvoker = PartyManagementInvoker()
-  final val partyApi: PartyApi                             = PartyApi()
+  final val partyApi: PartyApi                             = PartyApi(partyManagementUrl)
 
   final val partyProxyInvoker: PartyProxyInvoker = PartyProxyInvoker()
-  final val institutionApi: InstitutionApi       = InstitutionApi()
+  final val institutionApi: InstitutionApi       = InstitutionApi(partyProxyUrl)
 
   final val partyManagementService: PartyManagementService =
     PartyManagementServiceImpl(partyManagementInvoker, partyApi)
