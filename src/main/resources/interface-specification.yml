@@ -202,11 +202,19 @@ components:
   schemas:
     OnBoardingRequest:
       properties:
-        manager:
-          $ref: '#/components/schemas/User'
-        delegate:
-          $ref: '#/components/schemas/User'
-        operators:
+#        manager:
+#          $ref: '#/components/schemas/User'
+#        delegate:
+#          $ref: '#/components/schemas/User'
+#        operators:
+#          type: array
+#          items:
+#            $ref: '#/components/schemas/User'
+#        manager:
+#          $ref: '#/components/schemas/User'
+#        delegate:
+#          $ref: '#/components/schemas/User'
+        users:
           type: array
           items:
             $ref: '#/components/schemas/User'
@@ -214,8 +222,9 @@ components:
           type: string
       additionalProperties: false
       required:
-        - manager
-        - operators
+#        - manager
+#        - operators
+        - users
         - institutionId
     TokenRequest:
       properties:
@@ -247,11 +256,25 @@ components:
           type: string
         taxCode:
           type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
       additionalProperties: false
       required:
         - name
         - surname
         - taxCode
+        - role
+    UserRole:
+      properties:
+        value:
+          type: string
+          enum:
+            - Manager
+            - Delegate
+            - Operator
+      additionalProperties: false
+      required:
+        - value
     PersonInfo:
       properties:
         name:
