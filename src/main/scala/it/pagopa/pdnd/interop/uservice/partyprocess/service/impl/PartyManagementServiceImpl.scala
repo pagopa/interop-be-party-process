@@ -94,9 +94,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
 
   override def createRelationShip(taxCode: String, organizationId: String, role: String): Future[Unit] = {
     logger.info(s"Creating relationShip $taxCode/$organizationId/$role")
-    val roleEnum                            = Role(RoleEnums.Value.withName(role))
-    val partyRelationShip: RelationShipSeed = RelationShipSeed(from = taxCode, to = organizationId, role = roleEnum)
-    val request: ApiRequest[Unit]           = api.createRelationShip(partyRelationShip)
+    val partyRelationShip: RelationShip =
+      RelationShip(from = taxCode, to = organizationId, role = RelationShipEnums.Role.withName(role), None)
+
+    val request: ApiRequest[Unit] = api.createRelationShip(partyRelationShip)
     invoker
       .execute(request)
       .map { x =>
@@ -117,10 +118,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
 
   }
 
-  override def createToken(tokenUsers: Seq[TokenUser]): Future[TokenText] = {
+  override def createToken(relationShips: RelationShips): Future[TokenText] = {
 
-    logger.info(s"Creating token for [${tokenUsers.map(_.toString).mkString(",")}]")
-    val tokenSeed: TokenSeed = TokenSeed(seed = UUID.randomUUID().toString, tokenUsers)
+    logger.info(s"Creating token for [${relationShips.items.map(_.toString).mkString(",")}]")
+    val tokenSeed: TokenSeed = TokenSeed(seed = UUID.randomUUID().toString, relationShips)
 
     val request = api.createToken(tokenSeed)
     invoker

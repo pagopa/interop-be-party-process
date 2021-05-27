@@ -202,18 +202,18 @@ components:
   schemas:
     OnBoardingRequest:
       properties:
-#        manager:
-#          $ref: '#/components/schemas/User'
-#        delegate:
-#          $ref: '#/components/schemas/User'
-#        operators:
-#          type: array
-#          items:
-#            $ref: '#/components/schemas/User'
-#        manager:
-#          $ref: '#/components/schemas/User'
-#        delegate:
-#          $ref: '#/components/schemas/User'
+        #        manager:
+        #          $ref: '#/components/schemas/User'
+        #        delegate:
+        #          $ref: '#/components/schemas/User'
+        #        operators:
+        #          type: array
+        #          items:
+        #            $ref: '#/components/schemas/User'
+        #        manager:
+        #          $ref: '#/components/schemas/User'
+        #        delegate:
+        #          $ref: '#/components/schemas/User'
         users:
           type: array
           items:
@@ -222,14 +222,14 @@ components:
           type: string
       additionalProperties: false
       required:
-#        - manager
-#        - operators
+        #        - manager
+        #        - operators
         - users
         - institutionId
     TokenRequest:
       properties:
         legals:
-          type : array
+          type: array
           items:
             $ref: '#/components/schemas/User'
         institutionId:
@@ -256,16 +256,6 @@ components:
         taxCode:
           type: string
         role:
-          $ref: '#/components/schemas/UserRole'
-      additionalProperties: false
-      required:
-        - name
-        - surname
-        - taxCode
-        - role
-    UserRole:
-      properties:
-        value:
           type: string
           enum:
             - Manager
@@ -273,7 +263,11 @@ components:
             - Operator
       additionalProperties: false
       required:
-        - value
+        - name
+        - surname
+        - taxCode
+        - role
+        - role
     PersonInfo:
       properties:
         name:
