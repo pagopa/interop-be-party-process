@@ -117,10 +117,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
 
   }
 
-  override def createToken(manager: TokenUser, delegate: TokenUser): Future[TokenText] = {
-    logger.info(s"Creating token for: ${manager.toString}/${delegate.toString}")
-    val tokenSeed: TokenSeed =
-      TokenSeed(seed = UUID.randomUUID().toString, manager = manager, delegate = delegate)
+  override def createToken(tokenUsers: Seq[TokenUser]): Future[TokenText] = {
+
+    logger.info(s"Creating token for [${tokenUsers.map(_.toString).mkString(",")}]")
+    val tokenSeed: TokenSeed = TokenSeed(seed = UUID.randomUUID().toString, tokenUsers)
 
     val request = api.createToken(tokenSeed)
     invoker

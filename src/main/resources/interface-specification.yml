@@ -35,7 +35,7 @@ paths:
         - process
       summary: create an onboarding entry
       description: Return ok
-      operationId: getOnboardingInfo
+      operationId: getOnBoardingInfo
       parameters:
         - name: taxCode
           in: path
@@ -228,16 +228,15 @@ components:
         - institutionId
     TokenRequest:
       properties:
-        manager:
-          $ref: '#/components/schemas/User'
-        delegate:
-          $ref: '#/components/schemas/User'
+        legals:
+          type : array
+          items:
+            $ref: '#/components/schemas/User'
         institutionId:
           type: string
       additionalProperties: false
       required:
-        - manager
-        - delegate
+        - legals
         - institutionId
     NewToken:
       properties:
