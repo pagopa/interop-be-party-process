@@ -210,10 +210,7 @@ components:
         #          type: array
         #          items:
         #            $ref: '#/components/schemas/User'
-        #        manager:
-        #          $ref: '#/components/schemas/User'
-        #        delegate:
-        #          $ref: '#/components/schemas/User'
+
         users:
           type: array
           items:
@@ -266,7 +263,6 @@ components:
         - name
         - surname
         - taxCode
-        - role
         - role
     PersonInfo:
       properties:
