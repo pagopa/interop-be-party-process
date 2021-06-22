@@ -62,6 +62,9 @@ pipeline {
 
     stage('Apply Kubernetes files') {
       agent { label 'sbt-template' }
+      environment {
+        DOCKER_REPO = 'gateway.interop.pdnd.dev'
+      }
       steps{
         // we should use a container with kubectl preinstalled
         container('sbt-container') {
