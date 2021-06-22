@@ -2,24 +2,24 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: {{name}}-app
-  name: {{name}}-app
+    app: {{name}}
+  name: {{name}}
   namespace: {{name}}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: {{name}}-app
+      app: {{name}}
   template:
     metadata:
       labels:
-        app: {{name}}-app
+        app: {{name}}
     spec:
       imagePullSecrets:
         - name: regcred
       containers:
         - name: {{name}}
-          image: gateway.interop.pdnd.dev/services/{{name}}:{{version}}
+          image: {{repository}}/services/{{name}}:{{version}}
           imagePullPolicy: Always
           readinessProbe:
             httpGet:
@@ -76,7 +76,7 @@ spec:
       protocol: TCP
       name: monitoring
   selector:
-    app: {{name}}-app
+    app: {{name}}
 ---
 apiVersion: networking.k8s.io/v1beta1
 kind: Ingress

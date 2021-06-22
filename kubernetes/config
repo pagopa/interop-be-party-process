@@ -8,7 +8,9 @@ cd `dirname ${SCRIPT_PATH}` > /dev/null
 SCRIPT_PATH=`pwd`;
 popd  > /dev/null
 
-name=$(cat $SCRIPT_PATH/../build.sbt | grep "name :=" | awk -F:= '{ print $2 }' | sed 's/\"//' | sed 's/\",//' | sed 's/ //' | tr '[:upper:]' '[:lower:]' | uniq)
+repository=$DOCKER_REPO
+
+name=$(cat $SCRIPT_PATH/../build.sbt | grep "name :=" | awk -F:= '{ print $2 }' | sed 's/\"//' | sed 's/\",//' | sed 's/ //' | tr '[:upper:]' '[:lower:]' | grep -v client )
 
 #version=$($SCRIPT_PATH/../version.sh)
-version=$(cat $SCRIPT_PATH/../build.sbt  | grep "0.1.0-SNAPSHOT" | awk -F:= '{ print $2 }'  | sed 's/ //' | sed 's/"//' | sed 's/"//' | uniq)
+version=$(cat $SCRIPT_PATH/../build.sbt  | grep "ThisBuild / version := " | awk -F:= '{ print $2 }'  | sed 's/ //' | sed 's/"//' | sed 's/"//' | uniq)
