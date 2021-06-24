@@ -16,7 +16,6 @@ package object impl extends SprayJsonSupport with DefaultJsonProtocol {
   implicit val personInfoFormat: RootJsonFormat[PersonInfo]               = jsonFormat3(PersonInfo)
   implicit val institutionInfoFormat: RootJsonFormat[InstitutionInfo]     = jsonFormat4(InstitutionInfo)
   implicit val onBoardingInfoFormat: RootJsonFormat[OnBoardingInfo]       = jsonFormat2(OnBoardingInfo)
-  implicit val newTokenRequestFormat: RootJsonFormat[NewToken]            = jsonFormat1(NewToken)
   implicit val tokenRequestRequestFormat: RootJsonFormat[TokenRequest]    = jsonFormat2(TokenRequest)
 
 }

@@ -118,10 +118,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
 
   }
 
-  override def createToken(relationShips: RelationShips): Future[TokenText] = {
+  override def createToken(relationShips: RelationShips, documentHash: String): Future[TokenText] = {
 
     logger.info(s"Creating token for [${relationShips.items.map(_.toString).mkString(",")}]")
-    val tokenSeed: TokenSeed = TokenSeed(seed = UUID.randomUUID().toString, relationShips)
+    val tokenSeed: TokenSeed = TokenSeed(seed = UUID.randomUUID().toString, relationShips, documentHash)
 
     val request = api.createToken(tokenSeed)
     invoker

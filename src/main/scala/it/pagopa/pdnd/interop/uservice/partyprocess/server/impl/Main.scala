@@ -19,8 +19,15 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{
   executionContext
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
-import it.pagopa.pdnd.interop.uservice.partyprocess.service.impl.{PartyManagementServiceImpl, PartyRegistryServiceImpl}
+import it.pagopa.pdnd.interop.uservice.partyprocess.service.impl.{
+  MailerImpl,
+  PDFCreatorImp,
+  PartyManagementServiceImpl,
+  PartyRegistryServiceImpl
+}
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.{
+  Mailer,
+  PDFCreator,
   PartyManagementInvoker,
   PartyManagementService,
   PartyProxyInvoker,
@@ -45,9 +52,11 @@ object Main extends App with CorsSupport {
     PartyManagementServiceImpl(partyManagementInvoker, partyApi)
 
   final val partyProcessService: PartyRegistryService = PartyRegistryServiceImpl(partyProxyInvoker, institutionApi)
+  final val mailer: Mailer                            = new MailerImpl
+  final val pdfCreator: PDFCreator                    = new PDFCreatorImp
 
   val processApi: ProcessApi = new ProcessApi(
-    new ProcessApiServiceImpl(partyManagementService, partyProcessService),
+    new ProcessApiServiceImpl(partyManagementService, partyProcessService, mailer, pdfCreator),
     new ProcessApiMarshallerImpl(),
     SecurityDirectives.authenticateBasic("SecurityRealm", Authenticator)
   )

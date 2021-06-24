@@ -11,7 +11,7 @@ trait PartyManagementService {
   def createOrganization(organization: OrganizationSeed): Future[Organization]
   def createRelationShip(taxCode: String, organizationId: String, role: String): Future[Unit]
   def retrieveRelationship(from: String): Future[RelationShips]
-  def createToken(relationShips: RelationShips): Future[TokenText]
+  def createToken(relationShips: RelationShips, documentHash: String): Future[TokenText]
   def consumeToken(token: String): Future[Unit]
   def invalidateToken(token: String): Future[Unit]
 }

@@ -68,6 +68,7 @@ object Dependencies {
       // For making Java 12 happy
       "javax.annotation" % "javax.annotation-api" % "1.3.2" % "compile",
       //
+      "com.itextpdf" % "itext7-core" % "7.1.15" % Compile,
       akka.actorTyped              % Compile,
       akka.actor                   % Compile,
       akka.persistence             % Compile,

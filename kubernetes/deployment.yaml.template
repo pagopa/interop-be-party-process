@@ -56,6 +56,29 @@ spec:
                 secretKeyRef:
                   name: vault
                   key: VAULT_TOKEN
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: CASSANDRA_USER
+              valueFrom:
+                secretKeyRef:
+                  name: cassandra
+                  key: CASSANDRA_USER
+            - name: CASSANDRA_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: cassandra
+                  key: CASSANDRA_PWD
+      volumes:
+      - name: snapshots-volume
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -95,4 +118,3 @@ spec:
             backend:
               serviceName: {{name}}
               servicePort: 8088
-
