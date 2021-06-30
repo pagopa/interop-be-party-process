@@ -7,8 +7,11 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.model.Problem
 
 class HealthServiceApiImpl extends HealthApiService {
 
-  override def getStatus()(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem]): Route = getStatus200(
-    Problem(None, 200, "OK")
-  )
+  /** Code: 200, Message: successful operation, DataType: Problem
+    */
+  override def getStatus()(implicit
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    contexts: Seq[(String, String)]
+  ): Route = getStatus200(Problem(None, 200, "OK"))
 
 }

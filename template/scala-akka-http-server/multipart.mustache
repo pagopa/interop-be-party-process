@@ -8,6 +8,6 @@ implicit val vp: StringValueProvider = partsAndFiles.form ++ contexts.toMap{{^ve
     stringFields({{#vendorExtensions.x-non-file-params}}"{{baseName}}".as[{{dataType}}]{{^required}}.?{{#vendorExtensions.x-has-default-value}}({{defaultValue}}){{/vendorExtensions.x-has-default-value}}{{/required}}{{^-last}}, {{/-last}}{{/vendorExtensions.x-non-file-params}}) { ({{#vendorExtensions.x-non-file-params}}{{paramName}}{{^-last}}, {{/-last}}{{/vendorExtensions.x-non-file-params}}) =>{{/vendorExtensions.x-non-file-params.isEmpty}}
 {{classVarName}}Service.{{operationId}}({{#allParams}}{{paramName}} = {{paramName}}{{^-last}}, {{/-last}}{{/allParams}}){{^vendorExtensions.nonFileFormParams.isEmpty}}
     }{{/vendorExtensions.nonFileFormParams.isEmpty}}{{^vendorExtensions.x-file-params.isEmpty}}
-    }
+
     routes.fold[Route](t => reject(MalformedRequestContentRejection("Missing file.", t)), identity){{/vendorExtensions.x-file-params.isEmpty}}
 }
