@@ -31,6 +31,17 @@ object Dependencies {
 
   }
 
+  private[this] object itextpdf {
+    lazy val namespace = "com.itextpdf"
+    lazy val core      = namespace % "itext7-core" % iText7Version
+
+  }
+
+  private[this] object openapi4j {
+    lazy val namespace          = "org.openapi4j"
+    lazy val operationValidator = namespace % "openapi-operation-validator" % openapi4jVersion
+  }
+
   private[this] object javax {
     lazy val namespace = "com.sun.mail"
     lazy val mail      = namespace % "javax.mail" % "1.6.2"
@@ -68,7 +79,6 @@ object Dependencies {
       // For making Java 12 happy
       "javax.annotation" % "javax.annotation-api" % "1.3.2" % "compile",
       //
-      "com.itextpdf" % "itext7-core" % "7.1.15" % Compile,
       akka.actorTyped              % Compile,
       akka.actor                   % Compile,
       akka.persistence             % Compile,
@@ -76,10 +86,12 @@ object Dependencies {
       akka.http                    % Compile,
       akka.httpJson                % Compile,
       akka.management              % Compile,
+      openapi4j.operationValidator % Compile,
       javax.mail                   % Compile,
       pagopa.partyManagementClient % Compile,
       pagopa.partyProxyClient      % Compile,
       courier.mail                 % Compile,
+      itextpdf.core                % Compile,
       logback.classic              % Compile,
       akka.slf4j                   % Compile,
       kamon.bundle                 % Compile,

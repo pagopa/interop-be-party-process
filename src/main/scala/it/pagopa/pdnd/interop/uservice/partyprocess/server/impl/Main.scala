@@ -58,13 +58,13 @@ object Main extends App with CorsSupport {
   val processApi: ProcessApi = new ProcessApi(
     new ProcessApiServiceImpl(partyManagementService, partyProcessService, mailer, pdfCreator),
     new ProcessApiMarshallerImpl(),
-    SecurityDirectives.authenticateBasic("SecurityRealm", Authenticator)
+    SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
   )
 
   val healthApi: HealthApi = new HealthApi(
     new HealthServiceApiImpl(),
     new HealthApiMarshallerImpl(),
-    SecurityDirectives.authenticateBasic("SecurityRealm", Authenticator)
+    SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
   )
 
   locally {

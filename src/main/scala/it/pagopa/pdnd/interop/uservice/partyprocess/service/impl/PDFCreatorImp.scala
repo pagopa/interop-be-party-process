@@ -3,82 +3,80 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 import com.itextpdf.kernel.pdf.{PdfDocument, PdfWriter}
 import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.Paragraph
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{RelationShip, RelationShips}
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.Organization
+import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.Digester
+import it.pagopa.pdnd.interop.uservice.partyprocess.model.User
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.PDFCreator
 
 import java.io.{File, FileOutputStream}
-import java.nio.file.Files
-import java.security.{DigestInputStream, MessageDigest}
+import java.time.LocalDateTime
+import java.util.UUID
 import scala.concurrent.Future
 import scala.util.Try
+
 class PDFCreatorImp extends PDFCreator {
-  override def create(relationShips: RelationShips): Future[(File, String)] = Future.fromTry {
+
+  def create(users: Seq[User], organization: Organization): Future[(File, String)] = Future.fromTry {
     Try {
-      val file               = new File(s"/tmp/contratto_interoperabilità.pdf")
-      val stream             = new FileOutputStream(file)
-      val writer: PdfWriter  = new PdfWriter(stream)
-      val pdf: PdfDocument   = new PdfDocument(writer)
-      val document: Document = new Document(pdf)
+      val file: File =
+        new File(s"/tmp/${LocalDateTime.now().toString}${UUID.randomUUID().toString}_contratto_interoperabilità.pdf")
+      val stream: FileOutputStream = new FileOutputStream(file)
+      val writer: PdfWriter        = new PdfWriter(stream)
+      val pdf: PdfDocument         = new PdfDocument(writer)
+      val document: Document       = new Document(pdf)
 
       val _ = document
-        .add(new Paragraph("Rappresentati Legali"))
-        .add(new Paragraph("\n"))
-        .add(new Paragraph(relationShips.items.map(toText).mkString("\n")))
-        .add(new Paragraph("\n\n\n\n"))
-        .add(new Paragraph("Contratto:"))
+        .add(new Paragraph(s"Le persone\n${users.map(toText).mkString("\n")}"))
+        .add(
+          new Paragraph(
+            s"si accreditano presso la piattaforma di Interoperabilità in qualità di Rappresentanti Legali dell'Ente\n${toText(organization)}"
+          )
+        )
         .add(
           new Paragraph(
             """
-              |Lorem Ipsum is simply dummy text of the printing and typesetting industry. 
-              |Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer 
-              |took a galley of type and scrambled it to make a type specimen book. It has survived not only five 
-              |centuries, but also the leap into electronic typesetting, remaining essentially unchanged. 
-              |It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, 
-              |and more recently with desktop publishing software like Aldus PageMaker including versions 
-              |of Lorem Ipsum.
+              |Contratto:
+              |Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et
+              |dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
+              |ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore
+              |eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia
+              |deserunt mollit anim id est laborum.
               |""".stripMargin
           )
         )
-        .add(new Paragraph("Note lagali"))
         .add(
           new Paragraph(
             """
-              |Lorem Ipsum is simply dummy text of the printing and typesetting industry. 
-              |Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer 
-              |took a galley of type and scrambled it to make a type specimen book. It has survived not only five 
-              |centuries, but also the leap into electronic typesetting, remaining essentially unchanged. 
-              |It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, 
-              |and more recently with desktop publishing software like Aldus PageMaker including versions 
-              |of Lorem Ipsum.
+              |Note lagali:
+              |Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et
+              |dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
+              |ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore
+              |eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia
+              |deserunt mollit anim id est laborum.
               |""".stripMargin
           )
         )
       document.close()
-      val hash = computeHash(file)
+      val hash = Digester.createHash(file)
       (file, hash)
     }
   }
 
-  private def toText(relationShip: RelationShip): String = {
+  private def toText(user: User): String = {
     s"""
-       |${relationShip.from} 
-       |è ${relationShip.role.toString.toLowerCase}
-       |di ${relationShip.to}
+       |Nome: ${user.name} 
+       |Cognome: ${user.surname}
+       |Codice fiscale: ${user.taxCode}
+       |Ruolo: ${user.role}
        |""".stripMargin
   }
 
-  private def computeHash(file: File): String = {
-    val md = MessageDigest.getInstance("MD5")
-    Files.walk(file.toPath).filter(!_.toFile.isDirectory).forEach { path =>
-      val dis = new DigestInputStream(Files.newInputStream(path), md)
-      while (dis.available > 0) {
-        val _ = dis.read
-      }
-      dis.close()
-
-    }
-    md.digest.map(b => String.format("%02x", Byte.box(b))).mkString
-
+  private def toText(organization: Organization): String = {
+    s"""
+       |Nome: ${organization.description}
+       |Rappresentante Legale: ${organization.manager}
+       |Domicilio Digitale: ${organization.digitalAddress}
+       |""".stripMargin
   }
 
 }

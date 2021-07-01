@@ -5,7 +5,7 @@ import akka.http.scaladsl.marshalling.{Marshaller, ToEntityMarshaller}
 import akka.http.scaladsl.model.ContentTypes
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApiMarshaller
-import it.pagopa.pdnd.interop.uservice.partyprocess.model.{OnBoardingInfo, OnBoardingRequest, Problem, TokenRequest}
+import it.pagopa.pdnd.interop.uservice.partyprocess.model.{OnBoardingInfo, OnBoardingRequest, Problem}
 import spray.json._
 
 import java.io.File
@@ -30,8 +30,5 @@ class ProcessApiMarshallerImpl extends ProcessApiMarshaller with SprayJsonSuppor
     sprayJsonUnmarshaller[OnBoardingRequest]
 
   override implicit def toEntityMarshallerProblem: ToEntityMarshaller[Problem] = sprayJsonMarshaller[Problem]
-
-  override implicit def fromEntityUnmarshallerTokenRequest: FromEntityUnmarshaller[TokenRequest] =
-    sprayJsonUnmarshaller[TokenRequest]
 
 }

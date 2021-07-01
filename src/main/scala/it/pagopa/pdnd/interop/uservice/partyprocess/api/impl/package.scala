@@ -10,6 +10,7 @@ package object impl extends SprayJsonSupport with DefaultJsonProtocol {
 
   final val formatter: DateTimeFormatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
 
+  implicit val tokenChecksumFormat: RootJsonFormat[TokenChecksum]         = jsonFormat1(TokenChecksum)
   implicit val problemFormat: RootJsonFormat[Problem]                     = jsonFormat3(Problem)
   implicit val userFormat: RootJsonFormat[User]                           = jsonFormat4(User)
   implicit val onBoardingRequestFormat: RootJsonFormat[OnBoardingRequest] = jsonFormat2(OnBoardingRequest)
