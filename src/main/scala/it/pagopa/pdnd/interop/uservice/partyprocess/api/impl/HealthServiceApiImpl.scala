@@ -5,6 +5,7 @@ import akka.http.scaladsl.server.Route
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.HealthApiService
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.Problem
 
+@SuppressWarnings(Array("org.wartremover.warts.ImplicitParameter"))
 class HealthServiceApiImpl extends HealthApiService {
 
   /** Code: 200, Message: successful operation, DataType: Problem

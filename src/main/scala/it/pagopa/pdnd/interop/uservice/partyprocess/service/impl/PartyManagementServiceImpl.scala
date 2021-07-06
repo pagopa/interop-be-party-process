@@ -9,7 +9,13 @@ import org.slf4j.{Logger, LoggerFactory}
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
-@SuppressWarnings(Array("org.wartremover.warts.StringPlusAny"))
+@SuppressWarnings(
+  Array(
+    "org.wartremover.warts.StringPlusAny",
+    "org.wartremover.warts.ImplicitParameter",
+    "org.wartremover.warts.ToString"
+  )
+)
 final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api: PartyApi)(implicit
   ec: ExecutionContext
 ) extends PartyManagementService {
@@ -26,7 +32,7 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
       .recoverWith { case ex =>
         logger.error(s"Retrieving person ${ex.getMessage}")
-        Future.failed(ex)
+        Future.failed[Person](ex)
       }
   }
 
@@ -41,7 +47,7 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
       .recoverWith { case ex =>
         logger.error(s"Retrieving relationShips ${ex.getMessage}")
-        Future.failed(ex)
+        Future.failed[RelationShips](ex)
       }
   }
 
@@ -58,7 +64,7 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
       .recoverWith { case ex =>
         logger.error(s"Retrieving organization ${ex.getMessage}")
-        Future.failed(ex)
+        Future.failed[Organization](ex)
       }
   }
 
@@ -73,7 +79,7 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
       .recoverWith { case ex =>
         logger.error(s"Create person ${ex.getMessage}")
-        Future.failed(ex)
+        Future.failed[Person](ex)
       }
   }
 
@@ -88,7 +94,7 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
       .recoverWith { case ex =>
         logger.error(s"Create organization ${ex.getMessage}")
-        Future.failed(ex)
+        Future.failed[Organization](ex)
       }
   }
 
@@ -110,10 +116,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
           logger.error(s"Create relationShip $code")
           logger.error(s"Create relationShip $message")
 
-          Future.failed(new RuntimeException(message))
+          Future.failed[Unit](new RuntimeException(message))
         case ex =>
           logger.error(s"Create relationShip ! ${ex.getMessage}")
-          Future.failed(ex)
+          Future.failed[Unit](ex)
       }
 
   }
@@ -136,10 +142,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
           logger.error(s"Create token $code")
           logger.error(s"Create token $message")
 
-          Future.failed(new RuntimeException(message))
+          Future.failed[TokenText](new RuntimeException(message))
         case ex =>
           logger.error(s"Create token ! ${ex.getMessage}")
-          Future.failed(ex)
+          Future.failed[TokenText](ex)
       }
 
   }
@@ -160,10 +166,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
           logger.error(s"Token consumed $code")
           logger.error(s"Token consumed $message")
 
-          Future.failed(new RuntimeException(message))
+          Future.failed[Unit](new RuntimeException(message))
         case ex =>
           logger.error(s"Token consumed ! ${ex.getMessage}")
-          Future.failed(ex)
+          Future.failed[Unit](ex)
       }
 
   }
@@ -184,10 +190,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
           logger.error(s"Token invalidated $code")
           logger.error(s"Token invalidated $message")
 
-          Future.failed(new RuntimeException(message))
+          Future.failed[Unit](new RuntimeException(message))
         case ex =>
           logger.error(s"Token invalidated ! ${ex.getMessage}")
-          Future.failed(ex)
+          Future.failed[Unit](ex)
       }
 
   }

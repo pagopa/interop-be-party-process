@@ -5,15 +5,16 @@ object Dependencies {
 
   private[this] object akka {
     lazy val namespace   = "com.typesafe.akka"
-    lazy val actorTyped  = namespace                       %% "akka-actor-typed"       % akkaVersion
-    lazy val actor       = namespace                       %% "akka-actor"             % akkaVersion
-    lazy val persistence = namespace                       %% "akka-persistence-typed" % akkaVersion
-    lazy val stream      = namespace                       %% "akka-stream"            % akkaVersion
-    lazy val http        = namespace                       %% "akka-http"              % akkaHttpVersion
-    lazy val httpJson    = namespace                       %% "akka-http-spray-json"   % akkaHttpVersion
-    lazy val httpJson4s  = "de.heikoseeberger"             %% "akka-http-json4s"       % "1.36.0"
-    lazy val management  = "com.lightbend.akka.management" %% "akka-management"        % "1.0.10"
-    lazy val slf4j       = namespace                       %% "akka-slf4j"             % akkaVersion
+    lazy val actorTyped  = namespace                       %% "akka-actor-typed"         % akkaVersion
+    lazy val actor       = namespace                       %% "akka-actor"               % akkaVersion
+    lazy val persistence = namespace                       %% "akka-persistence-typed"   % akkaVersion
+    lazy val stream      = namespace                       %% "akka-stream"              % akkaVersion
+    lazy val http        = namespace                       %% "akka-http"                % akkaHttpVersion
+    lazy val httpJson    = namespace                       %% "akka-http-spray-json"     % akkaHttpVersion
+    lazy val httpJson4s  = "de.heikoseeberger"             %% "akka-http-json4s"         % "1.36.0"
+    lazy val management  = "com.lightbend.akka.management" %% "akka-management"          % "1.0.10"
+    lazy val slf4j       = namespace                       %% "akka-slf4j"               % akkaVersion
+    lazy val testkit     = namespace                       %% "akka-actor-testkit-typed" % akkaVersion
   }
 
   private[this] object pagopa {
@@ -96,6 +97,7 @@ object Dependencies {
       akka.slf4j                   % Compile,
       kamon.bundle                 % Compile,
       kamon.prometheus             % Compile,
+      akka.testkit                 % Test,
       scalatest.core               % Test,
       scalamock.core               % Test
     )

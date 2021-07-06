@@ -18,18 +18,20 @@ class PDFCreatorImp extends PDFCreator {
 
   def create(users: Seq[User], organization: Organization): Future[(File, String)] = Future.fromTry {
     Try {
-      val file: File =
-        new File(s"/tmp/${LocalDateTime.now().toString}${UUID.randomUUID().toString}_contratto_interoperabilità.pdf")
+      val file: File = File.createTempFile(
+        s"${LocalDateTime.now().toString}${UUID.randomUUID().toString}_contratto_interoperabilità",
+        "pdf"
+      )
       val stream: FileOutputStream = new FileOutputStream(file)
       val writer: PdfWriter        = new PdfWriter(stream)
       val pdf: PdfDocument         = new PdfDocument(writer)
       val document: Document       = new Document(pdf)
 
       val _ = document
-        .add(new Paragraph(s"Le persone\n${users.map(toText).mkString("\n")}"))
+        .add(new Paragraph(s"Le persone\n${users.map(userToText).mkString("\n")}"))
         .add(
           new Paragraph(
-            s"si accreditano presso la piattaforma di Interoperabilità in qualità di Rappresentanti Legali dell'Ente\n${toText(organization)}"
+            s"si accreditano presso la piattaforma di Interoperabilità in qualità di Rappresentanti Legali dell'Ente\n${orgToText(organization)}"
           )
         )
         .add(
@@ -62,7 +64,7 @@ class PDFCreatorImp extends PDFCreator {
     }
   }
 
-  private def toText(user: User): String = {
+  private def userToText(user: User): String = {
     s"""
        |Nome: ${user.name} 
        |Cognome: ${user.surname}
@@ -71,7 +73,7 @@ class PDFCreatorImp extends PDFCreator {
        |""".stripMargin
   }
 
-  private def toText(organization: Organization): String = {
+  private def orgToText(organization: Organization): String = {
     s"""
        |Nome: ${organization.description}
        |Rappresentante Legale: ${organization.manager}
