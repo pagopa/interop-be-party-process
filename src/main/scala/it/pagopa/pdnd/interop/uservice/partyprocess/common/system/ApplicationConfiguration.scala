@@ -9,6 +9,7 @@ object ApplicationConfiguration {
     val partyManagementUrl: String = config.getString("services.party-management")
     s"http://$partyManagementUrl:8088/pdnd-interop-uservice-party-management/0.0.1"
 //    s"https://gateway.interop.pdnd.dev/pdnd-interop-uservice-party-management/0.0.1"
+//    "http://localhost:8088/pdnd-interop-uservice-party-management/0.0.1"
   }
 
   def getPartyProxyUrl: String = {

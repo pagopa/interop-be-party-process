@@ -10,7 +10,7 @@ object Digester {
     val md  = MessageDigest.getInstance("MD5")
     val dis = new DigestInputStream(Files.newInputStream(file.toPath), md)
 
-    loop(dis.available > 0, { println("reading"); val _ = dis.read }, { println("closing"); dis.close() })
+    loop(dis.available > 0, { val _ = dis.read }, { dis.close() })
 
     md.digest.map(b => String.format("%02x", Byte.box(b))).mkString
 

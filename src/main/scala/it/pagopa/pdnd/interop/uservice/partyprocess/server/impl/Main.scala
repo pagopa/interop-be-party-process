@@ -75,6 +75,6 @@ object Main extends App with CorsSupport {
   val controller: Controller = new Controller(healthApi, processApi)
 
   val bindingFuture: Future[Http.ServerBinding] =
-    Http().newServerAt("0.0.0.0", 8088).bind(corsHandler(controller.routes))
+    Http().newServerAt("0.0.0.0", 8089).bind(corsHandler(controller.routes))
 
 }

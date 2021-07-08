@@ -19,8 +19,8 @@ class PDFCreatorImp extends PDFCreator {
   def create(users: Seq[User], organization: Organization): Future[(File, String)] = Future.fromTry {
     Try {
       val file: File = File.createTempFile(
-        s"${LocalDateTime.now().toString}${UUID.randomUUID().toString}_contratto_interoperabilità",
-        "pdf"
+        s"${LocalDateTime.now().toString}${UUID.randomUUID().toString}_contratto_interoperabilità.",
+        ".pdf"
       )
       val stream: FileOutputStream = new FileOutputStream(file)
       val writer: PdfWriter        = new PdfWriter(stream)

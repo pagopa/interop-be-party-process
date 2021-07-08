@@ -3,8 +3,8 @@ package it.pagopa.pdnd.interop.uservice.partyprocess
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.marshalling.{Marshal, ToEntityMarshaller}
-import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, SecurityDirectives}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationShipEnums.Role
@@ -31,7 +31,7 @@ import java.io.File
 import scala.concurrent.duration.{Duration, DurationInt}
 import scala.concurrent.{Await, Future}
 
-class TestSpec
+class PartyProcessSpec
     extends MockFactory
     with AnyWordSpecLike
     with BeforeAndAfterAll
@@ -157,7 +157,7 @@ class TestSpec
 
     }
 
-    "create a legals info" in {
+    "create a legals" in {
 
       val taxCode1       = "managerTaxCode"
       val taxCode2       = "delegateTaxCode"
@@ -225,9 +225,69 @@ class TestSpec
       val data     = Await.result(Marshal(req).to[MessageEntity].map(_.dataBytes), Duration.Inf)
       val response = request(data, "onboarding/legals", HttpMethods.POST)
 
-      response.status mustBe StatusCodes.OK
+      response.status mustBe StatusCodes.Created
 
     }
+    "create a operators" in {
+
+      val taxCode1       = "operator1TaxCode"
+      val taxCode2       = "operator2TaxCode"
+      val institutionId1 = "IST2"
+      val personPartyId1 = "bf80fac0-2775-4646-8fcf-28e083751900"
+      val personPartyId2 = "bf80fac0-2775-4646-8fcf-28e083751901"
+      val orgPartyId1    = "bf80fac0-2775-4646-8fcf-28e083751901"
+      val person1        = Person(taxCode = taxCode1, surname = "Ripley", name = "Ellen", partyId = personPartyId1)
+      val person2        = Person(taxCode = taxCode2, surname = "Maschetti", name = "Raffaello", partyId = personPartyId2)
+
+      val organization1 = Organization(
+        institutionId = institutionId1,
+        description = "org1",
+        manager = "manager1",
+        digitalAddress = "digitalAddress1",
+        partyId = orgPartyId1,
+        attributes = Seq.empty
+      )
+
+      val operator1 = User(name = "operator1", surname = "operator1", taxCode = taxCode1, role = "Operator")
+      val operator2 = User(name = "operator2", surname = "operator2", taxCode = taxCode2, role = "Operator")
+
+      (partyManagementService.retrieveOrganization _).expects(*).returning(Future.successful(organization1)).once()
+      (partyManagementService.createPerson _).expects(*).returning(Future.successful(person1)).once()
+      (partyManagementService.createPerson _).expects(*).returning(Future.successful(person2)).once()
+      (partyManagementService.createRelationShip _).expects(*, *, *).returning(Future.successful(())).repeat(2)
+
+      val req = OnBoardingRequest(users = Seq(operator1, operator2), institutionId = "institutionId1")
+
+      implicit val userFormat: RootJsonFormat[User]                           = jsonFormat4(User)
+      implicit val onBoardingRequestFormat: RootJsonFormat[OnBoardingRequest] = jsonFormat2(OnBoardingRequest)
+
+      implicit def fromEntityUnmarshallerOnBoardingRequest: ToEntityMarshaller[OnBoardingRequest] =
+        sprayJsonMarshaller[OnBoardingRequest]
+
+      val data     = Await.result(Marshal(req).to[MessageEntity].map(_.dataBytes), Duration.Inf)
+      val response = request(data, "onboarding/operators", HttpMethods.POST)
+
+      response.status mustBe StatusCodes.Created
+
+    }
+
+//    "confirm token" in {
+//      val token: String              = ???
+//      val contract: (FileInfo, File) = ???
+//
+//      (partyManagementService.retrieveOrganization _).expects(*).returning(Future.successful(organization1)).once()
+//      (partyManagementService.createPerson _).expects(*).returning(Future.successful(person1)).once()
+//      (partyManagementService.createPerson _).expects(*).returning(Future.successful(person2)).once()
+//      (partyManagementService.createRelationShip _).expects(*, *, *).returning(Future.successful(())).repeat(2)
+//
+//      val req = OnBoardingRequest(users = Seq(operator1, operator2), institutionId = "institutionId1")
+//
+//      val data     = Await.result(Marshal(req).to[MessageEntity].map(_.dataBytes), Duration.Inf)
+//      val response = request(data, s"/onboarding/complete/{$token}", HttpMethods.POST)
+//
+//      response.status mustBe StatusCodes.Created
+//
+//    }
 
   }
 
