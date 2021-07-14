@@ -28,6 +28,7 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
 import java.io.File
+import java.nio.file.Paths
 import scala.concurrent.duration.{Duration, DurationInt}
 import scala.concurrent.{Await, Future}
 
@@ -210,7 +211,7 @@ class PartyProcessSpec
         .once()
 
       (mailer.send _)
-        .expects(*, *)
+        .expects(*, *, *)
         .returning(Future.successful(()))
         .once()
 
@@ -271,23 +272,51 @@ class PartyProcessSpec
 
     }
 
-//    "confirm token" in {
-//      val token: String              = ???
-//      val contract: (FileInfo, File) = ???
-//
-//      (partyManagementService.retrieveOrganization _).expects(*).returning(Future.successful(organization1)).once()
-//      (partyManagementService.createPerson _).expects(*).returning(Future.successful(person1)).once()
-//      (partyManagementService.createPerson _).expects(*).returning(Future.successful(person2)).once()
-//      (partyManagementService.createRelationShip _).expects(*, *, *).returning(Future.successful(())).repeat(2)
-//
-//      val req = OnBoardingRequest(users = Seq(operator1, operator2), institutionId = "institutionId1")
-//
-//      val data     = Await.result(Marshal(req).to[MessageEntity].map(_.dataBytes), Duration.Inf)
-//      val response = request(data, s"/onboarding/complete/{$token}", HttpMethods.POST)
-//
-//      response.status mustBe StatusCodes.Created
-//
-//    }
+    "confirm token" in {
+
+      val token: String =
+        "eyJjaGVja3N1bSI6IjZkZGVlODIwZDA2MzgzMTI3ZWYwMjlmNTcxMjg1MzM5IiwiaWQiOiI0YjJmY2Y3My1iMmI0LTQ4N2QtYjk2MC1jM2MwNGQ5NDc3YzItM2RiZDk0ZDUtMzY0MS00MWI0LWJlMGItZjJmZjZjODU4Zjg5LU1hbmFnZXIiLCJsZWdhbHMiOlt7ImZyb20iOiI0NjAwNzg4Mi0wMDNlLTRlM2EtODMzMC1iNGYyYjA0NGJmNGUiLCJyb2xlIjoiRGVsZWdhdGUiLCJ0byI6IjNkYmQ5NGQ1LTM2NDEtNDFiNC1iZTBiLWYyZmY2Yzg1OGY4OSJ9LHsiZnJvbSI6IjRiMmZjZjczLWIyYjQtNDg3ZC1iOTYwLWMzYzA0ZDk0NzdjMiIsInJvbGUiOiJNYW5hZ2VyIiwidG8iOiIzZGJkOTRkNS0zNjQxLTQxYjQtYmUwYi1mMmZmNmM4NThmODkifV0sInNlZWQiOiJkMmE2ZWYyNy1hZTYwLTRiM2QtOGE5ZS1iMDIwMzViZDUyYzkiLCJ2YWxpZGl0eSI6IjIwMjEtMDctMTNUMTU6MTY6NDguNTU1NDM1KzAyOjAwIn0="
+
+      val path = Paths.get("src/test/resources/contract-test-01.pdf")
+
+      (partyManagementService.consumeToken _).expects(token).returning(Future.successful(()))
+
+      val formData =
+        Multipart.FormData.fromPath(name = "contract", MediaTypes.`application/octet-stream`, file = path, 100000)
+
+      val response = Await.result(
+        Http().singleRequest(
+          HttpRequest(
+            uri = s"$url/onboarding/complete/$token",
+            method = HttpMethods.POST,
+            entity = formData.toEntity,
+            headers = authorization
+          )
+        ),
+        Duration.Inf
+      )
+
+      response.status mustBe StatusCodes.OK
+
+    }
+
+    "delete token" in {
+
+      val token: String =
+        "eyJjaGVja3N1bSI6IjZkZGVlODIwZDA2MzgzMTI3ZWYwMjlmNTcxMjg1MzM5IiwiaWQiOiI0YjJmY2Y3My1iMmI0LTQ4N2QtYjk2MC1jM2MwNGQ5NDc3YzItM2RiZDk0ZDUtMzY0MS00MWI0LWJlMGItZjJmZjZjODU4Zjg5LU1hbmFnZXIiLCJsZWdhbHMiOlt7ImZyb20iOiI0NjAwNzg4Mi0wMDNlLTRlM2EtODMzMC1iNGYyYjA0NGJmNGUiLCJyb2xlIjoiRGVsZWdhdGUiLCJ0byI6IjNkYmQ5NGQ1LTM2NDEtNDFiNC1iZTBiLWYyZmY2Yzg1OGY4OSJ9LHsiZnJvbSI6IjRiMmZjZjczLWIyYjQtNDg3ZC1iOTYwLWMzYzA0ZDk0NzdjMiIsInJvbGUiOiJNYW5hZ2VyIiwidG8iOiIzZGJkOTRkNS0zNjQxLTQxYjQtYmUwYi1mMmZmNmM4NThmODkifV0sInNlZWQiOiJkMmE2ZWYyNy1hZTYwLTRiM2QtOGE5ZS1iMDIwMzViZDUyYzkiLCJ2YWxpZGl0eSI6IjIwMjEtMDctMTNUMTU6MTY6NDguNTU1NDM1KzAyOjAwIn0="
+
+      (partyManagementService.invalidateToken _).expects(token).returning(Future.successful(()))
+
+      val response = Await.result(
+        Http().singleRequest(
+          HttpRequest(uri = s"$url/onboarding/complete/$token", method = HttpMethods.DELETE, headers = authorization)
+        ),
+        Duration.Inf
+      )
+
+      response.status mustBe StatusCodes.OK
+
+    }
 
   }
 

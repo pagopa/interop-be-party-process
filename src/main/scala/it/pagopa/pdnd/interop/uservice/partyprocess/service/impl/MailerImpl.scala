@@ -6,22 +6,23 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.service.Mailer
 
 import java.io.File
 import scala.concurrent.Future
+import scala.util.Try
 
 class MailerImpl extends Mailer {
 
-  private val user     = System.getenv("USER_MAIL")
-  private val password = System.getenv("USER_PASSWORD")
+  private val user     = System.getenv("SMTP_USR")
+  private val password = System.getenv("SMTP_PSW")
 
   private val mailer = Mailer("smtp.gmail.com", 587)
     .auth(true)
     .as(user, password)
     .startTls(true)()
 
-  def send(file: File, token: String): Future[Unit] = {
+  def send(address: String, file: File, token: String): Future[Unit] = parseEmail(address).flatMap { to =>
     mailer(
       Envelope
-        .from("pdnd-interop" `@` "work.com")
-        .to("stefano.perazzolo" `@` "pagopa.it")
+        .from("pdnd-interop" `@` "pagopa.it")
+        .to(to)
         .subject("Chiusura procedura accreditamento interoperabilità")
         .content(
           Multipart()
@@ -29,10 +30,11 @@ class MailerImpl extends Mailer {
             .html(createEmailBody(token))
         )
     )
-
   }
 
-  def createEmailBody(token: String): String =
+  private def parseEmail(address: String) = Future.fromTry(Try(address.addr))
+
+  private def createEmailBody(token: String): String =
     s"""
        |<!doctype html>
        |<html>

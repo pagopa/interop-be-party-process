@@ -56,26 +56,16 @@ spec:
                 secretKeyRef:
                   name: vault
                   key: VAULT_TOKEN
-            - name: AWS_ACCESS_KEY_ID
+            - name: SMTP_USR
               valueFrom:
                 secretKeyRef:
-                  name: aws
-                  key: AWS_ACCESS_KEY_ID
-            - name: AWS_SECRET_ACCESS_KEY
+                  name: smtp
+                  key: SMTP_USR
+            - name: SMTP_PSW
               valueFrom:
                 secretKeyRef:
-                  name: aws
-                  key: AWS_SECRET_ACCESS_KEY
-            - name: CASSANDRA_USER
-              valueFrom:
-                secretKeyRef:
-                  name: cassandra
-                  key: CASSANDRA_USER
-            - name: CASSANDRA_PWD
-              valueFrom:
-                secretKeyRef:
-                  name: cassandra
-                  key: CASSANDRA_PWD
+                  name: smtp
+                  key: SMTP_PSW
       volumes:
       - name: snapshots-volume
         emptyDir: {}
