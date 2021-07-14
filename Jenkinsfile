@@ -64,6 +64,7 @@ pipeline {
       agent { label 'sbt-template' }
       environment {
         DOCKER_REPO = 'gateway.interop.pdnd.dev'
+        SMTP = credentials('smtp')
       }
       steps{
         // we should use a container with kubectl preinstalled

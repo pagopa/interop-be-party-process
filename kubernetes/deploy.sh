@@ -16,7 +16,7 @@ kubectl get secret regcred -n default -o yaml | sed s/"namespace: default"/"name
 
 kubectl create secret generic vault --from-literal=VAULT_ADDR=$VAULT_ADDR --from-literal=VAULT_TOKEN=$VAULT_TOKEN -n $NAMESPACE
 
-kubectl create secret generic email --from-literal=SMTP_USR=$SMTP_USR --from-literal=SMTP_PSW=$SMTP_PSW -n $NAMESPACE
+kubectl create secret generic smtp --from-literal=SMTP_USR=$SMTP_USR --from-literal=SMTP_PSW=$SMTP_PSW -n $NAMESPACE
 
 $SCRIPT_PATH/templater.sh $SCRIPT_PATH/deployment.yaml.template -s -f $SCRIPT_PATH/config > $SCRIPT_PATH/deployment.yaml
 
