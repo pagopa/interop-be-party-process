@@ -1,5 +1,5 @@
 
-ThisBuild / scalaVersion := "2.13.5"
+ThisBuild / scalaVersion := "2.13.6"
 ThisBuild / organization := "it.pagopa"
 ThisBuild / organizationName := "Pagopa S.p.A."
 ThisBuild / libraryDependencies := Dependencies.Jars.`server`.map(m =>
@@ -8,6 +8,8 @@ ThisBuild / libraryDependencies := Dependencies.Jars.`server`.map(m =>
   else
     m
 )
+
+ThisBuild / dependencyOverrides ++= Dependencies.Jars.overrides
 
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
@@ -99,6 +101,6 @@ lazy val root = (project in file("."))
   )
   .aggregate(client)
   .dependsOn(generated)
-  .enablePlugins(AshScriptPlugin, DockerPlugin)
+  .enablePlugins(JavaAppPackaging, JavaAgent)
 
-//javaAgents += "io.kamon" % "kanela-agent" % "1.0.7"
+javaAgents += "io.kamon" % "kanela-agent" % "1.0.11"

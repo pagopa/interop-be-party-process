@@ -11,18 +11,23 @@ object Dependencies {
     lazy val stream      = namespace                       %% "akka-stream"              % akkaVersion
     lazy val http        = namespace                       %% "akka-http"                % akkaHttpVersion
     lazy val httpJson    = namespace                       %% "akka-http-spray-json"     % akkaHttpVersion
-    lazy val httpJson4s  = "de.heikoseeberger"             %% "akka-http-json4s"         % "1.36.0"
-    lazy val management  = "com.lightbend.akka.management" %% "akka-management"          % "1.0.10"
+    lazy val httpJson4s  = "de.heikoseeberger"             %% "akka-http-json4s"         % "1.37.0"
+    lazy val management  = "com.lightbend.akka.management" %% "akka-management"          % "1.1.1"
     lazy val slf4j       = namespace                       %% "akka-slf4j"               % akkaVersion
     lazy val testkit     = namespace                       %% "akka-actor-testkit-typed" % akkaVersion
   }
 
   private[this] object pagopa {
     lazy val namespace = "it.pagopa"
+
     lazy val partyManagementClient =
       namespace %% "pdnd-interop-uservice-party-management-client" % partyManagementClientVersion
+
     lazy val partyProxyClient =
       namespace %% "pdnd-interop-uservice-party-registry-proxy-client" % partyProxyClientVersion
+
+    lazy val attributeRegistryClient =
+      namespace %% "pdnd-interop-uservice-attribute-registry-management-client" % attributeRegistryVersion
 
   }
 
@@ -41,11 +46,6 @@ object Dependencies {
   private[this] object openapi4j {
     lazy val namespace          = "org.openapi4j"
     lazy val operationValidator = namespace % "openapi-operation-validator" % openapi4jVersion
-  }
-
-  private[this] object javax {
-    lazy val namespace = "com.sun.mail"
-    lazy val mail      = namespace % "javax.mail" % "1.6.2"
   }
 
   private[this] object json4s {
@@ -75,31 +75,41 @@ object Dependencies {
     lazy val core      = namespace %% "scalamock" % scalaMockVersion
   }
 
+  private[this] object jackson {
+    lazy val namespace   = "com.fasterxml.jackson.core"
+    lazy val core        = namespace % "jackson-core"        % jacksonVersion
+    lazy val annotations = namespace % "jackson-annotations" % jacksonVersion
+    lazy val databind    = namespace % "jackson-databind"    % jacksonVersion
+  }
+
   object Jars {
+    lazy val overrides: Seq[ModuleID] =
+      Seq(jackson.annotations % Compile, jackson.core % Compile, jackson.databind % Compile)
+
     lazy val `server`: Seq[ModuleID] = Seq(
       // For making Java 12 happy
       "javax.annotation" % "javax.annotation-api" % "1.3.2" % "compile",
       //
-      akka.actorTyped              % Compile,
-      akka.actor                   % Compile,
-      akka.persistence             % Compile,
-      akka.stream                  % Compile,
-      akka.http                    % Compile,
-      akka.httpJson                % Compile,
-      akka.management              % Compile,
-      openapi4j.operationValidator % Compile,
-      javax.mail                   % Compile,
-      pagopa.partyManagementClient % Compile,
-      pagopa.partyProxyClient      % Compile,
-      courier.mail                 % Compile,
-      itextpdf.core                % Compile,
-      logback.classic              % Compile,
-      akka.slf4j                   % Compile,
-      kamon.bundle                 % Compile,
-      kamon.prometheus             % Compile,
-      akka.testkit                 % Test,
-      scalatest.core               % Test,
-      scalamock.core               % Test
+      akka.actorTyped                % Compile,
+      akka.actor                     % Compile,
+      akka.persistence               % Compile,
+      akka.stream                    % Compile,
+      akka.http                      % Compile,
+      akka.httpJson                  % Compile,
+      akka.management                % Compile,
+      openapi4j.operationValidator   % Compile,
+      pagopa.partyManagementClient   % Compile,
+      pagopa.partyProxyClient        % Compile,
+      pagopa.attributeRegistryClient % Compile,
+      courier.mail                   % Compile,
+      itextpdf.core                  % Compile,
+      logback.classic                % Compile,
+      akka.slf4j                     % Compile,
+      kamon.bundle                   % Compile,
+      kamon.prometheus               % Compile,
+      akka.testkit                   % Test,
+      scalatest.core                 % Test,
+      scalamock.core                 % Test
     )
     lazy val client: Seq[ModuleID] =
       Seq(

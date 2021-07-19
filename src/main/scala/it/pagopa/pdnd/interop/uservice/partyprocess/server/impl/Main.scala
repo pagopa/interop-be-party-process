@@ -3,6 +3,7 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.server.impl
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.directives.SecurityDirectives
 import akka.management.scaladsl.AkkaManagement
+import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.api.AttributeApi
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{
   HealthApiMarshallerImpl,
@@ -20,12 +21,15 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.impl.{
+  AttributeRegistryServiceImpl,
   MailerImpl,
   PDFCreatorImp,
   PartyManagementServiceImpl,
   PartyRegistryServiceImpl
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.{
+  AttributeRegistryInvoker,
+  AttributeRegistryService,
   Mailer,
   PDFCreator,
   PartyManagementInvoker,
@@ -48,15 +52,28 @@ object Main extends App with CorsSupport {
   final val partyProxyInvoker: PartyProxyInvoker = PartyProxyInvoker()
   final val institutionApi: InstitutionApi       = InstitutionApi(ApplicationConfiguration.getPartyProxyUrl)
 
+  final val attributeRegistryInvoker: AttributeRegistryInvoker = AttributeRegistryInvoker()
+  final val attributeApi: AttributeApi                         = AttributeApi(ApplicationConfiguration.getPartyProxyUrl)
+
   final val partyManagementService: PartyManagementService =
     PartyManagementServiceImpl(partyManagementInvoker, partyApi)
 
   final val partyProcessService: PartyRegistryService = PartyRegistryServiceImpl(partyProxyInvoker, institutionApi)
-  final val mailer: Mailer                            = new MailerImpl
-  final val pdfCreator: PDFCreator                    = new PDFCreatorImp
+
+  final val attributeRegistryService: AttributeRegistryService =
+    AttributeRegistryServiceImpl(attributeRegistryInvoker, attributeApi)
+
+  final val mailer: Mailer         = new MailerImpl
+  final val pdfCreator: PDFCreator = new PDFCreatorImp
 
   val processApi: ProcessApi = new ProcessApi(
-    new ProcessApiServiceImpl(partyManagementService, partyProcessService, mailer, pdfCreator),
+    new ProcessApiServiceImpl(
+      partyManagementService,
+      partyProcessService,
+      attributeRegistryService,
+      mailer,
+      pdfCreator
+    ),
     new ProcessApiMarshallerImpl(),
     SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
   )

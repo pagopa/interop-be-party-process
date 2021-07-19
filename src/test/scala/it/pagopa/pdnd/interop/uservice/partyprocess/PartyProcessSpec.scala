@@ -7,6 +7,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, SecurityDirectives}
 import akka.http.scaladsl.unmarshalling.Unmarshal
+import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{Attribute, AttributesResponse}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationShipEnums.Role
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{ProcessApiMarshallerImpl, ProcessApiServiceImpl}
@@ -15,6 +16,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{Authenticator
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.{
+  AttributeRegistryService,
   Mailer,
   PDFCreator,
   PartyManagementService,
@@ -29,6 +31,7 @@ import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
 import java.io.File
 import java.nio.file.Paths
+import java.time.OffsetDateTime
 import scala.concurrent.duration.{Duration, DurationInt}
 import scala.concurrent.{Await, Future}
 
@@ -40,12 +43,13 @@ class PartyProcessSpec
     with SprayJsonSupport
     with DefaultJsonProtocol {
 
-  val processApiMarshaller: ProcessApiMarshaller     = new ProcessApiMarshallerImpl
-  val mockHealthApi: HealthApi                       = mock[HealthApi]
-  val partyManagementService: PartyManagementService = mock[PartyManagementService]
-  val partyRegistryService: PartyRegistryService     = mock[PartyRegistryService]
-  val mailer: Mailer                                 = mock[Mailer]
-  val pdfCreator: PDFCreator                         = mock[PDFCreator]
+  val processApiMarshaller: ProcessApiMarshaller         = new ProcessApiMarshallerImpl
+  val mockHealthApi: HealthApi                           = mock[HealthApi]
+  val partyManagementService: PartyManagementService     = mock[PartyManagementService]
+  val partyRegistryService: PartyRegistryService         = mock[PartyRegistryService]
+  val attributeRegistryService: AttributeRegistryService = mock[AttributeRegistryService]
+  val mailer: Mailer                                     = mock[Mailer]
+  val pdfCreator: PDFCreator                             = mock[PDFCreator]
 
   var controller: Option[Controller]                 = None
   var bindServer: Option[Future[Http.ServerBinding]] = None
@@ -56,7 +60,13 @@ class PartyProcessSpec
   override def beforeAll(): Unit = {
 
     val processApi = new ProcessApi(
-      new ProcessApiServiceImpl(partyManagementService, partyRegistryService, mailer, pdfCreator),
+      new ProcessApiServiceImpl(
+        partyManagementService,
+        partyRegistryService,
+        attributeRegistryService,
+        mailer,
+        pdfCreator
+      ),
       processApiMarshaller,
       wrappingDirective
     )
@@ -88,15 +98,18 @@ class PartyProcessSpec
       val orgPartyId1    = "af80fac0-2775-4646-8fcf-28e083751901"
       val orgPartyId2    = "af80fac0-2775-4646-8fcf-28e083751902"
       val person1        = Person(taxCode = taxCode1, surname = "Doe", name = "John", partyId = personPartyId1)
+
       val relationShip1 =
         RelationShip(from = taxCode1, to = institutionId1, role = Role.Manager, status = Some("active"))
       val relationShip2 =
         RelationShip(from = taxCode1, to = institutionId2, role = Role.Delegate, status = Some("active"))
       val relationShips = RelationShips(items = Seq(relationShip1, relationShip2))
+
       val organization1 = Organization(
         institutionId = institutionId1,
         description = "org1",
-        manager = "manager1",
+        managerName = "managerName1",
+        managerSurname = "managerSurname1",
         digitalAddress = "digitalAddress1",
         partyId = orgPartyId1,
         attributes = Seq.empty
@@ -104,7 +117,8 @@ class PartyProcessSpec
       val organization2 = Organization(
         institutionId = institutionId2,
         description = "org2",
-        manager = "manager2",
+        managerName = "managerName2",
+        managerSurname = "managerSurname2",
         digitalAddress = "digitalAddress2",
         partyId = orgPartyId2,
         attributes = Seq.empty
@@ -182,10 +196,25 @@ class PartyProcessSpec
       val organization1 = Organization(
         institutionId = institutionId1,
         description = "org1",
-        manager = "manager1",
+        managerName = "managerName1",
+        managerSurname = "managerSurname1",
         digitalAddress = "digitalAddress1",
         partyId = orgPartyId1,
         attributes = Seq.empty
+      )
+
+      val attr1 = AttributesResponse(
+        Seq(
+          Attribute(
+            id = "1",
+            code = Some("1"),
+            certified = true,
+            description = "attrs",
+            origin = Some("test"),
+            name = "test attr",
+            creationTime = OffsetDateTime.now()
+          )
+        )
       )
 
       val file = new File("src/test/resources/fake.file")
@@ -199,21 +228,10 @@ class PartyProcessSpec
       (partyManagementService.createPerson _).expects(*).returning(Future.failed(new RuntimeException)).once()
       (partyManagementService.retrievePerson _).expects(*).returning(Future.successful(person1)).once()
       (partyManagementService.createRelationShip _).expects(*, *, *).returning(Future.successful(())).repeat(2)
-
-      (pdfCreator.create _)
-        .expects(*, *)
-        .returning(Future.successful((file, "hash")))
-        .once()
-
-      (partyManagementService.createToken _)
-        .expects(*, *)
-        .returning(Future.successful(TokenText("token")))
-        .once()
-
-      (mailer.send _)
-        .expects(*, *, *)
-        .returning(Future.successful(()))
-        .once()
+      (attributeRegistryService.createAttribute _).expects(*, *, *).returning(Future.successful(attr1)).once()
+      (pdfCreator.create _).expects(*, *).returning(Future.successful((file, "hash"))).once()
+      (partyManagementService.createToken _).expects(*, *).returning(Future.successful(TokenText("token"))).once()
+      (mailer.send _).expects(*, *, *).returning(Future.successful(())).once()
 
       val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 
@@ -243,7 +261,8 @@ class PartyProcessSpec
       val organization1 = Organization(
         institutionId = institutionId1,
         description = "org1",
-        manager = "manager1",
+        managerName = "managerName1",
+        managerSurname = "managerSurname1",
         digitalAddress = "digitalAddress1",
         partyId = orgPartyId1,
         attributes = Seq.empty

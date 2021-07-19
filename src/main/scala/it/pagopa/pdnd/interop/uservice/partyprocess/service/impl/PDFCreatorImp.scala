@@ -76,7 +76,7 @@ class PDFCreatorImp extends PDFCreator {
   private def orgToText(organization: Organization): String = {
     s"""
        |Nome: ${organization.description}
-       |Rappresentante Legale: ${organization.manager}
+       |Rappresentante Legale: ${organization.managerName} ${organization.managerSurname}
        |Domicilio Digitale: ${organization.digitalAddress}
        |""".stripMargin
   }
