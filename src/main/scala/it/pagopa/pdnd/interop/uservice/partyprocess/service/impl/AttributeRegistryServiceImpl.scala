@@ -1,6 +1,7 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.api.AttributeApi
+import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.invoker.ApiRequest
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{AttributeSeed, AttributesResponse}
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.{AttributeRegistryInvoker, AttributeRegistryService}
 import org.slf4j.{Logger, LoggerFactory}
@@ -20,31 +21,12 @@ final case class AttributeRegistryServiceImpl(attributeRegistryInvoker: Attribut
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  override def createAttribute(
-    origin: String,
-    description: String,
-    attribute: Option[String]
-  ): Future[AttributesResponse] =
-    attribute match {
-      case Some(attr) => sendRequest(origin, description, attr)
-      case None =>
-        Future.failed(new RuntimeException("No attribute has been passed"))
+  override def createAttribute(origin: String, description: String, attribute: String): Future[AttributesResponse] = {
+    val seeds: Seq[AttributeSeed] = Seq(
+      AttributeSeed(code = None, certified = true, description = description, origin = Some(origin), name = attribute)
+    )
+    val request: ApiRequest[AttributesResponse] = api.createAttributes(seeds)
 
-    }
-
-  private def sendRequest(origin: String, description: String, attribute: String): Future[AttributesResponse] = {
-    val request =
-      api.createAttributes(
-        Seq(
-          AttributeSeed(
-            code = None,
-            certified = true,
-            description = description,
-            origin = Some(origin),
-            name = attribute
-          )
-        )
-      )
     attributeRegistryInvoker
       .execute(request)
       .map { x =>
@@ -56,6 +38,6 @@ final case class AttributeRegistryServiceImpl(attributeRegistryInvoker: Attribut
         logger.error(s"Retrieving attributes ${ex.getMessage}")
         Future.failed[AttributesResponse](ex)
       }
-
   }
+
 }

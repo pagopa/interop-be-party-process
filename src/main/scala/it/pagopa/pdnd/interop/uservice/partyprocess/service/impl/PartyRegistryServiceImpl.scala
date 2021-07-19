@@ -1,9 +1,9 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
-import it.pagopa.pdnd.interop.uservice.partyprocess.service.{PartyRegistryService, PartyProxyInvoker}
+import it.pagopa.pdnd.interop.uservice.partyprocess.service.{PartyProxyInvoker, PartyRegistryService}
 import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.api.InstitutionApi
 import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.invoker.ApiRequest
-import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.{Institution, Institutions}
+import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.{Categories, Institution, Institutions}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -34,6 +34,22 @@ final case class PartyRegistryServiceImpl(invoker: PartyProxyInvoker, api: Insti
       .recoverWith { case ex =>
         logger.error(s"Retrieving institution ${ex.getMessage}")
         Future.failed[Institution](ex)
+      }
+  }
+
+  override def getCategories: Future[Categories] = {
+    val request: ApiRequest[Categories] = api.getCategories()
+    logger.info(s"getCategories ${request.toString}")
+    invoker
+      .execute(request)
+      .map { x =>
+        logger.info(s"Retrieving categories ${x.code}")
+        logger.info(s"Retrieving categories ${x.content}")
+        x.content
+      }
+      .recoverWith { case ex =>
+        logger.error(s"Retrieving categories ${ex.getMessage}")
+        Future.failed[Categories](ex)
       }
   }
 

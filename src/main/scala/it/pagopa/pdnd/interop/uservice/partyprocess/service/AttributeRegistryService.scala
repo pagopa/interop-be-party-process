@@ -5,5 +5,5 @@ import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.
 import scala.concurrent.Future
 
 trait AttributeRegistryService {
-  def createAttribute(origin: String, description: String, attribute: Option[String]): Future[AttributesResponse]
+  def createAttribute(origin: String, description: String, attribute: String): Future[AttributesResponse]
 }

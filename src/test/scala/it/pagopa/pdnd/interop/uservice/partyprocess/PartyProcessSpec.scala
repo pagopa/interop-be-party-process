@@ -22,7 +22,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.service.{
   PartyManagementService,
   PartyRegistryService
 }
-import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.Institution
+import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.{Categories, Category, Institution}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.must.Matchers
@@ -187,7 +187,7 @@ class PartyProcessSpec
         aoo = None,
         taxCode = None,
         administrationCode = None,
-        category = None,
+        category = Some("C17"),
         managerName = None,
         managerSurname = None,
         description = "institution",
@@ -211,7 +211,7 @@ class PartyProcessSpec
             certified = true,
             description = "attrs",
             origin = Some("test"),
-            name = "test attr",
+            name = "C17",
             creationTime = OffsetDateTime.now()
           )
         )
@@ -223,6 +223,10 @@ class PartyProcessSpec
       val delegate = User(name = "delegate", surname = "delegate", taxCode = taxCode2, role = "Delegate")
 
       (partyRegistryService.getInstitution _).expects(*).returning(Future.successful(institution1)).once()
+      (() => partyRegistryService.getCategories)
+        .expects()
+        .returning(Future.successful(Categories(Seq(Category("C17", "attrs", "test")))))
+        .once()
       (partyManagementService.createOrganization _).expects(*).returning(Future.successful(organization1)).once()
       (partyManagementService.createPerson _).expects(*).returning(Future.successful(person1)).once()
       (partyManagementService.createPerson _).expects(*).returning(Future.failed(new RuntimeException)).once()
