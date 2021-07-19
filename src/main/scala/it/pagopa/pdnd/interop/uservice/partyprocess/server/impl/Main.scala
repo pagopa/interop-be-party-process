@@ -53,7 +53,7 @@ object Main extends App with CorsSupport {
   final val institutionApi: InstitutionApi       = InstitutionApi(ApplicationConfiguration.getPartyProxyUrl)
 
   final val attributeRegistryInvoker: AttributeRegistryInvoker = AttributeRegistryInvoker()
-  final val attributeApi: AttributeApi                         = AttributeApi(ApplicationConfiguration.getPartyProxyUrl)
+  final val attributeApi: AttributeApi                         = AttributeApi(ApplicationConfiguration.getAttributeRegistryUrl)
 
   final val partyManagementService: PartyManagementService =
     PartyManagementServiceImpl(partyManagementInvoker, partyApi)
