@@ -22,9 +22,16 @@ final case class AttributeRegistryServiceImpl(attributeRegistryInvoker: Attribut
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
   override def createAttribute(origin: String, description: String, attribute: String): Future[AttributesResponse] = {
-    val seeds: Seq[AttributeSeed] = Seq(
-      AttributeSeed(code = None, certified = true, description = description, origin = Some(origin), name = attribute)
+
+    val seed: AttributeSeed = AttributeSeed(
+      code = Some(attribute),
+      certified = true,
+      description = description,
+      origin = Some(origin),
+      name = description
     )
+    val seeds: Seq[AttributeSeed] = Seq(seed)
+
     val request: ApiRequest[AttributesResponse] = api.createAttributes(seeds)
 
     attributeRegistryInvoker
