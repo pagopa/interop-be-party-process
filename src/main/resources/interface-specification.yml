@@ -28,13 +28,13 @@ tags:
       description: Find out more
       url: http://swagger.io
 paths:
-  /onboarding/{taxCode}:
+  /onboarding/info/{taxCode}:
     get:
       security:
         - bearerAuth: [ ]
       tags:
         - process
-      summary: create an onboarding entry
+      summary: get on boarding info
       description: Return ok
       operationId: getOnBoardingInfo
       parameters:
