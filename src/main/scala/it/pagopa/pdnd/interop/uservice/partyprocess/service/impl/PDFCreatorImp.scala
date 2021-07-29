@@ -10,6 +10,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.service.PDFCreator
 
 import java.io.{File, FileOutputStream}
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 import scala.concurrent.Future
 import scala.util.Try
@@ -18,10 +19,9 @@ class PDFCreatorImp extends PDFCreator {
 
   def create(users: Seq[User], organization: Organization): Future[(File, String)] = Future.fromTry {
     Try {
-      val file: File = File.createTempFile(
-        s"${LocalDateTime.now().toString}${UUID.randomUUID().toString}_contratto_interoperabilità.",
-        ".pdf"
-      )
+      val fileTimestamp: String = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+      val file: File =
+        File.createTempFile(s"${fileTimestamp}_${UUID.randomUUID().toString}_contratto_interoperabilità.", ".pdf")
       val stream: FileOutputStream = new FileOutputStream(file)
       val writer: PdfWriter        = new PdfWriter(stream)
       val pdf: PdfDocument         = new PdfDocument(writer)
