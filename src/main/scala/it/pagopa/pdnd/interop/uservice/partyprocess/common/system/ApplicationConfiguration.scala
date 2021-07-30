@@ -19,4 +19,9 @@ object ApplicationConfiguration {
     val partyProxyUrl: String = config.getString("services.attribute-registry")
     s"$partyProxyUrl/pdnd-interop-uservice-attribute-registry-management/0.0.1"
   }
+
+  def destinationMail: String = {
+    Option(System.getenv("DESTINATION_MAIL")).getOrElse(throw new RuntimeException("No destination email set"))
+  }
+
 }

@@ -65,6 +65,7 @@ pipeline {
       environment {
         DOCKER_REPO = 'gateway.interop.pdnd.dev'
         SMTP = credentials('smtp')
+        DESTINATION_MAIL = credentials('destination-mail')
       }
       steps{
         // we should use a container with kubectl preinstalled
