@@ -2,6 +2,7 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.common.system
 
 import com.typesafe.config.{Config, ConfigFactory}
 
+@SuppressWarnings(Array("org.wartremover.warts.Throw"))
 object ApplicationConfiguration {
   lazy val config: Config = ConfigFactory.load()
 
