@@ -66,6 +66,11 @@ spec:
                 secretKeyRef:
                   name: smtp
                   key: SMTP_PSW
+            - name: DESTINATION_MAIL
+                valueFrom:
+                    secretKeyRef:
+                        name: mail
+                        key: DESTINATION_MAIL
       volumes:
       - name: snapshots-volume
         emptyDir: {}
