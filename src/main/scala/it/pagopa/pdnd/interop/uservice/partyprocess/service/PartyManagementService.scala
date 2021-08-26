@@ -9,9 +9,9 @@ trait PartyManagementService {
   def retrieveOrganization(organizationId: String): Future[Organization]
   def createPerson(person: PersonSeed): Future[Person]
   def createOrganization(organization: OrganizationSeed): Future[Organization]
-  def createRelationShip(taxCode: String, organizationId: String, role: String): Future[Unit]
-  def retrieveRelationship(from: String): Future[RelationShips]
-  def createToken(relationShips: RelationShips, documentHash: String): Future[TokenText]
+  def createRelationship(taxCode: String, organizationId: String, role: String): Future[Unit]
+  def retrieveRelationship(from: Option[String], to: Option[String]): Future[Relationships]
+  def createToken(relationShips: Relationships, documentHash: String): Future[TokenText]
   def consumeToken(token: String): Future[Unit]
   def invalidateToken(token: String): Future[Unit]
 }

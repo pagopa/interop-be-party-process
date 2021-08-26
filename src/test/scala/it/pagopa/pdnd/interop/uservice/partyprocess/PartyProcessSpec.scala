@@ -8,20 +8,20 @@ import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, SecurityDirectives}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{Attribute, AttributesResponse}
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationShipEnums.Role
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model._
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.{Role, Status}
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
+  Organization,
+  Person,
+  Relationship,
+  Relationships,
+  TokenText
+}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{ProcessApiMarshallerImpl, ProcessApiServiceImpl}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.{HealthApi, ProcessApi, ProcessApiMarshaller}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{Authenticator, classicActorSystem, executionContext}
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
-import it.pagopa.pdnd.interop.uservice.partyprocess.service.{
-  AttributeRegistryService,
-  Mailer,
-  PDFCreator,
-  PartyManagementService,
-  PartyRegistryService
-}
+import it.pagopa.pdnd.interop.uservice.partyprocess.service._
 import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.{Categories, Category, Institution}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
@@ -100,10 +100,11 @@ class PartyProcessSpec
       val person1        = Person(taxCode = taxCode1, surname = "Doe", name = "John", partyId = personPartyId1)
 
       val relationShip1 =
-        RelationShip(from = taxCode1, to = institutionId1, role = Role.Manager, status = Some("active"))
+        Relationship(from = taxCode1, to = institutionId1, role = Role.Manager, status = Some(Status.Active))
       val relationShip2 =
-        RelationShip(from = taxCode1, to = institutionId2, role = Role.Delegate, status = Some("active"))
-      val relationShips = RelationShips(items = Seq(relationShip1, relationShip2))
+        Relationship(from = taxCode1, to = institutionId2, role = Role.Delegate, status = Some(Status.Active))
+
+      val relationShips = Relationships(items = Seq(relationShip1, relationShip2))
 
       val organization1 = Organization(
         institutionId = institutionId1,
@@ -131,20 +132,20 @@ class PartyProcessSpec
             institutionId = organization1.institutionId,
             description = organization1.description,
             digitalAddress = organization1.digitalAddress,
-            status = relationShip1.status.getOrElse("")
+            status = relationShip1.status.get.toString
           ),
           InstitutionInfo(
             institutionId = organization2.institutionId,
             description = organization2.description,
             digitalAddress = organization2.digitalAddress,
-            status = relationShip2.status.getOrElse("")
+            status = relationShip2.status.get.toString
           )
         )
       )
 
       (partyManagementService.retrievePerson _).expects(taxCode1).returning(Future.successful(person1)).once()
       (partyManagementService.retrieveRelationship _)
-        .expects(personPartyId1)
+        .expects(Some(taxCode1), None)
         .returning(Future.successful(relationShips))
         .once()
       (partyManagementService.retrieveOrganization _)
@@ -156,11 +157,10 @@ class PartyProcessSpec
         .returning(Future.successful(organization2))
         .once()
 
-      println(s"$url/onboarding/$taxCode1")
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
       val response = Await.result(
         Http().singleRequest(
-          HttpRequest(uri = s"$url/onboarding/$taxCode1", method = HttpMethods.GET, headers = authorization)
+          HttpRequest(uri = s"$url/onboarding/info/$taxCode1", method = HttpMethods.GET, headers = authorization)
         ),
         Duration.Inf
       )
@@ -231,7 +231,7 @@ class PartyProcessSpec
       (partyManagementService.createPerson _).expects(*).returning(Future.successful(person1)).once()
       (partyManagementService.createPerson _).expects(*).returning(Future.failed(new RuntimeException)).once()
       (partyManagementService.retrievePerson _).expects(*).returning(Future.successful(person1)).once()
-      (partyManagementService.createRelationShip _).expects(*, *, *).returning(Future.successful(())).repeat(2)
+      (partyManagementService.createRelationship _).expects(*, *, *).returning(Future.successful(())).repeat(2)
       (attributeRegistryService.createAttribute _).expects(*, *, *).returning(Future.successful(attr1)).once()
       (pdfCreator.create _).expects(*, *).returning(Future.successful((file, "hash"))).once()
       (partyManagementService.createToken _).expects(*, *).returning(Future.successful(TokenText("token"))).once()
@@ -251,7 +251,33 @@ class PartyProcessSpec
       response.status mustBe StatusCodes.Created
 
     }
-    "create a operators" in {
+    "not create operators if does not exists any active legal for a given institution" in {
+
+      val taxCode1 = "operator1TaxCode"
+      val taxCode2 = "operator2TaxCode"
+
+      val operator1 = User(name = "operator1", surname = "operator1", taxCode = taxCode1, role = "Operator")
+      val operator2 = User(name = "operator2", surname = "operator2", taxCode = taxCode2, role = "Operator")
+      (partyManagementService.retrieveRelationship _)
+        .expects(*, *)
+        .returning(Future.successful(Relationships(Seq.empty)))
+
+      val req = OnBoardingRequest(users = Seq(operator1, operator2), institutionId = "institutionId1")
+
+      implicit val userFormat: RootJsonFormat[User]                           = jsonFormat4(User)
+      implicit val onBoardingRequestFormat: RootJsonFormat[OnBoardingRequest] = jsonFormat2(OnBoardingRequest)
+
+      implicit def fromEntityUnmarshallerOnBoardingRequest: ToEntityMarshaller[OnBoardingRequest] =
+        sprayJsonMarshaller[OnBoardingRequest]
+
+      val data     = Await.result(Marshal(req).to[MessageEntity].map(_.dataBytes), Duration.Inf)
+      val response = request(data, "onboarding/operators", HttpMethods.POST)
+
+      response.status mustBe StatusCodes.BadRequest
+
+    }
+
+    "create operators if exits a legal active for a given institution" in {
 
       val taxCode1       = "operator1TaxCode"
       val taxCode2       = "operator2TaxCode"
@@ -272,15 +298,22 @@ class PartyProcessSpec
         attributes = Seq.empty
       )
 
+      val relationships =
+        Relationships(
+          Seq(Relationship(from = "", to = institutionId1, role = Role.Manager, status = Some(Status.Active)))
+        )
+
       val operator1 = User(name = "operator1", surname = "operator1", taxCode = taxCode1, role = "Operator")
       val operator2 = User(name = "operator2", surname = "operator2", taxCode = taxCode2, role = "Operator")
-
+      (partyManagementService.retrieveRelationship _)
+        .expects(None, Some(institutionId1))
+        .returning(Future.successful(relationships))
       (partyManagementService.retrieveOrganization _).expects(*).returning(Future.successful(organization1)).once()
       (partyManagementService.createPerson _).expects(*).returning(Future.successful(person1)).once()
       (partyManagementService.createPerson _).expects(*).returning(Future.successful(person2)).once()
-      (partyManagementService.createRelationShip _).expects(*, *, *).returning(Future.successful(())).repeat(2)
+      (partyManagementService.createRelationship _).expects(*, *, *).returning(Future.successful(())).repeat(2)
 
-      val req = OnBoardingRequest(users = Seq(operator1, operator2), institutionId = "institutionId1")
+      val req = OnBoardingRequest(users = Seq(operator1, operator2), institutionId = institutionId1)
 
       implicit val userFormat: RootJsonFormat[User]                           = jsonFormat4(User)
       implicit val onBoardingRequestFormat: RootJsonFormat[OnBoardingRequest] = jsonFormat2(OnBoardingRequest)

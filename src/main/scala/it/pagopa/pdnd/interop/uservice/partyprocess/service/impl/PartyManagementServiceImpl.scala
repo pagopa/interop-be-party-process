@@ -36,10 +36,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  def retrieveRelationship(from: String): Future[RelationShips] = {
-    val request: ApiRequest[RelationShips] = api.getRelationShips(from)
+  override def retrieveRelationship(from: Option[String], to: Option[String]): Future[Relationships] = {
+    val request: ApiRequest[Relationships] = api.getRelationships(from, to)
     invoker
-      .execute[RelationShips](request)
+      .execute[Relationships](request)
       .map { x =>
         logger.info(s"Retrieving relationShips ${x.code}")
         logger.info(s"Retrieving relationShips ${x.content}")
@@ -47,7 +47,7 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
       .recoverWith { case ex =>
         logger.error(s"Retrieving relationShips ${ex.getMessage}")
-        Future.failed[RelationShips](ex)
+        Future.failed[Relationships](ex)
       }
   }
 
@@ -98,12 +98,12 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  override def createRelationShip(taxCode: String, organizationId: String, role: String): Future[Unit] = {
+  override def createRelationship(taxCode: String, organizationId: String, role: String): Future[Unit] = {
     logger.info(s"Creating relationShip $taxCode/$organizationId/$role")
-    val partyRelationShip: RelationShip =
-      RelationShip(from = taxCode, to = organizationId, role = RelationShipEnums.Role.withName(role), None)
+    val partyRelationship: Relationship =
+      Relationship(from = taxCode, to = organizationId, role = RelationshipEnums.Role.withName(role), None)
 
-    val request: ApiRequest[Unit] = api.createRelationShip(partyRelationShip)
+    val request: ApiRequest[Unit] = api.createRelationship(partyRelationship)
     invoker
       .execute(request)
       .map { x =>
@@ -124,7 +124,7 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
 
   }
 
-  override def createToken(relationShips: RelationShips, documentHash: String): Future[TokenText] = {
+  override def createToken(relationShips: Relationships, documentHash: String): Future[TokenText] = {
 
     logger.info(s"Creating token for [${relationShips.items.map(_.toString).mkString(",")}]")
     val tokenSeed: TokenSeed = TokenSeed(seed = UUID.randomUUID().toString, relationShips, documentHash)
