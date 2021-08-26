@@ -193,8 +193,8 @@ class MailerImpl extends Mailer {
        |                    <tr>
        |                      <td>
        |                        <p>Buongiorno,</p>
-       |                        <p>per concludere l'accreditamento sulla piattaforma di Interoperabilità caricate <a href=https://www.interoperabilita.gov.it/conferma/$token>qui</a> il contratto firmato.</p>
-       |                        <p>Se si vuole procedere con l'annullamento della richiesta di accreditamento proseguire <a href=https://www.interoperabilita.gov.it/rifiuta/$token>qui</a>.</p>
+       |                        <p>per concludere l'accreditamento sulla piattaforma di Interoperabilità caricate <a href=http://localhost:3000/conferma-registrazione/$token>qui</a> il contratto firmato.</p>
+       |                        <p>Se si vuole procedere con l'annullamento della richiesta di accreditamento proseguire <a href=http://localhost:3000/cancella-registrazione/$token>qui</a>.</p>
        |                      </td>
        |                    </tr>
        |                  </table>
