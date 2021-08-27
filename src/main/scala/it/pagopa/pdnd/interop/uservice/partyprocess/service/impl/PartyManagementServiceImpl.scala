@@ -41,12 +41,12 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
     invoker
       .execute[Relationships](request)
       .map { x =>
-        logger.info(s"Retrieving relationShips ${x.code}")
-        logger.info(s"Retrieving relationShips ${x.content}")
+        logger.info(s"Retrieving relationships ${x.code}")
+        logger.info(s"Retrieving relationships ${x.content}")
         x.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Retrieving relationShips ${ex.getMessage}")
+        logger.error(s"Retrieving relationships ${ex.getMessage}")
         Future.failed[Relationships](ex)
       }
   }
@@ -99,7 +99,7 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
   }
 
   override def createRelationship(taxCode: String, organizationId: String, role: String): Future[Unit] = {
-    logger.info(s"Creating relationShip $taxCode/$organizationId/$role")
+    logger.info(s"Creating relationship $taxCode/$organizationId/$role")
     val partyRelationship: Relationship =
       Relationship(from = taxCode, to = organizationId, role = RelationshipEnums.Role.withName(role), None)
 
@@ -107,27 +107,27 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
     invoker
       .execute(request)
       .map { x =>
-        logger.info(s"Create relationShip ${x.code}")
-        logger.info(s"Create relationShip ${x.content}")
+        logger.info(s"Create relationship ${x.code}")
+        logger.info(s"Create relationship ${x.content}")
         x.content
       }
       .recoverWith {
         case ApiError(code, message, _, _, _) =>
-          logger.error(s"Create relationShip $code")
-          logger.error(s"Create relationShip $message")
+          logger.error(s"Create relationship $code")
+          logger.error(s"Create relationship $message")
 
           Future.failed[Unit](new RuntimeException(message))
         case ex =>
-          logger.error(s"Create relationShip ! ${ex.getMessage}")
+          logger.error(s"Create relationship ! ${ex.getMessage}")
           Future.failed[Unit](ex)
       }
 
   }
 
-  override def createToken(relationShips: Relationships, documentHash: String): Future[TokenText] = {
+  override def createToken(relationships: Relationships, documentHash: String): Future[TokenText] = {
 
-    logger.info(s"Creating token for [${relationShips.items.map(_.toString).mkString(",")}]")
-    val tokenSeed: TokenSeed = TokenSeed(seed = UUID.randomUUID().toString, relationShips, documentHash)
+    logger.info(s"Creating token for [${relationships.items.map(_.toString).mkString(",")}]")
+    val tokenSeed: TokenSeed = TokenSeed(seed = UUID.randomUUID().toString, relationships, documentHash)
 
     val request = api.createToken(tokenSeed)
     invoker

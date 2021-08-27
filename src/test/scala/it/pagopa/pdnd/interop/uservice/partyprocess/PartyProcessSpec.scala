@@ -99,12 +99,12 @@ class PartyProcessSpec
       val orgPartyId2    = "af80fac0-2775-4646-8fcf-28e083751902"
       val person1        = Person(taxCode = taxCode1, surname = "Doe", name = "John", partyId = personPartyId1)
 
-      val relationShip1 =
+      val relationship1 =
         Relationship(from = taxCode1, to = institutionId1, role = Role.Manager, status = Some(Status.Active))
-      val relationShip2 =
+      val relationship2 =
         Relationship(from = taxCode1, to = institutionId2, role = Role.Delegate, status = Some(Status.Active))
 
-      val relationShips = Relationships(items = Seq(relationShip1, relationShip2))
+      val relationships = Relationships(items = Seq(relationship1, relationship2))
 
       val organization1 = Organization(
         institutionId = institutionId1,
@@ -132,13 +132,13 @@ class PartyProcessSpec
             institutionId = organization1.institutionId,
             description = organization1.description,
             digitalAddress = organization1.digitalAddress,
-            status = relationShip1.status.get.toString
+            status = relationship1.status.get.toString
           ),
           InstitutionInfo(
             institutionId = organization2.institutionId,
             description = organization2.description,
             digitalAddress = organization2.digitalAddress,
-            status = relationShip2.status.get.toString
+            status = relationship2.status.get.toString
           )
         )
       )
@@ -146,7 +146,7 @@ class PartyProcessSpec
       (partyManagementService.retrievePerson _).expects(taxCode1).returning(Future.successful(person1)).once()
       (partyManagementService.retrieveRelationship _)
         .expects(Some(taxCode1), None)
-        .returning(Future.successful(relationShips))
+        .returning(Future.successful(relationships))
         .once()
       (partyManagementService.retrieveOrganization _)
         .expects(institutionId1)

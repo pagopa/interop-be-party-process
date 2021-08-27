@@ -94,11 +94,11 @@ class ProcessApiServiceImpl(
       _ <- Future.traverse(personsWithRoles)(pr =>
         partyManagementService.createRelationship(pr._1.taxCode, organization.institutionId, pr._2)
       )
-      relationShips = Relationships(personsWithRoles.map { case (person, role) =>
+      relationships = Relationships(personsWithRoles.map { case (person, role) =>
         createRelationship(organization, person, role)
       })
       pdf   <- pdfCreator.create(validUsers, organization)
-      token <- partyManagementService.createToken(relationShips, pdf._2)
+      token <- partyManagementService.createToken(relationships, pdf._2)
       _ <- mailer.send(
         ApplicationConfiguration.destinationMail,
         pdf._1,
@@ -200,10 +200,10 @@ class ProcessApiServiceImpl(
     )
   }
 
-  private def existsAManagerActive(relationShips: Relationships): Future[Unit] = Future.fromTry {
+  private def existsAManagerActive(relationships: Relationships): Future[Unit] = Future.fromTry {
     Either
       .cond(
-        relationShips.items.exists(rl =>
+        relationships.items.exists(rl =>
           rl.role == RelationshipEnums.Role.Manager &&
             rl.status.contains(RelationshipEnums.Status.Active)
         ),
