@@ -3,7 +3,7 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.api
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import spray.json.{DefaultJsonProtocol, JsString, JsValue, JsonFormat, RootJsonFormat, deserializationError}
 
-import java.io.{File, _}
+import java.io._
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.time.format.DateTimeFormatter

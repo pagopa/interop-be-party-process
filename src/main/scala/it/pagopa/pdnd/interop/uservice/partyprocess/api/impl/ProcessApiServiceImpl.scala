@@ -9,9 +9,9 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   OrganizationSeed,
   Person,
   PersonSeed,
-  RelationShip,
-  RelationShipEnums,
-  RelationShips,
+  Relationship,
+  RelationshipEnums,
+  Relationships,
   Problem => _
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApiService
@@ -58,10 +58,11 @@ class ProcessApiServiceImpl(
     val result: Future[OnBoardingInfo] = for {
       person <- getPerson(taxCode)
       personInfo = PersonInfo(person.name, person.surname, person.taxCode)
-      relationships <- partyManagementService.retrieveRelationship(person.taxCode)
+      relationships <- partyManagementService.retrieveRelationship(Some(person.taxCode), None)
       organizations <- Future.traverse(relationships.items)(r => getOrganization(r.to).map(o => (o, r.status)))
-      institutionsInfo = organizations.map { case (o, status) =>
-        InstitutionInfo(o.institutionId, o.description, o.digitalAddress, status.getOrElse("UNKNOWN")) //TODO: improve
+      institutionsInfo = organizations.flatMap { case (o, status) =>
+        status.map(st => InstitutionInfo(o.institutionId, o.description, o.digitalAddress, st.toString))
+
       }
     } yield OnBoardingInfo(personInfo, institutionsInfo)
 
@@ -82,7 +83,6 @@ class ProcessApiServiceImpl(
     toEntityMarshallerOnBoardingResponse: ToEntityMarshaller[OnBoardingResponse],
     contexts: Seq[(String, String)]
   ): Route = {
-    println(contexts.mkString)
     val organizationF: Future[Organization] = createOrganization(onBoardingRequest.institutionId).recoverWith {
       case _ => getOrganization(onBoardingRequest.institutionId)
     }
@@ -92,13 +92,13 @@ class ProcessApiServiceImpl(
       validUsers       <- verifyUsersByRoles(onBoardingRequest.users, Set("Manager", "Delegate"))
       personsWithRoles <- Future.traverse(validUsers)(user => addUser(user))
       _ <- Future.traverse(personsWithRoles)(pr =>
-        partyManagementService.createRelationShip(pr._1.taxCode, organization.institutionId, pr._2)
+        partyManagementService.createRelationship(pr._1.taxCode, organization.institutionId, pr._2)
       )
-      relationShips = RelationShips(personsWithRoles.map { case (person, role) =>
-        createRelationShip(organization, person, role)
+      relationships = Relationships(personsWithRoles.map { case (person, role) =>
+        createRelationship(organization, person, role)
       })
       pdf   <- pdfCreator.create(validUsers, organization)
-      token <- partyManagementService.createToken(relationShips, pdf._2)
+      token <- partyManagementService.createToken(relationships, pdf._2)
       _ <- mailer.send(
         ApplicationConfiguration.destinationMail,
         pdf._1,
@@ -126,11 +126,13 @@ class ProcessApiServiceImpl(
     onBoardingRequest: OnBoardingRequest
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
     val result: Future[Unit] = for {
-      organization <- getOrganization(onBoardingRequest.institutionId)
-      validUsers   <- verifyUsersByRoles(onBoardingRequest.users, Set("Operator"))
-      operators    <- Future.traverse(validUsers)(user => addUser(user))
+      relationships <- partyManagementService.retrieveRelationship(None, Some(onBoardingRequest.institutionId))
+      _             <- existsAManagerActive(relationships)
+      organization  <- getOrganization(onBoardingRequest.institutionId)
+      validUsers    <- verifyUsersByRoles(onBoardingRequest.users, Set("Operator"))
+      operators     <- Future.traverse(validUsers)(user => addUser(user))
       _ <- Future.traverse(operators)(pr =>
-        partyManagementService.createRelationShip(pr._1.taxCode, organization.institutionId, pr._2)
+        partyManagementService.createRelationship(pr._1.taxCode, organization.institutionId, pr._2)
       )
       _ = logger.info(s"Operators created ${operators.map(_.toString).mkString(",")}")
     } yield ()
@@ -151,7 +153,6 @@ class ProcessApiServiceImpl(
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     contexts: Seq[(String, String)]
   ): Route = {
-    println(contexts.mkString)
 
     val result: Future[Unit] = for {
       checksum <- calculateCheckSum(token)
@@ -199,13 +200,26 @@ class ProcessApiServiceImpl(
     )
   }
 
+  private def existsAManagerActive(relationships: Relationships): Future[Unit] = Future.fromTry {
+    Either
+      .cond(
+        relationships.items.exists(rl =>
+          rl.role == RelationshipEnums.Role.Manager &&
+            rl.status.contains(RelationshipEnums.Status.Active)
+        ),
+        (),
+        new RuntimeException("No active legals for this institution ")
+      )
+      .toTry
+  }
+
   private def addUser(user: User): Future[(Person, String)] = {
     logger.info(s"Adding user ${user.toString}")
     createPerson(user).recoverWith { case _ => getPerson(user.taxCode) }.map(p => (p, user.role))
   }
 
-  private def createRelationShip(organization: Organization, person: Person, role: String): RelationShip =
-    RelationShip(person.taxCode, organization.institutionId, RelationShipEnums.Role.withName(role))
+  private def createRelationship(organization: Organization, person: Person, role: String): Relationship =
+    Relationship(person.taxCode, organization.institutionId, RelationshipEnums.Role.withName(role))
 
   private def getPerson(taxCode: String): Future[Person] = partyManagementService.retrievePerson(taxCode)
 
@@ -244,7 +258,6 @@ class ProcessApiServiceImpl(
   private def calculateCheckSum(token: String): Future[String] = {
     Future.fromTry {
       Try {
-        println(token)
         val decoded: Array[Byte] = Base64.getDecoder.decode(token)
 
         val jsonTxt: String    = new String(decoded, StandardCharsets.UTF_8)

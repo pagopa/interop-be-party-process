@@ -104,3 +104,8 @@ lazy val root = (project in file("."))
   .enablePlugins(JavaAppPackaging, JavaAgent)
 
 javaAgents += "io.kamon" % "kanela-agent" % "1.0.11"
+
+Test / fork := true
+
+Test / envVars := Map("DESTINATION_MAIL" -> "mail")
+
