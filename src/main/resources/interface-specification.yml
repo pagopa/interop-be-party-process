@@ -272,12 +272,15 @@ components:
           type: string
         status:
           type: string
+        role:
+          type: string
       additionalProperties: false
       required:
         - institutionId
         - description
         - digitalAddress
         - status
+        - role
     OnBoardingInfo:
       properties:
         person:
