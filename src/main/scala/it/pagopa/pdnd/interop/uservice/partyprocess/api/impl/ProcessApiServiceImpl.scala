@@ -59,9 +59,9 @@ class ProcessApiServiceImpl(
       person <- getPerson(taxCode)
       personInfo = PersonInfo(person.name, person.surname, person.taxCode)
       relationships <- partyManagementService.retrieveRelationship(Some(person.taxCode), None)
-      organizations <- Future.traverse(relationships.items)(r => getOrganization(r.to).map(o => (o, r.status)))
-      institutionsInfo = organizations.flatMap { case (o, status) =>
-        status.map(st => InstitutionInfo(o.institutionId, o.description, o.digitalAddress, st.toString))
+      organizations <- Future.traverse(relationships.items)(r => getOrganization(r.to).map(o => (o, r.status, r.role)))
+      institutionsInfo = organizations.flatMap { case (o, status, role) =>
+        status.map(st => InstitutionInfo(o.institutionId, o.description, o.digitalAddress, st.toString, role.toString))
 
       }
     } yield OnBoardingInfo(personInfo, institutionsInfo)
