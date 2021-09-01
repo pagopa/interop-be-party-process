@@ -221,8 +221,20 @@ class PartyProcessSpec
 
       val file = new File("src/test/resources/fake.file")
 
-      val manager  = User(name = "manager", surname = "manager", taxCode = taxCode1, role = "Manager")
-      val delegate = User(name = "delegate", surname = "delegate", taxCode = taxCode2, role = "Delegate")
+      val manager = User(
+        name = "manager",
+        surname = "manager",
+        taxCode = taxCode1,
+        organizationRole = "Manager",
+        platformRole = "admin"
+      )
+      val delegate = User(
+        name = "delegate",
+        surname = "delegate",
+        taxCode = taxCode2,
+        organizationRole = "Delegate",
+        platformRole = "admin"
+      )
 
       (partyRegistryService.getInstitution _).expects(*).returning(Future.successful(institution1)).once()
       (() => partyRegistryService.getCategories)
@@ -233,7 +245,7 @@ class PartyProcessSpec
       (partyManagementService.createPerson _).expects(*).returning(Future.successful(person1)).once()
       (partyManagementService.createPerson _).expects(*).returning(Future.failed(new RuntimeException)).once()
       (partyManagementService.retrievePerson _).expects(*).returning(Future.successful(person1)).once()
-      (partyManagementService.createRelationship _).expects(*, *, *).returning(Future.successful(())).repeat(2)
+      (partyManagementService.createRelationship _).expects(*, *, *, *).returning(Future.successful(())).repeat(2)
       (attributeRegistryService.createAttribute _).expects(*, *, *).returning(Future.successful(attr1)).once()
       (pdfCreator.create _).expects(*, *).returning(Future.successful((file, "hash"))).once()
       (partyManagementService.createToken _).expects(*, *).returning(Future.successful(TokenText("token"))).once()
@@ -241,7 +253,7 @@ class PartyProcessSpec
 
       val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 
-      implicit val userFormat: RootJsonFormat[User]                           = jsonFormat4(User)
+      implicit val userFormat: RootJsonFormat[User]                           = jsonFormat5(User)
       implicit val onBoardingRequestFormat: RootJsonFormat[OnBoardingRequest] = jsonFormat2(OnBoardingRequest)
 
       implicit def fromEntityUnmarshallerOnBoardingRequest: ToEntityMarshaller[OnBoardingRequest] =
@@ -258,15 +270,27 @@ class PartyProcessSpec
       val taxCode1 = "operator1TaxCode"
       val taxCode2 = "operator2TaxCode"
 
-      val operator1 = User(name = "operator1", surname = "operator1", taxCode = taxCode1, role = "Operator")
-      val operator2 = User(name = "operator2", surname = "operator2", taxCode = taxCode2, role = "Operator")
+      val operator1 = User(
+        name = "operator1",
+        surname = "operator1",
+        taxCode = taxCode1,
+        organizationRole = "Operator",
+        platformRole = "security"
+      )
+      val operator2 = User(
+        name = "operator2",
+        surname = "operator2",
+        taxCode = taxCode2,
+        organizationRole = "Operator",
+        platformRole = "security"
+      )
       (partyManagementService.retrieveRelationship _)
         .expects(*, *)
         .returning(Future.successful(Relationships(Seq.empty)))
 
       val req = OnBoardingRequest(users = Seq(operator1, operator2), institutionId = "institutionId1")
 
-      implicit val userFormat: RootJsonFormat[User]                           = jsonFormat4(User)
+      implicit val userFormat: RootJsonFormat[User]                           = jsonFormat5(User)
       implicit val onBoardingRequestFormat: RootJsonFormat[OnBoardingRequest] = jsonFormat2(OnBoardingRequest)
 
       implicit def fromEntityUnmarshallerOnBoardingRequest: ToEntityMarshaller[OnBoardingRequest] =
@@ -305,19 +329,31 @@ class PartyProcessSpec
           Seq(Relationship(from = "", to = institutionId1, role = Role.Manager, status = Some(Status.Active)))
         )
 
-      val operator1 = User(name = "operator1", surname = "operator1", taxCode = taxCode1, role = "Operator")
-      val operator2 = User(name = "operator2", surname = "operator2", taxCode = taxCode2, role = "Operator")
+      val operator1 = User(
+        name = "operator1",
+        surname = "operator1",
+        taxCode = taxCode1,
+        organizationRole = "Operator",
+        platformRole = "security"
+      )
+      val operator2 = User(
+        name = "operator2",
+        surname = "operator2",
+        taxCode = taxCode2,
+        organizationRole = "Operator",
+        platformRole = "security"
+      )
       (partyManagementService.retrieveRelationship _)
         .expects(None, Some(institutionId1))
         .returning(Future.successful(relationships))
       (partyManagementService.retrieveOrganization _).expects(*).returning(Future.successful(organization1)).once()
       (partyManagementService.createPerson _).expects(*).returning(Future.successful(person1)).once()
       (partyManagementService.createPerson _).expects(*).returning(Future.successful(person2)).once()
-      (partyManagementService.createRelationship _).expects(*, *, *).returning(Future.successful(())).repeat(2)
+      (partyManagementService.createRelationship _).expects(*, *, *, *).returning(Future.successful(())).repeat(2)
 
       val req = OnBoardingRequest(users = Seq(operator1, operator2), institutionId = institutionId1)
 
-      implicit val userFormat: RootJsonFormat[User]                           = jsonFormat4(User)
+      implicit val userFormat: RootJsonFormat[User]                           = jsonFormat5(User)
       implicit val onBoardingRequestFormat: RootJsonFormat[OnBoardingRequest] = jsonFormat2(OnBoardingRequest)
 
       implicit def fromEntityUnmarshallerOnBoardingRequest: ToEntityMarshaller[OnBoardingRequest] =

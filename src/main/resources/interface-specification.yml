@@ -237,18 +237,21 @@ components:
           type: string
         taxCode:
           type: string
-        role:
+        organizationRole:
           type: string
           enum:
             - Manager
             - Delegate
             - Operator
+        platformRole:
+          type: string
       additionalProperties: false
       required:
         - name
         - surname
         - taxCode
-        - role
+        - organizationRole
+        - platformRole
     PersonInfo:
       properties:
         name:
