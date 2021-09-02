@@ -1,7 +1,6 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.common.system
 
 import com.typesafe.config.{Config, ConfigFactory}
-import scala.jdk.CollectionConverters._
 
 /** Represents the data structure holding all the admittable platform roles as defined through app configuration.
   * @param manager - the admittable manager platform roles
@@ -13,6 +12,10 @@ final case class PlatformRolesConfiguration(manager: ManagerRoles, delegate: Del
 @SuppressWarnings(Array("org.wartremover.warts.Throw"))
 object ApplicationConfiguration {
   lazy val config: Config = ConfigFactory.load()
+
+  def serverPort: Int = {
+    config.getInt("uservice-party-process.port")
+  }
 
   def getPartyManagementUrl: String = {
     val partyManagementUrl: String = config.getString("services.party-management")
@@ -43,23 +46,26 @@ object ApplicationConfiguration {
     *   <li>DELEGATE_PLATFORM_ROLES</li>
     *   <li>OPERATOR_PLATFORM_ROLES</li>
     *  </ul>
-    *
+    * <br>
+    * They MUST be populated with comma separated strings
     *  <hr>
     *    <br/>
     *    <br/>
     *   E.g.:
     *  <ul>
-    *   <li>export MANAGER_PLATFORM_ROLES = '"admin"'</li>
-    *   <li>export DELEGATE_PLATFORM_ROLES = '"delegate", "superuser"'</li>
-    *   <li>export OPERATOR_PLATFORM_ROLES = '"api", "security"'</li>
+    *   <li>export MANAGER_PLATFORM_ROLES=admin</li>
+    *   <li>export DELEGATE_PLATFORM_ROLES=delegate, superuser</li>
+    *   <li>export OPERATOR_PLATFORM_ROLES=api, security</li>
     *  </ul>
     */
   lazy val platformRolesConfiguration: PlatformRolesConfiguration = {
     PlatformRolesConfiguration(
-      manager = ManagerRoles(config.getStringList("uservice-party-process.platform.roles.manager").asScala.toSeq),
-      delegate = DelegateRoles(config.getStringList("uservice-party-process.platform.roles.manager").asScala.toSeq),
-      operator = OperatorRoles(config.getStringList("uservice-party-process.platform.roles.manager").asScala.toSeq)
+      manager = ManagerRoles(parameterAsList("uservice-party-process.platform.roles.manager")),
+      delegate = DelegateRoles(parameterAsList("uservice-party-process.platform.roles.delegate")),
+      operator = OperatorRoles(parameterAsList("uservice-party-process.platform.roles.operator"))
     )
   }
+
+  private def parameterAsList(parameterName: String) = config.getString(parameterName).split(",").map(_.trim).toSeq
 
 }

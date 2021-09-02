@@ -8,7 +8,7 @@ trait PlatformRoles {
     Either.cond(
       roles.contains(platformRole),
       platformRole,
-      new RuntimeException(s"Invalid platform role => $platformRole not supported for ${this.getClass.getName}")
+      new RuntimeException(s"Invalid platform role => $platformRole not supported for ${this.getClass.getSimpleName}")
     )
   }
 }

@@ -97,8 +97,8 @@ class ProcessApiServiceImpl(
       _ <- Future.traverse(personsWithRoles)(pr =>
         partyManagementService.createRelationship(pr._1.taxCode, organization.institutionId, pr._2, pr._3)
       )
-      relationships = Relationships(personsWithRoles.map { case (person, organizationRole, _) =>
-        createRelationship(organization, person, organizationRole)
+      relationships = Relationships(personsWithRoles.map { case (person, organizationRole, platformRole) =>
+        createRelationship(organization, person, organizationRole, platformRole)
       })
       pdf   <- pdfCreator.create(validUsers, organization)
       token <- partyManagementService.createToken(relationships, pdf._2)
@@ -222,8 +222,18 @@ class ProcessApiServiceImpl(
       .map(p => (p, user.organizationRole, user.platformRole))
   }
 
-  private def createRelationship(organization: Organization, person: Person, organizationRole: String): Relationship = {
-    Relationship(person.taxCode, organization.institutionId, RelationshipEnums.Role.withName(organizationRole))
+  private def createRelationship(
+    organization: Organization,
+    person: Person,
+    organizationRole: String,
+    platformRole: String
+  ): Relationship = {
+    Relationship(
+      person.taxCode,
+      organization.institutionId,
+      RelationshipEnums.Role.withName(organizationRole),
+      platformRole
+    )
   }
 
   private def getPerson(taxCode: String): Future[Person] = partyManagementService.retrievePerson(taxCode)

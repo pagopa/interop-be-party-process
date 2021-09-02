@@ -17,7 +17,7 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   TokenText
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{ProcessApiMarshallerImpl, ProcessApiServiceImpl}
-import it.pagopa.pdnd.interop.uservice.partyprocess.api.{HealthApi, ProcessApi, ProcessApiMarshaller}
+import it.pagopa.pdnd.interop.uservice.partyprocess.api.{HealthApi, PlatformApi, ProcessApi, ProcessApiMarshaller}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{Authenticator, classicActorSystem, executionContext}
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
@@ -45,6 +45,7 @@ class PartyProcessSpec
 
   val processApiMarshaller: ProcessApiMarshaller         = new ProcessApiMarshallerImpl
   val mockHealthApi: HealthApi                           = mock[HealthApi]
+  val mockPlatformApi: PlatformApi                       = mock[PlatformApi]
   val partyManagementService: PartyManagementService     = mock[PartyManagementService]
   val partyRegistryService: PartyRegistryService         = mock[PartyRegistryService]
   val attributeRegistryService: AttributeRegistryService = mock[AttributeRegistryService]
@@ -59,6 +60,11 @@ class PartyProcessSpec
 
   override def beforeAll(): Unit = {
 
+    System.setProperty("DELEGATE_PLATFORM_ROLES", "admin")
+    System.setProperty("OPERATOR_PLATFORM_ROLES", "security, api")
+    System.setProperty("MANAGER_PLATFORM_ROLES", "admin")
+    System.setProperty("DESTINATION_MAIL", "ernesto@sabato.ar")
+
     val processApi = new ProcessApi(
       new ProcessApiServiceImpl(
         partyManagementService,
@@ -71,7 +77,7 @@ class PartyProcessSpec
       wrappingDirective
     )
 
-    controller = Some(new Controller(mockHealthApi, processApi))
+    controller = Some(new Controller(mockHealthApi, mockPlatformApi, processApi))
 
     controller foreach { controller =>
       bindServer = Some(
@@ -100,9 +106,21 @@ class PartyProcessSpec
       val person1        = Person(taxCode = taxCode1, surname = "Doe", name = "John", partyId = personPartyId1)
 
       val relationship1 =
-        Relationship(from = taxCode1, to = institutionId1, role = Role.Manager, status = Some(Status.Active))
+        Relationship(
+          from = taxCode1,
+          to = institutionId1,
+          role = Role.Manager,
+          platformRole = "admin",
+          status = Some(Status.Active)
+        )
       val relationship2 =
-        Relationship(from = taxCode1, to = institutionId2, role = Role.Delegate, status = Some(Status.Active))
+        Relationship(
+          from = taxCode1,
+          to = institutionId2,
+          role = Role.Delegate,
+          platformRole = "admin",
+          status = Some(Status.Active)
+        )
 
       val relationships = Relationships(items = Seq(relationship1, relationship2))
 
@@ -175,7 +193,6 @@ class PartyProcessSpec
     }
 
     "create a legals" in {
-
       val taxCode1       = "managerTaxCode"
       val taxCode2       = "delegateTaxCode"
       val institutionId1 = "IST2"
@@ -326,7 +343,15 @@ class PartyProcessSpec
 
       val relationships =
         Relationships(
-          Seq(Relationship(from = "", to = institutionId1, role = Role.Manager, status = Some(Status.Active)))
+          Seq(
+            Relationship(
+              from = "",
+              to = institutionId1,
+              role = Role.Manager,
+              platformRole = "admin",
+              status = Some(Status.Active)
+            )
+          )
         )
 
       val operator1 = User(

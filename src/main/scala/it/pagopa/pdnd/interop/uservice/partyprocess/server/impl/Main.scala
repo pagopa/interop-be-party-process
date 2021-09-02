@@ -8,10 +8,12 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{
   HealthApiMarshallerImpl,
   HealthServiceApiImpl,
+  PlatformApiMarshallerImpl,
+  PlatformApiServiceImpl,
   ProcessApiMarshallerImpl,
   ProcessApiServiceImpl
 }
-import it.pagopa.pdnd.interop.uservice.partyprocess.api.{HealthApi, ProcessApi}
+import it.pagopa.pdnd.interop.uservice.partyprocess.api.{HealthApi, PlatformApi, ProcessApi}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{
   ApplicationConfiguration,
   Authenticator,
@@ -84,14 +86,20 @@ object Main extends App with CorsSupport {
     SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
   )
 
+  val platformApi: PlatformApi = new PlatformApi(
+    new PlatformApiServiceImpl(),
+    new PlatformApiMarshallerImpl(),
+    SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
+  )
+
   locally {
     val _ = AkkaManagement.get(classicActorSystem).start()
 
   }
 
-  val controller: Controller = new Controller(healthApi, processApi)
+  val controller: Controller = new Controller(healthApi, platformApi, processApi)
 
   val bindingFuture: Future[Http.ServerBinding] =
-    Http().newServerAt("0.0.0.0", 8088).bind(corsHandler(controller.routes))
+    Http().newServerAt("0.0.0.0", ApplicationConfiguration.serverPort).bind(corsHandler(controller.routes))
 
 }

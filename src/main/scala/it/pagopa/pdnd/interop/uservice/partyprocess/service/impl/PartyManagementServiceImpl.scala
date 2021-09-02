@@ -127,7 +127,13 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
   ): Future[Unit] = {
     logger.info(s"Creating relationship $taxCode/$organizationId/$organizationRole/ with platformRole = $platformRole")
     val partyRelationship: Relationship =
-      Relationship(from = taxCode, to = organizationId, role = RelationshipEnums.Role.withName(organizationRole), None)
+      Relationship(
+        from = taxCode,
+        to = organizationId,
+        role = RelationshipEnums.Role.withName(organizationRole),
+        platformRole = platformRole,
+        None
+      )
 
     val request: ApiRequest[Unit] = api.createRelationship(partyRelationship)
     invoker
