@@ -105,32 +105,27 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
   override def createRelationship(
     taxCode: String,
     organizationId: String,
-    organizationRole: String,
+    role: String,
     platformRole: String
   ): Future[Unit] = {
     for {
-      _ <- isPlatformRoleValid(organizationRole = organizationRole, platformRole = platformRole).toFuture
-      _ <- createRelationshipInvocation(
-        taxCode: String,
-        organizationId: String,
-        organizationRole: String,
-        platformRole: String
-      )
+      _ <- isPlatformRoleValid(role = role, platformRole = platformRole).toFuture
+      _ <- createRelationshipInvocation(taxCode: String, organizationId: String, role: String, platformRole: String)
     } yield ()
   }
 
   private def createRelationshipInvocation(
     taxCode: String,
     organizationId: String,
-    organizationRole: String,
+    role: String,
     platformRole: String
   ): Future[Unit] = {
-    logger.info(s"Creating relationship $taxCode/$organizationId/$organizationRole/ with platformRole = $platformRole")
+    logger.info(s"Creating relationship $taxCode/$organizationId/$role/ with platformRole = $platformRole")
     val partyRelationship: Relationship =
       Relationship(
         from = taxCode,
         to = organizationId,
-        role = RelationshipEnums.Role.withName(organizationRole),
+        role = RelationshipEnums.Role.withName(role),
         platformRole = platformRole,
         None
       )
@@ -155,9 +150,9 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  private def isPlatformRoleValid(organizationRole: String, platformRole: String): Either[Throwable, String] = {
-    logger.info(s"Checking if the platformRole '$platformRole' is admittable for a '$organizationRole'")
-    Try { RelationshipEnums.Role.withName(organizationRole) }.toEither.flatMap(role =>
+  private def isPlatformRoleValid(role: String, platformRole: String): Either[Throwable, String] = {
+    logger.info(s"Checking if the platformRole '$platformRole' is admittable for a '$role'")
+    Try { RelationshipEnums.Role.withName(role) }.toEither.flatMap(role =>
       role match {
         case Manager  => manager.hasPlatformRoleMapping(platformRole)
         case Delegate => delegate.hasPlatformRoleMapping(platformRole)

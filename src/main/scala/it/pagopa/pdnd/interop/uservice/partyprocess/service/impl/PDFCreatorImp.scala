@@ -69,7 +69,7 @@ class PDFCreatorImp extends PDFCreator {
        |Nome: ${user.name} 
        |Cognome: ${user.surname}
        |Codice fiscale: ${user.taxCode}
-       |Ruolo: ${user.organizationRole}
+       |Ruolo: ${user.role}
        |""".stripMargin
   }
 

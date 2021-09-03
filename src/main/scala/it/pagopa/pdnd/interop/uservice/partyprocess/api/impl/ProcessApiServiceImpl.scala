@@ -97,8 +97,8 @@ class ProcessApiServiceImpl(
       _ <- Future.traverse(personsWithRoles)(pr =>
         partyManagementService.createRelationship(pr._1.taxCode, organization.institutionId, pr._2, pr._3)
       )
-      relationships = Relationships(personsWithRoles.map { case (person, organizationRole, platformRole) =>
-        createRelationship(organization, person, organizationRole, platformRole)
+      relationships = Relationships(personsWithRoles.map { case (person, role, platformRole) =>
+        createRelationship(organization, person, role, platformRole)
       })
       pdf   <- pdfCreator.create(validUsers, organization)
       token <- partyManagementService.createToken(relationships, pdf._2)
@@ -188,14 +188,14 @@ class ProcessApiServiceImpl(
   }
 
   private def verifyUsersByRoles(users: Seq[User], roles: Set[String]): Future[Seq[User]] = {
-    val areValidUsers: Boolean = users.forall(user => roles.contains(user.organizationRole))
+    val areValidUsers: Boolean = users.forall(user => roles.contains(user.role))
     Future.fromTry(
       Either
         .cond(
           users.nonEmpty && areValidUsers,
           users,
           new RuntimeException(
-            s"Roles ${users.filter(user => !roles.contains(user.organizationRole)).mkString(", ")} are not admitted for this operation"
+            s"Roles ${users.filter(user => !roles.contains(user.role)).mkString(", ")} are not admitted for this operation"
           )
         )
         .toTry
@@ -219,21 +219,16 @@ class ProcessApiServiceImpl(
     logger.info(s"Adding user ${user.toString}")
     createPerson(user)
       .recoverWith { case _ => getPerson(user.taxCode) }
-      .map(p => (p, user.organizationRole, user.platformRole))
+      .map(p => (p, user.role, user.platformRole))
   }
 
   private def createRelationship(
     organization: Organization,
     person: Person,
-    organizationRole: String,
+    role: String,
     platformRole: String
   ): Relationship = {
-    Relationship(
-      person.taxCode,
-      organization.institutionId,
-      RelationshipEnums.Role.withName(organizationRole),
-      platformRole
-    )
+    Relationship(person.taxCode, organization.institutionId, RelationshipEnums.Role.withName(role), platformRole)
   }
 
   private def getPerson(taxCode: String): Future[Person] = partyManagementService.retrievePerson(taxCode)

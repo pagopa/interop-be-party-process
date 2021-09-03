@@ -236,20 +236,10 @@ class PartyProcessSpec
 
       val file = new File("src/test/resources/fake.file")
 
-      val manager = User(
-        name = "manager",
-        surname = "manager",
-        taxCode = taxCode1,
-        organizationRole = "Manager",
-        platformRole = "admin"
-      )
-      val delegate = User(
-        name = "delegate",
-        surname = "delegate",
-        taxCode = taxCode2,
-        organizationRole = "Delegate",
-        platformRole = "admin"
-      )
+      val manager =
+        User(name = "manager", surname = "manager", taxCode = taxCode1, role = "Manager", platformRole = "admin")
+      val delegate =
+        User(name = "delegate", surname = "delegate", taxCode = taxCode2, role = "Delegate", platformRole = "admin")
 
       (partyRegistryService.getInstitution _).expects(*).returning(Future.successful(institution1)).once()
       (() => partyRegistryService.getCategories)
@@ -289,14 +279,14 @@ class PartyProcessSpec
         name = "operator1",
         surname = "operator1",
         taxCode = taxCode1,
-        organizationRole = "Operator",
+        role = "Operator",
         platformRole = "security"
       )
       val operator2 = User(
         name = "operator2",
         surname = "operator2",
         taxCode = taxCode2,
-        organizationRole = "Operator",
+        role = "Operator",
         platformRole = "security"
       )
       (partyManagementService.retrieveRelationship _)
@@ -356,14 +346,14 @@ class PartyProcessSpec
         name = "operator1",
         surname = "operator1",
         taxCode = taxCode1,
-        organizationRole = "Operator",
+        role = "Operator",
         platformRole = "security"
       )
       val operator2 = User(
         name = "operator2",
         surname = "operator2",
         taxCode = taxCode2,
-        organizationRole = "Operator",
+        role = "Operator",
         platformRole = "security"
       )
       (partyManagementService.retrieveRelationship _)

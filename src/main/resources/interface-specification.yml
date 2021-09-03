@@ -259,7 +259,7 @@ components:
           type: string
         taxCode:
           type: string
-        organizationRole:
+        role:
           type: string
           enum:
             - Manager
@@ -272,7 +272,7 @@ components:
         - name
         - surname
         - taxCode
-        - organizationRole
+        - role
         - platformRole
     PersonInfo:
       properties:
