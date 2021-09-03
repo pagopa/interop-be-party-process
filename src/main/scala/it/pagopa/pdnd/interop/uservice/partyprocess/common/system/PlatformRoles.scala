@@ -4,7 +4,7 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.common.system
   */
 trait PlatformRoles {
   val roles: Seq[String]
-  def hasPlatformRoleMapping(platformRole: String): Either[Throwable, String] = {
+  def validatePlatformRoleMapping(platformRole: String): Either[Throwable, String] = {
     Either.cond(
       roles.contains(platformRole),
       platformRole,

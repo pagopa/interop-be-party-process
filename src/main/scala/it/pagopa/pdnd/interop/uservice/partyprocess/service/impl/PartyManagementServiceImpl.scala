@@ -7,7 +7,7 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.{PartyManagementInvoker, PartyManagementService}
 import org.slf4j.{Logger, LoggerFactory}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration.platformRolesConfiguration._
-import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.EitherOps
+import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.{EitherOps, TryOps}
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
@@ -109,26 +109,21 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
     platformRole: String
   ): Future[Unit] = {
     for {
-      _ <- isPlatformRoleValid(role = role, platformRole = platformRole).toFuture
-      _ <- invokeCreateRelationship(taxCode: String, organizationId: String, role: String, platformRole: String)
+      role <- Try { RelationshipEnums.Role.withName(role) }.toFuture
+      _    <- isPlatformRoleValid(role = role, platformRole = platformRole).toFuture
+      _    <- invokeCreateRelationship(taxCode, organizationId, role, platformRole)
     } yield ()
   }
 
   private def invokeCreateRelationship(
     taxCode: String,
     organizationId: String,
-    role: String,
+    role: RelationshipEnums.Role,
     platformRole: String
   ): Future[Unit] = {
     logger.info(s"Creating relationship $taxCode/$organizationId/$role/ with platformRole = $platformRole")
     val partyRelationship: Relationship =
-      Relationship(
-        from = taxCode,
-        to = organizationId,
-        role = RelationshipEnums.Role.withName(role),
-        platformRole = platformRole,
-        None
-      )
+      Relationship(from = taxCode, to = organizationId, role = role, platformRole = platformRole, None)
 
     val request: ApiRequest[Unit] = api.createRelationship(partyRelationship)
     invoker
@@ -150,15 +145,13 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  private def isPlatformRoleValid(role: String, platformRole: String): Either[Throwable, String] = {
+  private def isPlatformRoleValid(role: RelationshipEnums.Role, platformRole: String): Either[Throwable, String] = {
     logger.info(s"Checking if the platformRole '$platformRole' is admittable for a '$role'")
-    Try { RelationshipEnums.Role.withName(role) }.toEither.flatMap(role =>
-      role match {
-        case Manager  => manager.hasPlatformRoleMapping(platformRole)
-        case Delegate => delegate.hasPlatformRoleMapping(platformRole)
-        case Operator => operator.hasPlatformRoleMapping(platformRole)
-      }
-    )
+    role match {
+      case Manager  => manager.validatePlatformRoleMapping(platformRole)
+      case Delegate => delegate.validatePlatformRoleMapping(platformRole)
+      case Operator => operator.validatePlatformRoleMapping(platformRole)
+    }
   }
 
   override def createToken(relationships: Relationships, documentHash: String): Future[TokenText] = {
