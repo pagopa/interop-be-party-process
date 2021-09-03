@@ -36,7 +36,7 @@ object ApplicationConfiguration {
     Option(System.getenv("DESTINATION_MAIL")).getOrElse(throw new RuntimeException("No destination email set"))
   }
 
-  /** Return the data structure containing all the platform roles currently defined for this deployment.
+  /** Returns the data structure containing all the platform roles currently defined for this deployment.
     * <br/>
     * In order to customize the roles for your needs, you MUST define the following environment variables:
     * <br/>
