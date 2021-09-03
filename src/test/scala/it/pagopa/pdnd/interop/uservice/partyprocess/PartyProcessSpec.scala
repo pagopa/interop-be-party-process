@@ -59,11 +59,9 @@ class PartyProcessSpec
     SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
 
   override def beforeAll(): Unit = {
-
     System.setProperty("DELEGATE_PLATFORM_ROLES", "admin")
     System.setProperty("OPERATOR_PLATFORM_ROLES", "security, api")
     System.setProperty("MANAGER_PLATFORM_ROLES", "admin")
-    System.setProperty("DESTINATION_MAIL", "ernesto@sabato.ar")
 
     val processApi = new ProcessApi(
       new ProcessApiServiceImpl(
