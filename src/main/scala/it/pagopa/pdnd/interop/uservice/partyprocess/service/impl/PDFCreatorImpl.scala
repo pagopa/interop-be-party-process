@@ -15,7 +15,7 @@ import java.util.UUID
 import scala.concurrent.Future
 import scala.util.Try
 
-class PDFCreatorImp extends PDFCreator {
+class PDFCreatorImpl extends PDFCreator {
 
   def create(users: Seq[User], organization: Organization): Future[(File, String)] = Future.fromTry {
     Try {

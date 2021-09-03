@@ -25,7 +25,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.impl.{
   AttributeRegistryServiceImpl,
   MailerImpl,
-  PDFCreatorImp,
+  PDFCreatorImpl,
   PartyManagementServiceImpl,
   PartyRegistryServiceImpl
 }
@@ -66,7 +66,7 @@ object Main extends App with CorsSupport {
     AttributeRegistryServiceImpl(attributeRegistryInvoker, attributeApi)
 
   final val mailer: Mailer         = new MailerImpl
-  final val pdfCreator: PDFCreator = new PDFCreatorImp
+  final val pdfCreator: PDFCreator = new PDFCreatorImpl
 
   val processApi: ProcessApi = new ProcessApi(
     new ProcessApiServiceImpl(
