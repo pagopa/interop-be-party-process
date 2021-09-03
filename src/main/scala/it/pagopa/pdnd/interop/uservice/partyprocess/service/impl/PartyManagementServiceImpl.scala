@@ -110,11 +110,11 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
   ): Future[Unit] = {
     for {
       _ <- isPlatformRoleValid(role = role, platformRole = platformRole).toFuture
-      _ <- createRelationshipInvocation(taxCode: String, organizationId: String, role: String, platformRole: String)
+      _ <- invokeCreateRelationship(taxCode: String, organizationId: String, role: String, platformRole: String)
     } yield ()
   }
 
-  private def createRelationshipInvocation(
+  private def invokeCreateRelationship(
     taxCode: String,
     organizationId: String,
     role: String,
