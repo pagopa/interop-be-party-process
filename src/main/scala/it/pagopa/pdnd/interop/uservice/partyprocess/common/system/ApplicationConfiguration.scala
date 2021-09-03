@@ -60,12 +60,12 @@ object ApplicationConfiguration {
     */
   lazy val platformRolesConfiguration: PlatformRolesConfiguration = {
     PlatformRolesConfiguration(
-      manager = ManagerRoles(parameterAsList("uservice-party-process.platform.roles.manager")),
-      delegate = DelegateRoles(parameterAsList("uservice-party-process.platform.roles.delegate")),
-      operator = OperatorRoles(parameterAsList("uservice-party-process.platform.roles.operator"))
+      manager = ManagerRoles(sequencedParameter("uservice-party-process.platform.roles.manager")),
+      delegate = DelegateRoles(sequencedParameter("uservice-party-process.platform.roles.delegate")),
+      operator = OperatorRoles(sequencedParameter("uservice-party-process.platform.roles.operator"))
     )
   }
 
-  private def parameterAsList(parameterName: String) = config.getString(parameterName).split(",").map(_.trim).toSeq
+  private def sequencedParameter(parameterName: String) = config.getString(parameterName).split(",").map(_.trim).toSeq
 
 }
