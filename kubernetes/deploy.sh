@@ -20,11 +20,6 @@ kubectl create secret generic smtp --from-literal=SMTP_USR=$SMTP_USR --from-lite
 
 kubectl create secret generic mail --from-literal=DESTINATION_MAIL=$DESTINATION_MAIL -n $NAMESPACE
 
-## Setting up env vars for roles
-managerPlatformRoles=$MANAGER_PLATFORM_ROLES
-delegatePlatformRoles=$DELEGATE_PLATFORM_ROLES
-operatorPlatformRoles=$OPERATOR_PLATFORM_ROLES
-
 $SCRIPT_PATH/templater.sh $SCRIPT_PATH/deployment.yaml.template -s -f $SCRIPT_PATH/config > $SCRIPT_PATH/deployment.yaml
 
 kubectl create -f $SCRIPT_PATH/deployment.yaml && rm -rf $SCRIPT_PATH/deployment.yaml
