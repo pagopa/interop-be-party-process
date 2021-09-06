@@ -72,11 +72,11 @@ spec:
                   name: mail
                   key: DESTINATION_MAIL
             - name: MANAGER_PLATFORM_ROLES
-                 value: {{managerPlatformRoles}}
+              value: {{managerPlatformRoles}}
             - name: DELEGATE_PLATFORM_ROLES
-                 value: {{delegatePlatformRoles}}
+              value: {{delegatePlatformRoles}}
             - name: OPERATOR_PLATFORM_ROLES
-                 value: {{operatorPlatformRoles}}
+              value: {{operatorPlatformRoles}}
       volumes:
       - name: snapshots-volume
         emptyDir: {}
