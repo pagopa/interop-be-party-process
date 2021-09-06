@@ -6,12 +6,25 @@ import scala.concurrent.Future
 
 trait PartyManagementService {
   def retrievePerson(taxCode: String): Future[Person]
+
   def retrieveOrganization(organizationId: String): Future[Organization]
+
   def createPerson(person: PersonSeed): Future[Person]
+
   def createOrganization(organization: OrganizationSeed): Future[Organization]
-  def createRelationship(taxCode: String, organizationId: String, role: String): Future[Unit]
+
+  def createRelationship(
+    taxCode: String,
+    organizationId: String,
+    operationRole: String,
+    platformRole: String
+  ): Future[Unit]
+
   def retrieveRelationship(from: Option[String], to: Option[String]): Future[Relationships]
+
   def createToken(relationships: Relationships, documentHash: String): Future[TokenText]
+
   def consumeToken(token: String): Future[Unit]
+
   def invalidateToken(token: String): Future[Unit]
 }

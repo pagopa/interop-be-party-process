@@ -71,6 +71,12 @@ spec:
                 secretKeyRef:
                   name: mail
                   key: DESTINATION_MAIL
+            - name: MANAGER_PLATFORM_ROLES
+                 value: {{managerPlatformRoles}}
+            - name: DELEGATE_PLATFORM_ROLES
+                 value: {{delegatePlatformRoles}}
+            - name: OPERATOR_PLATFORM_ROLES
+                 value: {{operatorPlatformRoles}}
       volumes:
       - name: snapshots-volume
         emptyDir: {}

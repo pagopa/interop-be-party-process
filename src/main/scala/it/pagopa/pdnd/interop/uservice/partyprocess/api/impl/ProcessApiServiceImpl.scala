@@ -4,6 +4,9 @@ import akka.http.scaladsl.marshalling.ToEntityMarshaller
 import akka.http.scaladsl.server.Directives.onComplete
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.Delegate
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.Operator
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.Manager
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   Organization,
   OrganizationSeed,
@@ -89,13 +92,13 @@ class ProcessApiServiceImpl(
 
     val result: Future[OnBoardingResponse] = for {
       organization     <- organizationF
-      validUsers       <- verifyUsersByRoles(onBoardingRequest.users, Set("Manager", "Delegate"))
+      validUsers       <- verifyUsersByRoles(onBoardingRequest.users, Set(Manager.toString, Delegate.toString))
       personsWithRoles <- Future.traverse(validUsers)(user => addUser(user))
       _ <- Future.traverse(personsWithRoles)(pr =>
-        partyManagementService.createRelationship(pr._1.taxCode, organization.institutionId, pr._2)
+        partyManagementService.createRelationship(pr._1.taxCode, organization.institutionId, pr._2, pr._3)
       )
-      relationships = Relationships(personsWithRoles.map { case (person, role) =>
-        createRelationship(organization, person, role)
+      relationships = Relationships(personsWithRoles.map { case (person, role, platformRole) =>
+        createRelationship(organization, person, role, platformRole)
       })
       pdf   <- pdfCreator.create(validUsers, organization)
       token <- partyManagementService.createToken(relationships, pdf._2)
@@ -129,10 +132,10 @@ class ProcessApiServiceImpl(
       relationships <- partyManagementService.retrieveRelationship(None, Some(onBoardingRequest.institutionId))
       _             <- existsAManagerActive(relationships)
       organization  <- getOrganization(onBoardingRequest.institutionId)
-      validUsers    <- verifyUsersByRoles(onBoardingRequest.users, Set("Operator"))
+      validUsers    <- verifyUsersByRoles(onBoardingRequest.users, Set(Operator.toString))
       operators     <- Future.traverse(validUsers)(user => addUser(user))
       _ <- Future.traverse(operators)(pr =>
-        partyManagementService.createRelationship(pr._1.taxCode, organization.institutionId, pr._2)
+        partyManagementService.createRelationship(pr._1.taxCode, organization.institutionId, pr._2, pr._3)
       )
       _ = logger.info(s"Operators created ${operators.map(_.toString).mkString(",")}")
     } yield ()
@@ -141,8 +144,7 @@ class ProcessApiServiceImpl(
       case Success(_) => createOperators201
       case Failure(ex) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
-        createLegals400(errorResponse)
-
+        createOperators400(errorResponse)
     }
   }
 
@@ -213,13 +215,21 @@ class ProcessApiServiceImpl(
       .toTry
   }
 
-  private def addUser(user: User): Future[(Person, String)] = {
+  private def addUser(user: User): Future[(Person, String, String)] = {
     logger.info(s"Adding user ${user.toString}")
-    createPerson(user).recoverWith { case _ => getPerson(user.taxCode) }.map(p => (p, user.role))
+    createPerson(user)
+      .recoverWith { case _ => getPerson(user.taxCode) }
+      .map(p => (p, user.role, user.platformRole))
   }
 
-  private def createRelationship(organization: Organization, person: Person, role: String): Relationship =
-    Relationship(person.taxCode, organization.institutionId, RelationshipEnums.Role.withName(role))
+  private def createRelationship(
+    organization: Organization,
+    person: Person,
+    role: String,
+    platformRole: String
+  ): Relationship = {
+    Relationship(person.taxCode, organization.institutionId, RelationshipEnums.Role.withName(role), platformRole)
+  }
 
   private def getPerson(taxCode: String): Future[Person] = partyManagementService.retrievePerson(taxCode)
 

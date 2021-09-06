@@ -5,33 +5,37 @@ info:
   version: 0.0.1
   contact:
     name: API Support
-    url: http://www.example.com/support
+    url: 'http://www.example.com/support'
     email: support@example.com
   termsOfService: 'http://swagger.io/terms/'
   x-api-id: an x-api-id
   x-summary: an x-summary
 servers:
-#  - url: https://gateway.interop.pdnd.dev/pdnd-interop-uservice-party-process/0.0.1
   - url: /pdnd-interop-uservice-party-process/0.0.1
     description: This service is the party process
 security:
-  - bearerAuth: [ ]
+  - bearerAuth: []
 tags:
   - name: process
     description: Implements party process
     externalDocs:
       description: Find out more
-      url: http://swagger.io
+      url: 'http://swagger.io'
+  - name: platform
+    description: Implements platform endpoints
+    externalDocs:
+      description: Find out more
+      url: 'http://swagger.io'
   - name: health
     description: Verify service status
     externalDocs:
       description: Find out more
-      url: http://swagger.io
+      url: 'http://swagger.io'
 paths:
-  /onboarding/info/{taxCode}:
+  '/onboarding/info/{taxCode}':
     get:
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       tags:
         - process
       summary: get on boarding info
@@ -60,7 +64,7 @@ paths:
   /onboarding/legals:
     post:
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       tags:
         - process
       summary: create an onboarding entry
@@ -88,7 +92,7 @@ paths:
   /onboarding/operators:
     post:
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       tags:
         - process
       summary: create an onboarding entry
@@ -109,10 +113,10 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  /onboarding/complete/{token}:
+  '/onboarding/complete/{token}':
     post:
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       tags:
         - process
       summary: create an onboarding entry
@@ -152,7 +156,7 @@ paths:
                 $ref: '#/components/schemas/Problem'
     delete:
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       tags:
         - process
       summary: invalidate an onboarding request
@@ -177,7 +181,7 @@ paths:
   /status:
     get:
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       tags:
         - health
       summary: Health status endpoint
@@ -190,6 +194,26 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /platform/roles:
+    get:
+      summary: Get Platform Roles
+      tags:
+        - platform
+      responses:
+        '200':
+          description: Available platform roles' bindings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformRolesResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      operationId: getPlatformRoles
+      description: Returns all the available bindings between roles and platform roles.
 components:
   schemas:
     OnBoardingRequest:
@@ -202,8 +226,6 @@ components:
           type: string
       additionalProperties: false
       required:
-        #        - manager
-        #        - operators
         - users
         - institutionId
     OnBoardingResponse:
@@ -243,12 +265,15 @@ components:
             - Manager
             - Delegate
             - Operator
+        platformRole:
+          type: string
       additionalProperties: false
       required:
         - name
         - surname
         - taxCode
         - role
+        - platformRole
     PersonInfo:
       properties:
         name:
@@ -293,19 +318,40 @@ components:
       required:
         - person
         - institutions
+    PlatformRolesResponse:
+      title: PlatformRolesResponse
+      type: object
+      description: This payload contains the currently defined bindings between roles and platform roles.
+      properties:
+        managerRoles:
+          type: array
+          description: binding between manager and its platform roles
+          items:
+            type: string
+        delegateRoles:
+          type: array
+          description: binding between delegate and its platform roles
+          items:
+            type: string
+        operatorRoles:
+          type: array
+          description: binding between operator and its platform roles
+          items:
+            type: string
+      required:
+        - managerRoles
+        - delegateRoles
+        - operatorRoles
     Problem:
       properties:
         detail:
-          description:
-            A human readable explanation specific to this occurrence of the problem.
+          description: A human readable explanation specific to this occurrence of the problem.
           example: Request took too long to complete.
           maxLength: 4096
           pattern: '^.{0,1024}$'
           type: string
         status:
-          description:
-            The HTTP status code generated by the origin server for this occurrence
-            of the problem.
+          description: The HTTP status code generated by the origin server for this occurrence of the problem.
           example: 503
           exclusiveMaximum: true
           format: int32
@@ -313,8 +359,7 @@ components:
           minimum: 100
           type: integer
         title:
-          description:
-            A short, summary of the problem type. Written in english and readable
+          description: 'A short, summary of the problem type. Written in english and readable'
           example: Service Unavailable
           maxLength: 64
           pattern: '^[ -~]{0,64}$'
@@ -324,8 +369,8 @@ components:
         - status
         - title
   securitySchemes:
-     bearerAuth:
-       type: http
-       description: A bearer token in the format of a JWS and comformed to the specifications included in [RFC8725](https://tools.ietf.org/html/RFC8725).
-       scheme: bearer
-       bearerFormat: JWT
+    bearerAuth:
+      type: http
+      description: 'A bearer token in the format of a JWS and comformed to the specifications included in [RFC8725](https://tools.ietf.org/html/RFC8725).'
+      scheme: bearer
+      bearerFormat: JWT
