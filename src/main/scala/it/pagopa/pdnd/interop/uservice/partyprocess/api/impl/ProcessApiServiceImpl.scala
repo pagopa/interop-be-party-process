@@ -12,9 +12,11 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   OrganizationSeed,
   Person,
   PersonSeed,
-  Relationship,
   RelationshipEnums,
+  RelationshipSeed,
+  RelationshipSeedEnums,
   Relationships,
+  RelationshipsSeed,
   Problem => _
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApiService
@@ -63,9 +65,8 @@ class ProcessApiServiceImpl(
       personInfo = PersonInfo(person.name, person.surname, person.taxCode)
       relationships <- partyManagementService.retrieveRelationship(Some(person.taxCode), None)
       organizations <- Future.traverse(relationships.items)(r => getOrganization(r.to).map(o => (o, r.status, r.role)))
-      institutionsInfo = organizations.flatMap { case (o, status, role) =>
-        status.map(st => InstitutionInfo(o.institutionId, o.description, o.digitalAddress, st.toString, role.toString))
-
+      institutionsInfo = organizations.map { case (o, status, role) =>
+        InstitutionInfo(o.institutionId, o.description, o.digitalAddress, status.toString, role.toString)
       }
     } yield OnBoardingInfo(personInfo, institutionsInfo)
 
@@ -97,7 +98,7 @@ class ProcessApiServiceImpl(
       _ <- Future.traverse(personsWithRoles)(pr =>
         partyManagementService.createRelationship(pr._1.taxCode, organization.institutionId, pr._2, pr._3)
       )
-      relationships = Relationships(personsWithRoles.map { case (person, role, platformRole) =>
+      relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, platformRole) =>
         createRelationship(organization, person, role, platformRole)
       })
       pdf   <- pdfCreator.create(validUsers, organization)
@@ -207,7 +208,7 @@ class ProcessApiServiceImpl(
       .cond(
         relationships.items.exists(rl =>
           rl.role == RelationshipEnums.Role.Manager &&
-            rl.status.contains(RelationshipEnums.Status.Active)
+            rl.status == RelationshipEnums.Status.Active
         ),
         (),
         new RuntimeException("No active legals for this institution ")
@@ -227,9 +228,13 @@ class ProcessApiServiceImpl(
     person: Person,
     role: String,
     platformRole: String
-  ): Relationship = {
-    Relationship(person.taxCode, organization.institutionId, RelationshipEnums.Role.withName(role), platformRole)
-  }
+  ): RelationshipSeed =
+    RelationshipSeed(
+      person.taxCode,
+      organization.institutionId,
+      RelationshipSeedEnums.Role.withName(role),
+      platformRole
+    )
 
   private def getPerson(taxCode: String): Future[Person] = partyManagementService.retrievePerson(taxCode)
 

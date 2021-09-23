@@ -32,6 +32,7 @@ import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 import java.io.File
 import java.nio.file.Paths
 import java.time.OffsetDateTime
+import java.util.UUID
 import scala.concurrent.duration.{Duration, DurationInt}
 import scala.concurrent.{Await, Future}
 
@@ -105,19 +106,21 @@ class PartyProcessSpec
 
       val relationship1 =
         Relationship(
+          id = UUID.randomUUID(),
           from = taxCode1,
           to = institutionId1,
           role = Role.Manager,
           platformRole = "admin",
-          status = Some(Status.Active)
+          status = Status.Active
         )
       val relationship2 =
         Relationship(
+          id = UUID.randomUUID(),
           from = taxCode1,
           to = institutionId2,
           role = Role.Delegate,
           platformRole = "admin",
-          status = Some(Status.Active)
+          status = Status.Active
         )
 
       val relationships = Relationships(items = Seq(relationship1, relationship2))
@@ -148,14 +151,14 @@ class PartyProcessSpec
             institutionId = organization1.institutionId,
             description = organization1.description,
             digitalAddress = organization1.digitalAddress,
-            status = relationship1.status.get.toString,
+            status = relationship1.status.toString,
             role = relationship1.role.toString
           ),
           InstitutionInfo(
             institutionId = organization2.institutionId,
             description = organization2.description,
             digitalAddress = organization2.digitalAddress,
-            status = relationship2.status.get.toString,
+            status = relationship2.status.toString,
             role = relationship2.role.toString
           )
         )
@@ -333,11 +336,12 @@ class PartyProcessSpec
         Relationships(
           Seq(
             Relationship(
+              id = UUID.randomUUID(),
               from = "",
               to = institutionId1,
               role = Role.Manager,
               platformRole = "admin",
-              status = Some(Status.Active)
+              status = Status.Active
             )
           )
         )

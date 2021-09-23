@@ -5,7 +5,7 @@ import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import com.typesafe.config.ConfigFactory
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker._
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{Problem, Relationship, RelationshipEnums}
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{Problem, RelationshipSeed, RelationshipSeedEnums}
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.PartyManagementService
 import org.json4s.Formats
 import org.scalamock.scalatest.MockFactory
@@ -90,13 +90,12 @@ class PartyManagementServiceImplSpec
       val platformRole     = "api"
 
       //given mocked integration API behavior
-      val partyRelationship: Relationship =
-        Relationship(
+      val partyRelationship: RelationshipSeed =
+        RelationshipSeed(
           from = taxCode,
           to = partyIdTo,
-          role = RelationshipEnums.Role.withName(relationshipRole),
-          platformRole = platformRole,
-          None
+          role = RelationshipSeedEnums.Role.withName(relationshipRole),
+          platformRole = platformRole
         )
       val mockApiRequest = ApiRequest[Unit](ApiMethods.POST, "http://localhost", "/relationships", "application/json")
         .withBody(partyRelationship)
