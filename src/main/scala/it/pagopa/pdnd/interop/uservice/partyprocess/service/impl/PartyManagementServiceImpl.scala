@@ -124,12 +124,12 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
     organizationId: String,
     role: RelationshipSeedEnums.Role,
     platformRole: String
-  ): Future[Unit] = {
+  ): Future[Relationship] = {
     logger.info(s"Creating relationship $taxCode/$organizationId/$role/ with platformRole = $platformRole")
     val partyRelationship: RelationshipSeed =
       RelationshipSeed(from = taxCode, to = organizationId, role = role, platformRole = platformRole)
 
-    val request: ApiRequest[Unit] = api.createRelationship(partyRelationship)
+    val request: ApiRequest[Relationship] = api.createRelationship(partyRelationship)
     invoker
       .execute(request)
       .map { x =>
@@ -142,10 +142,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
           logger.error(s"Create relationship $code")
           logger.error(s"Create relationship $message")
 
-          Future.failed[Unit](new RuntimeException(message))
+          Future.failed[Relationship](new RuntimeException(message))
         case ex =>
           logger.error(s"Create relationship ! ${ex.getMessage}")
-          Future.failed[Unit](ex)
+          Future.failed[Relationship](ex)
       }
   }
 
