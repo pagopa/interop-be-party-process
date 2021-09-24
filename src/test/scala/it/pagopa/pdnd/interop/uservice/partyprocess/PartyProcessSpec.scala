@@ -152,14 +152,16 @@ class PartyProcessSpec
             description = organization1.description,
             digitalAddress = organization1.digitalAddress,
             status = relationship1.status.toString,
-            role = relationship1.role.toString
+            role = relationship1.role.toString,
+            platformRole = relationship1.platformRole
           ),
           InstitutionInfo(
             institutionId = organization2.institutionId,
             description = organization2.description,
             digitalAddress = organization2.digitalAddress,
             status = relationship2.status.toString,
-            role = relationship2.role.toString
+            role = relationship2.role.toString,
+            platformRole = relationship2.platformRole
           )
         )
       )

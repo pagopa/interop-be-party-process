@@ -5,20 +5,37 @@ import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import com.typesafe.config.ConfigFactory
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker._
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{Problem, RelationshipSeed, RelationshipSeedEnums}
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.Manager
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Status.Active
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
+  Problem,
+  Relationship,
+  RelationshipSeed,
+  RelationshipSeedEnums
+}
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.PartyManagementService
 import org.json4s.Formats
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.wordspec.AnyWordSpecLike
 
+import java.util.UUID
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
 //ApiInvoker manually mocked because of scalamock limitations for this scenario (i.e.: Json4s formats MUST not be null)
 private class MockPartyApiInvoker(implicit json4sFormats: Formats, system: actor.ActorSystem)
     extends ApiInvoker(json4sFormats) {
-  override def execute[T](r: ApiRequest[T])(implicit evidence$2: Manifest[T]): Future[ApiResponse[T]] =
-    Future.successful(new ApiResponse[T](200, ().asInstanceOf[T]))
+  override def execute[T](r: ApiRequest[T])(implicit evidence$2: Manifest[T]): Future[ApiResponse[T]] = {
+    val mockRelationshipResponse = Relationship(
+      id = UUID.randomUUID(),
+      from = "from",
+      to = "to",
+      role = Manager,
+      platformRole = "admin",
+      status = Active
+    )
+    Future.successful(new ApiResponse[T](200, mockRelationshipResponse.asInstanceOf[T]))
+  }
 }
 
 private object MockPartyApiInvoker {
@@ -97,10 +114,11 @@ class PartyManagementServiceImplSpec
           role = RelationshipSeedEnums.Role.withName(relationshipRole),
           platformRole = platformRole
         )
-      val mockApiRequest = ApiRequest[Unit](ApiMethods.POST, "http://localhost", "/relationships", "application/json")
-        .withBody(partyRelationship)
-        .withSuccessResponse[Unit](201)
-        .withErrorResponse[Problem](400)
+      val mockApiRequest =
+        ApiRequest[Relationship](ApiMethods.POST, "http://localhost", "/relationships", "application/json")
+          .withBody(partyRelationship)
+          .withSuccessResponse[Relationship](201)
+          .withErrorResponse[Problem](400)
       (mockPartyAPI.createRelationship _).expects(partyRelationship).returning(mockApiRequest).once()
 
       //when
