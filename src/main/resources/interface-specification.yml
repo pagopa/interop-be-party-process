@@ -299,6 +299,8 @@ components:
           type: string
         role:
           type: string
+        platformRole:
+          type: string
       additionalProperties: false
       required:
         - institutionId
@@ -306,6 +308,7 @@ components:
         - digitalAddress
         - status
         - role
+        - platformRole
     OnBoardingInfo:
       properties:
         person:
