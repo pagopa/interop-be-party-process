@@ -59,6 +59,21 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
+  def getInstitutionRelationships(institutionId: String): Future[Relationships] = {
+    val request: ApiRequest[Relationships] = api.getRelationships(to = Some(institutionId))
+    invoker
+      .execute[Relationships](request)
+      .map { x =>
+        logger.info(s"Retrieving relationships for institution $institutionId: ${x.code}")
+        logger.info(s"Retrieving relationships for institution $institutionId: ${x.content}")
+        x.content
+      }
+      .recoverWith { case ex =>
+        logger.error(s"ERROR while retrieving relationships for institution $institutionId: ${ex.getMessage}")
+        Future.failed[Relationships](ex)
+      }
+  }
+
   override def retrieveOrganization(organizationId: String): Future[Organization] = {
     val request: ApiRequest[Organization] = api.getOrganization(organizationId)
     logger.info(s"Retrieving organization $organizationId")

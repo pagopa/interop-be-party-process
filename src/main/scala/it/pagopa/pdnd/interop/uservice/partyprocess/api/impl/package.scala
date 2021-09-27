@@ -39,15 +39,17 @@ package object impl extends DefaultJsonProtocol {
           deserializationError(s"expected a String but got a ${notAJsString.compactPrint}")
       }
     }
-  final val formatter: DateTimeFormatter                                    = DateTimeFormatter.ISO_OFFSET_DATE_TIME
-  implicit val tokenChecksumFormat: RootJsonFormat[TokenChecksum]           = jsonFormat1(TokenChecksum)
-  implicit val problemFormat: RootJsonFormat[Problem]                       = jsonFormat3(Problem)
-  implicit val userFormat: RootJsonFormat[User]                             = jsonFormat5(User)
-  implicit val onBoardingRequestFormat: RootJsonFormat[OnBoardingRequest]   = jsonFormat2(OnBoardingRequest)
-  implicit val onBoardingResponseFormat: RootJsonFormat[OnBoardingResponse] = jsonFormat2(OnBoardingResponse)
-  implicit val personInfoFormat: RootJsonFormat[PersonInfo]                 = jsonFormat3(PersonInfo)
-  implicit val institutionInfoFormat: RootJsonFormat[InstitutionInfo]       = jsonFormat6(InstitutionInfo)
-  implicit val onBoardingInfoFormat: RootJsonFormat[OnBoardingInfo]         = jsonFormat2(OnBoardingInfo)
-  implicit val tokenRequestRequestFormat: RootJsonFormat[TokenRequest]      = jsonFormat2(TokenRequest)
+  final val formatter: DateTimeFormatter                                          = DateTimeFormatter.ISO_OFFSET_DATE_TIME
+  implicit val tokenChecksumFormat: RootJsonFormat[TokenChecksum]                 = jsonFormat1(TokenChecksum)
+  implicit val problemFormat: RootJsonFormat[Problem]                             = jsonFormat3(Problem)
+  implicit val userFormat: RootJsonFormat[User]                                   = jsonFormat5(User)
+  implicit val onBoardingRequestFormat: RootJsonFormat[OnBoardingRequest]         = jsonFormat2(OnBoardingRequest)
+  implicit val onBoardingResponseFormat: RootJsonFormat[OnBoardingResponse]       = jsonFormat2(OnBoardingResponse)
+  implicit val personInfoFormat: RootJsonFormat[PersonInfo]                       = jsonFormat3(PersonInfo)
+  implicit val institutionInfoFormat: RootJsonFormat[InstitutionInfo]             = jsonFormat6(InstitutionInfo)
+  implicit val onBoardingInfoFormat: RootJsonFormat[OnBoardingInfo]               = jsonFormat2(OnBoardingInfo)
+  implicit val tokenRequestRequestFormat: RootJsonFormat[TokenRequest]            = jsonFormat2(TokenRequest)
+  implicit val relationshipInfoFormat: RootJsonFormat[RelationshipInfo]           = jsonFormat4(RelationshipInfo)
+  implicit val relationshipsResponseFormat: RootJsonFormat[RelationshipsResponse] = jsonFormat1(RelationshipsResponse)
 
 }

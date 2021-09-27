@@ -22,6 +22,8 @@ trait PartyManagementService {
 
   def retrieveRelationship(from: Option[String], to: Option[String]): Future[Relationships]
 
+  def getInstitutionRelationships(institutionId: String): Future[Relationships]
+
   def createToken(relationshipsSeed: RelationshipsSeed, documentHash: String): Future[TokenText]
 
   def consumeToken(token: String): Future[Unit]

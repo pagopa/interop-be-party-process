@@ -9,13 +9,7 @@ import akka.http.scaladsl.server.directives.{AuthenticationDirective, SecurityDi
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{Attribute, AttributesResponse}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.{Role, Status}
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
-  Organization,
-  Person,
-  Relationship,
-  Relationships,
-  TokenText
-}
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{ProcessApiMarshallerImpl, ProcessApiServiceImpl}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.{HealthApi, PlatformApi, ProcessApi, ProcessApiMarshaller}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{Authenticator, classicActorSystem, executionContext}
@@ -431,6 +425,84 @@ class PartyProcessSpec
 
     }
 
+    "retrieve all the relationships of a specific institution" in {
+      val taxCode1      = "CF1"
+      val taxCode2      = "CF2"
+      val taxCode3      = "CF3"
+      val taxCode4      = "CF4"
+      val institutionId = "IST1"
+
+      val relationship1 =
+        Relationship(
+          id = UUID.randomUUID(),
+          from = taxCode1,
+          to = institutionId,
+          role = Role.Manager,
+          platformRole = "admin",
+          status = Status.Active
+        )
+      val relationship2 =
+        Relationship(
+          id = UUID.randomUUID(),
+          from = taxCode2,
+          to = institutionId,
+          role = Role.Delegate,
+          platformRole = "admin",
+          status = Status.Active
+        )
+
+      val relationship3 =
+        Relationship(
+          id = UUID.randomUUID(),
+          from = taxCode3,
+          to = institutionId,
+          role = Role.Operator,
+          platformRole = "security",
+          status = Status.Active
+        )
+
+      val relationship4 =
+        Relationship(
+          id = UUID.randomUUID(),
+          from = taxCode4,
+          to = institutionId,
+          role = Role.Operator,
+          platformRole = "api",
+          status = Status.Active
+        )
+
+      val relationships = Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
+
+      (partyManagementService.getInstitutionRelationships _)
+        .expects(institutionId)
+        .returning(Future.successful(relationships))
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
+      val response = Await.result(
+        Http().singleRequest(
+          HttpRequest(
+            uri = s"$url/institutions/${institutionId}/relationships",
+            method = HttpMethods.GET,
+            headers = authorization
+          )
+        ),
+        Duration.Inf
+      )
+
+      val body = Await.result(Unmarshal(response.entity).to[RelationshipsResponse], Duration.Inf)
+      response.status mustBe StatusCodes.OK
+      body.relationships must contain only (RelationshipInfo(
+        from = taxCode1,
+        role = "Manager",
+        platformRole = "admin",
+        status = "Active"
+      ),
+      RelationshipInfo(from = taxCode2, role = "Delegate", platformRole = "admin", status = "Active"),
+      RelationshipInfo(from = taxCode3, role = "Operator", platformRole = "security", status = "Active"),
+      RelationshipInfo(from = taxCode4, role = "Operator", platformRole = "api", status = "Active"))
+
+    }
   }
 
 }
