@@ -113,6 +113,35 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /institutions/{institutionId}/relationships:
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: returns the relationships related to the institution
+      description: Return ok
+      operationId: getInstitutionRelationships
+      parameters:
+        - name: institutionId
+          in: path
+          description: The identifier of the institution
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelationshipsResponse'
+        '400':
+          description: Invalid institution id supplied
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   '/onboarding/complete/{token}':
     post:
       security:
@@ -251,6 +280,44 @@ components:
       required:
         - legals
         - institutionId
+    RelationshipInfo:
+      type: object
+      properties:
+        from:
+          type: string
+          description: tax code
+        role:
+          type: string
+          description: represents the generic available role types for the relationship
+          enum:
+            - Manager
+            - Delegate
+            - Operator
+        platformRole:
+          type: string
+          description: 'user role in the application context (e.g.: administrator, security user). This MUST belong to the configured set of application specific platform roles'
+        status:
+          type: string
+          enum:
+            - Pending
+            - Active
+            - Inactive
+      additionalProperties: false
+      required:
+        - from
+        - role
+        - platformRole
+        - status
+    RelationshipsResponse:
+       type: object
+       properties:
+         relationships:
+           type: array
+           items:
+             $ref: '#/components/schemas/RelationshipInfo'
+       additionalProperties: false
+       required:
+         - relationships
     User:
       properties:
         name:
