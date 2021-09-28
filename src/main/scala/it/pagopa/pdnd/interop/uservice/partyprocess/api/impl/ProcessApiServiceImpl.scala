@@ -296,12 +296,12 @@ class ProcessApiServiceImpl(
     * Code: 400, Message: Invalid institution id supplied, DataType: Problem
     */
   override def getInstitutionRelationships(institutionId: String)(implicit
-    toEntityMarshallerRelationshipsResponse: ToEntityMarshaller[RelationshipsResponse],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerRelationshipInfo: ToEntityMarshaller[Seq[RelationshipInfo]],
     contexts: Seq[(String, String)]
   ): Route = {
     logger.info(s"Getting relationships of institution $institutionId")
-    val result: Future[RelationshipsResponse] = for {
+    val result: Future[Seq[RelationshipInfo]] = for {
       relationships <- partyManagementService.getInstitutionRelationships(institutionId)
       response = relationshipsToRelationshipsResponse(relationships)
     } yield response
@@ -314,15 +314,13 @@ class ProcessApiServiceImpl(
     }
   }
 
-  private def relationshipsToRelationshipsResponse(relationships: Relationships): RelationshipsResponse = {
-    RelationshipsResponse(relationships =
-      relationships.items.map(item =>
-        RelationshipInfo(
-          from = item.from,
-          role = item.role.toString,
-          platformRole = item.platformRole,
-          status = item.status.toString
-        )
+  private def relationshipsToRelationshipsResponse(relationships: Relationships): Seq[RelationshipInfo] = {
+    relationships.items.map(item =>
+      RelationshipInfo(
+        from = item.from,
+        role = item.role.toString,
+        platformRole = item.platformRole,
+        status = item.status.toString
       )
     )
 

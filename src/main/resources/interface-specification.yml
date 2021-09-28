@@ -309,15 +309,9 @@ components:
         - platformRole
         - status
     RelationshipsResponse:
-       type: object
-       properties:
-         relationships:
-           type: array
-           items:
-             $ref: '#/components/schemas/RelationshipInfo'
-       additionalProperties: false
-       required:
-         - relationships
+      type: array
+      items:
+        $ref: '#/components/schemas/RelationshipInfo'
     User:
       properties:
         name:

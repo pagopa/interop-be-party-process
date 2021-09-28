@@ -490,9 +490,9 @@ class PartyProcessSpec
         Duration.Inf
       )
 
-      val body = Await.result(Unmarshal(response.entity).to[RelationshipsResponse], Duration.Inf)
+      val body = Await.result(Unmarshal(response.entity).to[Seq[RelationshipInfo]], Duration.Inf)
       response.status mustBe StatusCodes.OK
-      body.relationships must contain only (RelationshipInfo(
+      body must contain only (RelationshipInfo(
         from = taxCode1,
         role = "Manager",
         platformRole = "admin",
