@@ -126,7 +126,7 @@ class PartyProcessSpec
         managerSurname = "managerSurname1",
         digitalAddress = "digitalAddress1",
         partyId = orgPartyId1,
-        attributes = Seq.empty
+        attributes = Seq("1", "2", "3")
       )
       val organization2 = Organization(
         institutionId = institutionId2,
@@ -135,7 +135,7 @@ class PartyProcessSpec
         managerSurname = "managerSurname2",
         digitalAddress = "digitalAddress2",
         partyId = orgPartyId2,
-        attributes = Seq.empty
+        attributes = Seq("99", "100", "101")
       )
 
       val expected = OnBoardingInfo(
@@ -147,7 +147,8 @@ class PartyProcessSpec
             digitalAddress = organization1.digitalAddress,
             status = relationship1.status.toString,
             role = relationship1.role.toString,
-            platformRole = relationship1.platformRole
+            platformRole = relationship1.platformRole,
+            attributes = Seq("1", "2", "3")
           ),
           InstitutionInfo(
             institutionId = organization2.institutionId,
@@ -155,7 +156,8 @@ class PartyProcessSpec
             digitalAddress = organization2.digitalAddress,
             status = relationship2.status.toString,
             role = relationship2.role.toString,
-            platformRole = relationship2.platformRole
+            platformRole = relationship2.platformRole,
+            attributes = Seq("99", "100", "101")
           )
         )
       )

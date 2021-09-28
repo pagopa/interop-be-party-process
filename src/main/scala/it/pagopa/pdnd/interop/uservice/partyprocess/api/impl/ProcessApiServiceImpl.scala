@@ -68,7 +68,15 @@ class ProcessApiServiceImpl(
         getOrganization(r.to).map(o => (o, r.status, r.role, r.platformRole))
       )
       institutionsInfo = organizations.map { case (o, status, role, platformRole) =>
-        InstitutionInfo(o.institutionId, o.description, o.digitalAddress, status.toString, role.toString, platformRole)
+        InstitutionInfo(
+          o.institutionId,
+          o.description,
+          o.digitalAddress,
+          status.toString,
+          role.toString,
+          platformRole,
+          attributes = o.attributes
+        )
       }
     } yield OnBoardingInfo(personInfo, institutionsInfo)
 
