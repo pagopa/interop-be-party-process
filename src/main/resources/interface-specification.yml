@@ -362,6 +362,11 @@ components:
           type: string
         platformRole:
           type: string
+        attributes:
+          type: array
+          description: certified attributes bound to this institution
+          items:
+            type: string
       additionalProperties: false
       required:
         - institutionId
@@ -370,6 +375,7 @@ components:
         - status
         - role
         - platformRole
+        - attributes
     OnBoardingInfo:
       properties:
         person:
