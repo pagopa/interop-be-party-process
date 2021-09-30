@@ -322,6 +322,28 @@ class ProcessApiServiceImpl(
     }
   }
 
+  /** Code: 200, Message: successful operation, DataType: RelationshipInfo
+    * Code: 400, Message: Invalid institution id supplied, DataType: Problem
+    */
+  override def getInstitutionTaxCodeRelationship(institutionId: String, taxCode: String)(implicit
+    toEntityMarshallerRelationshipInfo: ToEntityMarshaller[RelationshipsResponse],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    contexts: Seq[(String, String)]
+  ): Route = {
+    logger.info(s"Getting relationship for institution $institutionId and tax code $taxCode")
+    val result: Future[RelationshipsResponse] = for {
+      relationships <- partyManagementService.retrieveRelationship(Some(taxCode), Some(institutionId))
+      response = relationshipsToRelationshipsResponse(relationships)
+    } yield response
+
+    onComplete(result) {
+      case Success(relationships) => getInstitutionTaxCodeRelationship200(relationships)
+      case Failure(ex) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        getInstitutionTaxCodeRelationship400(errorResponse)
+    }
+  }
+
   private def relationshipsToRelationshipsResponse(relationships: Relationships): RelationshipsResponse = {
     RelationshipsResponse(relationships =
       relationships.items.map(item =>

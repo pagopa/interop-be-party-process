@@ -142,6 +142,41 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /institutions/{institutionId}/relationships/{taxCode}:
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: returns the relationship related to the institution and tax code
+      description: Return ok
+      operationId: getInstitutionTaxCodeRelationship
+      parameters:
+        - name: institutionId
+          in: path
+          description: The identifier of the institution
+          required: true
+          schema:
+            type: string
+        - name: taxCode
+          in: path
+          description: The identifier of the operator
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelationshipsResponse'
+        '400':
+          description: Invalid institution id supplied
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   '/onboarding/complete/{token}':
     post:
       security:
