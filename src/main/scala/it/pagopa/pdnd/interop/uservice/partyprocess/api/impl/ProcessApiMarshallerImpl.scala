@@ -9,7 +9,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.model.{
   OnBoardingRequest,
   OnBoardingResponse,
   Problem,
-  RelationshipsResponse
+  RelationshipInfo
 }
 import spray.json._
 
@@ -35,6 +35,6 @@ class ProcessApiMarshallerImpl extends ProcessApiMarshaller with SprayJsonSuppor
 
   override implicit def toEntityMarshallerProblem: ToEntityMarshaller[Problem] = sprayJsonMarshaller[Problem]
 
-  override implicit def toEntityMarshallerRelationshipsResponse: ToEntityMarshaller[RelationshipsResponse] =
-    sprayJsonMarshaller[RelationshipsResponse]
+  override implicit def toEntityMarshallerRelationshipInfoarray: ToEntityMarshaller[Seq[RelationshipInfo]] =
+    sprayJsonMarshaller[Seq[RelationshipInfo]]
 }
