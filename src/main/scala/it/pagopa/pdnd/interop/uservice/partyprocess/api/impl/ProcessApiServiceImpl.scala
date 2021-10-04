@@ -350,7 +350,8 @@ class ProcessApiServiceImpl(
         from = item.from,
         role = item.role.toString,
         platformRole = item.platformRole,
-        status = item.status.toString
+        // TODO This conversion is temporary, while we implement a naming convention for enums
+        status = item.status.toString.toLowerCase
       )
     )
 
