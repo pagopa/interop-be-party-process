@@ -498,11 +498,11 @@ class PartyProcessSpec
         from = taxCode1,
         role = "Manager",
         platformRole = "admin",
-        status = "Active"
+        status = "active"
       ),
-      RelationshipInfo(from = taxCode2, role = "Delegate", platformRole = "admin", status = "Active"),
-      RelationshipInfo(from = taxCode3, role = "Operator", platformRole = "security", status = "Active"),
-      RelationshipInfo(from = taxCode4, role = "Operator", platformRole = "api", status = "Active"))
+      RelationshipInfo(from = taxCode2, role = "Delegate", platformRole = "admin", status = "active"),
+      RelationshipInfo(from = taxCode3, role = "Operator", platformRole = "security", status = "active"),
+      RelationshipInfo(from = taxCode4, role = "Operator", platformRole = "api", status = "active"))
 
     }
   }

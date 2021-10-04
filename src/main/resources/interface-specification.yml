@@ -334,9 +334,9 @@ components:
         status:
           type: string
           enum:
-            - Pending
-            - Active
-            - Inactive
+            - pending
+            - active
+            - inactive
       additionalProperties: false
       required:
         - from
