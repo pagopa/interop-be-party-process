@@ -114,7 +114,7 @@ class ProcessApiServiceImpl(
       pdf   <- pdfCreator.create(validUsers, organization)
       token <- partyManagementService.createToken(relationships, pdf._2)
       _ <- mailer.send(
-        ApplicationConfiguration.destinationMail,
+        ApplicationConfiguration.destinationMails,
         pdf._1,
         token.token
       ) //TODO address must be the digital address

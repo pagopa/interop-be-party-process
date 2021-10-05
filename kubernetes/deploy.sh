@@ -18,7 +18,7 @@ kubectl create secret generic vault --from-literal=VAULT_ADDR=$VAULT_ADDR --from
 
 kubectl create secret generic smtp --from-literal=SMTP_USR=$SMTP_USR --from-literal=SMTP_PSW=$SMTP_PSW -n $NAMESPACE
 
-kubectl create secret generic mail --from-literal=DESTINATION_MAIL=$DESTINATION_MAIL -n $NAMESPACE
+kubectl create secret generic mail --from-literal=DESTINATION_MAILS=$DESTINATION_MAILS -n $NAMESPACE
 
 $SCRIPT_PATH/templater.sh $SCRIPT_PATH/deployment.yaml.template -s -f $SCRIPT_PATH/config > $SCRIPT_PATH/deployment.yaml
 
