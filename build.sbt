@@ -107,5 +107,5 @@ javaAgents += "io.kamon" % "kanela-agent" % "1.0.11"
 
 Test / fork := true
 
-Test / envVars := Map("DESTINATION_MAIL" -> "mail")
+Test / envVars := Map("DESTINATION_MAILS" -> "mail1,mail2")
 

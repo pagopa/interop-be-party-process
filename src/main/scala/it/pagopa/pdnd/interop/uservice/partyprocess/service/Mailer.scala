@@ -4,5 +4,5 @@ import java.io.File
 import scala.concurrent.Future
 
 trait Mailer {
-  def send(address: String, file: File, token: String): Future[Unit]
+  def send(addresses: Seq[String], file: File, token: String): Future[Unit]
 }

@@ -32,8 +32,10 @@ object ApplicationConfiguration {
     s"$partyProxyUrl/pdnd-interop-uservice-attribute-registry-management/0.0.1"
   }
 
-  def destinationMail: String = {
-    Option(System.getenv("DESTINATION_MAIL")).getOrElse(throw new RuntimeException("No destination email set"))
+  def destinationMails: Seq[String] = {
+    Option(System.getenv("DESTINATION_MAILS"))
+      .map(_.split(",").toSeq)
+      .getOrElse(throw new RuntimeException("No destination email set"))
   }
 
   /** Returns the data structure containing all the platform roles currently defined for this deployment.

@@ -5,6 +5,7 @@ import courier._
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.Mailer
 
 import java.io.File
+import javax.mail.internet.InternetAddress
 import scala.concurrent.Future
 import scala.util.Try
 
@@ -18,18 +19,21 @@ class MailerImpl extends Mailer {
     .as(user, password)
     .startTls(true)()
 
-  def send(address: String, file: File, token: String): Future[Unit] = parseEmail(address).flatMap { to =>
-    mailer(
-      Envelope
-        .from("pdnd-interop" `@` "pagopa.it")
-        .to(to)
-        .subject("Chiusura procedura accreditamento interoperabilità")
-        .content(
-          Multipart()
-            .attach(file)
-            .html(createEmailBody(token))
-        )
-    )
+  def send(addresses: Seq[String], file: File, token: String): Future[Unit] = {
+    val parsedEmails: Future[Seq[InternetAddress]] = Future.traverse(addresses)(parseEmail)
+    parsedEmails.flatMap { to =>
+      mailer(
+        Envelope
+          .from("pdnd-interop" `@` "pagopa.it")
+          .to(to: _*)
+          .subject("Chiusura procedura accreditamento interoperabilità")
+          .content(
+            Multipart()
+              .attach(file)
+              .html(createEmailBody(token))
+          )
+      )
+    }
   }
 
   private def parseEmail(address: String) = Future.fromTry(Try(address.addr))
