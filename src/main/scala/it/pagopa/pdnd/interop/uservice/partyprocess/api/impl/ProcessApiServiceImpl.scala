@@ -4,14 +4,13 @@ import akka.http.scaladsl.marshalling.ToEntityMarshaller
 import akka.http.scaladsl.server.Directives.onComplete
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.Delegate
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.Operator
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.Manager
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.{Delegate, Manager, Operator}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   Organization,
   OrganizationSeed,
   Person,
   PersonSeed,
+  Relationship,
   RelationshipEnums,
   RelationshipSeed,
   RelationshipSeedEnums,
@@ -20,7 +19,9 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   Problem => _
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApiService
+import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.OptionOps
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{ApplicationConfiguration, Digester}
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.{RelationshipNotActivable, RelationshipNotFound}
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.service._
 import org.slf4j.{Logger, LoggerFactory}
@@ -63,7 +64,7 @@ class ProcessApiServiceImpl(
     val result: Future[OnBoardingInfo] = for {
       person <- getPerson(taxCode)
       personInfo = PersonInfo(person.name, person.surname, person.taxCode)
-      relationships <- partyManagementService.retrieveRelationship(Some(person.taxCode), None)
+      relationships <- partyManagementService.retrieveRelationship(Some(person.taxCode), None, None)
       organizations <- Future.traverse(relationships.items)(r =>
         getOrganization(r.to).map(o => (o, r.status, r.role, r.platformRole))
       )
@@ -140,7 +141,7 @@ class ProcessApiServiceImpl(
     onBoardingRequest: OnBoardingRequest
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
     val result: Future[Unit] = for {
-      relationships <- partyManagementService.retrieveRelationship(None, Some(onBoardingRequest.institutionId))
+      relationships <- partyManagementService.retrieveRelationship(None, Some(onBoardingRequest.institutionId), None)
       _             <- existsAManagerActive(relationships)
       organization  <- getOrganization(onBoardingRequest.institutionId)
       validUsers    <- verifyUsersByRoles(onBoardingRequest.users, Set(Operator.toString))
@@ -332,7 +333,7 @@ class ProcessApiServiceImpl(
   ): Route = {
     logger.info(s"Getting relationship for institution $institutionId and tax code $taxCode")
     val result: Future[Seq[RelationshipInfo]] = for {
-      relationships <- partyManagementService.retrieveRelationship(Some(taxCode), Some(institutionId))
+      relationships <- partyManagementService.retrieveRelationship(Some(taxCode), Some(institutionId), None)
       response = relationshipsToRelationshipsResponse(relationships)
     } yield response
 
@@ -343,6 +344,45 @@ class ProcessApiServiceImpl(
         getInstitutionTaxCodeRelationship400(errorResponse)
     }
   }
+
+  /** Code: 204, Message: Successful operation
+    * Code: 400, Message: Invalid id supplied, DataType: Problem
+    * Code: 404, Message: Not found, DataType: Problem
+    */
+  override def activateInstitutionTaxCodeRelationship(
+    institutionId: String,
+    taxCode: String,
+    activationRequest: ActivationRequest
+  )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
+    logger.info(s"Activating relationship for institution $institutionId and tax code $taxCode")
+    val result: Future[Unit] = for {
+      relationships <- partyManagementService.retrieveRelationship(
+        Some(taxCode),
+        Some(institutionId),
+        Some(activationRequest.platformRole)
+      )
+      relationship <- relationships.items.headOption
+        .toFuture(RelationshipNotFound(institutionId, taxCode, activationRequest.platformRole))
+      _ <- relationshipMustBeActivable(relationship)
+      _ <- partyManagementService.activateRelationship(relationship.id)
+    } yield ()
+
+    onComplete(result) {
+      case Success(_) => activateInstitutionTaxCodeRelationship204
+      case Failure(ex: RelationshipNotFound) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 404, "Not found")
+        activateInstitutionTaxCodeRelationship404(errorResponse)
+      case Failure(ex) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        activateInstitutionTaxCodeRelationship400(errorResponse)
+    }
+  }
+
+  private def relationshipMustBeActivable(relationship: Relationship): Future[Unit] =
+    relationship.status match {
+      case RelationshipEnums.Status.Suspended => Future.successful(())
+      case status                             => Future.failed(RelationshipNotActivable(relationship.id.toString, status.toString))
+    }
 
   private def relationshipsToRelationshipsResponse(relationships: Relationships): Seq[RelationshipInfo] = {
     relationships.items.map(item =>

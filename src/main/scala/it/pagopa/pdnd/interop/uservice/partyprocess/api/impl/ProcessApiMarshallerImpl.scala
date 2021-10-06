@@ -5,6 +5,7 @@ import akka.http.scaladsl.marshalling.ToEntityMarshaller
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApiMarshaller
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.{
+  ActivationRequest,
   OnBoardingInfo,
   OnBoardingRequest,
   OnBoardingResponse,
@@ -37,4 +38,8 @@ class ProcessApiMarshallerImpl extends ProcessApiMarshaller with SprayJsonSuppor
 
   override implicit def toEntityMarshallerRelationshipInfoarray: ToEntityMarshaller[Seq[RelationshipInfo]] =
     sprayJsonMarshaller[Seq[RelationshipInfo]]
+
+  override implicit def fromEntityUnmarshallerActivationRequest: FromEntityUnmarshaller[ActivationRequest] =
+    sprayJsonUnmarshaller[ActivationRequest]
+
 }
