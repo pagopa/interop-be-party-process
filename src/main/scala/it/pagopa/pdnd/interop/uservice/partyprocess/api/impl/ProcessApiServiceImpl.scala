@@ -21,7 +21,11 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApiService
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.OptionOps
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{ApplicationConfiguration, Digester}
-import it.pagopa.pdnd.interop.uservice.partyprocess.error.{RelationshipNotActivable, RelationshipNotFound}
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.{
+  RelationshipNotActivable,
+  RelationshipNotFound,
+  RelationshipNotSuspendable
+}
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.service._
 import org.slf4j.{Logger, LoggerFactory}
@@ -349,7 +353,7 @@ class ProcessApiServiceImpl(
     * Code: 400, Message: Invalid id supplied, DataType: Problem
     * Code: 404, Message: Not found, DataType: Problem
     */
-  override def activateInstitutionTaxCodeRelationship(
+  override def activateRelationshipByInstitutionTaxCode(
     institutionId: String,
     taxCode: String,
     activationRequest: ActivationRequest
@@ -368,13 +372,46 @@ class ProcessApiServiceImpl(
     } yield ()
 
     onComplete(result) {
-      case Success(_) => activateInstitutionTaxCodeRelationship204
+      case Success(_) => activateRelationshipByInstitutionTaxCode204
       case Failure(ex: RelationshipNotFound) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 404, "Not found")
-        activateInstitutionTaxCodeRelationship404(errorResponse)
+        activateRelationshipByInstitutionTaxCode404(errorResponse)
       case Failure(ex) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
-        activateInstitutionTaxCodeRelationship400(errorResponse)
+        activateRelationshipByInstitutionTaxCode400(errorResponse)
+    }
+  }
+
+  /** Code: 204, Message: Successful operation
+    * Code: 400, Message: Invalid id supplied, DataType: Problem
+    * Code: 404, Message: Not found, DataType: Problem
+    */
+  override def suspendRelationshipByInstitutionTaxCode(
+    institutionId: String,
+    taxCode: String,
+    activationRequest: ActivationRequest
+  )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
+    logger.info(s"Suspending relationship for institution $institutionId and tax code $taxCode")
+    val result: Future[Unit] = for {
+      relationships <- partyManagementService.retrieveRelationship(
+        Some(taxCode),
+        Some(institutionId),
+        Some(activationRequest.platformRole)
+      )
+      relationship <- relationships.items.headOption
+        .toFuture(RelationshipNotFound(institutionId, taxCode, activationRequest.platformRole))
+      _ <- relationshipMustBeSuspendable(relationship)
+      _ <- partyManagementService.suspendRelationship(relationship.id)
+    } yield ()
+
+    onComplete(result) {
+      case Success(_) => activateRelationshipByInstitutionTaxCode204
+      case Failure(ex: RelationshipNotFound) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 404, "Not found")
+        activateRelationshipByInstitutionTaxCode404(errorResponse)
+      case Failure(ex) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        activateRelationshipByInstitutionTaxCode400(errorResponse)
     }
   }
 
@@ -382,6 +419,12 @@ class ProcessApiServiceImpl(
     relationship.status match {
       case RelationshipEnums.Status.Suspended => Future.successful(())
       case status                             => Future.failed(RelationshipNotActivable(relationship.id.toString, status.toString))
+    }
+
+  private def relationshipMustBeSuspendable(relationship: Relationship): Future[Unit] =
+    relationship.status match {
+      case RelationshipEnums.Status.Active => Future.successful(())
+      case status                          => Future.failed(RelationshipNotSuspendable(relationship.id.toString, status.toString))
     }
 
   private def relationshipsToRelationshipsResponse(relationships: Relationships): Seq[RelationshipInfo] = {

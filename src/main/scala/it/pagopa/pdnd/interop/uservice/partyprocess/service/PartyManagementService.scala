@@ -31,6 +31,8 @@ trait PartyManagementService {
 
   def activateRelationship(relationshipId: UUID): Future[Unit]
 
+  def suspendRelationship(relationshipId: UUID): Future[Unit]
+
   def createToken(relationshipsSeed: RelationshipsSeed, documentHash: String): Future[TokenText]
 
   def consumeToken(token: String): Future[Unit]

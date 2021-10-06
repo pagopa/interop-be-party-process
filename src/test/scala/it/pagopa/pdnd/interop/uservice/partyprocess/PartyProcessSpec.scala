@@ -596,4 +596,93 @@ class PartyProcessSpec
 
   }
 
+  "Relationship suspension" must {
+    "succeed" in {
+
+      val taxCode        = "taxCode"
+      val institutionId  = "institutionId"
+      val platformRole   = "platformRole"
+      val relationshipId = UUID.randomUUID()
+
+      val relationships = Relationships(
+        Seq(
+          Relationship(
+            relationshipId,
+            taxCode,
+            institutionId,
+            RelationshipEnums.Role.Operator,
+            platformRole,
+            RelationshipEnums.Status.Active
+          )
+        )
+      )
+
+      (partyManagementService.retrieveRelationship _)
+        .expects(Some(taxCode), Some(institutionId), Some(platformRole))
+        .returning(Future.successful(relationships))
+
+      (partyManagementService.suspendRelationship _)
+        .expects(relationshipId)
+        .returning(Future.successful(()))
+
+      val data = ActivationRequest(platformRole)
+      val response = Await.result(
+        Http().singleRequest(
+          HttpRequest(
+            uri = s"$url/institutions/$institutionId/relationships/$taxCode/suspend",
+            method = HttpMethods.POST,
+            entity = HttpEntity(ContentTypes.`application/json`, data.toJson.toString),
+            headers = authorization
+          )
+        ),
+        Duration.Inf
+      )
+
+      response.status mustBe StatusCodes.NoContent
+
+    }
+
+    "fail if relationship is not Active" in {
+
+      val taxCode        = "taxCode"
+      val institutionId  = "institutionId"
+      val platformRole   = "platformRole"
+      val relationshipId = UUID.randomUUID()
+
+      val relationships = Relationships(
+        Seq(
+          Relationship(
+            relationshipId,
+            taxCode,
+            institutionId,
+            RelationshipEnums.Role.Operator,
+            platformRole,
+            RelationshipEnums.Status.Pending
+          )
+        )
+      )
+
+      (partyManagementService.retrieveRelationship _)
+        .expects(Some(taxCode), Some(institutionId), Some(platformRole))
+        .returning(Future.successful(relationships))
+
+      val data = ActivationRequest(platformRole)
+      val response = Await.result(
+        Http().singleRequest(
+          HttpRequest(
+            uri = s"$url/institutions/$institutionId/relationships/$taxCode/suspend",
+            method = HttpMethods.POST,
+            entity = HttpEntity(ContentTypes.`application/json`, data.toJson.toString),
+            headers = authorization
+          )
+        ),
+        Duration.Inf
+      )
+
+      response.status mustBe StatusCodes.BadRequest
+
+    }
+
+  }
+
 }
