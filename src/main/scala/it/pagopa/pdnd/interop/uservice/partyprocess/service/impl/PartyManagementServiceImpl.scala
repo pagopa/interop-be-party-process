@@ -44,8 +44,12 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  override def retrieveRelationship(from: Option[String], to: Option[String]): Future[Relationships] = {
-    val request: ApiRequest[Relationships] = api.getRelationships(from, to)
+  override def retrieveRelationship(
+    from: Option[String],
+    to: Option[String],
+    platformRole: Option[String]
+  ): Future[Relationships] = {
+    val request: ApiRequest[Relationships] = api.getRelationships(from, to, platformRole)
     invoker
       .execute[Relationships](request)
       .map { x =>
@@ -241,6 +245,50 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
           Future.failed[Unit](new RuntimeException(message))
         case ex =>
           logger.error(s"Token invalidated ! ${ex.getMessage}")
+          Future.failed[Unit](ex)
+      }
+  }
+
+  override def activateRelationship(relationshipId: UUID): Future[Unit] = {
+    logger.info(s"Activating relationship $relationshipId")
+
+    val request = api.activatePartyRelationshipById(relationshipId)
+    invoker
+      .execute(request)
+      .map { x =>
+        logger.info(s"Relationship activated ${x.code}")
+        x.content
+      }
+      .recoverWith {
+        case ApiError(code, message, _, _, _) =>
+          logger.error(s"Relationship activation $code")
+          logger.error(s"Relationship activation $message")
+
+          Future.failed[Unit](new RuntimeException(message))
+        case ex =>
+          logger.error(s"Relationship activation ${ex.getMessage}")
+          Future.failed[Unit](ex)
+      }
+  }
+
+  override def suspendRelationship(relationshipId: UUID): Future[Unit] = {
+    logger.info(s"Suspending relationship $relationshipId")
+
+    val request = api.suspendPartyRelationshipById(relationshipId)
+    invoker
+      .execute(request)
+      .map { x =>
+        logger.info(s"Relationship suspended ${x.code}")
+        x.content
+      }
+      .recoverWith {
+        case ApiError(code, message, _, _, _) =>
+          logger.error(s"Relationship suspension $code")
+          logger.error(s"Relationship suspension $message")
+
+          Future.failed[Unit](new RuntimeException(message))
+        case ex =>
+          logger.error(s"Relationship suspension ${ex.getMessage}")
           Future.failed[Unit](ex)
       }
   }

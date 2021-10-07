@@ -10,7 +10,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{Attribute, AttributesResponse}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.{Role, Status}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model._
-import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{ProcessApiMarshallerImpl, ProcessApiServiceImpl}
+import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{ProcessApiMarshallerImpl, ProcessApiServiceImpl, _}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.{HealthApi, PlatformApi, ProcessApi, ProcessApiMarshaller}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{Authenticator, classicActorSystem, executionContext}
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
@@ -21,7 +21,7 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import spray.json.{DefaultJsonProtocol, RootJsonFormat}
+import spray.json.{DefaultJsonProtocol, RootJsonFormat, enrichAny}
 
 import java.io.File
 import java.nio.file.Paths
@@ -164,7 +164,7 @@ class PartyProcessSpec
 
       (partyManagementService.retrievePerson _).expects(taxCode1).returning(Future.successful(person1)).once()
       (partyManagementService.retrieveRelationship _)
-        .expects(Some(taxCode1), None)
+        .expects(Some(taxCode1), None, None)
         .returning(Future.successful(relationships))
         .once()
       (partyManagementService.retrieveOrganization _)
@@ -291,7 +291,7 @@ class PartyProcessSpec
         platformRole = "security"
       )
       (partyManagementService.retrieveRelationship _)
-        .expects(*, *)
+        .expects(*, *, *)
         .returning(Future.successful(Relationships(Seq.empty)))
 
       val req = OnBoardingRequest(users = Seq(operator1, operator2), institutionId = "institutionId1")
@@ -359,7 +359,7 @@ class PartyProcessSpec
         platformRole = "security"
       )
       (partyManagementService.retrieveRelationship _)
-        .expects(None, Some(institutionId1))
+        .expects(None, Some(institutionId1), None)
         .returning(Future.successful(relationships))
       (partyManagementService.retrieveOrganization _).expects(*).returning(Future.successful(organization1)).once()
       (partyManagementService.createPerson _).expects(*).returning(Future.successful(person1)).once()
@@ -484,7 +484,7 @@ class PartyProcessSpec
       val response = Await.result(
         Http().singleRequest(
           HttpRequest(
-            uri = s"$url/institutions/${institutionId}/relationships",
+            uri = s"$url/institutions/$institutionId/relationships",
             method = HttpMethods.GET,
             headers = authorization
           )
@@ -505,6 +505,184 @@ class PartyProcessSpec
       RelationshipInfo(from = taxCode4, role = "Operator", platformRole = "api", status = "active"))
 
     }
+  }
+
+  "Relationship activation" must {
+    "succeed" in {
+
+      val taxCode        = "taxCode"
+      val institutionId  = "institutionId"
+      val platformRole   = "platformRole"
+      val relationshipId = UUID.randomUUID()
+
+      val relationships = Relationships(
+        Seq(
+          Relationship(
+            relationshipId,
+            taxCode,
+            institutionId,
+            RelationshipEnums.Role.Operator,
+            platformRole,
+            RelationshipEnums.Status.Suspended
+          )
+        )
+      )
+
+      (partyManagementService.retrieveRelationship _)
+        .expects(Some(taxCode), Some(institutionId), Some(platformRole))
+        .returning(Future.successful(relationships))
+
+      (partyManagementService.activateRelationship _)
+        .expects(relationshipId)
+        .returning(Future.successful(()))
+
+      val data = ActivationRequest(platformRole)
+      val response = Await.result(
+        Http().singleRequest(
+          HttpRequest(
+            uri = s"$url/institutions/$institutionId/relationships/$taxCode/activate",
+            method = HttpMethods.POST,
+            entity = HttpEntity(ContentTypes.`application/json`, data.toJson.toString),
+            headers = authorization
+          )
+        ),
+        Duration.Inf
+      )
+
+      response.status mustBe StatusCodes.NoContent
+
+    }
+
+    "fail if relationship is not Suspended" in {
+
+      val taxCode        = "taxCode"
+      val institutionId  = "institutionId"
+      val platformRole   = "platformRole"
+      val relationshipId = UUID.randomUUID()
+
+      val relationships = Relationships(
+        Seq(
+          Relationship(
+            relationshipId,
+            taxCode,
+            institutionId,
+            RelationshipEnums.Role.Operator,
+            platformRole,
+            RelationshipEnums.Status.Pending
+          )
+        )
+      )
+
+      (partyManagementService.retrieveRelationship _)
+        .expects(Some(taxCode), Some(institutionId), Some(platformRole))
+        .returning(Future.successful(relationships))
+
+      val data = ActivationRequest(platformRole)
+      val response = Await.result(
+        Http().singleRequest(
+          HttpRequest(
+            uri = s"$url/institutions/$institutionId/relationships/$taxCode/activate",
+            method = HttpMethods.POST,
+            entity = HttpEntity(ContentTypes.`application/json`, data.toJson.toString),
+            headers = authorization
+          )
+        ),
+        Duration.Inf
+      )
+
+      response.status mustBe StatusCodes.BadRequest
+
+    }
+
+  }
+
+  "Relationship suspension" must {
+    "succeed" in {
+
+      val taxCode        = "taxCode"
+      val institutionId  = "institutionId"
+      val platformRole   = "platformRole"
+      val relationshipId = UUID.randomUUID()
+
+      val relationships = Relationships(
+        Seq(
+          Relationship(
+            relationshipId,
+            taxCode,
+            institutionId,
+            RelationshipEnums.Role.Operator,
+            platformRole,
+            RelationshipEnums.Status.Active
+          )
+        )
+      )
+
+      (partyManagementService.retrieveRelationship _)
+        .expects(Some(taxCode), Some(institutionId), Some(platformRole))
+        .returning(Future.successful(relationships))
+
+      (partyManagementService.suspendRelationship _)
+        .expects(relationshipId)
+        .returning(Future.successful(()))
+
+      val data = ActivationRequest(platformRole)
+      val response = Await.result(
+        Http().singleRequest(
+          HttpRequest(
+            uri = s"$url/institutions/$institutionId/relationships/$taxCode/suspend",
+            method = HttpMethods.POST,
+            entity = HttpEntity(ContentTypes.`application/json`, data.toJson.toString),
+            headers = authorization
+          )
+        ),
+        Duration.Inf
+      )
+
+      response.status mustBe StatusCodes.NoContent
+
+    }
+
+    "fail if relationship is not Active" in {
+
+      val taxCode        = "taxCode"
+      val institutionId  = "institutionId"
+      val platformRole   = "platformRole"
+      val relationshipId = UUID.randomUUID()
+
+      val relationships = Relationships(
+        Seq(
+          Relationship(
+            relationshipId,
+            taxCode,
+            institutionId,
+            RelationshipEnums.Role.Operator,
+            platformRole,
+            RelationshipEnums.Status.Pending
+          )
+        )
+      )
+
+      (partyManagementService.retrieveRelationship _)
+        .expects(Some(taxCode), Some(institutionId), Some(platformRole))
+        .returning(Future.successful(relationships))
+
+      val data = ActivationRequest(platformRole)
+      val response = Await.result(
+        Http().singleRequest(
+          HttpRequest(
+            uri = s"$url/institutions/$institutionId/relationships/$taxCode/suspend",
+            method = HttpMethods.POST,
+            entity = HttpEntity(ContentTypes.`application/json`, data.toJson.toString),
+            headers = authorization
+          )
+        ),
+        Duration.Inf
+      )
+
+      response.status mustBe StatusCodes.BadRequest
+
+    }
+
   }
 
 }

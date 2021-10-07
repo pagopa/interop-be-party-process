@@ -2,6 +2,7 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.service
 
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model._
 
+import java.util.UUID
 import scala.concurrent.Future
 
 trait PartyManagementService {
@@ -20,9 +21,17 @@ trait PartyManagementService {
     platformRole: String
   ): Future[Unit]
 
-  def retrieveRelationship(from: Option[String], to: Option[String]): Future[Relationships]
+  def retrieveRelationship(
+    from: Option[String],
+    to: Option[String],
+    platformRole: Option[String]
+  ): Future[Relationships]
 
   def getInstitutionRelationships(institutionId: String): Future[Relationships]
+
+  def activateRelationship(relationshipId: UUID): Future[Unit]
+
+  def suspendRelationship(relationshipId: UUID): Future[Unit]
 
   def createToken(relationshipsSeed: RelationshipsSeed, documentHash: String): Future[TokenText]
 
