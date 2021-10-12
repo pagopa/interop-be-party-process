@@ -15,7 +15,8 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 package object partyprocess extends SprayJsonSupport {
-  final lazy val url: String = "http://localhost:8088/pdnd-interop-uservice-party-process/0.0.1"
+  final lazy val url: String =
+    s"http://localhost:8088/pdnd-interop-uservice-party-process/${buildinfo.BuildInfo.interfaceVersion}"
 
   implicit val fromEntityUnmarshallerOnBoardingInfo: FromEntityUnmarshaller[OnBoardingInfo] =
     sprayJsonUnmarshaller[OnBoardingInfo]
