@@ -1,4 +1,5 @@
 import Versions._
+import PDNDVersions._
 import sbt._
 
 object Dependencies {
@@ -11,7 +12,7 @@ object Dependencies {
     lazy val stream      = namespace                       %% "akka-stream"              % akkaVersion
     lazy val http        = namespace                       %% "akka-http"                % akkaHttpVersion
     lazy val httpJson    = namespace                       %% "akka-http-spray-json"     % akkaHttpVersion
-    lazy val httpJson4s  = "de.heikoseeberger"             %% "akka-http-json4s"         % "1.37.0"
+    lazy val httpJson4s  = "de.heikoseeberger"             %% "akka-http-json4s"         % akkaHttpJson4sVersion
     lazy val management  = "com.lightbend.akka.management" %% "akka-management"          % "1.1.1"
     lazy val slf4j       = namespace                       %% "akka-slf4j"               % akkaVersion
     lazy val testkit     = namespace                       %% "akka-actor-testkit-typed" % akkaVersion
@@ -21,10 +22,10 @@ object Dependencies {
     lazy val namespace = "it.pagopa"
 
     lazy val partyManagementClient =
-      namespace %% "pdnd-interop-uservice-party-management-client" % partyManagementClientVersion
+      namespace %% "pdnd-interop-uservice-party-management-client" % partyManagementVersion
 
     lazy val partyProxyClient =
-      namespace %% "pdnd-interop-uservice-party-registry-proxy-client" % partyProxyClientVersion
+      namespace %% "pdnd-interop-uservice-party-registry-proxy-client" % partyProxyVersion
 
     lazy val attributeRegistryClient =
       namespace %% "pdnd-interop-uservice-attribute-registry-management-client" % attributeRegistryVersion
@@ -46,6 +47,11 @@ object Dependencies {
   private[this] object openapi4j {
     lazy val namespace          = "org.openapi4j"
     lazy val operationValidator = namespace % "openapi-operation-validator" % openapi4jVersion
+  }
+
+  private[this] object mustache {
+    lazy val namespace = "com.github.spullara.mustache.java"
+    lazy val compiler  = namespace % "compiler" % mustacheVersion
   }
 
   private[this] object json4s {
@@ -98,6 +104,7 @@ object Dependencies {
       akka.httpJson                  % Compile,
       akka.management                % Compile,
       openapi4j.operationValidator   % Compile,
+      mustache.compiler              % Compile,
       pagopa.partyManagementClient   % Compile,
       pagopa.partyProxyClient        % Compile,
       pagopa.attributeRegistryClient % Compile,

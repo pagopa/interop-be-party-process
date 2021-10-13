@@ -14,7 +14,9 @@ managerPlatformRoles=$MANAGER_PLATFORM_ROLES
 delegatePlatformRoles=$DELEGATE_PLATFORM_ROLES
 operatorPlatformRoles=$OPERATOR_PLATFORM_ROLES
 
-name=$(cat $SCRIPT_PATH/../build.sbt | grep "name :=" | awk -F:= '{ print $2 }' | sed 's/\"//' | sed 's/\",//' | sed 's/ //' | tr '[:upper:]' '[:lower:]' | grep -v client )
+name=$(cat $SCRIPT_PATH/../build.sbt | grep "name :=" | awk -F:= '{ print $2 }' | sed 's/\"//' | sed 's/\",//' | sed 's/ //' | tr '[:upper:]' '[:lower:]' | grep -v client)
 
-#version=$($SCRIPT_PATH/../version.sh)
-version=$(cat $SCRIPT_PATH/../build.sbt  | grep "ThisBuild / version := " | awk -F:= '{ print $2 }'  | sed 's/ //' | sed 's/"//' | sed 's/"//' | uniq)
+#getting version from sbt
+cd $SCRIPT_PATH/..
+version=$(sbt -Dsbt.log.noformat=true 'inspect actual version' | grep "Setting: java.lang.String" | cut -d '=' -f2 | tr -d ' ')
+cd $SCRIPT_PATH
