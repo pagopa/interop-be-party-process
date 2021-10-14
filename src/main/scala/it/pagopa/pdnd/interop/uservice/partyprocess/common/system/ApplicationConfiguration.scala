@@ -17,20 +17,11 @@ object ApplicationConfiguration {
     config.getInt("uservice-party-process.port")
   }
 
-  def getPartyManagementUrl: String = {
-    val partyManagementUrl: String = config.getString("services.party-management")
-    s"$partyManagementUrl/pdnd-interop-uservice-party-management/0.0.1"
-  }
+  def getPartyManagementUrl: String = config.getString("services.party-management")
 
-  def getPartyProxyUrl: String = {
-    val partyProxyUrl: String = config.getString("services.party-proxy")
-    s"$partyProxyUrl/pdnd-interop-uservice-party-registry-proxy/0.0.1"
-  }
+  def getPartyProxyUrl: String = config.getString("services.party-proxy")
 
-  def getAttributeRegistryUrl: String = {
-    val partyProxyUrl: String = config.getString("services.attribute-registry")
-    s"$partyProxyUrl/pdnd-interop-uservice-attribute-registry-management/0.0.1"
-  }
+  def getAttributeRegistryUrl: String = config.getString("services.attribute-registry")
 
   def destinationMails: Seq[String] = {
     Option(System.getenv("DESTINATION_MAILS"))
