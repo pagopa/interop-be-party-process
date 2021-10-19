@@ -1,5 +1,6 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
+import akka.http.scaladsl.server.directives.FileInfo
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.{ApiError, ApiRequest}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipSeedEnums.Role.{
@@ -13,6 +14,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration.platformRolesConfiguration._
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.{EitherOps, TryOps}
 
+import java.io.File
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -202,10 +204,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
 
   }
 
-  override def consumeToken(token: String): Future[Unit] = {
+  override def consumeToken(token: String, fileParts: (FileInfo, File)): Future[Unit] = {
     logger.info(s"Consuming token $token")
 
-    val request = api.consumeToken(token)
+    val request = api.consumeToken(token, fileParts._2)
     invoker
       .execute(request)
       .map { x =>
@@ -290,6 +292,28 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
         case ex =>
           logger.error(s"Relationship suspension ${ex.getMessage}")
           Future.failed[Unit](ex)
+      }
+  }
+
+  override def getRelationshipById(relationshipId: UUID): Future[Relationship] = {
+    logger.info(s"Getting relationship $relationshipId")
+
+    val request = api.getRelationshipById(relationshipId)
+    invoker
+      .execute(request)
+      .map { x =>
+        logger.info(s"Relationship retrieved ${x.code}")
+        x.content
+      }
+      .recoverWith {
+        case ApiError(code, message, _, _, _) =>
+          logger.error(s"Relationship retrieval error $code")
+          logger.error(s"Relationship retrieval error message: $message")
+
+          Future.failed[Relationship](new RuntimeException(message))
+        case ex =>
+          logger.error(s"Relationship suspension ${ex.getMessage}")
+          Future.failed[Relationship](ex)
       }
   }
 }

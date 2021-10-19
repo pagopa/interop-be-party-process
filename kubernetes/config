@@ -13,6 +13,9 @@ repository=$DOCKER_REPO
 managerPlatformRoles=$MANAGER_PLATFORM_ROLES
 delegatePlatformRoles=$DELEGATE_PLATFORM_ROLES
 operatorPlatformRoles=$OPERATOR_PLATFORM_ROLES
+storageType=$STORAGE_TYPE
+storageContainer=$STORAGE_CONTAINER
+storageEndpoint=$STORAGE_ENDPOINT
 
 name=$(cat $SCRIPT_PATH/../build.sbt | grep "name :=" | awk -F:= '{ print $2 }' | sed 's/\"//' | sed 's/\",//' | sed 's/ //' | tr '[:upper:]' '[:lower:]' | grep -v client)
 

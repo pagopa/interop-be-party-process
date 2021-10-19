@@ -1,9 +1,11 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.api.impl
 
 import akka.http.scaladsl.marshalling.ToEntityMarshaller
-import akka.http.scaladsl.server.Directives.onComplete
+import akka.http.scaladsl.model.{ContentType, HttpEntity, MessageEntity}
+import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.{Delegate, Manager, Operator}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   Organization,
@@ -19,9 +21,11 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   Problem => _
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApiService
-import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.OptionOps
+import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.{OptionOps, TryOps}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{ApplicationConfiguration, Digester}
 import it.pagopa.pdnd.interop.uservice.partyprocess.error.{
+  ContentTypeParsingError,
+  RelationshipDocumentNotFound,
   RelationshipNotActivable,
   RelationshipNotFound,
   RelationshipNotSuspendable
@@ -31,9 +35,10 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.service._
 import org.slf4j.{Logger, LoggerFactory}
 import spray.json._
 
-import java.io.File
+import java.io.{File, FileOutputStream}
 import java.nio.charset.StandardCharsets
-import java.util.Base64
+import java.nio.file.{Files, Path}
+import java.util.{Base64, UUID}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
@@ -50,7 +55,8 @@ class ProcessApiServiceImpl(
   partyRegistryService: PartyRegistryService,
   attributeRegistryService: AttributeRegistryService,
   mailer: Mailer,
-  pdfCreator: PDFCreator
+  pdfCreator: PDFCreator,
+  fileManager: FileManager
 )(implicit ec: ExecutionContext)
     extends ProcessApiService {
 
@@ -175,7 +181,7 @@ class ProcessApiServiceImpl(
     val result: Future[Unit] = for {
       checksum <- calculateCheckSum(token)
       verified <- verifyChecksum(contract._2, checksum, token)
-      _        <- partyManagementService.consumeToken(verified)
+      _        <- partyManagementService.consumeToken(verified, contract)
     } yield ()
 
     onComplete(result) {
@@ -413,6 +419,63 @@ class ProcessApiServiceImpl(
         val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
         activateRelationshipByInstitutionTaxCode400(errorResponse)
     }
+  }
+
+  def getOnboardingDocument(relationshipId: String)(implicit
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerFile: ToEntityMarshaller[File],
+    contexts: Seq[(String, String)]
+  ): Route = {
+    val result: Future[DocumentDetails] =
+      for {
+        _              <- tokenFromContext(contexts)
+        uuid           <- Try { UUID.fromString(relationshipId) }.toFuture
+        relationship   <- partyManagementService.getRelationshipById(uuid)
+        filePath       <- relationship.filePath.toFuture(RelationshipDocumentNotFound(relationshipId))
+        fileName       <- relationship.fileName.toFuture(RelationshipDocumentNotFound(relationshipId))
+        contentTypeStr <- relationship.contentType.toFuture(RelationshipDocumentNotFound(relationshipId))
+        contentType <- ContentType
+          .parse(contentTypeStr)
+          .fold(ex => Future.failed(ContentTypeParsingError(contentTypeStr, ex)), Future.successful)
+        response <- fileManager.get(filePath)
+      } yield DocumentDetails(fileName, contentType, response)
+
+    onComplete(result) {
+      case Success(document) =>
+        val output: MessageEntity = convertToMessageEntity(document)
+        complete(output)
+      case Failure(ex: ApiError[_]) if ex.code == 400 =>
+        getOnboardingDocument400(
+          Problem(Option(ex.getMessage), 400, s"Error retrieving document for relationship $relationshipId")
+        )
+      case Failure(ex: ApiError[_]) if ex.code == 404 =>
+        getOnboardingDocument404(
+          Problem(Option(ex.getMessage), 404, s"Error retrieving document for relationship $relationshipId")
+        )
+      case Failure(ex) =>
+        complete(
+          500,
+          Problem(Option(ex.getMessage), 500, s"Error retrieving document for relationship $relationshipId")
+        )
+    }
+  }
+
+  private[this] def tokenFromContext(context: Seq[(String, String)]): Future[String] =
+    Future.fromTry(
+      context
+        .find(_._1 == "bearer")
+        .map(header => header._2)
+        .toRight(new RuntimeException("Bearer Token not provided"))
+        .toTry
+    )
+
+  def convertToMessageEntity(documentDetails: DocumentDetails): MessageEntity = {
+    val randomPath: Path               = Files.createTempDirectory(s"document")
+    val temporaryFilePath: String      = s"${randomPath.toString}/${documentDetails.fileName}"
+    val file: File                     = new File(temporaryFilePath)
+    val outputStream: FileOutputStream = new FileOutputStream(file)
+    documentDetails.file.writeTo(outputStream)
+    HttpEntity.fromFile(documentDetails.contentType, file)
   }
 
   private def relationshipMustBeActivable(relationship: Relationship): Future[Unit] =

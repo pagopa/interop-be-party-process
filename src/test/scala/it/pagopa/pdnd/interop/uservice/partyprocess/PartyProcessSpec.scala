@@ -57,6 +57,11 @@ class PartyProcessSpec
     System.setProperty("DELEGATE_PLATFORM_ROLES", "admin")
     System.setProperty("OPERATOR_PLATFORM_ROLES", "security, api")
     System.setProperty("MANAGER_PLATFORM_ROLES", "admin")
+    System.setProperty("STORAGE_TYPE", "File")
+    System.setProperty("STORAGE_CONTAINER", "local")
+    System.setProperty("STORAGE_ENDPOINT", "local")
+    System.setProperty("STORAGE_APPLICATION_ID", "local")
+    System.setProperty("STORAGE_APPLICATION_SECRET", "local")
 
     val processApi = new ProcessApi(
       new ProcessApiServiceImpl(
@@ -64,7 +69,8 @@ class PartyProcessSpec
         partyRegistryService,
         attributeRegistryService,
         mailer,
-        pdfCreator
+        pdfCreator,
+        mock[FileManager]
       ),
       processApiMarshaller,
       wrappingDirective
@@ -388,7 +394,7 @@ class PartyProcessSpec
 
       val path = Paths.get("src/test/resources/contract-test-01.pdf")
 
-      (partyManagementService.consumeToken _).expects(token).returning(Future.successful(()))
+      (partyManagementService.consumeToken _).expects(token, *).returning(Future.successful(()))
 
       val formData =
         Multipart.FormData.fromPath(name = "contract", MediaTypes.`application/octet-stream`, file = path, 100000)
@@ -518,12 +524,15 @@ class PartyProcessSpec
       val relationships = Relationships(
         Seq(
           Relationship(
-            relationshipId,
-            taxCode,
-            institutionId,
-            RelationshipEnums.Role.Operator,
-            platformRole,
-            RelationshipEnums.Status.Suspended
+            id = relationshipId,
+            from = taxCode,
+            to = institutionId,
+            filePath = None,
+            fileName = None,
+            contentType = None,
+            role = RelationshipEnums.Role.Operator,
+            platformRole = platformRole,
+            status = RelationshipEnums.Status.Suspended
           )
         )
       )
@@ -563,12 +572,15 @@ class PartyProcessSpec
       val relationships = Relationships(
         Seq(
           Relationship(
-            relationshipId,
-            taxCode,
-            institutionId,
-            RelationshipEnums.Role.Operator,
-            platformRole,
-            RelationshipEnums.Status.Pending
+            id = relationshipId,
+            from = taxCode,
+            to = institutionId,
+            filePath = None,
+            fileName = None,
+            contentType = None,
+            role = RelationshipEnums.Role.Operator,
+            platformRole = platformRole,
+            status = RelationshipEnums.Status.Pending
           )
         )
       )
@@ -607,12 +619,15 @@ class PartyProcessSpec
       val relationships = Relationships(
         Seq(
           Relationship(
-            relationshipId,
-            taxCode,
-            institutionId,
-            RelationshipEnums.Role.Operator,
-            platformRole,
-            RelationshipEnums.Status.Active
+            id = relationshipId,
+            from = taxCode,
+            to = institutionId,
+            filePath = None,
+            fileName = None,
+            contentType = None,
+            role = RelationshipEnums.Role.Operator,
+            platformRole = platformRole,
+            status = RelationshipEnums.Status.Active
           )
         )
       )
@@ -652,12 +667,15 @@ class PartyProcessSpec
       val relationships = Relationships(
         Seq(
           Relationship(
-            relationshipId,
-            taxCode,
-            institutionId,
-            RelationshipEnums.Role.Operator,
-            platformRole,
-            RelationshipEnums.Status.Pending
+            id = relationshipId,
+            from = taxCode,
+            to = institutionId,
+            filePath = None,
+            fileName = None,
+            contentType = None,
+            role = RelationshipEnums.Role.Operator,
+            platformRole = platformRole,
+            status = RelationshipEnums.Status.Pending
           )
         )
       )

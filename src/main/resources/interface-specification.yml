@@ -328,6 +328,41 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /onboarding/relationship/{relationshipId}/document:
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Get an onboarding document
+      operationId: getOnboardingDocument
+      parameters:
+        - name: relationshipId
+          in: path
+          description: the relationship id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Signed onboarding document retrieved
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Document not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /status:
     get:
       security:
