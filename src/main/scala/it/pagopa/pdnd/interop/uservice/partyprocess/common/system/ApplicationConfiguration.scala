@@ -23,7 +23,7 @@ object ApplicationConfiguration {
 
   def getAttributeRegistryUrl: String    = config.getString("services.attribute-registry")
   def getAuthorizationProcessURL: String = config.getString("services.authorization-process")
-  def getUserRegistryURL: String         = config.getString("services.authorization-process")
+  def getUserRegistryURL: String         = config.getString("services.user-registry-management")
 
   def destinationMails: Seq[String] = {
     Option(System.getenv("DESTINATION_MAILS"))
