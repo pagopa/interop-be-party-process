@@ -2,7 +2,6 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
 import com.azure.storage.blob.specialized.BlockBlobClient
 import com.azure.storage.blob.{BlobServiceClient, BlobServiceClientBuilder}
-import com.azure.storage.common.StorageSharedKeyCredential
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration.storageAccountInfo
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.FileManager
 
@@ -13,13 +12,13 @@ import scala.util.Try
 final class BlobStorageManagerImpl extends FileManager {
 
   lazy val azureBlobClient = {
-    val accountName: String = storageAccountInfo.applicationId
-    val accountKey: String  = storageAccountInfo.applicationSecret
-    val endpoint: String    = storageAccountInfo.endpoint
-    val credential          = new StorageSharedKeyCredential(accountName, accountKey)
+    val accountName: String    = storageAccountInfo.applicationId
+    val accountKey: String     = storageAccountInfo.applicationSecret
+    val endpointSuffix: String = storageAccountInfo.endpoint
+    val connectionString =
+      s"DefaultEndpointsProtocol=https;AccountName=$accountName;AccountKey=$accountKey;EndpointSuffix=$endpointSuffix"
     val storageClient: BlobServiceClient =
-      new BlobServiceClientBuilder().endpoint(endpoint).credential(credential).buildClient
-
+      new BlobServiceClientBuilder().connectionString(connectionString).buildClient()
     storageClient
   }
 
