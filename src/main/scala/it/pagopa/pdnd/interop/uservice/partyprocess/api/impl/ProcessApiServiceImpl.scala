@@ -61,7 +61,7 @@ class ProcessApiServiceImpl(
   /** Code: 200, Message: successful operation, DataType: OnBoardingInfo
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
-  def getOnBoardingInfo()(implicit
+  override def getOnBoardingInfo()(implicit
     toEntityMarshallerOnBoardingInfo: ToEntityMarshaller[OnBoardingInfo],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     contexts: Seq[(String, String)]
