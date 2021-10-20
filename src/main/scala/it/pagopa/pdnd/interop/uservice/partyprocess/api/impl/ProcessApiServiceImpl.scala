@@ -19,7 +19,7 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   Problem => _
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApiService
-import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.OptionOps
+import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.{OptionOps, TryOps}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{ApplicationConfiguration, Digester}
 import it.pagopa.pdnd.interop.uservice.partyprocess.error.{
   RelationshipNotActivable,
@@ -33,7 +33,7 @@ import spray.json._
 
 import java.io.File
 import java.nio.charset.StandardCharsets
-import java.util.Base64
+import java.util.{Base64, UUID}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
@@ -49,6 +49,8 @@ class ProcessApiServiceImpl(
   partyManagementService: PartyManagementService,
   partyRegistryService: PartyRegistryService,
   attributeRegistryService: AttributeRegistryService,
+  authorizationProcessService: AuthorizationProcessService,
+  userRegistryManagementService: UserRegistryManagementService,
   mailer: Mailer,
   pdfCreator: PDFCreator
 )(implicit ec: ExecutionContext)
@@ -59,14 +61,18 @@ class ProcessApiServiceImpl(
   /** Code: 200, Message: successful operation, DataType: OnBoardingInfo
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
-  override def getOnBoardingInfo(taxCode: String)(implicit
+  def getOnBoardingInfo()(implicit
     toEntityMarshallerOnBoardingInfo: ToEntityMarshaller[OnBoardingInfo],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     contexts: Seq[(String, String)]
   ): Route = {
-    logger.info(s"Getting onboarding information for $taxCode")
+
     val result: Future[OnBoardingInfo] = for {
-      person <- getPerson(taxCode)
+      bearer      <- tokenFromContext(contexts)
+      validJWT    <- authorizationProcessService.validateToken(bearer)
+      subjectUUID <- Try { UUID.fromString(validJWT.sub) }.toFuture
+      user        <- userRegistryManagementService.getUserById(subjectUUID)
+      person      <- getPerson(user.externalId)
       personInfo = PersonInfo(person.name, person.surname, person.taxCode)
       relationships <- partyManagementService.retrieveRelationship(Some(person.taxCode), None, None)
       organizations <- Future.traverse(relationships.items)(r =>
@@ -93,6 +99,15 @@ class ProcessApiServiceImpl(
 
     }
   }
+
+  private[this] def tokenFromContext(context: Seq[(String, String)]): Future[String] =
+    Future.fromTry(
+      context
+        .find(_._1 == "bearer")
+        .map(header => header._2)
+        .toRight(new RuntimeException("Bearer Token not provided"))
+        .toTry
+    )
 
   /** Code: 201, Message: successful operation, DataType: OnBoardingResponse
     * Code: 400, Message: Invalid ID supplied, DataType: Problem

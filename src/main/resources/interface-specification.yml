@@ -32,7 +32,7 @@ tags:
       description: Find out more
       url: 'http://swagger.io'
 paths:
-  '/onboarding/info/{taxCode}':
+  '/onboarding/info/':
     get:
       security:
         - bearerAuth: []
@@ -41,13 +41,6 @@ paths:
       summary: get on boarding info
       description: Return ok
       operationId: getOnBoardingInfo
-      parameters:
-        - name: taxCode
-          in: path
-          description: The tax code to get onboarding info
-          required: true
-          schema:
-            type: string
       responses:
         '200':
           description: successful operation

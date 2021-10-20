@@ -30,6 +30,12 @@ object Dependencies {
     lazy val attributeRegistryClient =
       namespace %% "pdnd-interop-uservice-attribute-registry-management-client" % attributeRegistryVersion
 
+    lazy val authorizationProcessClient =
+      namespace %% "pdnd-interop-uservice-authorization-process-client" % authorizationProcessVersion
+
+    lazy val userRegistryManagementClient =
+      namespace %% "pdnd-interop-uservice-user-registry-management-client" % userRegistryManagementVersion
+
   }
 
   private[this] object courier {
@@ -96,27 +102,29 @@ object Dependencies {
       // For making Java 12 happy
       "javax.annotation" % "javax.annotation-api" % "1.3.2" % "compile",
       //
-      akka.actorTyped                % Compile,
-      akka.actor                     % Compile,
-      akka.persistence               % Compile,
-      akka.stream                    % Compile,
-      akka.http                      % Compile,
-      akka.httpJson                  % Compile,
-      akka.management                % Compile,
-      openapi4j.operationValidator   % Compile,
-      mustache.compiler              % Compile,
-      pagopa.partyManagementClient   % Compile,
-      pagopa.partyProxyClient        % Compile,
-      pagopa.attributeRegistryClient % Compile,
-      courier.mail                   % Compile,
-      itextpdf.core                  % Compile,
-      logback.classic                % Compile,
-      akka.slf4j                     % Compile,
-      kamon.bundle                   % Compile,
-      kamon.prometheus               % Compile,
-      akka.testkit                   % Test,
-      scalatest.core                 % Test,
-      scalamock.core                 % Test
+      akka.actorTyped                     % Compile,
+      akka.actor                          % Compile,
+      akka.persistence                    % Compile,
+      akka.stream                         % Compile,
+      akka.http                           % Compile,
+      akka.httpJson                       % Compile,
+      akka.management                     % Compile,
+      openapi4j.operationValidator        % Compile,
+      mustache.compiler                   % Compile,
+      pagopa.partyManagementClient        % Compile,
+      pagopa.partyProxyClient             % Compile,
+      pagopa.attributeRegistryClient      % Compile,
+      pagopa.authorizationProcessClient   % Compile,
+      pagopa.userRegistryManagementClient % Compile,
+      courier.mail                        % Compile,
+      itextpdf.core                       % Compile,
+      logback.classic                     % Compile,
+      akka.slf4j                          % Compile,
+      kamon.bundle                        % Compile,
+      kamon.prometheus                    % Compile,
+      akka.testkit                        % Test,
+      scalatest.core                      % Test,
+      scalamock.core                      % Test
     )
     lazy val client: Seq[ModuleID] =
       Seq(

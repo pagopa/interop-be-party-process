@@ -8,6 +8,7 @@ import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, SecurityDirectives}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{Attribute, AttributesResponse}
+import it.pagopa.pdnd.interop.uservice.authorizationprocess.client.model.ValidJWT
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.{Role, Status}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{ProcessApiMarshallerImpl, ProcessApiServiceImpl, _}
@@ -29,6 +30,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.duration.{Duration, DurationInt}
 import scala.concurrent.{Await, Future}
+import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{User => UserRegistryUser}
 
 class PartyProcessSpec
     extends MockFactory
@@ -38,14 +40,16 @@ class PartyProcessSpec
     with SprayJsonSupport
     with DefaultJsonProtocol {
 
-  val processApiMarshaller: ProcessApiMarshaller         = new ProcessApiMarshallerImpl
-  val mockHealthApi: HealthApi                           = mock[HealthApi]
-  val mockPlatformApi: PlatformApi                       = mock[PlatformApi]
-  val partyManagementService: PartyManagementService     = mock[PartyManagementService]
-  val partyRegistryService: PartyRegistryService         = mock[PartyRegistryService]
-  val attributeRegistryService: AttributeRegistryService = mock[AttributeRegistryService]
-  val mailer: Mailer                                     = mock[Mailer]
-  val pdfCreator: PDFCreator                             = mock[PDFCreator]
+  val processApiMarshaller: ProcessApiMarshaller               = new ProcessApiMarshallerImpl
+  val mockHealthApi: HealthApi                                 = mock[HealthApi]
+  val mockPlatformApi: PlatformApi                             = mock[PlatformApi]
+  val partyManagementService: PartyManagementService           = mock[PartyManagementService]
+  val partyRegistryService: PartyRegistryService               = mock[PartyRegistryService]
+  val userRegistryService: UserRegistryManagementService       = mock[UserRegistryManagementService]
+  val authorizationProcessService: AuthorizationProcessService = mock[AuthorizationProcessService]
+  val attributeRegistryService: AttributeRegistryService       = mock[AttributeRegistryService]
+  val mailer: Mailer                                           = mock[Mailer]
+  val pdfCreator: PDFCreator                                   = mock[PDFCreator]
 
   var controller: Option[Controller]                 = None
   var bindServer: Option[Future[Http.ServerBinding]] = None
@@ -63,6 +67,8 @@ class PartyProcessSpec
         partyManagementService,
         partyRegistryService,
         attributeRegistryService,
+        authorizationProcessService,
+        userRegistryService,
         mailer,
         pdfCreator
       ),
@@ -162,6 +168,39 @@ class PartyProcessSpec
         )
       )
 
+      val mockSubjectUUID = "af80fac0-2775-4646-8fcf-28e083751988"
+      (authorizationProcessService.validateToken _)
+        .expects(*)
+        .returning(
+          Future.successful(
+            ValidJWT(
+              iss = UUID.randomUUID().toString,
+              sub = mockSubjectUUID,
+              aud = List("test"),
+              exp = OffsetDateTime.now(),
+              nbf = OffsetDateTime.now(),
+              iat = OffsetDateTime.now(),
+              jti = "123"
+            )
+          )
+        )
+        .once()
+
+      (userRegistryService.getUserById _)
+        .expects(UUID.fromString(mockSubjectUUID))
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = UUID.fromString(mockSubjectUUID),
+              externalId = taxCode1,
+              name = "Mario",
+              surname = "Super",
+              email = "super@mario.it"
+            )
+          )
+        )
+        .once()
+
       (partyManagementService.retrievePerson _).expects(taxCode1).returning(Future.successful(person1)).once()
       (partyManagementService.retrieveRelationship _)
         .expects(Some(taxCode1), None, None)
@@ -179,7 +218,7 @@ class PartyProcessSpec
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
       val response = Await.result(
         Http().singleRequest(
-          HttpRequest(uri = s"$url/onboarding/info/$taxCode1", method = HttpMethods.GET, headers = authorization)
+          HttpRequest(uri = s"$url/onboarding/info", method = HttpMethods.GET, headers = authorization)
         ),
         Duration.Inf
       )
