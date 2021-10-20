@@ -72,9 +72,8 @@ class ProcessApiServiceImpl(
       validJWT    <- authorizationProcessService.validateToken(bearer)
       subjectUUID <- Try { UUID.fromString(validJWT.sub) }.toFuture
       user        <- userRegistryManagementService.getUserById(subjectUUID)
-      person      <- getPerson(user.externalId)
-      personInfo = PersonInfo(person.name, person.surname, person.taxCode)
-      relationships <- partyManagementService.retrieveRelationship(Some(person.taxCode), None, None)
+      personInfo = PersonInfo(user.name, user.surname, user.externalId)
+      relationships <- partyManagementService.retrieveRelationship(Some(user.externalId), None, None)
       organizations <- Future.traverse(relationships.items)(r =>
         getOrganization(r.to).map(o => (o, r.status, r.role, r.platformRole))
       )
@@ -265,8 +264,6 @@ class ProcessApiServiceImpl(
       RelationshipSeedEnums.Role.withName(role),
       platformRole
     )
-
-  private def getPerson(taxCode: String): Future[Person] = partyManagementService.retrievePerson(taxCode)
 
   private def createPerson(user: User): Future[Person] = {
     val seed: PersonSeed = PersonSeed(name = user.name, surname = user.surname, taxCode = user.taxCode)
