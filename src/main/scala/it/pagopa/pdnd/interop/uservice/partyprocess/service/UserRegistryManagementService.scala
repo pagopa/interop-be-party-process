@@ -7,4 +7,5 @@ import scala.concurrent.Future
 
 trait UserRegistryManagementService {
   def getUserById(userId: UUID): Future[User]
+  def upsertUser(externalId: String, name: String, surname: String, email: String): Future[User]
 }

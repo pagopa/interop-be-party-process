@@ -35,6 +35,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.service.impl.{
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.{
   AttributeRegistryInvoker,
   AttributeRegistryService,
+  FileManager,
   AuthorizationProcessInvoker,
   AuthorizationProcessService,
   Mailer,
@@ -52,7 +53,12 @@ import kamon.Kamon
 
 import scala.concurrent.Future
 
+@SuppressWarnings(Array("org.wartremover.warts.TryPartial"))
 object Main extends App with CorsSupport {
+
+  final val fileManager = FileManager
+    .getConcreteImplementation(ApplicationConfiguration.runtimeFileManager)
+    .get //end of the world here: if no valid file manager is configured, the application must break.
 
   Kamon.init()
 
@@ -96,7 +102,8 @@ object Main extends App with CorsSupport {
       authorizationProcessService,
       userRegistryManagementService,
       mailer,
-      pdfCreator
+      pdfCreator,
+      fileManager
     ),
     new ProcessApiMarshallerImpl(),
     SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)

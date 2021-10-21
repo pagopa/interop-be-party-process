@@ -1,13 +1,13 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.service
 
+import akka.http.scaladsl.server.directives.FileInfo
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model._
 
+import java.io.File
 import java.util.UUID
 import scala.concurrent.Future
 
 trait PartyManagementService {
-  def retrievePerson(taxCode: String): Future[Person]
-
   def retrieveOrganization(organizationId: String): Future[Organization]
 
   def createPerson(person: PersonSeed): Future[Person]
@@ -35,7 +35,9 @@ trait PartyManagementService {
 
   def createToken(relationshipsSeed: RelationshipsSeed, documentHash: String): Future[TokenText]
 
-  def consumeToken(token: String): Future[Unit]
+  def consumeToken(token: String, fileParts: (FileInfo, File)): Future[Unit]
 
   def invalidateToken(token: String): Future[Unit]
+
+  def getRelationshipById(relationshipId: UUID): Future[Relationship]
 }

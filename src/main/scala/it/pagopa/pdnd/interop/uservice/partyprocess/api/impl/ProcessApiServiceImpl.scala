@@ -1,15 +1,15 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.api.impl
 
 import akka.http.scaladsl.marshalling.ToEntityMarshaller
-import akka.http.scaladsl.server.Directives.onComplete
+import akka.http.scaladsl.model.{ContentType, HttpEntity, MessageEntity}
+import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.{Delegate, Manager, Operator}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   Organization,
   OrganizationSeed,
-  Person,
-  PersonSeed,
   Relationship,
   RelationshipEnums,
   RelationshipSeed,
@@ -21,18 +21,16 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApiService
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.{OptionOps, TryOps}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{ApplicationConfiguration, Digester}
-import it.pagopa.pdnd.interop.uservice.partyprocess.error.{
-  RelationshipNotActivable,
-  RelationshipNotFound,
-  RelationshipNotSuspendable
-}
+import it.pagopa.pdnd.interop.uservice.partyprocess.error._
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.service._
+import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{User => UserRegistryUser}
 import org.slf4j.{Logger, LoggerFactory}
 import spray.json._
 
-import java.io.File
+import java.io.{File, FileOutputStream}
 import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Path}
 import java.util.{Base64, UUID}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -52,7 +50,8 @@ class ProcessApiServiceImpl(
   authorizationProcessService: AuthorizationProcessService,
   userRegistryManagementService: UserRegistryManagementService,
   mailer: Mailer,
-  pdfCreator: PDFCreator
+  pdfCreator: PDFCreator,
+  fileManager: FileManager
 )(implicit ec: ExecutionContext)
     extends ProcessApiService {
 
@@ -75,7 +74,7 @@ class ProcessApiServiceImpl(
       personInfo = PersonInfo(user.name, user.surname, user.externalId)
       relationships <- partyManagementService.retrieveRelationship(Some(user.externalId), None, None)
       organizations <- Future.traverse(relationships.items)(r =>
-        getOrganization(r.to).map(o => (o, r.status, r.role, r.platformRole))
+        getOrganization(r.to.toString).map(o => (o, r.status, r.role, r.platformRole))
       )
       institutionsInfo = organizations.map { case (o, status, role, platformRole) =>
         InstitutionInfo(
@@ -125,10 +124,10 @@ class ProcessApiServiceImpl(
       validUsers       <- verifyUsersByRoles(onBoardingRequest.users, Set(Manager.toString, Delegate.toString))
       personsWithRoles <- Future.traverse(validUsers)(user => addUser(user))
       _ <- Future.traverse(personsWithRoles)(pr =>
-        partyManagementService.createRelationship(pr._1.taxCode, organization.institutionId, pr._2, pr._3)
+        partyManagementService.createRelationship(pr._1.id.toString, organization.institutionId, pr._2, pr._3)
       )
       relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, platformRole) =>
-        createRelationship(organization, person, role, platformRole)
+        createRelationship(organization.id, person.id, role, platformRole)
       })
       pdf   <- pdfCreator.create(validUsers, organization)
       token <- partyManagementService.createToken(relationships, pdf._2)
@@ -165,7 +164,7 @@ class ProcessApiServiceImpl(
       validUsers    <- verifyUsersByRoles(onBoardingRequest.users, Set(Operator.toString))
       operators     <- Future.traverse(validUsers)(user => addUser(user))
       _ <- Future.traverse(operators)(pr =>
-        partyManagementService.createRelationship(pr._1.taxCode, organization.institutionId, pr._2, pr._3)
+        partyManagementService.createRelationship(pr._1.id.toString, organization.institutionId, pr._2, pr._3)
       )
       _ = logger.info(s"Operators created ${operators.map(_.toString).mkString(",")}")
     } yield ()
@@ -189,7 +188,7 @@ class ProcessApiServiceImpl(
     val result: Future[Unit] = for {
       checksum <- calculateCheckSum(token)
       verified <- verifyChecksum(contract._2, checksum, token)
-      _        <- partyManagementService.consumeToken(verified)
+      _        <- partyManagementService.consumeToken(verified, contract)
     } yield ()
 
     onComplete(result) {
@@ -245,7 +244,7 @@ class ProcessApiServiceImpl(
       .toTry
   }
 
-  private def addUser(user: User): Future[(Person, String, String)] = {
+  private def addUser(user: User): Future[(UserRegistryUser, String, String)] = {
     logger.info(s"Adding user ${user.toString}")
     createPerson(user)
       .recoverWith { case _ => getPerson(user.taxCode) }
@@ -253,21 +252,24 @@ class ProcessApiServiceImpl(
   }
 
   private def createRelationship(
-    organization: Organization,
-    person: Person,
+    organizationId: UUID,
+    personId: UUID,
     role: String,
     platformRole: String
   ): RelationshipSeed =
-    RelationshipSeed(
-      person.taxCode,
-      organization.institutionId,
-      RelationshipSeedEnums.Role.withName(role),
-      platformRole
-    )
+    RelationshipSeed(personId, organizationId, RelationshipSeedEnums.Role.withName(role), platformRole)
 
-  private def createPerson(user: User): Future[Person] = {
-    val seed: PersonSeed = PersonSeed(name = user.name, surname = user.surname, taxCode = user.taxCode)
-    partyManagementService.createPerson(seed)
+  private def createPerson(user: User): Future[UserRegistryUser] = {
+    userRegistryManagementService.upsertUser(
+      externalId = user.taxCode,
+      name = user.name,
+      surname = user.surname,
+      email = user.email.getOrElse("")
+    )
+  }
+
+  private def getPerson(userId: String): Future[UserRegistryUser] = {
+    Try { UUID.fromString(userId) }.toFuture.flatMap(uuid => userRegistryManagementService.getUserById(uuid))
   }
 
   private def getOrganization(institutionId: String): Future[Organization] =
@@ -288,8 +290,6 @@ class ProcessApiServiceImpl(
       seed = OrganizationSeed(
         institutionId = institution.id,
         description = institution.description,
-        managerName = institution.managerName.getOrElse(""),       // TODO verify optionality
-        managerSurname = institution.managerSurname.getOrElse(""), // TODO verify optionality
         digitalAddress = institution.digitalAddress.getOrElse(""), // TODO Must be non optional
         attributes = attributes.attributes.filter(attr => institution.category == attr.code).map(_.id)
       )
@@ -427,6 +427,54 @@ class ProcessApiServiceImpl(
     }
   }
 
+  def getOnboardingDocument(relationshipId: String)(implicit
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerFile: ToEntityMarshaller[File],
+    contexts: Seq[(String, String)]
+  ): Route = {
+    val result: Future[DocumentDetails] =
+      for {
+        _              <- tokenFromContext(contexts)
+        uuid           <- Try { UUID.fromString(relationshipId) }.toFuture
+        relationship   <- partyManagementService.getRelationshipById(uuid)
+        filePath       <- relationship.filePath.toFuture(RelationshipDocumentNotFound(relationshipId))
+        fileName       <- relationship.fileName.toFuture(RelationshipDocumentNotFound(relationshipId))
+        contentTypeStr <- relationship.contentType.toFuture(RelationshipDocumentNotFound(relationshipId))
+        contentType <- ContentType
+          .parse(contentTypeStr)
+          .fold(ex => Future.failed(ContentTypeParsingError(contentTypeStr, ex)), Future.successful)
+        response <- fileManager.get(filePath)
+      } yield DocumentDetails(fileName, contentType, response)
+
+    onComplete(result) {
+      case Success(document) =>
+        val output: MessageEntity = convertToMessageEntity(document)
+        complete(output)
+      case Failure(ex: ApiError[_]) if ex.code == 400 =>
+        getOnboardingDocument400(
+          Problem(Option(ex.getMessage), 400, s"Error retrieving document for relationship $relationshipId")
+        )
+      case Failure(ex: ApiError[_]) if ex.code == 404 =>
+        getOnboardingDocument404(
+          Problem(Option(ex.getMessage), 404, s"Error retrieving document for relationship $relationshipId")
+        )
+      case Failure(ex) =>
+        complete(
+          500,
+          Problem(Option(ex.getMessage), 500, s"Error retrieving document for relationship $relationshipId")
+        )
+    }
+  }
+
+  def convertToMessageEntity(documentDetails: DocumentDetails): MessageEntity = {
+    val randomPath: Path               = Files.createTempDirectory(s"document")
+    val temporaryFilePath: String      = s"${randomPath.toString}/${documentDetails.fileName}"
+    val file: File                     = new File(temporaryFilePath)
+    val outputStream: FileOutputStream = new FileOutputStream(file)
+    documentDetails.file.writeTo(outputStream)
+    HttpEntity.fromFile(documentDetails.contentType, file)
+  }
+
   private def relationshipMustBeActivable(relationship: Relationship): Future[Unit] =
     relationship.status match {
       case RelationshipEnums.Status.Suspended => Future.successful(())
@@ -442,7 +490,7 @@ class ProcessApiServiceImpl(
   private def relationshipsToRelationshipsResponse(relationships: Relationships): Seq[RelationshipInfo] = {
     relationships.items.map(item =>
       RelationshipInfo(
-        from = item.from,
+        from = item.from.toString,
         role = item.role.toString,
         platformRole = item.platformRole,
         // TODO This conversion is temporary, while we implement a naming convention for enums

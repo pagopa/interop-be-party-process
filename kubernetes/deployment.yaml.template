@@ -77,6 +77,20 @@ spec:
               value: {{delegatePlatformRoles}}
             - name: OPERATOR_PLATFORM_ROLES
               value: {{operatorPlatformRoles}}
+            - name: STORAGE_CONTAINER
+              value: {{storageContainer}}
+            - name: STORAGE_ENDPOINT
+              value: {{storageEndpoint}}
+            - name: STORAGE_APPLICATION_ID
+              valueFrom:
+                secretKeyRef:
+                  name: storage
+                  key: STORAGE_USR
+            - name: STORAGE_APPLICATION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: storage
+                  key: STORAGE_PSW
       volumes:
       - name: snapshots-volume
         emptyDir: {}

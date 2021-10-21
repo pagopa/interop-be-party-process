@@ -28,8 +28,8 @@ private class MockPartyApiInvoker(implicit json4sFormats: Formats, system: actor
   override def execute[T](r: ApiRequest[T])(implicit evidence$2: Manifest[T]): Future[ApiResponse[T]] = {
     val mockRelationshipResponse = Relationship(
       id = UUID.randomUUID(),
-      from = "from",
-      to = "to",
+      from = UUID.randomUUID(),
+      to = UUID.randomUUID(),
       role = Manager,
       platformRole = "admin",
       status = Active
@@ -44,9 +44,6 @@ private object MockPartyApiInvoker {
 }
 
 object PartyProcessMockConfig {
-  System.setProperty("DELEGATE_PLATFORM_ROLES", "admin")
-  System.setProperty("OPERATOR_PLATFORM_ROLES", "security, api")
-  System.setProperty("MANAGER_PLATFORM_ROLES", "admin")
 
   val testDataConfig = ConfigFactory.parseString(s"""
       akka.coordinated-shutdown.terminate-actor-system = off
@@ -56,7 +53,7 @@ object PartyProcessMockConfig {
     """)
 
   val config = ConfigFactory
-    .parseResourcesAnySyntax("resource")
+    .parseResourcesAnySyntax("test")
     .withFallback(testDataConfig)
 }
 
@@ -94,22 +91,27 @@ class PartyManagementServiceImplSpec
       val invalidPlatformRole = "foobar"
       //when
       val createRelationshipOp =
-        partyManagementService.createRelationship("BGSBNNY", "ACME Corp.", "Manager", invalidPlatformRole)
+        partyManagementService.createRelationship(
+          UUID.randomUUID().toString,
+          UUID.randomUUID().toString,
+          "Manager",
+          invalidPlatformRole
+        )
       //then
       createRelationshipOp.failed.futureValue.getMessage shouldBe s"Invalid platform role => $invalidPlatformRole not supported for ManagerRoles"
     }
 
     "return a success when the platform role is contained in the configured list for the defined role" in {
       //given the request payload
-      val taxCode          = "MRRRSS1345"
-      val partyIdTo        = "Miro Gardens"
+      val userId           = UUID.randomUUID()
+      val partyIdTo        = UUID.randomUUID()
       val relationshipRole = "Operator"
       val platformRole     = "api"
 
       //given mocked integration API behavior
       val partyRelationship: RelationshipSeed =
         RelationshipSeed(
-          from = taxCode,
+          from = userId,
           to = partyIdTo,
           role = RelationshipSeedEnums.Role.withName(relationshipRole),
           platformRole = platformRole
@@ -122,7 +124,8 @@ class PartyManagementServiceImplSpec
       (mockPartyAPI.createRelationship _).expects(partyRelationship).returning(mockApiRequest).once()
 
       //when
-      val operation = partyManagementService.createRelationship(taxCode, partyIdTo, relationshipRole, platformRole)
+      val operation =
+        partyManagementService.createRelationship(userId.toString, partyIdTo.toString, relationshipRole, platformRole)
 
       //then
       operation.futureValue shouldBe ()

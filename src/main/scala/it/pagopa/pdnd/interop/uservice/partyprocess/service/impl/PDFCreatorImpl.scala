@@ -4,6 +4,7 @@ import com.itextpdf.kernel.pdf.{PdfDocument, PdfWriter}
 import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.Paragraph
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.Organization
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.Manager
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.Digester
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.User
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.PDFCreator
@@ -17,6 +18,7 @@ import scala.util.Try
 
 class PDFCreatorImpl extends PDFCreator {
 
+  @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
   def create(users: Seq[User], organization: Organization): Future[(File, String)] = Future.fromTry {
     Try {
       val fileTimestamp: String = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
@@ -26,12 +28,13 @@ class PDFCreatorImpl extends PDFCreator {
       val writer: PdfWriter        = new PdfWriter(stream)
       val pdf: PdfDocument         = new PdfDocument(writer)
       val document: Document       = new Document(pdf)
+      val manager                  = users.find(u => u.role == Manager.toString).get
 
       val _ = document
         .add(new Paragraph(s"Le persone\n${users.map(userToText).mkString("\n")}"))
         .add(
           new Paragraph(
-            s"si accreditano presso la piattaforma di Interoperabilità in qualità di Rappresentanti Legali dell'Ente\n${orgToText(organization)}"
+            s"si accreditano presso la piattaforma di Interoperabilità in qualità di Rappresentanti Legali dell'Ente\n${orgToText(manager, organization)}"
           )
         )
         .add(
@@ -73,10 +76,10 @@ class PDFCreatorImpl extends PDFCreator {
        |""".stripMargin
   }
 
-  private def orgToText(organization: Organization): String = {
+  private def orgToText(manager: User, organization: Organization): String = {
     s"""
        |Nome: ${organization.description}
-       |Rappresentante Legale: ${organization.managerName} ${organization.managerSurname}
+       |Rappresentante Legale: ${manager.name} ${manager.surname}
        |Domicilio Digitale: ${organization.digitalAddress}
        |""".stripMargin
   }

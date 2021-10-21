@@ -94,6 +94,16 @@ object Dependencies {
     lazy val databind    = namespace % "jackson-databind"    % jacksonVersion
   }
 
+  private[this] object azure {
+    lazy val namespace   = "com.azure"
+    lazy val storageBlob = namespace % "azure-storage-blob" % azureStorageBlobVersion
+  }
+
+  private[this] object awssdk {
+    lazy val namespace = "software.amazon.awssdk"
+    lazy val s3        = namespace % "s3" % awsSdkVersion
+  }
+
   object Jars {
     lazy val overrides: Seq[ModuleID] =
       Seq(jackson.annotations % Compile, jackson.core % Compile, jackson.databind % Compile)
@@ -122,6 +132,8 @@ object Dependencies {
       akka.slf4j                          % Compile,
       kamon.bundle                        % Compile,
       kamon.prometheus                    % Compile,
+      azure.storageBlob                   % Compile,
+      awssdk.s3                           % Compile,
       akka.testkit                        % Test,
       scalatest.core                      % Test,
       scalamock.core                      % Test

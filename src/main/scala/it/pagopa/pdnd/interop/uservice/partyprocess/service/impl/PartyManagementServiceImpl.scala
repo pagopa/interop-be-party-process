@@ -1,5 +1,6 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
+import akka.http.scaladsl.server.directives.FileInfo
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.{ApiError, ApiRequest}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipSeedEnums.Role.{
@@ -13,6 +14,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration.platformRolesConfiguration._
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.{EitherOps, TryOps}
 
+import java.io.File
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -28,21 +30,6 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
   ec: ExecutionContext
 ) extends PartyManagementService {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
-
-  override def retrievePerson(taxCode: String): Future[Person] = {
-    val request: ApiRequest[Person] = api.getPerson(taxCode)
-    invoker
-      .execute[Person](request)
-      .map { x =>
-        logger.info(s"Retrieving person ${x.code}")
-        logger.info(s"Retrieving person ${x.content}")
-        x.content
-      }
-      .recoverWith { case ex =>
-        logger.error(s"Retrieving person ${ex.getMessage}")
-        Future.failed[Person](ex)
-      }
-  }
 
   override def retrieveRelationship(
     from: Option[String],
@@ -79,20 +66,28 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
   }
 
   override def retrieveOrganization(organizationId: String): Future[Organization] = {
-    val request: ApiRequest[Organization] = api.getOrganization(organizationId)
-    logger.info(s"Retrieving organization $organizationId")
-    logger.info(s"Retrieving organization ${request.toString}")
-    invoker
-      .execute[Organization](request)
-      .map { x =>
-        logger.info(s"Retrieving organization ${x.code}")
-        logger.info(s"Retrieving organization ${x.content}")
-        x.content
-      }
-      .recoverWith { case ex =>
-        logger.error(s"Retrieving organization ${ex.getMessage}")
-        Future.failed[Organization](ex)
-      }
+    def getOrganization(id: UUID) = {
+      val request: ApiRequest[Organization] = api.getOrganizationById(id)
+      logger.info(s"Retrieving organization $organizationId")
+      logger.info(s"Retrieving organization ${request.toString}")
+      invoker
+        .execute[Organization](request)
+        .map { x =>
+          logger.info(s"Retrieving organization ${x.code}")
+          logger.info(s"Retrieving organization ${x.content}")
+          x.content
+        }
+        .recoverWith { case ex =>
+          logger.error(s"Retrieving organization ${ex.getMessage}")
+          Future.failed[Organization](ex)
+        }
+    }
+
+    for {
+      id     <- Try { UUID.fromString(organizationId) }.toFuture
+      result <- getOrganization(id)
+    } yield result
+
   }
 
   override def createPerson(person: PersonSeed): Future[Person] = {
@@ -126,27 +121,29 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
   }
 
   override def createRelationship(
-    taxCode: String,
+    id: String,
     organizationId: String,
     role: String,
     platformRole: String
   ): Future[Unit] = {
     for {
       role <- Try { RelationshipSeedEnums.Role.withName(role) }.toFuture
+      from <- Try { UUID.fromString(id) }.toFuture
+      to   <- Try { UUID.fromString(organizationId) }.toFuture
       _    <- isPlatformRoleValid(role = role, platformRole = platformRole).toFuture
-      _    <- invokeCreateRelationship(taxCode, organizationId, role, platformRole)
+      _    <- invokeCreateRelationship(from, to, role, platformRole)
     } yield ()
   }
 
   private def invokeCreateRelationship(
-    taxCode: String,
-    organizationId: String,
+    id: UUID,
+    organizationId: UUID,
     role: RelationshipSeedEnums.Role,
     platformRole: String
   ): Future[Relationship] = {
-    logger.info(s"Creating relationship $taxCode/$organizationId/$role/ with platformRole = $platformRole")
+    logger.info(s"Creating relationship $id/$organizationId/$role/ with platformRole = $platformRole")
     val partyRelationship: RelationshipSeed =
-      RelationshipSeed(from = taxCode, to = organizationId, role = role, platformRole = platformRole)
+      RelationshipSeed(from = id, to = organizationId, role = role, platformRole = platformRole)
 
     val request: ApiRequest[Relationship] = api.createRelationship(partyRelationship)
     invoker
@@ -202,10 +199,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
 
   }
 
-  override def consumeToken(token: String): Future[Unit] = {
+  override def consumeToken(token: String, fileParts: (FileInfo, File)): Future[Unit] = {
     logger.info(s"Consuming token $token")
 
-    val request = api.consumeToken(token)
+    val request = api.consumeToken(token, fileParts._2)
     invoker
       .execute(request)
       .map { x =>
@@ -290,6 +287,28 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
         case ex =>
           logger.error(s"Relationship suspension ${ex.getMessage}")
           Future.failed[Unit](ex)
+      }
+  }
+
+  override def getRelationshipById(relationshipId: UUID): Future[Relationship] = {
+    logger.info(s"Getting relationship $relationshipId")
+
+    val request = api.getRelationshipById(relationshipId)
+    invoker
+      .execute(request)
+      .map { x =>
+        logger.info(s"Relationship retrieved ${x.code}")
+        x.content
+      }
+      .recoverWith {
+        case ApiError(code, message, _, _, _) =>
+          logger.error(s"Relationship retrieval error $code")
+          logger.error(s"Relationship retrieval error message: $message")
+
+          Future.failed[Relationship](new RuntimeException(message))
+        case ex =>
+          logger.error(s"Relationship suspension ${ex.getMessage}")
+          Future.failed[Relationship](ex)
       }
   }
 }
