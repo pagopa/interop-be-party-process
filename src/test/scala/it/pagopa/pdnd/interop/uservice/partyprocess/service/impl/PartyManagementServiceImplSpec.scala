@@ -44,9 +44,6 @@ private object MockPartyApiInvoker {
 }
 
 object PartyProcessMockConfig {
-  System.setProperty("DELEGATE_PLATFORM_ROLES", "admin")
-  System.setProperty("OPERATOR_PLATFORM_ROLES", "security, api")
-  System.setProperty("MANAGER_PLATFORM_ROLES", "admin")
 
   val testDataConfig = ConfigFactory.parseString(s"""
       akka.coordinated-shutdown.terminate-actor-system = off
@@ -56,7 +53,7 @@ object PartyProcessMockConfig {
     """)
 
   val config = ConfigFactory
-    .parseResourcesAnySyntax("resource")
+    .parseResourcesAnySyntax("test")
     .withFallback(testDataConfig)
 }
 
