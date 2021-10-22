@@ -106,6 +106,36 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /user/institutions/{institutionId}/relationships:
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: returns the relationships related to the institution
+      description: Return ok
+      operationId: getUserInstitutionRelationships
+      parameters:
+        - name: institutionId
+          in: path
+          description: The identifier of the institution
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelationshipsResponse'
+        '400':
+          description: Invalid institution id supplied
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /institutions/{institutionId}/relationships:
     get:
       security:
@@ -122,7 +152,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       responses:
         '200':
           description: successful operation

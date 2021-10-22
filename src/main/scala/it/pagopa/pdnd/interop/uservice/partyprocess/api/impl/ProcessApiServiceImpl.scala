@@ -313,6 +313,33 @@ class ProcessApiServiceImpl(
   /** Code: 201, Message: successful operation, DataType: RelationshipsResponse
     * Code: 400, Message: Invalid institution id supplied, DataType: Problem
     */
+  /** Code: 200, Message: successful operation, DataType: RelationshipInfo
+    * Code: 400, Message: Invalid institution id supplied, DataType: Problem
+    */
+  override def getUserInstitutionRelationships(institutionId: String)(implicit
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerRelationshipInfoarray: ToEntityMarshaller[Seq[RelationshipInfo]],
+    contexts: Seq[(String, String)]
+  ): Route = {
+    logger.info(s"Getting relationship for institution $institutionId and current user")
+    val result: Future[Seq[RelationshipInfo]] = for {
+      subjectUUID   <- getCallerSubjectIdentifier(contexts)
+      uuid          <- Try { UUID.fromString(institutionId) }.toFuture
+      relationships <- partyManagementService.retrieveRelationship(Some(subjectUUID), Some(uuid), None)
+      response = relationshipsToRelationshipsResponse(relationships)
+    } yield response
+
+    onComplete(result) {
+      case Success(relationships) => getUserInstitutionRelationships200(relationships)
+      case Failure(ex) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        getUserInstitutionRelationships400(errorResponse)
+    }
+  }
+
+  /** Code: 201, Message: successful operation, DataType: RelationshipsResponse
+    * Code: 400, Message: Invalid institution id supplied, DataType: Problem
+    */
   override def getInstitutionRelationships(institutionId: String)(implicit
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerRelationshipInfo: ToEntityMarshaller[Seq[RelationshipInfo]],
