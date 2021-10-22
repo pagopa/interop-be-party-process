@@ -210,15 +210,15 @@ class PartyProcessSpec
         .once()
 
       (partyManagementService.retrieveRelationship _)
-        .expects(Some(taxCode1), None, None)
+        .expects(Some(UUID.fromString(mockSubjectUUID)), None, None)
         .returning(Future.successful(relationships))
         .once()
       (partyManagementService.retrieveOrganization _)
-        .expects(institutionId1.toString)
+        .expects(institutionId1)
         .returning(Future.successful(organization1))
         .once()
       (partyManagementService.retrieveOrganization _)
-        .expects(institutionId2.toString)
+        .expects(institutionId2)
         .returning(Future.successful(organization2))
         .once()
 
@@ -373,6 +373,20 @@ class PartyProcessSpec
         platformRole = "security",
         email = None
       )
+
+      (partyManagementService.retrieveOrganizationByExternalId _)
+        .expects(*)
+        .returning(
+          Future.successful(
+            Organization(
+              id = UUID.randomUUID(),
+              institutionId = "d4r3",
+              description = "test",
+              digitalAddress = "big@fish.it",
+              attributes = Seq.empty
+            )
+          )
+        )
       (partyManagementService.retrieveRelationship _)
         .expects(*, *, *)
         .returning(Future.successful(Relationships(Seq.empty)))
@@ -438,10 +452,13 @@ class PartyProcessSpec
         platformRole = "security",
         email = None
       )
+
+      (partyManagementService.retrieveOrganizationByExternalId _)
+        .expects(*)
+        .returning(Future.successful(organization1))
       (partyManagementService.retrieveRelationship _)
-        .expects(None, Some(institutionId1.toString), None)
+        .expects(None, Some(UUID.fromString(orgPartyId1)), None)
         .returning(Future.successful(relationships))
-      (partyManagementService.retrieveOrganization _).expects(*).returning(Future.successful(organization1)).once()
 
       (userRegistryService.upsertUser _)
         .expects(*, *, *, *)
@@ -584,7 +601,7 @@ class PartyProcessSpec
       val relationships = Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
 
       (partyManagementService.getInstitutionRelationships _)
-        .expects(institutionId.toString)
+        .expects(institutionId)
         .returning(Future.successful(relationships))
         .once()
 
@@ -603,14 +620,14 @@ class PartyProcessSpec
       val body = Await.result(Unmarshal(response.entity).to[Seq[RelationshipInfo]], Duration.Inf)
       response.status mustBe StatusCodes.OK
       body must contain only (RelationshipInfo(
-        from = userId.toString,
+        from = userId,
         role = "Manager",
         platformRole = "admin",
         status = "active"
       ),
-      RelationshipInfo(from = userId2.toString, role = "Delegate", platformRole = "admin", status = "active"),
-      RelationshipInfo(from = userId3.toString, role = "Operator", platformRole = "security", status = "active"),
-      RelationshipInfo(from = userId4.toString, role = "Operator", platformRole = "api", status = "active"))
+      RelationshipInfo(from = userId2, role = "Delegate", platformRole = "admin", status = "active"),
+      RelationshipInfo(from = userId3, role = "Operator", platformRole = "security", status = "active"),
+      RelationshipInfo(from = userId4, role = "Operator", platformRole = "api", status = "active"))
 
     }
   }
@@ -640,18 +657,35 @@ class PartyProcessSpec
       )
 
       (partyManagementService.retrieveRelationship _)
-        .expects(Some(userId.toString), Some(institutionId.toString), Some(platformRole))
+        .expects(Some(userId), Some(institutionId), Some(platformRole))
         .returning(Future.successful(relationships))
 
       (partyManagementService.activateRelationship _)
         .expects(relationshipId)
         .returning(Future.successful(()))
 
+      (authorizationProcessService.validateToken _)
+        .expects(*)
+        .returning(
+          Future.successful(
+            ValidJWT(
+              iss = UUID.randomUUID().toString,
+              sub = userId.toString,
+              aud = List("test"),
+              exp = OffsetDateTime.now(),
+              nbf = OffsetDateTime.now(),
+              iat = OffsetDateTime.now(),
+              jti = "123"
+            )
+          )
+        )
+        .once()
+
       val data = ActivationRequest(platformRole)
       val response = Await.result(
         Http().singleRequest(
           HttpRequest(
-            uri = s"$url/institutions/$institutionId/relationships/$userId/activate",
+            uri = s"$url/institutions/$institutionId/relationships/activate",
             method = HttpMethods.POST,
             entity = HttpEntity(ContentTypes.`application/json`, data.toJson.toString),
             headers = authorization
@@ -688,14 +722,31 @@ class PartyProcessSpec
       )
 
       (partyManagementService.retrieveRelationship _)
-        .expects(Some(fromId.toString), Some(institutionId.toString), Some(platformRole))
+        .expects(Some(fromId), Some(institutionId), Some(platformRole))
         .returning(Future.successful(relationships))
+
+      (authorizationProcessService.validateToken _)
+        .expects(*)
+        .returning(
+          Future.successful(
+            ValidJWT(
+              iss = UUID.randomUUID().toString,
+              sub = fromId.toString,
+              aud = List("test"),
+              exp = OffsetDateTime.now(),
+              nbf = OffsetDateTime.now(),
+              iat = OffsetDateTime.now(),
+              jti = "123"
+            )
+          )
+        )
+        .once()
 
       val data = ActivationRequest(platformRole)
       val response = Await.result(
         Http().singleRequest(
           HttpRequest(
-            uri = s"$url/institutions/$institutionId/relationships/$fromId/activate",
+            uri = s"$url/institutions/$institutionId/relationships/activate",
             method = HttpMethods.POST,
             entity = HttpEntity(ContentTypes.`application/json`, data.toJson.toString),
             headers = authorization
@@ -735,18 +786,35 @@ class PartyProcessSpec
       )
 
       (partyManagementService.retrieveRelationship _)
-        .expects(Some(fromId.toString), Some(institutionId.toString), Some(platformRole))
+        .expects(Some(fromId), Some(institutionId), Some(platformRole))
         .returning(Future.successful(relationships))
 
       (partyManagementService.suspendRelationship _)
         .expects(relationshipId)
         .returning(Future.successful(()))
 
+      (authorizationProcessService.validateToken _)
+        .expects(*)
+        .returning(
+          Future.successful(
+            ValidJWT(
+              iss = UUID.randomUUID().toString,
+              sub = fromId.toString,
+              aud = List("test"),
+              exp = OffsetDateTime.now(),
+              nbf = OffsetDateTime.now(),
+              iat = OffsetDateTime.now(),
+              jti = "123"
+            )
+          )
+        )
+        .once()
+
       val data = ActivationRequest(platformRole)
       val response = Await.result(
         Http().singleRequest(
           HttpRequest(
-            uri = s"$url/institutions/$institutionId/relationships/$fromId/suspend",
+            uri = s"$url/institutions/$institutionId/relationships/suspend",
             method = HttpMethods.POST,
             entity = HttpEntity(ContentTypes.`application/json`, data.toJson.toString),
             headers = authorization
@@ -783,14 +851,31 @@ class PartyProcessSpec
       )
 
       (partyManagementService.retrieveRelationship _)
-        .expects(Some(fromId.toString), Some(institutionId.toString), Some(platformRole))
+        .expects(Some(fromId), Some(institutionId), Some(platformRole))
         .returning(Future.successful(relationships))
+
+      (authorizationProcessService.validateToken _)
+        .expects(*)
+        .returning(
+          Future.successful(
+            ValidJWT(
+              iss = UUID.randomUUID().toString,
+              sub = fromId.toString,
+              aud = List("test"),
+              exp = OffsetDateTime.now(),
+              nbf = OffsetDateTime.now(),
+              iat = OffsetDateTime.now(),
+              jti = "123"
+            )
+          )
+        )
+        .once()
 
       val data = ActivationRequest(platformRole)
       val response = Await.result(
         Http().singleRequest(
           HttpRequest(
-            uri = s"$url/institutions/$institutionId/relationships/$fromId/suspend",
+            uri = s"$url/institutions/$institutionId/relationships/suspend",
             method = HttpMethods.POST,
             entity = HttpEntity(ContentTypes.`application/json`, data.toJson.toString),
             headers = authorization

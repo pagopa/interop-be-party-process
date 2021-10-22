@@ -122,6 +122,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         '200':
           description: successful operation
@@ -135,42 +136,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  /institutions/{institutionId}/relationships/{taxCode}:
-    get:
-      security:
-        - bearerAuth: [ ]
-      tags:
-        - process
-      summary: returns the relationship related to the institution and tax code
-      description: Return ok
-      operationId: getInstitutionTaxCodeRelationship
-      parameters:
-        - name: institutionId
-          in: path
-          description: The identifier of the institution
-          required: true
-          schema:
-            type: string
-        - name: taxCode
-          in: path
-          description: The identifier of the operator
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RelationshipsResponse'
-        '400':
-          description: Invalid institution id supplied
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
-  /institutions/{institutionId}/relationships/{taxCode}/activate:
+  /institutions/{institutionId}/relationships/activate:
     post:
       security:
         - bearerAuth: [ ]
@@ -178,7 +144,7 @@ paths:
         - process
       summary: Activate the relationship related to the institution and tax code
       description: Activate relationship
-      operationId: activateRelationshipByInstitutionTaxCode
+      operationId: activateInstitutionRelationshipsByCaller
       parameters:
         - name: institutionId
           in: path
@@ -186,12 +152,7 @@ paths:
           required: true
           schema:
             type: string
-        - name: taxCode
-          in: path
-          description: The identifier of the operator
-          required: true
-          schema:
-            type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -213,7 +174,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  /institutions/{institutionId}/relationships/{taxCode}/suspend:
+  /institutions/{institutionId}/relationships/suspend:
     post:
       security:
         - bearerAuth: [ ]
@@ -221,7 +182,7 @@ paths:
         - process
       summary: Suspend the relationship related to the institution and tax code
       description: Suspend relationship
-      operationId: suspendRelationshipByInstitutionTaxCode
+      operationId: suspendInstitutionRelationshipsByCaller
       parameters:
         - name: institutionId
           in: path
@@ -229,12 +190,7 @@ paths:
           required: true
           schema:
             type: string
-        - name: taxCode
-          in: path
-          description: The identifier of the operator
-          required: true
-          schema:
-            type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -417,23 +373,12 @@ components:
       required:
         - token
         - document
-    TokenRequest:
-      properties:
-        legals:
-          type: array
-          items:
-            $ref: '#/components/schemas/User'
-        institutionId:
-          type: string
-      additionalProperties: false
-      required:
-        - legals
-        - institutionId
     RelationshipInfo:
       type: object
       properties:
         from:
           type: string
+          format: uuid
           description: tax code
         role:
           type: string

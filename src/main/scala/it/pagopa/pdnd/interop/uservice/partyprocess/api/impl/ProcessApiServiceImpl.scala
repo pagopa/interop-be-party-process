@@ -67,14 +67,12 @@ class ProcessApiServiceImpl(
   ): Route = {
 
     val result: Future[OnBoardingInfo] = for {
-      bearer      <- tokenFromContext(contexts)
-      validJWT    <- authorizationProcessService.validateToken(bearer)
-      subjectUUID <- Try { UUID.fromString(validJWT.sub) }.toFuture
+      subjectUUID <- getCallerSubjectIdentifier(contexts)
       user        <- userRegistryManagementService.getUserById(subjectUUID)
       personInfo = PersonInfo(user.name, user.surname, user.externalId)
-      relationships <- partyManagementService.retrieveRelationship(Some(user.externalId), None, None)
+      relationships <- partyManagementService.retrieveRelationship(Some(subjectUUID), None, None)
       organizations <- Future.traverse(relationships.items)(r =>
-        getOrganization(r.to.toString).map(o => (o, r.status, r.role, r.platformRole))
+        getOrganization(r.to).map(o => (o, r.status, r.role, r.platformRole))
       )
       institutionsInfo = organizations.map { case (o, status, role, platformRole) =>
         InstitutionInfo(
@@ -116,7 +114,7 @@ class ProcessApiServiceImpl(
     contexts: Seq[(String, String)]
   ): Route = {
     val organizationF: Future[Organization] = createOrganization(onBoardingRequest.institutionId).recoverWith {
-      case _ => getOrganization(onBoardingRequest.institutionId)
+      case _ => partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)
     }
 
     val result: Future[OnBoardingResponse] = for {
@@ -124,7 +122,7 @@ class ProcessApiServiceImpl(
       validUsers       <- verifyUsersByRoles(onBoardingRequest.users, Set(Manager.toString, Delegate.toString))
       personsWithRoles <- Future.traverse(validUsers)(user => addUser(user))
       _ <- Future.traverse(personsWithRoles)(pr =>
-        partyManagementService.createRelationship(pr._1.id.toString, organization.institutionId, pr._2, pr._3)
+        partyManagementService.createRelationship(pr._1.id, organization.id, pr._2, pr._3)
       )
       relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, platformRole) =>
         createRelationship(organization.id, person.id, role, platformRole)
@@ -158,13 +156,14 @@ class ProcessApiServiceImpl(
     onBoardingRequest: OnBoardingRequest
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
     val result: Future[Unit] = for {
-      relationships <- partyManagementService.retrieveRelationship(None, Some(onBoardingRequest.institutionId), None)
+      organization  <- partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)
+      relationships <- partyManagementService.retrieveRelationship(None, Some(organization.id), None)
       _             <- existsAManagerActive(relationships)
-      organization  <- getOrganization(onBoardingRequest.institutionId)
-      validUsers    <- verifyUsersByRoles(onBoardingRequest.users, Set(Operator.toString))
-      operators     <- Future.traverse(validUsers)(user => addUser(user))
+
+      validUsers <- verifyUsersByRoles(onBoardingRequest.users, Set(Operator.toString))
+      operators  <- Future.traverse(validUsers)(user => addUser(user))
       _ <- Future.traverse(operators)(pr =>
-        partyManagementService.createRelationship(pr._1.id.toString, organization.institutionId, pr._2, pr._3)
+        partyManagementService.createRelationship(pr._1.id, organization.id, pr._2, pr._3)
       )
       _ = logger.info(s"Operators created ${operators.map(_.toString).mkString(",")}")
     } yield ()
@@ -246,9 +245,7 @@ class ProcessApiServiceImpl(
 
   private def addUser(user: User): Future[(UserRegistryUser, String, String)] = {
     logger.info(s"Adding user ${user.toString}")
-    createPerson(user)
-      .recoverWith { case _ => getPerson(user.taxCode) }
-      .map(p => (p, user.role, user.platformRole))
+    createPerson(user).map(p => (p, user.role, user.platformRole))
   }
 
   private def createRelationship(
@@ -268,11 +265,7 @@ class ProcessApiServiceImpl(
     )
   }
 
-  private def getPerson(userId: String): Future[UserRegistryUser] = {
-    Try { UUID.fromString(userId) }.toFuture.flatMap(uuid => userRegistryManagementService.getUserById(uuid))
-  }
-
-  private def getOrganization(institutionId: String): Future[Organization] =
+  private def getOrganization(institutionId: UUID): Future[Organization] =
     partyManagementService.retrieveOrganization(institutionId)
 
   private def createOrganization(institutionId: String): Future[Organization] =
@@ -327,7 +320,8 @@ class ProcessApiServiceImpl(
   ): Route = {
     logger.info(s"Getting relationships of institution $institutionId")
     val result: Future[Seq[RelationshipInfo]] = for {
-      relationships <- partyManagementService.getInstitutionRelationships(institutionId)
+      uuid          <- Try { UUID.fromString(institutionId) }.toFuture
+      relationships <- partyManagementService.getInstitutionRelationships(uuid)
       response = relationshipsToRelationshipsResponse(relationships)
     } yield response
 
@@ -339,58 +333,37 @@ class ProcessApiServiceImpl(
     }
   }
 
-  /** Code: 200, Message: successful operation, DataType: RelationshipInfo
-    * Code: 400, Message: Invalid institution id supplied, DataType: Problem
-    */
-  override def getInstitutionTaxCodeRelationship(institutionId: String, taxCode: String)(implicit
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
-    toEntityMarshallerRelationshipInfoarray: ToEntityMarshaller[Seq[RelationshipInfo]],
-    contexts: Seq[(String, String)]
-  ): Route = {
-    logger.info(s"Getting relationship for institution $institutionId and tax code $taxCode")
-    val result: Future[Seq[RelationshipInfo]] = for {
-      relationships <- partyManagementService.retrieveRelationship(Some(taxCode), Some(institutionId), None)
-      response = relationshipsToRelationshipsResponse(relationships)
-    } yield response
-
-    onComplete(result) {
-      case Success(relationships) => getInstitutionTaxCodeRelationship200(relationships)
-      case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
-        getInstitutionTaxCodeRelationship400(errorResponse)
-    }
-  }
-
   /** Code: 204, Message: Successful operation
     * Code: 400, Message: Invalid id supplied, DataType: Problem
     * Code: 404, Message: Not found, DataType: Problem
     */
-  override def activateRelationshipByInstitutionTaxCode(
+  override def activateInstitutionRelationshipsByCaller(
     institutionId: String,
-    taxCode: String,
     activationRequest: ActivationRequest
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
-    logger.info(s"Activating relationship for institution $institutionId and tax code $taxCode")
+    logger.info(s"Activating relationship for institution $institutionId")
     val result: Future[Unit] = for {
+      institutionUUID <- Try { UUID.fromString(institutionId) }.toFuture
+      subjectUUID     <- getCallerSubjectIdentifier(contexts)
       relationships <- partyManagementService.retrieveRelationship(
-        Some(taxCode),
-        Some(institutionId),
+        Some(subjectUUID),
+        Some(institutionUUID),
         Some(activationRequest.platformRole)
       )
       relationship <- relationships.items.headOption
-        .toFuture(RelationshipNotFound(institutionId, taxCode, activationRequest.platformRole))
+        .toFuture(RelationshipNotFound(institutionUUID, subjectUUID, activationRequest.platformRole))
       _ <- relationshipMustBeActivable(relationship)
       _ <- partyManagementService.activateRelationship(relationship.id)
     } yield ()
 
     onComplete(result) {
-      case Success(_) => activateRelationshipByInstitutionTaxCode204
+      case Success(_) => activateInstitutionRelationshipsByCaller204
       case Failure(ex: RelationshipNotFound) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 404, "Not found")
-        activateRelationshipByInstitutionTaxCode404(errorResponse)
+        activateInstitutionRelationshipsByCaller404(errorResponse)
       case Failure(ex) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
-        activateRelationshipByInstitutionTaxCode400(errorResponse)
+        activateInstitutionRelationshipsByCaller400(errorResponse)
     }
   }
 
@@ -398,32 +371,32 @@ class ProcessApiServiceImpl(
     * Code: 400, Message: Invalid id supplied, DataType: Problem
     * Code: 404, Message: Not found, DataType: Problem
     */
-  override def suspendRelationshipByInstitutionTaxCode(
+  override def suspendInstitutionRelationshipsByCaller(
     institutionId: String,
-    taxCode: String,
     activationRequest: ActivationRequest
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
-    logger.info(s"Suspending relationship for institution $institutionId and tax code $taxCode")
     val result: Future[Unit] = for {
+      institutionUUID <- Try { UUID.fromString(institutionId) }.toFuture
+      subjectUUID     <- getCallerSubjectIdentifier(contexts)
       relationships <- partyManagementService.retrieveRelationship(
-        Some(taxCode),
-        Some(institutionId),
+        Some(subjectUUID),
+        Some(institutionUUID),
         Some(activationRequest.platformRole)
       )
       relationship <- relationships.items.headOption
-        .toFuture(RelationshipNotFound(institutionId, taxCode, activationRequest.platformRole))
+        .toFuture(RelationshipNotFound(institutionUUID, subjectUUID, activationRequest.platformRole))
       _ <- relationshipMustBeSuspendable(relationship)
       _ <- partyManagementService.suspendRelationship(relationship.id)
     } yield ()
 
     onComplete(result) {
-      case Success(_) => activateRelationshipByInstitutionTaxCode204
+      case Success(_) => suspendInstitutionRelationshipsByCaller204
       case Failure(ex: RelationshipNotFound) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 404, "Not found")
-        activateRelationshipByInstitutionTaxCode404(errorResponse)
+        suspendInstitutionRelationshipsByCaller404(errorResponse)
       case Failure(ex) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
-        activateRelationshipByInstitutionTaxCode400(errorResponse)
+        suspendInstitutionRelationshipsByCaller400(errorResponse)
     }
   }
 
@@ -490,13 +463,22 @@ class ProcessApiServiceImpl(
   private def relationshipsToRelationshipsResponse(relationships: Relationships): Seq[RelationshipInfo] = {
     relationships.items.map(item =>
       RelationshipInfo(
-        from = item.from.toString,
+        from = item.from,
         role = item.role.toString,
         platformRole = item.platformRole,
         // TODO This conversion is temporary, while we implement a naming convention for enums
         status = item.status.toString.toLowerCase
       )
     )
+  }
 
+  private def getCallerSubjectIdentifier(contexts: Seq[(String, String)]): Future[UUID] = {
+    for {
+      bearer   <- tokenFromContext(contexts)
+      validJWT <- authorizationProcessService.validateToken(bearer)
+      subjectUUID <- Try {
+        UUID.fromString(validJWT.sub)
+      }.toFuture
+    } yield subjectUUID
   }
 }

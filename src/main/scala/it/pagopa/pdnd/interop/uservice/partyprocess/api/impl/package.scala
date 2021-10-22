@@ -12,6 +12,22 @@ import scala.util.{Failure, Success, Try}
 
 package object impl extends DefaultJsonProtocol {
 
+  implicit val uuidFormat: JsonFormat[UUID] =
+    new JsonFormat[UUID] {
+      override def write(obj: UUID): JsValue = JsString(obj.toString)
+
+      override def read(json: JsValue): UUID = json match {
+        case JsString(s) =>
+          Try(UUID.fromString(s)) match {
+            case Success(result) => result
+            case Failure(exception) =>
+              deserializationError(s"could not parse $s as UUID", exception)
+          }
+        case notAJsString =>
+          deserializationError(s"expected a String but got a ${notAJsString.compactPrint}")
+      }
+    }
+
   implicit val fileFormat: JsonFormat[File] =
     new JsonFormat[File] {
       override def write(obj: File): JsValue = {
@@ -48,7 +64,6 @@ package object impl extends DefaultJsonProtocol {
   implicit val personInfoFormat: RootJsonFormat[PersonInfo]                 = jsonFormat3(PersonInfo)
   implicit val institutionInfoFormat: RootJsonFormat[InstitutionInfo]       = jsonFormat7(InstitutionInfo)
   implicit val onBoardingInfoFormat: RootJsonFormat[OnBoardingInfo]         = jsonFormat2(OnBoardingInfo)
-  implicit val tokenRequestRequestFormat: RootJsonFormat[TokenRequest]      = jsonFormat2(TokenRequest)
   implicit val relationshipInfoFormat: RootJsonFormat[RelationshipInfo]     = jsonFormat4(RelationshipInfo)
   implicit val activationRequestFormat: RootJsonFormat[ActivationRequest]   = jsonFormat1(ActivationRequest)
 

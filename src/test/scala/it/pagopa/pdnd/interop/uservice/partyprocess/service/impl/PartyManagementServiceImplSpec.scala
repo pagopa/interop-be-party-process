@@ -81,7 +81,8 @@ class PartyManagementServiceImplSpec
       //given
       val invalidRole = "JavaScriptNinja"
       //when
-      val operation = partyManagementService.createRelationship("DFFDCK", "ACME Corp.", invalidRole, "admin")
+      val operation =
+        partyManagementService.createRelationship(UUID.randomUUID(), UUID.randomUUID(), invalidRole, "admin")
       //then
       operation.failed.futureValue.getMessage shouldBe s"No value found for '$invalidRole'"
     }
@@ -91,12 +92,7 @@ class PartyManagementServiceImplSpec
       val invalidPlatformRole = "foobar"
       //when
       val createRelationshipOp =
-        partyManagementService.createRelationship(
-          UUID.randomUUID().toString,
-          UUID.randomUUID().toString,
-          "Manager",
-          invalidPlatformRole
-        )
+        partyManagementService.createRelationship(UUID.randomUUID(), UUID.randomUUID(), "Manager", invalidPlatformRole)
       //then
       createRelationshipOp.failed.futureValue.getMessage shouldBe s"Invalid platform role => $invalidPlatformRole not supported for ManagerRoles"
     }
@@ -125,7 +121,7 @@ class PartyManagementServiceImplSpec
 
       //when
       val operation =
-        partyManagementService.createRelationship(userId.toString, partyIdTo.toString, relationshipRole, platformRole)
+        partyManagementService.createRelationship(userId, partyIdTo, relationshipRole, platformRole)
 
       //then
       operation.futureValue shouldBe ()

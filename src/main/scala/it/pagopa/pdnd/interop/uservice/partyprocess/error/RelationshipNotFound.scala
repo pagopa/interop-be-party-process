@@ -1,4 +1,8 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.error
 
-final case class RelationshipNotFound(institutionId: String, taxCode: String, role: String)
-    extends Throwable(s"Relationship not found for Institution $institutionId Tax Code $taxCode Role $role ")
+import java.util.UUID
+
+final case class RelationshipNotFound(institutionId: UUID, userId: UUID, role: String)
+    extends Throwable(
+      s"Relationship not found for Institution ${institutionId.toString} User ${userId.toString} Role $role "
+    )
