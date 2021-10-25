@@ -31,7 +31,7 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
 ) extends PartyManagementService {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  override def retrieveRelationship(
+  override def retrieveRelationships(
     from: Option[UUID],
     to: Option[UUID],
     platformRole: Option[String]

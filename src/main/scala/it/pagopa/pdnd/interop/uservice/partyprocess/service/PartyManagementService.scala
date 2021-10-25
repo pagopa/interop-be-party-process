@@ -17,7 +17,7 @@ trait PartyManagementService {
 
   def createRelationship(id: UUID, organizationId: UUID, operationRole: String, platformRole: String): Future[Unit]
 
-  def retrieveRelationship(from: Option[UUID], to: Option[UUID], platformRole: Option[String]): Future[Relationships]
+  def retrieveRelationships(from: Option[UUID], to: Option[UUID], platformRole: Option[String]): Future[Relationships]
 
   def getInstitutionRelationships(id: UUID): Future[Relationships]
 
