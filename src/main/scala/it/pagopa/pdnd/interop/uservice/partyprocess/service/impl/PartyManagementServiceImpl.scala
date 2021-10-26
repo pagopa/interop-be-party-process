@@ -31,24 +31,9 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
 ) extends PartyManagementService {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  override def retrievePerson(taxCode: String): Future[Person] = {
-    val request: ApiRequest[Person] = api.getPerson(taxCode)
-    invoker
-      .execute[Person](request)
-      .map { x =>
-        logger.info(s"Retrieving person ${x.code}")
-        logger.info(s"Retrieving person ${x.content}")
-        x.content
-      }
-      .recoverWith { case ex =>
-        logger.error(s"Retrieving person ${ex.getMessage}")
-        Future.failed[Person](ex)
-      }
-  }
-
-  override def retrieveRelationship(
-    from: Option[String],
-    to: Option[String],
+  override def retrieveRelationships(
+    from: Option[UUID],
+    to: Option[UUID],
     platformRole: Option[String]
   ): Future[Relationships] = {
     val request: ApiRequest[Relationships] = api.getRelationships(from, to, platformRole)
@@ -65,23 +50,23 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  def getInstitutionRelationships(institutionId: String): Future[Relationships] = {
-    val request: ApiRequest[Relationships] = api.getRelationships(to = Some(institutionId))
+  def getInstitutionRelationships(id: UUID): Future[Relationships] = {
+    val request: ApiRequest[Relationships] = api.getRelationships(to = Some(id))
     invoker
       .execute[Relationships](request)
       .map { x =>
-        logger.info(s"Retrieving relationships for institution $institutionId: ${x.code}")
-        logger.info(s"Retrieving relationships for institution $institutionId: ${x.content}")
+        logger.info(s"Retrieving relationships for institution $id: ${x.code}")
+        logger.info(s"Retrieving relationships for institution $id: ${x.content}")
         x.content
       }
       .recoverWith { case ex =>
-        logger.error(s"ERROR while retrieving relationships for institution $institutionId: ${ex.getMessage}")
+        logger.error(s"ERROR while retrieving relationships for institution $id: ${ex.getMessage}")
         Future.failed[Relationships](ex)
       }
   }
 
-  override def retrieveOrganization(organizationId: String): Future[Organization] = {
-    val request: ApiRequest[Organization] = api.getOrganization(organizationId)
+  override def retrieveOrganization(organizationId: UUID): Future[Organization] = {
+    val request: ApiRequest[Organization] = api.getOrganizationById(organizationId)
     logger.info(s"Retrieving organization $organizationId")
     logger.info(s"Retrieving organization ${request.toString}")
     invoker
@@ -93,6 +78,23 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
       .recoverWith { case ex =>
         logger.error(s"Retrieving organization ${ex.getMessage}")
+        Future.failed[Organization](ex)
+      }
+  }
+
+  override def retrieveOrganizationByExternalId(externalOrganizationId: String): Future[Organization] = {
+    val request: ApiRequest[Organization] = api.getOrganizationByExternalId(externalOrganizationId)
+    logger.info(s"Retrieving organization by external id $externalOrganizationId")
+    logger.info(s"Retrieving organization by external id ${request.toString}")
+    invoker
+      .execute[Organization](request)
+      .map { x =>
+        logger.info(s"Retrieving organization by external id - ERROR: ${x.code}")
+        logger.info(s"Retrieving organization by external id - ERROR: ${x.content}")
+        x.content
+      }
+      .recoverWith { case ex =>
+        logger.error(s"Retrieving organization by external id ${ex.getMessage}")
         Future.failed[Organization](ex)
       }
   }
@@ -128,27 +130,27 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
   }
 
   override def createRelationship(
-    taxCode: String,
-    organizationId: String,
+    personId: UUID,
+    organizationId: UUID,
     role: String,
     platformRole: String
   ): Future[Unit] = {
     for {
       role <- Try { RelationshipSeedEnums.Role.withName(role) }.toFuture
       _    <- isPlatformRoleValid(role = role, platformRole = platformRole).toFuture
-      _    <- invokeCreateRelationship(taxCode, organizationId, role, platformRole)
+      _    <- invokeCreateRelationship(personId, organizationId, role, platformRole)
     } yield ()
   }
 
   private def invokeCreateRelationship(
-    taxCode: String,
-    organizationId: String,
+    personId: UUID,
+    organizationId: UUID,
     role: RelationshipSeedEnums.Role,
     platformRole: String
   ): Future[Relationship] = {
-    logger.info(s"Creating relationship $taxCode/$organizationId/$role/ with platformRole = $platformRole")
+    logger.info(s"Creating relationship $personId/$organizationId/$role/ with platformRole = $platformRole")
     val partyRelationship: RelationshipSeed =
-      RelationshipSeed(from = taxCode, to = organizationId, role = role, platformRole = platformRole)
+      RelationshipSeed(from = personId, to = organizationId, role = role, platformRole = platformRole)
 
     val request: ApiRequest[Relationship] = api.createRelationship(partyRelationship)
     invoker

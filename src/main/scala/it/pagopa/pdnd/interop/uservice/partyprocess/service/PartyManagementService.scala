@@ -8,28 +8,18 @@ import java.util.UUID
 import scala.concurrent.Future
 
 trait PartyManagementService {
-  def retrievePerson(taxCode: String): Future[Person]
-
-  def retrieveOrganization(organizationId: String): Future[Organization]
+  def retrieveOrganization(organizationId: UUID): Future[Organization]
+  def retrieveOrganizationByExternalId(externalOrganizationId: String): Future[Organization]
 
   def createPerson(person: PersonSeed): Future[Person]
 
   def createOrganization(organization: OrganizationSeed): Future[Organization]
 
-  def createRelationship(
-    taxCode: String,
-    organizationId: String,
-    operationRole: String,
-    platformRole: String
-  ): Future[Unit]
+  def createRelationship(id: UUID, organizationId: UUID, operationRole: String, platformRole: String): Future[Unit]
 
-  def retrieveRelationship(
-    from: Option[String],
-    to: Option[String],
-    platformRole: Option[String]
-  ): Future[Relationships]
+  def retrieveRelationships(from: Option[UUID], to: Option[UUID], platformRole: Option[String]): Future[Relationships]
 
-  def getInstitutionRelationships(institutionId: String): Future[Relationships]
+  def getInstitutionRelationships(id: UUID): Future[Relationships]
 
   def activateRelationship(relationshipId: UUID): Future[Unit]
 

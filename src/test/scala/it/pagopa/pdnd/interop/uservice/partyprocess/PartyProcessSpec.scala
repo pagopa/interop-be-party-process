@@ -8,20 +8,22 @@ import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, SecurityDirectives}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{Attribute, AttributesResponse}
+import it.pagopa.pdnd.interop.uservice.authorizationprocess.client.model.ValidJWT
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.{Role, Status}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model._
-import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{ProcessApiMarshallerImpl, ProcessApiServiceImpl, _}
+import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{ProcessApiMarshallerImpl, ProcessApiServiceImpl}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.{HealthApi, PlatformApi, ProcessApi, ProcessApiMarshaller}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{Authenticator, classicActorSystem, executionContext}
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.partyprocess.service._
 import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.{Categories, Category, Institution}
+import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{User => UserRegistryUser}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import spray.json.{DefaultJsonProtocol, RootJsonFormat, enrichAny}
+import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
 import java.io.File
 import java.nio.file.Paths
@@ -38,14 +40,16 @@ class PartyProcessSpec
     with SprayJsonSupport
     with DefaultJsonProtocol {
 
-  val processApiMarshaller: ProcessApiMarshaller         = new ProcessApiMarshallerImpl
-  val mockHealthApi: HealthApi                           = mock[HealthApi]
-  val mockPlatformApi: PlatformApi                       = mock[PlatformApi]
-  val partyManagementService: PartyManagementService     = mock[PartyManagementService]
-  val partyRegistryService: PartyRegistryService         = mock[PartyRegistryService]
-  val attributeRegistryService: AttributeRegistryService = mock[AttributeRegistryService]
-  val mailer: Mailer                                     = mock[Mailer]
-  val pdfCreator: PDFCreator                             = mock[PDFCreator]
+  val processApiMarshaller: ProcessApiMarshaller               = new ProcessApiMarshallerImpl
+  val mockHealthApi: HealthApi                                 = mock[HealthApi]
+  val mockPlatformApi: PlatformApi                             = mock[PlatformApi]
+  val partyManagementService: PartyManagementService           = mock[PartyManagementService]
+  val partyRegistryService: PartyRegistryService               = mock[PartyRegistryService]
+  val userRegistryService: UserRegistryManagementService       = mock[UserRegistryManagementService]
+  val authorizationProcessService: AuthorizationProcessService = mock[AuthorizationProcessService]
+  val attributeRegistryService: AttributeRegistryService       = mock[AttributeRegistryService]
+  val mailer: Mailer                                           = mock[Mailer]
+  val pdfCreator: PDFCreator                                   = mock[PDFCreator]
 
   var controller: Option[Controller]                 = None
   var bindServer: Option[Future[Http.ServerBinding]] = None
@@ -68,6 +72,8 @@ class PartyProcessSpec
         partyManagementService,
         partyRegistryService,
         attributeRegistryService,
+        authorizationProcessService,
+        userRegistryService,
         mailer,
         pdfCreator,
         mock[FileManager]
@@ -97,17 +103,23 @@ class PartyProcessSpec
 
     "retrieve a onboarding info" in {
       val taxCode1       = "CF1"
-      val institutionId1 = "IST1"
-      val institutionId2 = "IST2"
+      val institutionId1 = UUID.randomUUID()
+      val institutionId2 = UUID.randomUUID()
       val personPartyId1 = "af80fac0-2775-4646-8fcf-28e083751900"
       val orgPartyId1    = "af80fac0-2775-4646-8fcf-28e083751901"
       val orgPartyId2    = "af80fac0-2775-4646-8fcf-28e083751902"
-      val person1        = Person(taxCode = taxCode1, surname = "Doe", name = "John", partyId = personPartyId1)
+      val person1 = UserRegistryUser(
+        id = UUID.fromString(personPartyId1),
+        externalId = "CF1",
+        name = "Mario",
+        surname = "Rossi",
+        email = ""
+      )
 
       val relationship1 =
         Relationship(
           id = UUID.randomUUID(),
-          from = taxCode1,
+          from = person1.id,
           to = institutionId1,
           role = Role.Manager,
           platformRole = "admin",
@@ -116,7 +128,7 @@ class PartyProcessSpec
       val relationship2 =
         Relationship(
           id = UUID.randomUUID(),
-          from = taxCode1,
+          from = person1.id,
           to = institutionId2,
           role = Role.Delegate,
           platformRole = "admin",
@@ -126,26 +138,22 @@ class PartyProcessSpec
       val relationships = Relationships(items = Seq(relationship1, relationship2))
 
       val organization1 = Organization(
-        institutionId = institutionId1,
+        institutionId = institutionId1.toString,
         description = "org1",
-        managerName = "managerName1",
-        managerSurname = "managerSurname1",
         digitalAddress = "digitalAddress1",
-        partyId = orgPartyId1,
+        id = UUID.fromString(orgPartyId1),
         attributes = Seq("1", "2", "3")
       )
       val organization2 = Organization(
-        institutionId = institutionId2,
+        institutionId = institutionId2.toString,
         description = "org2",
-        managerName = "managerName2",
-        managerSurname = "managerSurname2",
         digitalAddress = "digitalAddress2",
-        partyId = orgPartyId2,
+        id = UUID.fromString(orgPartyId2),
         attributes = Seq("99", "100", "101")
       )
 
       val expected = OnBoardingInfo(
-        person = PersonInfo(name = person1.name, surname = person1.surname, taxCode = person1.taxCode),
+        person = PersonInfo(name = person1.name, surname = person1.surname, taxCode = person1.externalId),
         institutions = Seq(
           InstitutionInfo(
             institutionId = organization1.institutionId,
@@ -168,9 +176,41 @@ class PartyProcessSpec
         )
       )
 
-      (partyManagementService.retrievePerson _).expects(taxCode1).returning(Future.successful(person1)).once()
-      (partyManagementService.retrieveRelationship _)
-        .expects(Some(taxCode1), None, None)
+      val mockSubjectUUID = "af80fac0-2775-4646-8fcf-28e083751988"
+      (authorizationProcessService.validateToken _)
+        .expects(*)
+        .returning(
+          Future.successful(
+            ValidJWT(
+              iss = UUID.randomUUID().toString,
+              sub = mockSubjectUUID,
+              aud = List("test"),
+              exp = OffsetDateTime.now(),
+              nbf = OffsetDateTime.now(),
+              iat = OffsetDateTime.now(),
+              jti = "123"
+            )
+          )
+        )
+        .once()
+
+      (userRegistryService.getUserById _)
+        .expects(UUID.fromString(mockSubjectUUID))
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = UUID.fromString(mockSubjectUUID),
+              externalId = taxCode1,
+              name = "Mario",
+              surname = "Rossi",
+              email = "super@mario.it"
+            )
+          )
+        )
+        .once()
+
+      (partyManagementService.retrieveRelationships _)
+        .expects(Some(UUID.fromString(mockSubjectUUID)), None, None)
         .returning(Future.successful(relationships))
         .once()
       (partyManagementService.retrieveOrganization _)
@@ -185,7 +225,7 @@ class PartyProcessSpec
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
       val response = Await.result(
         Http().singleRequest(
-          HttpRequest(uri = s"$url/onboarding/info/$taxCode1", method = HttpMethods.GET, headers = authorization)
+          HttpRequest(uri = s"$url/onboarding/info", method = HttpMethods.GET, headers = authorization)
         ),
         Duration.Inf
       )
@@ -201,9 +241,7 @@ class PartyProcessSpec
       val taxCode1       = "managerTaxCode"
       val taxCode2       = "delegateTaxCode"
       val institutionId1 = "IST2"
-      val personPartyId1 = "bf80fac0-2775-4646-8fcf-28e083751900"
       val orgPartyId1    = "bf80fac0-2775-4646-8fcf-28e083751901"
-      val person1        = Person(taxCode = taxCode1, surname = "Doe", name = "John", partyId = personPartyId1)
       val institution1 = Institution(
         id = institutionId1,
         o = None,
@@ -220,10 +258,8 @@ class PartyProcessSpec
       val organization1 = Organization(
         institutionId = institutionId1,
         description = "org1",
-        managerName = "managerName1",
-        managerSurname = "managerSurname1",
         digitalAddress = "digitalAddress1",
-        partyId = orgPartyId1,
+        id = UUID.fromString(orgPartyId1),
         attributes = Seq.empty
       )
 
@@ -244,9 +280,23 @@ class PartyProcessSpec
       val file = new File("src/test/resources/fake.file")
 
       val manager =
-        User(name = "manager", surname = "manager", taxCode = taxCode1, role = "Manager", platformRole = "admin")
+        User(
+          name = "manager",
+          surname = "manager",
+          taxCode = taxCode1,
+          role = "Manager",
+          platformRole = "admin",
+          email = None
+        )
       val delegate =
-        User(name = "delegate", surname = "delegate", taxCode = taxCode2, role = "Delegate", platformRole = "admin")
+        User(
+          name = "delegate",
+          surname = "delegate",
+          taxCode = taxCode2,
+          role = "Delegate",
+          platformRole = "admin",
+          email = None
+        )
 
       (partyRegistryService.getInstitution _).expects(*).returning(Future.successful(institution1)).once()
       (() => partyRegistryService.getCategories)
@@ -254,9 +304,34 @@ class PartyProcessSpec
         .returning(Future.successful(Categories(Seq(Category("C17", "attrs", "test")))))
         .once()
       (partyManagementService.createOrganization _).expects(*).returning(Future.successful(organization1)).once()
-      (partyManagementService.createPerson _).expects(*).returning(Future.successful(person1)).once()
-      (partyManagementService.createPerson _).expects(*).returning(Future.failed(new RuntimeException)).once()
-      (partyManagementService.retrievePerson _).expects(*).returning(Future.successful(person1)).once()
+      (userRegistryService.upsertUser _)
+        .expects(*, *, *, *)
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = UUID.randomUUID(),
+              externalId = taxCode1,
+              name = "manager",
+              surname = "manager",
+              email = ""
+            )
+          )
+        )
+        .once()
+      (userRegistryService.upsertUser _)
+        .expects(*, *, *, *)
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = UUID.randomUUID(),
+              externalId = taxCode2,
+              name = "delegate",
+              surname = "delegate",
+              email = ""
+            )
+          )
+        )
+        .once()
       (partyManagementService.createRelationship _).expects(*, *, *, *).returning(Future.successful(())).repeat(2)
       (attributeRegistryService.createAttribute _).expects(*, *, *).returning(Future.successful(attr1)).once()
       (pdfCreator.create _).expects(*, *).returning(Future.successful((file, "hash"))).once()
@@ -265,7 +340,7 @@ class PartyProcessSpec
 
       val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 
-      implicit val userFormat: RootJsonFormat[User]                           = jsonFormat5(User)
+      implicit val userFormat: RootJsonFormat[User]                           = jsonFormat6(User)
       implicit val onBoardingRequestFormat: RootJsonFormat[OnBoardingRequest] = jsonFormat2(OnBoardingRequest)
 
       implicit def fromEntityUnmarshallerOnBoardingRequest: ToEntityMarshaller[OnBoardingRequest] =
@@ -287,22 +362,38 @@ class PartyProcessSpec
         surname = "operator1",
         taxCode = taxCode1,
         role = "Operator",
-        platformRole = "security"
+        platformRole = "security",
+        email = Some("operat@ore.it")
       )
       val operator2 = User(
         name = "operator2",
         surname = "operator2",
         taxCode = taxCode2,
         role = "Operator",
-        platformRole = "security"
+        platformRole = "security",
+        email = None
       )
-      (partyManagementService.retrieveRelationship _)
+
+      (partyManagementService.retrieveOrganizationByExternalId _)
+        .expects(*)
+        .returning(
+          Future.successful(
+            Organization(
+              id = UUID.randomUUID(),
+              institutionId = "d4r3",
+              description = "test",
+              digitalAddress = "big@fish.it",
+              attributes = Seq.empty
+            )
+          )
+        )
+      (partyManagementService.retrieveRelationships _)
         .expects(*, *, *)
         .returning(Future.successful(Relationships(Seq.empty)))
 
       val req = OnBoardingRequest(users = Seq(operator1, operator2), institutionId = "institutionId1")
 
-      implicit val userFormat: RootJsonFormat[User]                           = jsonFormat5(User)
+      implicit val userFormat: RootJsonFormat[User]                           = jsonFormat6(User)
       implicit val onBoardingRequestFormat: RootJsonFormat[OnBoardingRequest] = jsonFormat2(OnBoardingRequest)
 
       implicit def fromEntityUnmarshallerOnBoardingRequest: ToEntityMarshaller[OnBoardingRequest] =
@@ -315,24 +406,19 @@ class PartyProcessSpec
 
     }
 
-    "create operators if exits a legal active for a given institution" in {
+    "create operators if exists a legal active for a given institution" in {
 
       val taxCode1       = "operator1TaxCode"
       val taxCode2       = "operator2TaxCode"
-      val institutionId1 = "IST2"
+      val institutionId1 = UUID.randomUUID()
       val personPartyId1 = "bf80fac0-2775-4646-8fcf-28e083751900"
-      val personPartyId2 = "bf80fac0-2775-4646-8fcf-28e083751901"
       val orgPartyId1    = "bf80fac0-2775-4646-8fcf-28e083751901"
-      val person1        = Person(taxCode = taxCode1, surname = "Ripley", name = "Ellen", partyId = personPartyId1)
-      val person2        = Person(taxCode = taxCode2, surname = "Maschetti", name = "Raffaello", partyId = personPartyId2)
 
       val organization1 = Organization(
-        institutionId = institutionId1,
+        institutionId = institutionId1.toString,
         description = "org1",
-        managerName = "managerName1",
-        managerSurname = "managerSurname1",
         digitalAddress = "digitalAddress1",
-        partyId = orgPartyId1,
+        id = UUID.fromString(orgPartyId1),
         attributes = Seq.empty
       )
 
@@ -341,7 +427,7 @@ class PartyProcessSpec
           Seq(
             Relationship(
               id = UUID.randomUUID(),
-              from = "",
+              from = UUID.fromString(personPartyId1),
               to = institutionId1,
               role = Role.Manager,
               platformRole = "admin",
@@ -355,26 +441,59 @@ class PartyProcessSpec
         surname = "operator1",
         taxCode = taxCode1,
         role = "Operator",
-        platformRole = "security"
+        platformRole = "security",
+        email = Some("mario@ros.si")
       )
       val operator2 = User(
         name = "operator2",
         surname = "operator2",
         taxCode = taxCode2,
         role = "Operator",
-        platformRole = "security"
+        platformRole = "security",
+        email = None
       )
-      (partyManagementService.retrieveRelationship _)
-        .expects(None, Some(institutionId1), None)
+
+      (partyManagementService.retrieveOrganizationByExternalId _)
+        .expects(*)
+        .returning(Future.successful(organization1))
+      (partyManagementService.retrieveRelationships _)
+        .expects(None, Some(UUID.fromString(orgPartyId1)), None)
         .returning(Future.successful(relationships))
-      (partyManagementService.retrieveOrganization _).expects(*).returning(Future.successful(organization1)).once()
-      (partyManagementService.createPerson _).expects(*).returning(Future.successful(person1)).once()
-      (partyManagementService.createPerson _).expects(*).returning(Future.successful(person2)).once()
+
+      (userRegistryService.upsertUser _)
+        .expects(*, *, *, *)
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = UUID.randomUUID(),
+              externalId = taxCode1,
+              name = "operator1",
+              surname = "operator1",
+              email = "mario@ros.si"
+            )
+          )
+        )
+        .once()
+      (userRegistryService.upsertUser _)
+        .expects(*, *, *, *)
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = UUID.randomUUID(),
+              externalId = taxCode2,
+              name = "operator2",
+              surname = "operator2",
+              email = ""
+            )
+          )
+        )
+        .once()
+
       (partyManagementService.createRelationship _).expects(*, *, *, *).returning(Future.successful(())).repeat(2)
 
-      val req = OnBoardingRequest(users = Seq(operator1, operator2), institutionId = institutionId1)
+      val req = OnBoardingRequest(users = Seq(operator1, operator2), institutionId = institutionId1.toString)
 
-      implicit val userFormat: RootJsonFormat[User]                           = jsonFormat5(User)
+      implicit val userFormat: RootJsonFormat[User]                           = jsonFormat6(User)
       implicit val onBoardingRequestFormat: RootJsonFormat[OnBoardingRequest] = jsonFormat2(OnBoardingRequest)
 
       implicit def fromEntityUnmarshallerOnBoardingRequest: ToEntityMarshaller[OnBoardingRequest] =
@@ -434,16 +553,21 @@ class PartyProcessSpec
     }
 
     "retrieve all the relationships of a specific institution" in {
-      val taxCode1      = "CF1"
-      val taxCode2      = "CF2"
-      val taxCode3      = "CF3"
-      val taxCode4      = "CF4"
-      val institutionId = "IST1"
+      val userId          = UUID.randomUUID()
+      val adminIdentifier = UUID.randomUUID()
+      val userId3         = UUID.randomUUID()
+      val userId4         = UUID.randomUUID()
+      val institutionId   = UUID.randomUUID()
+
+      val relationshipId1 = UUID.randomUUID()
+      val relationshipId2 = UUID.randomUUID()
+      val relationshipId3 = UUID.randomUUID()
+      val relationshipId4 = UUID.randomUUID()
 
       val relationship1 =
         Relationship(
-          id = UUID.randomUUID(),
-          from = taxCode1,
+          id = relationshipId1,
+          from = userId,
           to = institutionId,
           role = Role.Manager,
           platformRole = "admin",
@@ -451,8 +575,8 @@ class PartyProcessSpec
         )
       val relationship2 =
         Relationship(
-          id = UUID.randomUUID(),
-          from = taxCode2,
+          id = relationshipId2,
+          from = adminIdentifier,
           to = institutionId,
           role = Role.Delegate,
           platformRole = "admin",
@@ -461,8 +585,8 @@ class PartyProcessSpec
 
       val relationship3 =
         Relationship(
-          id = UUID.randomUUID(),
-          from = taxCode3,
+          id = relationshipId3,
+          from = userId3,
           to = institutionId,
           role = Role.Operator,
           platformRole = "security",
@@ -471,8 +595,8 @@ class PartyProcessSpec
 
       val relationship4 =
         Relationship(
-          id = UUID.randomUUID(),
-          from = taxCode4,
+          id = relationshipId4,
+          from = userId4,
           to = institutionId,
           role = Role.Operator,
           platformRole = "api",
@@ -481,8 +605,30 @@ class PartyProcessSpec
 
       val relationships = Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
 
-      (partyManagementService.getInstitutionRelationships _)
-        .expects(institutionId)
+      (authorizationProcessService.validateToken _)
+        .expects(*)
+        .returning(
+          Future.successful(
+            ValidJWT(
+              iss = UUID.randomUUID().toString,
+              sub = adminIdentifier.toString,
+              aud = List("test"),
+              exp = OffsetDateTime.now(),
+              nbf = OffsetDateTime.now(),
+              iat = OffsetDateTime.now(),
+              jti = "123"
+            )
+          )
+        )
+        .once()
+
+      (partyManagementService.retrieveRelationships _)
+        .expects(Some(adminIdentifier), Some(institutionId), None)
+        .returning(Future.successful(relationships))
+        .once()
+
+      (partyManagementService.retrieveRelationships _)
+        .expects(None, Some(institutionId), None)
         .returning(Future.successful(relationships))
         .once()
 
@@ -501,57 +647,287 @@ class PartyProcessSpec
       val body = Await.result(Unmarshal(response.entity).to[Seq[RelationshipInfo]], Duration.Inf)
       response.status mustBe StatusCodes.OK
       body must contain only (RelationshipInfo(
-        from = taxCode1,
+        id = relationshipId1,
+        from = userId,
         role = "Manager",
         platformRole = "admin",
         status = "active"
       ),
-      RelationshipInfo(from = taxCode2, role = "Delegate", platformRole = "admin", status = "active"),
-      RelationshipInfo(from = taxCode3, role = "Operator", platformRole = "security", status = "active"),
-      RelationshipInfo(from = taxCode4, role = "Operator", platformRole = "api", status = "active"))
+      RelationshipInfo(
+        id = relationshipId2,
+        from = adminIdentifier,
+        role = "Delegate",
+        platformRole = "admin",
+        status = "active"
+      ),
+      RelationshipInfo(
+        id = relationshipId3,
+        from = userId3,
+        role = "Operator",
+        platformRole = "security",
+        status = "active"
+      ),
+      RelationshipInfo(
+        id = relationshipId4,
+        from = userId4,
+        role = "Operator",
+        platformRole = "api",
+        status = "active"
+      ))
 
+    }
+
+    "retrieve all the relationships of a specific institution with filter by platformRole" in {
+      val userId          = UUID.randomUUID()
+      val adminIdentifier = UUID.randomUUID()
+      val userId3         = UUID.randomUUID()
+      val userId4         = UUID.randomUUID()
+      val institutionId   = UUID.randomUUID()
+
+      val relationshipId1 = UUID.randomUUID()
+      val relationshipId2 = UUID.randomUUID()
+      val relationshipId3 = UUID.randomUUID()
+      val relationshipId4 = UUID.randomUUID()
+
+      val relationship1 =
+        Relationship(
+          id = relationshipId1,
+          from = userId,
+          to = institutionId,
+          role = Role.Manager,
+          platformRole = "admin",
+          status = Status.Active
+        )
+      val relationship2 =
+        Relationship(
+          id = relationshipId2,
+          from = adminIdentifier,
+          to = institutionId,
+          role = Role.Delegate,
+          platformRole = "admin",
+          status = Status.Active
+        )
+
+      val relationship3 =
+        Relationship(
+          id = relationshipId3,
+          from = userId3,
+          to = institutionId,
+          role = Role.Operator,
+          platformRole = "security",
+          status = Status.Active
+        )
+
+      val relationship4 =
+        Relationship(
+          id = relationshipId4,
+          from = userId4,
+          to = institutionId,
+          role = Role.Operator,
+          platformRole = "api",
+          status = Status.Active
+        )
+
+      val relationships = Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
+
+      (authorizationProcessService.validateToken _)
+        .expects(*)
+        .returning(
+          Future.successful(
+            ValidJWT(
+              iss = UUID.randomUUID().toString,
+              sub = adminIdentifier.toString,
+              aud = List("test"),
+              exp = OffsetDateTime.now(),
+              nbf = OffsetDateTime.now(),
+              iat = OffsetDateTime.now(),
+              jti = "123"
+            )
+          )
+        )
+        .once()
+
+      (partyManagementService.retrieveRelationships _)
+        .expects(Some(adminIdentifier), Some(institutionId), None)
+        .returning(Future.successful(relationships))
+        .once()
+
+      (partyManagementService.retrieveRelationships _)
+        .expects(None, Some(institutionId), None)
+        .returning(Future.successful(relationships))
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
+      val response = Await.result(
+        Http().singleRequest(
+          HttpRequest(
+            uri = s"$url/institutions/$institutionId/relationships?platformRoles=security,api",
+            method = HttpMethods.GET,
+            headers = authorization
+          )
+        ),
+        Duration.Inf
+      )
+
+      val body = Await.result(Unmarshal(response.entity).to[Seq[RelationshipInfo]], Duration.Inf)
+      response.status mustBe StatusCodes.OK
+      body must contain only (RelationshipInfo(
+        id = relationshipId3,
+        from = userId3,
+        role = "Operator",
+        platformRole = "security",
+        status = "active"
+      ),
+      RelationshipInfo(
+        id = relationshipId4,
+        from = userId4,
+        role = "Operator",
+        platformRole = "api",
+        status = "active"
+      ))
+
+    }
+
+    "retrieve only the relationships of a specific role when the current user is not an admin" in {
+      val userId          = UUID.randomUUID()
+      val adminIdentifier = UUID.randomUUID()
+      val userId3         = UUID.randomUUID()
+      val userId4         = UUID.randomUUID()
+      val institutionId   = UUID.randomUUID()
+
+      val relationshipId1 = UUID.randomUUID()
+      val relationshipId2 = UUID.randomUUID()
+      val relationshipId3 = UUID.randomUUID()
+      val relationshipId4 = UUID.randomUUID()
+
+      val relationship1 =
+        Relationship(
+          id = relationshipId1,
+          from = userId,
+          to = institutionId,
+          role = Role.Manager,
+          platformRole = "admin",
+          status = Status.Active
+        )
+      val relationship2 =
+        Relationship(
+          id = relationshipId2,
+          from = adminIdentifier,
+          to = institutionId,
+          role = Role.Delegate,
+          platformRole = "admin",
+          status = Status.Active
+        )
+
+      val relationship3 =
+        Relationship(
+          id = relationshipId3,
+          from = userId3,
+          to = institutionId,
+          role = Role.Operator,
+          platformRole = "security",
+          status = Status.Active
+        )
+
+      val relationship4 =
+        Relationship(
+          id = relationshipId4,
+          from = userId4,
+          to = institutionId,
+          role = Role.Operator,
+          platformRole = "api",
+          status = Status.Active
+        )
+
+      val relationships         = Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
+      val selectedRelationships = Relationships(items = Seq(relationship3))
+
+      (authorizationProcessService.validateToken _)
+        .expects(*)
+        .returning(
+          Future.successful(
+            ValidJWT(
+              iss = UUID.randomUUID().toString,
+              sub = userId3.toString,
+              aud = List("test"),
+              exp = OffsetDateTime.now(),
+              nbf = OffsetDateTime.now(),
+              iat = OffsetDateTime.now(),
+              jti = "123"
+            )
+          )
+        )
+        .once()
+
+      (partyManagementService.retrieveRelationships _)
+        .expects(Some(userId3), Some(institutionId), None)
+        .returning(Future.successful(selectedRelationships))
+        .once()
+
+      (partyManagementService.retrieveRelationships _)
+        .expects(None, Some(institutionId), None)
+        .returning(Future.successful(relationships))
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
+      val response = Await.result(
+        Http().singleRequest(
+          HttpRequest(
+            uri = s"$url/institutions/$institutionId/relationships",
+            method = HttpMethods.GET,
+            headers = authorization
+          )
+        ),
+        Duration.Inf
+      )
+
+      val body = Await.result(Unmarshal(response.entity).to[Seq[RelationshipInfo]], Duration.Inf)
+      response.status mustBe StatusCodes.OK
+      body must contain only
+        RelationshipInfo(
+          id = relationshipId3,
+          from = userId3,
+          role = "Operator",
+          platformRole = "security",
+          status = "active"
+        )
     }
   }
 
   "Relationship activation" must {
     "succeed" in {
 
-      val taxCode        = "taxCode"
-      val institutionId  = "institutionId"
+      val userId         = UUID.randomUUID()
+      val institutionId  = UUID.randomUUID()
       val platformRole   = "platformRole"
       val relationshipId = UUID.randomUUID()
 
-      val relationships = Relationships(
-        Seq(
-          Relationship(
-            id = relationshipId,
-            from = taxCode,
-            to = institutionId,
-            filePath = None,
-            fileName = None,
-            contentType = None,
-            role = RelationshipEnums.Role.Operator,
-            platformRole = platformRole,
-            status = RelationshipEnums.Status.Suspended
-          )
+      val relationship =
+        Relationship(
+          id = relationshipId,
+          from = userId,
+          to = institutionId,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = RelationshipEnums.Role.Operator,
+          platformRole = platformRole,
+          status = RelationshipEnums.Status.Suspended
         )
-      )
 
-      (partyManagementService.retrieveRelationship _)
-        .expects(Some(taxCode), Some(institutionId), Some(platformRole))
-        .returning(Future.successful(relationships))
+      (partyManagementService.getRelationshipById _)
+        .expects(relationshipId)
+        .returning(Future.successful(relationship))
 
       (partyManagementService.activateRelationship _)
         .expects(relationshipId)
         .returning(Future.successful(()))
 
-      val data = ActivationRequest(platformRole)
       val response = Await.result(
         Http().singleRequest(
           HttpRequest(
-            uri = s"$url/institutions/$institutionId/relationships/$taxCode/activate",
+            uri = s"$url/relationships/$relationshipId/activate",
             method = HttpMethods.POST,
-            entity = HttpEntity(ContentTypes.`application/json`, data.toJson.toString),
             headers = authorization
           )
         ),
@@ -564,38 +940,32 @@ class PartyProcessSpec
 
     "fail if relationship is not Suspended" in {
 
-      val taxCode        = "taxCode"
-      val institutionId  = "institutionId"
+      val fromId         = UUID.randomUUID()
       val platformRole   = "platformRole"
       val relationshipId = UUID.randomUUID()
 
-      val relationships = Relationships(
-        Seq(
-          Relationship(
-            id = relationshipId,
-            from = taxCode,
-            to = institutionId,
-            filePath = None,
-            fileName = None,
-            contentType = None,
-            role = RelationshipEnums.Role.Operator,
-            platformRole = platformRole,
-            status = RelationshipEnums.Status.Pending
-          )
+      val relationships =
+        Relationship(
+          id = relationshipId,
+          from = fromId,
+          to = UUID.randomUUID(),
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = RelationshipEnums.Role.Operator,
+          platformRole = platformRole,
+          status = RelationshipEnums.Status.Pending
         )
-      )
 
-      (partyManagementService.retrieveRelationship _)
-        .expects(Some(taxCode), Some(institutionId), Some(platformRole))
+      (partyManagementService.getRelationshipById _)
+        .expects(relationshipId)
         .returning(Future.successful(relationships))
 
-      val data = ActivationRequest(platformRole)
       val response = Await.result(
         Http().singleRequest(
           HttpRequest(
-            uri = s"$url/institutions/$institutionId/relationships/$taxCode/activate",
+            uri = s"$url/relationships/$relationshipId/activate",
             method = HttpMethods.POST,
-            entity = HttpEntity(ContentTypes.`application/json`, data.toJson.toString),
             headers = authorization
           )
         ),
@@ -611,42 +981,36 @@ class PartyProcessSpec
   "Relationship suspension" must {
     "succeed" in {
 
-      val taxCode        = "taxCode"
-      val institutionId  = "institutionId"
+      val fromId         = UUID.randomUUID()
       val platformRole   = "platformRole"
       val relationshipId = UUID.randomUUID()
 
-      val relationships = Relationships(
-        Seq(
-          Relationship(
-            id = relationshipId,
-            from = taxCode,
-            to = institutionId,
-            filePath = None,
-            fileName = None,
-            contentType = None,
-            role = RelationshipEnums.Role.Operator,
-            platformRole = platformRole,
-            status = RelationshipEnums.Status.Active
-          )
+      val relationship =
+        Relationship(
+          id = relationshipId,
+          from = fromId,
+          to = UUID.randomUUID(),
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = RelationshipEnums.Role.Operator,
+          platformRole = platformRole,
+          status = RelationshipEnums.Status.Active
         )
-      )
 
-      (partyManagementService.retrieveRelationship _)
-        .expects(Some(taxCode), Some(institutionId), Some(platformRole))
-        .returning(Future.successful(relationships))
+      (partyManagementService.getRelationshipById _)
+        .expects(relationshipId)
+        .returning(Future.successful(relationship))
 
       (partyManagementService.suspendRelationship _)
         .expects(relationshipId)
         .returning(Future.successful(()))
 
-      val data = ActivationRequest(platformRole)
       val response = Await.result(
         Http().singleRequest(
           HttpRequest(
-            uri = s"$url/institutions/$institutionId/relationships/$taxCode/suspend",
+            uri = s"$url/relationships/$relationshipId/suspend",
             method = HttpMethods.POST,
-            entity = HttpEntity(ContentTypes.`application/json`, data.toJson.toString),
             headers = authorization
           )
         ),
@@ -659,38 +1023,32 @@ class PartyProcessSpec
 
     "fail if relationship is not Active" in {
 
-      val taxCode        = "taxCode"
-      val institutionId  = "institutionId"
+      val fromId         = UUID.randomUUID()
       val platformRole   = "platformRole"
       val relationshipId = UUID.randomUUID()
 
-      val relationships = Relationships(
-        Seq(
-          Relationship(
-            id = relationshipId,
-            from = taxCode,
-            to = institutionId,
-            filePath = None,
-            fileName = None,
-            contentType = None,
-            role = RelationshipEnums.Role.Operator,
-            platformRole = platformRole,
-            status = RelationshipEnums.Status.Pending
-          )
+      val relationship =
+        Relationship(
+          id = relationshipId,
+          from = fromId,
+          to = UUID.randomUUID(),
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = RelationshipEnums.Role.Operator,
+          platformRole = platformRole,
+          status = RelationshipEnums.Status.Pending
         )
-      )
 
-      (partyManagementService.retrieveRelationship _)
-        .expects(Some(taxCode), Some(institutionId), Some(platformRole))
-        .returning(Future.successful(relationships))
+      (partyManagementService.getRelationshipById _)
+        .expects(relationshipId)
+        .returning(Future.successful(relationship))
 
-      val data = ActivationRequest(platformRole)
       val response = Await.result(
         Http().singleRequest(
           HttpRequest(
-            uri = s"$url/institutions/$institutionId/relationships/$taxCode/suspend",
+            uri = s"$url/relationships/$relationshipId/suspend",
             method = HttpMethods.POST,
-            entity = HttpEntity(ContentTypes.`application/json`, data.toJson.toString),
             headers = authorization
           )
         ),

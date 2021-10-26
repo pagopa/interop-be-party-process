@@ -4,6 +4,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.directives.SecurityDirectives
 import akka.management.scaladsl.AkkaManagement
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.api.AttributeApi
+import it.pagopa.pdnd.interop.uservice.authorizationprocess.client.api.AuthApi
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{
   HealthApiMarshallerImpl,
@@ -24,23 +25,30 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.impl.{
   AttributeRegistryServiceImpl,
+  AuthorizationProcessServiceImpl,
   MailerImpl,
   PDFCreatorImpl,
   PartyManagementServiceImpl,
-  PartyRegistryServiceImpl
+  PartyRegistryServiceImpl,
+  UserRegistryManagementServiceImpl
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.{
   AttributeRegistryInvoker,
   AttributeRegistryService,
   FileManager,
+  AuthorizationProcessInvoker,
+  AuthorizationProcessService,
   Mailer,
   PDFCreator,
   PartyManagementInvoker,
   PartyManagementService,
   PartyProxyInvoker,
-  PartyRegistryService
+  PartyRegistryService,
+  UserRegistryManagementInvoker,
+  UserRegistryManagementService
 }
 import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.api.InstitutionApi
+import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.api.UserApi
 import kamon.Kamon
 
 import scala.concurrent.Future
@@ -63,6 +71,12 @@ object Main extends App with CorsSupport {
   final val attributeRegistryInvoker: AttributeRegistryInvoker = AttributeRegistryInvoker()
   final val attributeApi: AttributeApi                         = AttributeApi(ApplicationConfiguration.getAttributeRegistryUrl)
 
+  final val authorizationProcessInvoker: AuthorizationProcessInvoker = AuthorizationProcessInvoker()
+  final val authAPI: AuthApi                                         = AuthApi(ApplicationConfiguration.getAuthorizationProcessURL)
+
+  final val userRegistryManagementInvoker: UserRegistryManagementInvoker = UserRegistryManagementInvoker()
+  final val userAPI: UserApi                                             = UserApi(ApplicationConfiguration.getUserRegistryURL)
+
   final val partyManagementService: PartyManagementService =
     PartyManagementServiceImpl(partyManagementInvoker, partyApi)
 
@@ -70,6 +84,12 @@ object Main extends App with CorsSupport {
 
   final val attributeRegistryService: AttributeRegistryService =
     AttributeRegistryServiceImpl(attributeRegistryInvoker, attributeApi)
+
+  final val authorizationProcessService: AuthorizationProcessService =
+    AuthorizationProcessServiceImpl(authorizationProcessInvoker, authAPI)
+
+  final val userRegistryManagementService: UserRegistryManagementService =
+    UserRegistryManagementServiceImpl(userRegistryManagementInvoker, userAPI)
 
   final val mailer: Mailer         = new MailerImpl
   final val pdfCreator: PDFCreator = new PDFCreatorImpl
@@ -79,6 +99,8 @@ object Main extends App with CorsSupport {
       partyManagementService,
       partyProcessService,
       attributeRegistryService,
+      authorizationProcessService,
+      userRegistryManagementService,
       mailer,
       pdfCreator,
       fileManager
