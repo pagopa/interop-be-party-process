@@ -244,6 +244,7 @@ class ProcessApiServiceImpl(
       .toTry
   }
 
+  //TODO add the recover with using the latest user registry version endpoints.
   private def addUser(user: User): Future[(UserRegistryUser, String, String)] = {
     logger.info(s"Adding user ${user.toString}")
     createPerson(user).map(p => (p, user.role, user.platformRole))
