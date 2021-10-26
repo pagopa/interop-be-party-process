@@ -411,7 +411,6 @@ components:
         from:
           type: string
           format: uuid
-          description: tax code
         role:
           type: string
           description: represents the generic available role types for the relationship
