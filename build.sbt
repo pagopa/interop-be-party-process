@@ -110,8 +110,6 @@ lazy val root = (project in file("."))
     }".toLowerCase,
     Docker / packageName := s"services/${name.value}",
     Docker / dockerExposedPorts := Seq(8080),
-    Compile / compile / wartremoverErrors ++= Warts.unsafe,
-    wartremoverExcluded += sourceManaged.value,
     scalafmtOnCompile := true
   )
   .aggregate(client)

@@ -10,6 +10,7 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.Relationship
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   Organization,
   OrganizationSeed,
+  PersonSeed,
   Relationship,
   RelationshipEnums,
   RelationshipSeed,
@@ -25,7 +26,12 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{ApplicationCo
 import it.pagopa.pdnd.interop.uservice.partyprocess.error._
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.service._
-import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{User => UserRegistryUser}
+import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{
+  NONE => CertificationEnumsNone,
+  User => UserRegistryUser,
+  UserExtras => UserRegistryUserExtras,
+  UserSeed => UserRegistryUserSeed
+}
 import org.slf4j.{Logger, LoggerFactory}
 import spray.json._
 
@@ -36,14 +42,6 @@ import java.util.{Base64, UUID}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-@SuppressWarnings(
-  Array(
-    "org.wartremover.warts.StringPlusAny",
-    "org.wartremover.warts.ImplicitParameter",
-    "org.wartremover.warts.ToString",
-    "org.wartremover.warts.Equals"
-  )
-)
 class ProcessApiServiceImpl(
   partyManagementService: PartyManagementService,
   partyRegistryService: PartyRegistryService,
@@ -121,7 +119,7 @@ class ProcessApiServiceImpl(
     val result: Future[OnBoardingResponse] = for {
       organization     <- organizationF
       validUsers       <- verifyUsersByRoles(onBoardingRequest.users, Set(Manager.toString, Delegate.toString))
-      personsWithRoles <- Future.traverse(validUsers)(user => addUser(user))
+      personsWithRoles <- Future.traverse(validUsers)(addUser)
       _ <- Future.traverse(personsWithRoles)(pr =>
         partyManagementService.createRelationship(pr._1.id, organization.id, pr._2, pr._3)
       )
@@ -141,7 +139,6 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(response) =>
         createLegals201(response)
-      //        complete(StatusCodes.Created, HttpEntity.fromFile(ContentTypes.`application/octet-stream`, file))
       case Failure(ex) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
         createLegals400(errorResponse)
@@ -162,7 +159,7 @@ class ProcessApiServiceImpl(
       _             <- existsAManagerActive(relationships)
 
       validUsers <- verifyUsersByRoles(onBoardingRequest.users, Set(Operator.toString))
-      operators  <- Future.traverse(validUsers)(user => addUser(user))
+      operators  <- Future.traverse(validUsers)(addUser)
       _ <- Future.traverse(operators)(pr =>
         partyManagementService.createRelationship(pr._1.id, organization.id, pr._2, pr._3)
       )
@@ -244,10 +241,14 @@ class ProcessApiServiceImpl(
       .toTry
   }
 
-  //TODO add the recover with using the latest user registry version endpoints.
   private def addUser(user: User): Future[(UserRegistryUser, String, String)] = {
     logger.info(s"Adding user ${user.toString}")
-    createPerson(user).map(p => (p, user.role, user.platformRole))
+    createPerson(user)
+      .recoverWith {
+        // TODO Once errors are defined, we should check that error is "person already exists"
+        case _ => userRegistryManagementService.getUserByExternalId(user.taxCode)
+      }
+      .map((_, user.role, user.platformRole))
   }
 
   private def createRelationship(
@@ -258,14 +259,25 @@ class ProcessApiServiceImpl(
   ): RelationshipSeed =
     RelationshipSeed(personId, organizationId, RelationshipSeedEnums.Role.withName(role), platformRole)
 
-  private def createPerson(user: User): Future[UserRegistryUser] = {
-    userRegistryManagementService.upsertUser(
-      externalId = user.taxCode,
-      name = user.name,
-      surname = user.surname,
-      email = user.email.getOrElse("")
-    )
-  }
+  private def createPerson(user: User): Future[UserRegistryUser] =
+    for {
+      user <- userRegistryManagementService
+        .createUser(
+          UserRegistryUserSeed(
+            externalId = user.taxCode,
+            name = user.name,
+            surname = user.surname,
+            certification = CertificationEnumsNone,
+            extras = UserRegistryUserExtras(email = user.email, birthDate = None)
+          )
+        )
+        .recoverWith {
+          // Use can already exists on user registry
+          // TODO Once errors are defined, we should check that error is "person already exists"
+          case _ => userRegistryManagementService.getUserByExternalId(user.taxCode)
+        }
+      _ <- partyManagementService.createPerson(PersonSeed(user.id))
+    } yield user
 
   private def getOrganization(institutionId: UUID): Future[Organization] =
     partyManagementService.retrieveOrganization(institutionId)

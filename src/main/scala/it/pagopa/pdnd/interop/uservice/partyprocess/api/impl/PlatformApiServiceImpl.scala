@@ -10,7 +10,6 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationCon
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.{PlatformRolesResponse, Problem}
 
-@SuppressWarnings(Array("org.wartremover.warts.ImplicitParameter"))
 class PlatformApiServiceImpl extends PlatformApiService {
 
   /** Code: 200, Message: successful operation, DataType: Problem

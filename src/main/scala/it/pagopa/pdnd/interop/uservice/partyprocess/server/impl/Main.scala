@@ -53,7 +53,6 @@ import kamon.Kamon
 
 import scala.concurrent.Future
 
-@SuppressWarnings(Array("org.wartremover.warts.TryPartial"))
 object Main extends App with CorsSupport {
 
   final val fileManager = FileManager

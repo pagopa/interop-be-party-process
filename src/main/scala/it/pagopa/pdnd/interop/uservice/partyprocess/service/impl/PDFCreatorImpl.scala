@@ -18,7 +18,6 @@ import scala.util.Try
 
 class PDFCreatorImpl extends PDFCreator {
 
-  @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
   def create(users: Seq[User], organization: Organization): Future[(File, String)] = Future.fromTry {
     Try {
       val fileTimestamp: String = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
