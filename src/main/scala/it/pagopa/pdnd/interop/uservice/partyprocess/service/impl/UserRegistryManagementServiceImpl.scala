@@ -19,12 +19,12 @@ final case class UserRegistryManagementServiceImpl(invoker: UserRegistryManageme
 
   override def getUserById(userId: UUID): Future[User] = {
     val request: ApiRequest[User] = api.getUserById(userId)
-    invoke(request, "Retrieve User")
+    invoke(request, "Retrieve User By ID")
   }
 
   override def getUserByExternalId(externalId: String): Future[User] = {
     val request: ApiRequest[User] = api.getUserByExternalId(EmbeddedExternalId(externalId))
-    invoke(request, "Retrieve User")
+    invoke(request, "Retrieve User By External ID")
   }
 
   override def createUser(seed: UserSeed): Future[User] = {
