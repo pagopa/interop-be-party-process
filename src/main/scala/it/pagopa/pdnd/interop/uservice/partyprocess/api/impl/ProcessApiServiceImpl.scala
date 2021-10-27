@@ -261,15 +261,21 @@ class ProcessApiServiceImpl(
 
   private def createPerson(user: User): Future[UserRegistryUser] =
     for {
-      user <- userRegistryManagementService.createUser(
-        UserRegistryUserSeed(
-          externalId = user.taxCode,
-          name = user.name,
-          surname = user.surname,
-          certification = CertificationEnumsNone,
-          extras = UserRegistryUserExtras(email = user.email, birthDate = None)
+      user <- userRegistryManagementService
+        .createUser(
+          UserRegistryUserSeed(
+            externalId = user.taxCode,
+            name = user.name,
+            surname = user.surname,
+            certification = CertificationEnumsNone,
+            extras = UserRegistryUserExtras(email = user.email, birthDate = None)
+          )
         )
-      )
+        .recoverWith {
+          // Use can already exists on user registry
+          // TODO Once errors are defined, we should check that error is "person already exists"
+          case _ => userRegistryManagementService.getUserByExternalId(user.taxCode)
+        }
       _ <- partyManagementService.createPerson(PersonSeed(user.id))
     } yield user
 
