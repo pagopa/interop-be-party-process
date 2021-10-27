@@ -6,7 +6,6 @@ import java.io.{ByteArrayOutputStream, FileInputStream, InputStream}
 import scala.concurrent.Future
 import scala.util.Try
 
-@SuppressWarnings(Array("org.wartremover.warts.ToString"))
 final class FileManagerImpl extends FileManager {
 
   def get(filePath: String): Future[ByteArrayOutputStream] = Future.fromTry {

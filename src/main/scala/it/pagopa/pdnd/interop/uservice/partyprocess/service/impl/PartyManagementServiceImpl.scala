@@ -19,13 +19,6 @@ import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-@SuppressWarnings(
-  Array(
-    "org.wartremover.warts.StringPlusAny",
-    "org.wartremover.warts.ImplicitParameter",
-    "org.wartremover.warts.ToString"
-  )
-)
 final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api: PartyApi)(implicit
   ec: ExecutionContext
 ) extends PartyManagementService {

@@ -1,16 +1,7 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.server
 
 import akka.http.scaladsl.common._
-import akka.http.scaladsl.server.{
-  Directive,
-  Directive0,
-  Directive1,
-  InvalidRequiredValueForQueryParamRejection,
-  MalformedFormFieldRejection,
-  MissingFormFieldRejection,
-  MissingQueryParamRejection,
-  UnsupportedRequestContentTypeRejection
-}
+import akka.http.scaladsl.server.{Directive, Directive0, Directive1, InvalidRequiredValueForQueryParamRejection, MalformedFormFieldRejection, MissingFormFieldRejection, MissingQueryParamRejection, UnsupportedRequestContentTypeRejection}
 import akka.http.scaladsl.server.directives.BasicDirectives
 import akka.http.scaladsl.unmarshalling.Unmarshaller.UnsupportedContentTypeException
 
@@ -62,23 +53,18 @@ object StringDirectives extends StringDirectives {
     import akka.http.scaladsl.server.directives.RouteDirectives._
     import akka.http.scaladsl.unmarshalling._
 
-    type FSU[T]  = FromStringUnmarshaller[T]
+    type FSU[T] = FromStringUnmarshaller[T]
     type FSOU[T] = Unmarshaller[Option[String], T]
-    type SFVP    = StringValueProvider
+    type SFVP = StringValueProvider
 
     protected def extractField[A, B](f: A => Directive1[B]): StringDefAux[A, Directive1[B]] = stringDef(f)
 
-    protected def handleFieldResult[T](fieldName: String, result: Future[T]): Directive1[T] =
-      onComplete(result).flatMap {
-        case Success(x)                               => provide(x)
-        case Failure(Unmarshaller.NoContentException) => reject(MissingFormFieldRejection(fieldName))
-        case Failure(x: UnsupportedContentTypeException) =>
-          reject(UnsupportedRequestContentTypeRejection(x.supported, x.actualContentType))
-        case Failure(x) =>
-          reject(
-            MalformedFormFieldRejection(fieldName, if (x.getMessage == null) "" else x.getMessage, Option(x.getCause))
-          )
-      }
+    protected def handleFieldResult[T](fieldName: String, result: Future[T]): Directive1[T] = onComplete(result).flatMap {
+      case Success(x) => provide(x)
+      case Failure(Unmarshaller.NoContentException) => reject(MissingFormFieldRejection(fieldName))
+      case Failure(x: UnsupportedContentTypeException) => reject(UnsupportedRequestContentTypeRejection(x.supported, x.actualContentType))
+      case Failure(x) => reject(MalformedFormFieldRejection(fieldName, if (x.getMessage == null) "" else x.getMessage, Option(x.getCause)))
+    }
 
     private def filter[T](paramName: String, fsou: FSOU[T])(implicit vp: SFVP): Directive1[T] = {
       extract { ctx =>
@@ -95,34 +81,23 @@ object StringDirectives extends StringDirectives {
       extractField[NameReceptacle[T], T] { nr => filter(nr.name, fsu) }
     implicit def forNUR[T](implicit vp: SFVP): StringDefAux[NameUnmarshallerReceptacle[T], Directive1[T]] =
       extractField[NameUnmarshallerReceptacle[T], T] { nr => filter(nr.name, nr.um) }
-    implicit def forNOR[T](implicit
-      fsou: FSOU[T],
-      vp: SFVP
-    ): StringDefAux[NameOptionReceptacle[T], Directive1[Option[T]]] =
+    implicit def forNOR[T](implicit fsou: FSOU[T], vp: SFVP): StringDefAux[NameOptionReceptacle[T], Directive1[Option[T]]] =
       extractField[NameOptionReceptacle[T], Option[T]] { nr => filter[Option[T]](nr.name, fsou) }
     implicit def forNDR[T](implicit fsou: FSOU[T], vp: SFVP): StringDefAux[NameDefaultReceptacle[T], Directive1[T]] =
       extractField[NameDefaultReceptacle[T], T] { nr => filter[T](nr.name, fsou withDefaultValue nr.default) }
-    implicit def forNOUR[T](implicit
-      vp: SFVP
-    ): StringDefAux[NameOptionUnmarshallerReceptacle[T], Directive1[Option[T]]] =
+    implicit def forNOUR[T](implicit vp: SFVP): StringDefAux[NameOptionUnmarshallerReceptacle[T], Directive1[Option[T]]] =
       extractField[NameOptionUnmarshallerReceptacle[T], Option[T]] { nr => filter(nr.name, nr.um: FSOU[T]) }
     implicit def forNDUR[T](implicit vp: SFVP): StringDefAux[NameDefaultUnmarshallerReceptacle[T], Directive1[T]] =
-      extractField[NameDefaultUnmarshallerReceptacle[T], T] { nr =>
-        filter[T](nr.name, (nr.um: FSOU[T]) withDefaultValue nr.default)
-      }
+      extractField[NameDefaultUnmarshallerReceptacle[T], T] { nr => filter[T](nr.name, (nr.um: FSOU[T]) withDefaultValue nr.default) }
 
     //////////////////// required parameter support ////////////////////
 
-    private def requiredFilter[T](paramName: String, fsou: FSOU[T], requiredValue: Any)(implicit
-      vp: SFVP
-    ): Directive0 = {
+    private def requiredFilter[T](paramName: String, fsou: FSOU[T], requiredValue: Any)(implicit vp: SFVP): Directive0 = {
       extract { ctx =>
         import ctx.{executionContext, materializer}
         onComplete(fsou(vp.get(paramName))) flatMap {
           case Success(value) if value == requiredValue => pass
-          case Success(value) =>
-            reject(InvalidRequiredValueForQueryParamRejection(paramName, requiredValue.toString, value.toString))
-              .toDirective[Unit]
+          case Success(value) => reject(InvalidRequiredValueForQueryParamRejection(paramName, requiredValue.toString, value.toString)).toDirective[Unit]
           case _ => reject(MissingQueryParamRejection(paramName)).toDirective[Unit]
         }
       }.flatMap(identity)
@@ -132,25 +107,18 @@ object StringDirectives extends StringDirectives {
       stringDef[RequiredValueReceptacle[T], Directive0] { rvr => requiredFilter(rvr.name, fsu, rvr.requiredValue) }
 
     implicit def forRVDR[T](implicit vp: SFVP): StringDefAux[RequiredValueUnmarshallerReceptacle[T], Directive0] =
-      stringDef[RequiredValueUnmarshallerReceptacle[T], Directive0] { rvr =>
-        requiredFilter(rvr.name, rvr.um, rvr.requiredValue)
-      }
+      stringDef[RequiredValueUnmarshallerReceptacle[T], Directive0] { rvr => requiredFilter(rvr.name, rvr.um, rvr.requiredValue) }
 
     //////////////////// tuple support ////////////////////
 
     import akka.http.scaladsl.server.util.BinaryPolyFunc
     import akka.http.scaladsl.server.util.TupleOps._
 
-    implicit def forTuple[T](implicit
-      fold: FoldLeft[Directive0, T, ConvertStringDefAndConcatenate.type]
-    ): StringDefAux[T, fold.Out] =
+    implicit def forTuple[T](implicit fold: FoldLeft[Directive0, T, ConvertStringDefAndConcatenate.type]): StringDefAux[T, fold.Out] =
       stringDef[T, fold.Out](fold(BasicDirectives.pass, _))
 
     object ConvertStringDefAndConcatenate extends BinaryPolyFunc {
-      implicit def from[P, TA, TB](implicit
-        sdef: StringDef[P] { type Out = Directive[TB] },
-        ev: Join[TA, TB]
-      ): BinaryPolyFunc.Case[Directive[TA], P, ConvertStringDefAndConcatenate.type] { type Out = Directive[ev.Out] } =
+      implicit def from[P, TA, TB](implicit sdef: StringDef[P] {type Out = Directive[TB]}, ev: Join[TA, TB]): BinaryPolyFunc.Case[Directive[TA], P, ConvertStringDefAndConcatenate.type] {type Out = Directive[ev.Out]} =
         at[Directive[TA], P] { (a, t) => a & sdef(t) }
     }
 
