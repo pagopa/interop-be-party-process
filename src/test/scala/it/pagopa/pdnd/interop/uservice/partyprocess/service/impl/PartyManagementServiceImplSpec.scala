@@ -2,7 +2,6 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
 import akka.actor
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
-import com.typesafe.config.ConfigFactory
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker._
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.Manager
@@ -13,6 +12,7 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   RelationshipSeed,
   RelationshipSeedEnums
 }
+import it.pagopa.pdnd.interop.uservice.partyprocess.SpecConfig
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.PartyManagementService
 import org.json4s.Formats
 import org.scalamock.scalatest.MockFactory
@@ -43,24 +43,10 @@ private object MockPartyApiInvoker {
     new ApiInvoker(json4sFormats)(system)
 }
 
-object PartyProcessMockConfig {
-
-  val testDataConfig = ConfigFactory.parseString(s"""
-      akka.coordinated-shutdown.terminate-actor-system = off
-      akka.coordinated-shutdown.run-by-actor-system-terminate = off
-      akka.coordinated-shutdown.run-by-jvm-shutdown-hook = off
-      akka.cluster.run-coordinated-shutdown-when-down = off
-    """)
-
-  val config = ConfigFactory
-    .parseResourcesAnySyntax("test")
-    .withFallback(testDataConfig)
-}
-
 /** Tests if the platform role checks work when creating a relationship.
   */
 class PartyManagementServiceImplSpec
-    extends ScalaTestWithActorTestKit(PartyProcessMockConfig.config)
+    extends ScalaTestWithActorTestKit(SpecConfig.config)
     with MockFactory
     with AnyWordSpecLike
     with ScalaFutures {
