@@ -11,7 +11,6 @@ final case class PlatformRolesConfiguration(manager: ManagerRoles, delegate: Del
 
 case class StorageAccountInfo(applicationId: String, applicationSecret: String, endpoint: String, container: String)
 
-@SuppressWarnings(Array("org.wartremover.warts.Throw"))
 object ApplicationConfiguration {
   lazy val config: Config = ConfigFactory.load()
 

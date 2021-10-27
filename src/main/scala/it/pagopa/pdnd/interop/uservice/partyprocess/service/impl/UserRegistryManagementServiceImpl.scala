@@ -12,13 +12,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
-@SuppressWarnings(
-  Array(
-    "org.wartremover.warts.StringPlusAny",
-    "org.wartremover.warts.ImplicitParameter",
-    "org.wartremover.warts.ToString"
-  )
-)
 final case class UserRegistryManagementServiceImpl(invoker: UserRegistryManagementInvoker, api: UserApi)(implicit
   ec: ExecutionContext
 ) extends UserRegistryManagementService {

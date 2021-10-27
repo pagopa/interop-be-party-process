@@ -9,13 +9,6 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-@SuppressWarnings(
-  Array(
-    "org.wartremover.warts.StringPlusAny",
-    "org.wartremover.warts.ImplicitParameter",
-    "org.wartremover.warts.ToString"
-  )
-)
 final case class AuthorizationProcessServiceImpl(invoker: AuthorizationProcessInvoker, api: AuthApi)(implicit
   ec: ExecutionContext
 ) extends AuthorizationProcessService {
