@@ -8,6 +8,8 @@ import java.util.UUID
 import scala.concurrent.Future
 
 trait PartyManagementService {
+  def deleteRelationshipById(relationshipUUID: UUID): Future[Unit]
+
   def retrieveOrganization(organizationId: UUID): Future[Organization]
   def retrieveOrganizationByExternalId(externalOrganizationId: String): Future[Organization]
 

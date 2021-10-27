@@ -1061,4 +1061,136 @@ class PartyProcessSpec
 
   }
 
+  "Relationship removal" must {
+    "succeed when the relationship id is bound to the selected institution" in {
+
+      val fromId         = UUID.randomUUID()
+      val platformRole   = "platformRole"
+      val relationshipId = UUID.randomUUID()
+      val institutionId  = UUID.randomUUID()
+
+      val relationship =
+        Relationship(
+          id = relationshipId,
+          from = fromId,
+          to = institutionId,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = RelationshipEnums.Role.Operator,
+          platformRole = platformRole,
+          status = RelationshipEnums.Status.Active
+        )
+
+      val relationships = Relationships(items = Seq(relationship))
+
+      (partyManagementService.retrieveRelationships _)
+        .expects(None, Some(institutionId), None)
+        .returning(Future.successful(relationships))
+
+      (partyManagementService.deleteRelationshipById _)
+        .expects(relationshipId)
+        .returning(Future.successful(()))
+
+      val response = Await.result(
+        Http().singleRequest(
+          HttpRequest(
+            uri = s"$url/institutions/${institutionId}/relationships/$relationshipId",
+            method = HttpMethods.DELETE,
+            headers = authorization
+          )
+        ),
+        Duration.Inf
+      )
+
+      response.status mustBe StatusCodes.NoContent
+
+    }
+
+    "fail if relationship does not belong to the institution" in {
+
+      val fromId         = UUID.randomUUID()
+      val platformRole   = "platformRole"
+      val relationshipId = UUID.randomUUID()
+      val institutionId  = UUID.randomUUID()
+
+      val relationship =
+        Relationship(
+          id = UUID.randomUUID(), //that's not the relationship to delete
+          from = fromId,
+          to = institutionId,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = RelationshipEnums.Role.Operator,
+          platformRole = platformRole,
+          status = RelationshipEnums.Status.Pending
+        )
+
+      val relationships = Relationships(items = Seq(relationship))
+
+      (partyManagementService.retrieveRelationships _)
+        .expects(None, Some(institutionId), None)
+        .returning(Future.successful(relationships))
+
+      val response = Await.result(
+        Http().singleRequest(
+          HttpRequest(
+            uri = s"$url/institutions/${institutionId}/relationships/$relationshipId",
+            method = HttpMethods.DELETE,
+            headers = authorization
+          )
+        ),
+        Duration.Inf
+      )
+
+      response.status mustBe StatusCodes.NotFound
+    }
+
+    "fail if party management deletion returns a failed future" in {
+
+      val fromId         = UUID.randomUUID()
+      val platformRole   = "platformRole"
+      val relationshipId = UUID.randomUUID()
+      val institutionId  = UUID.randomUUID()
+
+      val relationship =
+        Relationship(
+          id = relationshipId,
+          from = fromId,
+          to = institutionId,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = RelationshipEnums.Role.Operator,
+          platformRole = platformRole,
+          status = RelationshipEnums.Status.Active
+        )
+
+      val relationships = Relationships(items = Seq(relationship))
+
+      (partyManagementService.retrieveRelationships _)
+        .expects(None, Some(institutionId), None)
+        .returning(Future.successful(relationships))
+
+      (partyManagementService.deleteRelationshipById _)
+        .expects(relationshipId)
+        .returning(Future.failed(new RuntimeException("Party Management Error")))
+
+      val response = Await.result(
+        Http().singleRequest(
+          HttpRequest(
+            uri = s"$url/institutions/${institutionId}/relationships/$relationshipId",
+            method = HttpMethods.DELETE,
+            headers = authorization
+          )
+        ),
+        Duration.Inf
+      )
+
+      response.status mustBe StatusCodes.BadRequest
+
+    }
+  }
+
 }

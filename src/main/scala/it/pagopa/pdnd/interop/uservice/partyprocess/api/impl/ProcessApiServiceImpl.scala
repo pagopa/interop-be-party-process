@@ -530,4 +530,34 @@ class ProcessApiServiceImpl(
         getRelationship400(errorResponse)
     }
   }
+
+  /** Code: 204, Message: relationship deleted
+    * Code: 400, Message: Bad request, DataType: Problem
+    * Code: 404, Message: Relationship not found, DataType: Problem
+    */
+  override def deleteInstitutionRelationshipById(institutionId: String, relationshipId: String)(implicit
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    contexts: Seq[(String, String)]
+  ): Route = {
+    val result = for {
+      institutionUUID  <- Try { UUID.fromString(institutionId) }.toFuture
+      relationshipUUID <- Try { UUID.fromString(relationshipId) }.toFuture
+      relationships    <- partyManagementService.retrieveRelationships(None, Some(institutionUUID), None)
+      _ <- relationships.items
+        .find(r => r.id == relationshipUUID)
+        .toFuture(RelationshipNotFoundInInstitution(institutionId = institutionUUID, relationshipId = relationshipUUID))
+      _ <- partyManagementService.deleteRelationshipById(relationshipUUID)
+
+    } yield ()
+
+    onComplete(result) {
+      case Success(_) => deleteInstitutionRelationshipById204
+      case Failure(ex: RelationshipNotFoundInInstitution) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 404, "Not found")
+        deleteInstitutionRelationshipById404(errorResponse)
+      case Failure(ex) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        deleteInstitutionRelationshipById400(errorResponse)
+    }
+  }
 }
