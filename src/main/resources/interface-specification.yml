@@ -41,6 +41,12 @@ paths:
       summary: get on boarding info
       description: Return ok
       operationId: getOnBoardingInfo
+      parameters:
+        - name: institutionId
+          description: UUID of an institution you can filter the retrieval with
+          in: query
+          schema:
+            type: string
       responses:
         '200':
           description: successful operation

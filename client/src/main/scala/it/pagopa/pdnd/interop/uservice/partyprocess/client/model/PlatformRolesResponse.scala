@@ -22,4 +22,3 @@ case class PlatformRolesResponse (
   operatorRoles: Seq[String]
 ) extends ApiModel
 
-

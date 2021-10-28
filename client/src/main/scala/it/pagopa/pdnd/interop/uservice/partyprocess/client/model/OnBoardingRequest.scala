@@ -18,4 +18,3 @@ case class OnBoardingRequest (
   institutionId: String
 ) extends ApiModel
 
-

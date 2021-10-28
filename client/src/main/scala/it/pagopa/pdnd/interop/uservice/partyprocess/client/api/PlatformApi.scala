@@ -23,7 +23,7 @@ object PlatformApi {
 }
 
 class PlatformApi(baseUrl: String) {
-  
+
   /**
    * Returns all the available bindings between roles and platform roles.
    * 

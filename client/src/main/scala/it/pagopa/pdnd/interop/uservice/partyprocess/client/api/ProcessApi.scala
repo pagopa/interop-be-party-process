@@ -28,7 +28,7 @@ object ProcessApi {
 }
 
 class ProcessApi(baseUrl: String) {
-  
+
   /**
    * Activate relationship
    * 
@@ -118,10 +118,13 @@ class ProcessApi(baseUrl: String) {
    * 
    * Available security schemes:
    *   bearerAuth (http)
+   * 
+   * @param institutionId UUID of an institution you can filter the retrieval with
    */
-  def getOnBoardingInfo()(implicit bearerToken: BearerToken): ApiRequest[OnBoardingInfo] =
+  def getOnBoardingInfo(institutionId: Option[String] = None)(implicit bearerToken: BearerToken): ApiRequest[OnBoardingInfo] =
     ApiRequest[OnBoardingInfo](ApiMethods.GET, baseUrl, "/onboarding/info/", "application/json")
-      .withCredentials(bearerToken).withSuccessResponse[OnBoardingInfo](200)
+      .withCredentials(bearerToken).withQueryParam("institutionId", institutionId)
+      .withSuccessResponse[OnBoardingInfo](200)
       .withErrorResponse[Problem](400)
       
 

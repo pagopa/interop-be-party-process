@@ -25,6 +25,7 @@ import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{
 }
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import spray.json.DefaultJsonProtocol
@@ -43,7 +44,8 @@ class PartyProcessSpec
     with Matchers
     with SprayJsonSupport
     with DefaultJsonProtocol
-    with SpecHelper {
+    with SpecHelper
+    with ScalaFutures {
 
   var controller: Option[Controller]                 = None
   var bindServer: Option[Future[Http.ServerBinding]] = None
@@ -226,10 +228,156 @@ class PartyProcessSpec
         Duration.Inf
       )
 
-      val body = Await.result(Unmarshal(response.entity).to[OnBoardingInfo], Duration.Inf)
+      val body = Unmarshal(response.entity).to[OnBoardingInfo].futureValue
 
       response.status mustBe StatusCodes.OK
       body mustBe expected
+
+    }
+
+    "retrieve an onboarding info with institution id filter" in {
+      val taxCode1       = "CF1"
+      val institutionId1 = UUID.randomUUID()
+      val personPartyId1 = "af80fac0-2775-4646-8fcf-28e083751800"
+      val orgPartyId1    = "af80fac0-2775-4646-8fcf-28e083751801"
+      val person1 = UserRegistryUser(
+        id = UUID.fromString(personPartyId1),
+        externalId = "CF1",
+        name = "Mario",
+        surname = "Rossi",
+        certification = CertificationEnumsNone,
+        extras = UserRegistryUserExtras(email = None, birthDate = None)
+      )
+
+      val relationship1 =
+        Relationship(
+          id = UUID.randomUUID(),
+          from = person1.id,
+          to = institutionId1,
+          role = Role.Manager,
+          platformRole = "admin",
+          status = Status.Active
+        )
+
+      val relationships = Relationships(items = Seq(relationship1))
+
+      val organization1 = Organization(
+        institutionId = institutionId1.toString,
+        description = "org1",
+        digitalAddress = "digitalAddress1",
+        id = UUID.fromString(orgPartyId1),
+        attributes = Seq("1", "2", "3")
+      )
+
+      val expected = OnBoardingInfo(
+        person = PersonInfo(name = person1.name, surname = person1.surname, taxCode = person1.externalId),
+        institutions = Seq(
+          InstitutionInfo(
+            institutionId = organization1.institutionId,
+            description = organization1.description,
+            digitalAddress = organization1.digitalAddress,
+            status = relationship1.status.toString,
+            role = relationship1.role.toString,
+            platformRole = relationship1.platformRole,
+            attributes = Seq("1", "2", "3")
+          )
+        )
+      )
+
+      val mockSubjectUUID = UUID.randomUUID().toString
+      (mockAuthorizationProcessService.validateToken _)
+        .expects(*)
+        .returning(
+          Future.successful(
+            ValidJWT(
+              iss = UUID.randomUUID().toString,
+              sub = mockSubjectUUID,
+              aud = List("test"),
+              exp = OffsetDateTime.now(),
+              nbf = OffsetDateTime.now(),
+              iat = OffsetDateTime.now(),
+              jti = "123"
+            )
+          )
+        )
+        .once()
+
+      (mockUserRegistryService.getUserById _)
+        .expects(UUID.fromString(mockSubjectUUID))
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = UUID.fromString(mockSubjectUUID),
+              externalId = taxCode1,
+              name = "Mario",
+              surname = "Rossi",
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(email = Some("super@mario.it"), birthDate = None)
+            )
+          )
+        )
+        .once()
+
+      (mockPartyManagementService.retrieveRelationships _)
+        .expects(Some(UUID.fromString(mockSubjectUUID)), Some(institutionId1), None)
+        .returning(Future.successful(relationships))
+        .once()
+      (mockPartyManagementService.retrieveOrganization _)
+        .expects(institutionId1)
+        .returning(Future.successful(organization1))
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/onboarding/info?institutionId=${institutionId1}",
+              method = HttpMethods.GET,
+              headers = authorization
+            )
+          )
+          .futureValue
+
+      val body = Unmarshal(response.entity).to[OnBoardingInfo].futureValue
+
+      response.status mustBe StatusCodes.OK
+      body mustBe expected
+
+    }
+
+    "fail the onboarding info retrieval when the institution id filter contains an invalid string" in {
+      val mockSubjectUUID = "af80fac0-2775-4646-8fcf-28e083751988"
+      (mockAuthorizationProcessService.validateToken _)
+        .expects(*)
+        .returning(
+          Future.successful(
+            ValidJWT(
+              iss = UUID.randomUUID().toString,
+              sub = mockSubjectUUID,
+              aud = List("test"),
+              exp = OffsetDateTime.now(),
+              nbf = OffsetDateTime.now(),
+              iat = OffsetDateTime.now(),
+              jti = "123"
+            )
+          )
+        )
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/onboarding/info?institutionId=wrong-institution-id",
+              method = HttpMethods.GET,
+              headers = authorization
+            )
+          )
+          .futureValue
+
+      response.status mustBe StatusCodes.BadRequest
 
     }
 
@@ -368,7 +516,7 @@ class PartyProcessSpec
 
       val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 
-      val data     = Await.result(Marshal(req).to[MessageEntity].map(_.dataBytes), Duration.Inf)
+      val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/legals", HttpMethods.POST)
 
       response.status mustBe StatusCodes.Created
@@ -416,7 +564,7 @@ class PartyProcessSpec
 
       val req = OnBoardingRequest(users = Seq(operator1, operator2), institutionId = "institutionId1")
 
-      val data     = Await.result(Marshal(req).to[MessageEntity].map(_.dataBytes), Duration.Inf)
+      val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/operators", HttpMethods.POST)
 
       response.status mustBe StatusCodes.BadRequest
@@ -542,7 +690,7 @@ class PartyProcessSpec
 
       val req = OnBoardingRequest(users = Seq(operator1, operator2), institutionId = institutionId1.toString)
 
-      val data     = Await.result(Marshal(req).to[MessageEntity].map(_.dataBytes), Duration.Inf)
+      val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/operators", HttpMethods.POST)
 
       response.status mustBe StatusCodes.Created
@@ -561,17 +709,17 @@ class PartyProcessSpec
       val formData =
         Multipart.FormData.fromPath(name = "contract", MediaTypes.`application/octet-stream`, file = path, 100000)
 
-      val response = Await.result(
-        Http().singleRequest(
-          HttpRequest(
-            uri = s"$url/onboarding/complete/$token",
-            method = HttpMethods.POST,
-            entity = formData.toEntity,
-            headers = authorization
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/onboarding/complete/$token",
+              method = HttpMethods.POST,
+              entity = formData.toEntity,
+              headers = authorization
+            )
           )
-        ),
-        Duration.Inf
-      )
+          .futureValue
 
       response.status mustBe StatusCodes.OK
 
@@ -584,12 +732,12 @@ class PartyProcessSpec
 
       (mockPartyManagementService.invalidateToken _).expects(token).returning(Future.successful(()))
 
-      val response = Await.result(
-        Http().singleRequest(
-          HttpRequest(uri = s"$url/onboarding/complete/$token", method = HttpMethods.DELETE, headers = authorization)
-        ),
-        Duration.Inf
-      )
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(uri = s"$url/onboarding/complete/$token", method = HttpMethods.DELETE, headers = authorization)
+          )
+          .futureValue
 
       response.status mustBe StatusCodes.OK
 
@@ -676,18 +824,18 @@ class PartyProcessSpec
         .once()
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
-      val response = Await.result(
-        Http().singleRequest(
-          HttpRequest(
-            uri = s"$url/institutions/$institutionId/relationships",
-            method = HttpMethods.GET,
-            headers = authorization
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/institutions/$institutionId/relationships",
+              method = HttpMethods.GET,
+              headers = authorization
+            )
           )
-        ),
-        Duration.Inf
-      )
+          .futureValue
 
-      val body = Await.result(Unmarshal(response.entity).to[Seq[RelationshipInfo]], Duration.Inf)
+      val body = Unmarshal(response.entity).to[Seq[RelationshipInfo]].futureValue
       response.status mustBe StatusCodes.OK
       body must contain only (RelationshipInfo(
         id = relationshipId1,
@@ -801,18 +949,18 @@ class PartyProcessSpec
         .once()
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
-      val response = Await.result(
-        Http().singleRequest(
-          HttpRequest(
-            uri = s"$url/institutions/$institutionId/relationships?platformRoles=security,api",
-            method = HttpMethods.GET,
-            headers = authorization
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/institutions/$institutionId/relationships?platformRoles=security,api",
+              method = HttpMethods.GET,
+              headers = authorization
+            )
           )
-        ),
-        Duration.Inf
-      )
+          .futureValue
 
-      val body = Await.result(Unmarshal(response.entity).to[Seq[RelationshipInfo]], Duration.Inf)
+      val body = Unmarshal(response.entity).to[Seq[RelationshipInfo]].futureValue
       response.status mustBe StatusCodes.OK
       body must contain only (RelationshipInfo(
         id = relationshipId3,
@@ -913,18 +1061,18 @@ class PartyProcessSpec
         .once()
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
-      val response = Await.result(
-        Http().singleRequest(
-          HttpRequest(
-            uri = s"$url/institutions/$institutionId/relationships",
-            method = HttpMethods.GET,
-            headers = authorization
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/institutions/$institutionId/relationships",
+              method = HttpMethods.GET,
+              headers = authorization
+            )
           )
-        ),
-        Duration.Inf
-      )
+          .futureValue
 
-      val body = Await.result(Unmarshal(response.entity).to[Seq[RelationshipInfo]], Duration.Inf)
+      val body = Unmarshal(response.entity).to[Seq[RelationshipInfo]].futureValue
       response.status mustBe StatusCodes.OK
       body must contain only
         RelationshipInfo(
@@ -966,16 +1114,16 @@ class PartyProcessSpec
         .expects(relationshipId)
         .returning(Future.successful(()))
 
-      val response = Await.result(
-        Http().singleRequest(
-          HttpRequest(
-            uri = s"$url/relationships/$relationshipId/activate",
-            method = HttpMethods.POST,
-            headers = authorization
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/relationships/$relationshipId/activate",
+              method = HttpMethods.POST,
+              headers = authorization
+            )
           )
-        ),
-        Duration.Inf
-      )
+          .futureValue
 
       response.status mustBe StatusCodes.NoContent
 
@@ -1004,16 +1152,16 @@ class PartyProcessSpec
         .expects(relationshipId)
         .returning(Future.successful(relationships))
 
-      val response = Await.result(
-        Http().singleRequest(
-          HttpRequest(
-            uri = s"$url/relationships/$relationshipId/activate",
-            method = HttpMethods.POST,
-            headers = authorization
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/relationships/$relationshipId/activate",
+              method = HttpMethods.POST,
+              headers = authorization
+            )
           )
-        ),
-        Duration.Inf
-      )
+          .futureValue
 
       response.status mustBe StatusCodes.BadRequest
 
@@ -1049,16 +1197,16 @@ class PartyProcessSpec
         .expects(relationshipId)
         .returning(Future.successful(()))
 
-      val response = Await.result(
-        Http().singleRequest(
-          HttpRequest(
-            uri = s"$url/relationships/$relationshipId/suspend",
-            method = HttpMethods.POST,
-            headers = authorization
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/relationships/$relationshipId/suspend",
+              method = HttpMethods.POST,
+              headers = authorization
+            )
           )
-        ),
-        Duration.Inf
-      )
+          .futureValue
 
       response.status mustBe StatusCodes.NoContent
 
@@ -1087,16 +1235,16 @@ class PartyProcessSpec
         .expects(relationshipId)
         .returning(Future.successful(relationship))
 
-      val response = Await.result(
-        Http().singleRequest(
-          HttpRequest(
-            uri = s"$url/relationships/$relationshipId/suspend",
-            method = HttpMethods.POST,
-            headers = authorization
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/relationships/$relationshipId/suspend",
+              method = HttpMethods.POST,
+              headers = authorization
+            )
           )
-        ),
-        Duration.Inf
-      )
+          .futureValue
 
       response.status mustBe StatusCodes.BadRequest
 
