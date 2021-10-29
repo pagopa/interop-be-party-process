@@ -5,6 +5,7 @@ import akka.http.scaladsl.model.{ContentType, HttpEntity, MessageEntity}
 import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
+import cats.implicits.toTraverseOps
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.{Delegate, Manager, Operator}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
@@ -66,11 +67,9 @@ class ProcessApiServiceImpl(
   ): Route = {
 
     val result: Future[OnBoardingInfo] = for {
-      subjectUUID <- getCallerSubjectIdentifier(contexts)
-      institutionUUID <- institutionId
-        .map(id => id.toFutureUUID.map(uuid => Some(uuid)))
-        .getOrElse(Future.successful(None))
-      user <- userRegistryManagementService.getUserById(subjectUUID)
+      subjectUUID     <- getCallerSubjectIdentifier(contexts)
+      institutionUUID <- institutionId.traverse(_.toFutureUUID)
+      user            <- userRegistryManagementService.getUserById(subjectUUID)
       personInfo = PersonInfo(user.name, user.surname, user.externalId)
       relationships <- partyManagementService.retrieveRelationships(Some(subjectUUID), institutionUUID, None)
       organizations <- Future.traverse(relationships.items)(r =>

@@ -17,6 +17,7 @@ object Versions {
   lazy val jacksonVersion          = "2.11.4"
   lazy val azureStorageBlobVersion = "12.14.1"
   lazy val awsSdkVersion           = "2.17.42"
+  lazy val catsVersion             = "2.6.1"
 }
 
 object PDNDVersions {
