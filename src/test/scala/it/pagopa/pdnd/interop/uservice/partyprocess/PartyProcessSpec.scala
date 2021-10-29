@@ -62,6 +62,11 @@ class PartyProcessSpec
     System.setProperty("STORAGE_ENDPOINT", "local")
     System.setProperty("STORAGE_APPLICATION_ID", "local")
     System.setProperty("STORAGE_APPLICATION_SECRET", "local")
+    System.setProperty("PARTY_MANAGEMENT_URL", "local")
+    System.setProperty("PARTY_PROXY_URL", "local")
+    System.setProperty("ATTRIBUTE_REGISTRY_URL", "local")
+    System.setProperty("AUTHORIZATION_PROCESS_URL", "local")
+    System.setProperty("USER_REGISTRY_MANAGEMENT_URL", "local")
 
     val processApi = new ProcessApi(
       new ProcessApiServiceImpl(
