@@ -19,4 +19,3 @@ case class PersonInfo (
   taxCode: String
 ) extends ApiModel
 
-

@@ -24,4 +24,3 @@ case class InstitutionInfo (
   attributes: Seq[String]
 ) extends ApiModel
 
-

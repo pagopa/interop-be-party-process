@@ -18,4 +18,3 @@ case class OnBoardingInfo (
   institutions: Seq[InstitutionInfo]
 ) extends ApiModel
 
-

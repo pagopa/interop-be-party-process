@@ -5,6 +5,7 @@ import akka.http.scaladsl.model.{ContentType, HttpEntity, MessageEntity}
 import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
+import cats.implicits.toTraverseOps
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.{Delegate, Manager, Operator}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
@@ -21,7 +22,7 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApiService
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration.platformRolesConfiguration
-import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.{OptionOps, TryOps}
+import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.{OptionOps, StringOps, TryOps}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{ApplicationConfiguration, Digester}
 import it.pagopa.pdnd.interop.uservice.partyprocess.error._
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
@@ -59,17 +60,18 @@ class ProcessApiServiceImpl(
   /** Code: 200, Message: successful operation, DataType: OnBoardingInfo
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
-  override def getOnBoardingInfo()(implicit
+  override def getOnBoardingInfo(institutionId: Option[String])(implicit
     toEntityMarshallerOnBoardingInfo: ToEntityMarshaller[OnBoardingInfo],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     contexts: Seq[(String, String)]
   ): Route = {
 
     val result: Future[OnBoardingInfo] = for {
-      subjectUUID <- getCallerSubjectIdentifier(contexts)
-      user        <- userRegistryManagementService.getUserById(subjectUUID)
+      subjectUUID     <- getCallerSubjectIdentifier(contexts)
+      institutionUUID <- institutionId.traverse(_.toFutureUUID)
+      user            <- userRegistryManagementService.getUserById(subjectUUID)
       personInfo = PersonInfo(user.name, user.surname, user.externalId)
-      relationships <- partyManagementService.retrieveRelationships(Some(subjectUUID), None, None)
+      relationships <- partyManagementService.retrieveRelationships(Some(subjectUUID), institutionUUID, None)
       organizations <- Future.traverse(relationships.items)(r =>
         getOrganization(r.to).map(o => (o, r.status, r.role, r.platformRole))
       )

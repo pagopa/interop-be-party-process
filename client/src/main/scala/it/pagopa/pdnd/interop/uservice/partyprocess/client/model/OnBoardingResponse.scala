@@ -19,4 +19,3 @@ case class OnBoardingResponse (
   document: File
 ) extends ApiModel
 
-
