@@ -77,8 +77,10 @@ processService.confirmOnBoarding(token = token, contract = contract)
         }
         } ~
         path("onboarding" / "info") { 
-        get { wrappingDirective { implicit contexts =>  
-            processService.getOnBoardingInfo()
+        get { wrappingDirective { implicit contexts => 
+            parameters("institutionId".as[String].?) { (institutionId) => 
+            processService.getOnBoardingInfo(institutionId = institutionId)
+            }
         }
         }
         } ~
@@ -187,7 +189,7 @@ processService.confirmOnBoarding(token = token, contract = contract)
            * Code: 200, Message: successful operation, DataType: OnBoardingInfo
    * Code: 400, Message: Invalid ID supplied, DataType: Problem
         */
-        def getOnBoardingInfo()
+        def getOnBoardingInfo(institutionId: Option[String])
             (implicit toEntityMarshallerOnBoardingInfo: ToEntityMarshaller[OnBoardingInfo], toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route
 
           def getOnboardingDocument200(responseFile: File)(implicit toEntityMarshallerFile: ToEntityMarshaller[File]): Route =

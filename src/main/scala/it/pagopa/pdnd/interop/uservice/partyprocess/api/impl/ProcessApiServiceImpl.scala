@@ -5,11 +5,13 @@ import akka.http.scaladsl.model.{ContentType, HttpEntity, MessageEntity}
 import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
+import cats.implicits.toTraverseOps
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.{Delegate, Manager, Operator}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   Organization,
   OrganizationSeed,
+  PersonSeed,
   Relationship,
   RelationshipEnums,
   RelationshipSeed,
@@ -20,12 +22,17 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApiService
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration.platformRolesConfiguration
-import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.{OptionOps, TryOps}
+import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.{OptionOps, StringOps, TryOps}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{ApplicationConfiguration, Digester}
 import it.pagopa.pdnd.interop.uservice.partyprocess.error._
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.service._
-import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{User => UserRegistryUser}
+import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{
+  NONE => CertificationEnumsNone,
+  User => UserRegistryUser,
+  UserExtras => UserRegistryUserExtras,
+  UserSeed => UserRegistryUserSeed
+}
 import org.slf4j.{Logger, LoggerFactory}
 import spray.json._
 
@@ -53,17 +60,18 @@ class ProcessApiServiceImpl(
   /** Code: 200, Message: successful operation, DataType: OnBoardingInfo
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
-  override def getOnBoardingInfo()(implicit
+  override def getOnBoardingInfo(institutionId: Option[String])(implicit
     toEntityMarshallerOnBoardingInfo: ToEntityMarshaller[OnBoardingInfo],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     contexts: Seq[(String, String)]
   ): Route = {
 
     val result: Future[OnBoardingInfo] = for {
-      subjectUUID <- getCallerSubjectIdentifier(contexts)
-      user        <- userRegistryManagementService.getUserById(subjectUUID)
+      subjectUUID     <- getCallerSubjectIdentifier(contexts)
+      institutionUUID <- institutionId.traverse(_.toFutureUUID)
+      user            <- userRegistryManagementService.getUserById(subjectUUID)
       personInfo = PersonInfo(user.name, user.surname, user.externalId)
-      relationships <- partyManagementService.retrieveRelationships(Some(subjectUUID), None, None)
+      relationships <- partyManagementService.retrieveRelationships(Some(subjectUUID), institutionUUID, None)
       organizations <- Future.traverse(relationships.items)(r =>
         getOrganization(r.to).map(o => (o, r.status, r.role, r.platformRole))
       )
@@ -113,7 +121,7 @@ class ProcessApiServiceImpl(
     val result: Future[OnBoardingResponse] = for {
       organization     <- organizationF
       validUsers       <- verifyUsersByRoles(onBoardingRequest.users, Set(Manager.toString, Delegate.toString))
-      personsWithRoles <- Future.traverse(validUsers)(user => addUser(user))
+      personsWithRoles <- Future.traverse(validUsers)(addUser)
       _ <- Future.traverse(personsWithRoles)(pr =>
         partyManagementService.createRelationship(pr._1.id, organization.id, pr._2, pr._3)
       )
@@ -133,7 +141,6 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(response) =>
         createLegals201(response)
-      //        complete(StatusCodes.Created, HttpEntity.fromFile(ContentTypes.`application/octet-stream`, file))
       case Failure(ex) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
         createLegals400(errorResponse)
@@ -154,7 +161,7 @@ class ProcessApiServiceImpl(
       _             <- existsAManagerActive(relationships)
 
       validUsers <- verifyUsersByRoles(onBoardingRequest.users, Set(Operator.toString))
-      operators  <- Future.traverse(validUsers)(user => addUser(user))
+      operators  <- Future.traverse(validUsers)(addUser)
       _ <- Future.traverse(operators)(pr =>
         partyManagementService.createRelationship(pr._1.id, organization.id, pr._2, pr._3)
       )
@@ -236,10 +243,14 @@ class ProcessApiServiceImpl(
       .toTry
   }
 
-  //TODO add the recover with using the latest user registry version endpoints.
   private def addUser(user: User): Future[(UserRegistryUser, String, String)] = {
     logger.info(s"Adding user ${user.toString}")
-    createPerson(user).map(p => (p, user.role, user.platformRole))
+    createPerson(user)
+      .recoverWith {
+        // TODO Once errors are defined, we should check that error is "person already exists"
+        case _ => userRegistryManagementService.getUserByExternalId(user.taxCode)
+      }
+      .map((_, user.role, user.platformRole))
   }
 
   private def createRelationship(
@@ -250,14 +261,25 @@ class ProcessApiServiceImpl(
   ): RelationshipSeed =
     RelationshipSeed(personId, organizationId, RelationshipSeedEnums.Role.withName(role), platformRole)
 
-  private def createPerson(user: User): Future[UserRegistryUser] = {
-    userRegistryManagementService.upsertUser(
-      externalId = user.taxCode,
-      name = user.name,
-      surname = user.surname,
-      email = user.email.getOrElse("")
-    )
-  }
+  private def createPerson(user: User): Future[UserRegistryUser] =
+    for {
+      user <- userRegistryManagementService
+        .createUser(
+          UserRegistryUserSeed(
+            externalId = user.taxCode,
+            name = user.name,
+            surname = user.surname,
+            certification = CertificationEnumsNone,
+            extras = UserRegistryUserExtras(email = user.email, birthDate = None)
+          )
+        )
+        .recoverWith {
+          // Use can already exists on user registry
+          // TODO Once errors are defined, we should check that error is "person already exists"
+          case _ => userRegistryManagementService.getUserByExternalId(user.taxCode)
+        }
+      _ <- partyManagementService.createPerson(PersonSeed(user.id))
+    } yield user
 
   private def getOrganization(institutionId: UUID): Future[Organization] =
     partyManagementService.retrieveOrganization(institutionId)
@@ -532,6 +554,7 @@ class ProcessApiServiceImpl(
     contexts: Seq[(String, String)]
   ): Route = {
     val result = for {
+      _                <- getCallerSubjectIdentifier(contexts)
       institutionUUID  <- Try { UUID.fromString(institutionId) }.toFuture
       relationshipUUID <- Try { UUID.fromString(relationshipId) }.toFuture
       relationships    <- partyManagementService.retrieveRelationships(None, Some(institutionUUID), None)

@@ -104,6 +104,11 @@ object Dependencies {
     lazy val s3        = namespace % "s3" % awsSdkVersion
   }
 
+  private[this] object cats {
+    lazy val namespace = "org.typelevel"
+    lazy val core      = namespace %% "cats-core" % catsVersion
+  }
+
   object Jars {
     lazy val overrides: Seq[ModuleID] =
       Seq(jackson.annotations % Compile, jackson.core % Compile, jackson.databind % Compile)
@@ -134,6 +139,7 @@ object Dependencies {
       kamon.prometheus                    % Compile,
       azure.storageBlob                   % Compile,
       awssdk.s3                           % Compile,
+      cats.core                           % Compile,
       akka.testkit                        % Test,
       scalatest.core                      % Test,
       scalamock.core                      % Test
