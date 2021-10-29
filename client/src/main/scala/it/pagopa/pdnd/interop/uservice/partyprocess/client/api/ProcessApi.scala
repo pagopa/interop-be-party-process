@@ -110,7 +110,7 @@ class ProcessApi(baseUrl: String) {
       
 
   /**
-   * Return ok
+   * Given a relationship identifier, it relates the corresponding relationship.
    * 
    * Expected answers:
    *   code 204 :  (relationship deleted)
@@ -120,13 +120,11 @@ class ProcessApi(baseUrl: String) {
    * Available security schemes:
    *   bearerAuth (http)
    * 
-   * @param institutionId The identifier of the institution
-   * @param relationshipId the identifier of the relationship to be removed
+   * @param relationshipId the identifier of the relationship to be deleted
    */
-  def deleteInstitutionRelationshipById(institutionId: UUID, relationshipId: UUID)(implicit bearerToken: BearerToken): ApiRequest[Unit] =
-    ApiRequest[Unit](ApiMethods.DELETE, baseUrl, "/institutions/{institutionId}/relationships/{relationshipId}", "application/json")
-      .withCredentials(bearerToken).withPathParam("institutionId", institutionId)
-      .withPathParam("relationshipId", relationshipId)
+  def deleteRelationshipById(relationshipId: UUID)(implicit bearerToken: BearerToken): ApiRequest[Unit] =
+    ApiRequest[Unit](ApiMethods.DELETE, baseUrl, "/relationships/{relationshipId}", "application/json")
+      .withCredentials(bearerToken).withPathParam("relationshipId", relationshipId)
       .withSuccessResponse[Unit](204)
       .withErrorResponse[Problem](400)
       .withErrorResponse[Problem](404)

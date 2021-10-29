@@ -510,13 +510,18 @@ class ProcessApiServiceImpl(
   }
 
   private def getCallerSubjectIdentifier(contexts: Seq[(String, String)]): Future[UUID] = {
-    for {
+    val subject = for {
       bearer   <- tokenFromContext(contexts)
       validJWT <- authorizationProcessService.validateToken(bearer)
       subjectUUID <- Try {
         UUID.fromString(validJWT.sub)
       }.toFuture
     } yield subjectUUID
+
+    subject transform {
+      case s @ Success(_) => s
+      case Failure(cause) => Failure(SubjectValidationError(cause.getMessage))
+    }
   }
 
   /** Code: 200, Message: successful operation, DataType: RelationshipInfo
@@ -549,30 +554,23 @@ class ProcessApiServiceImpl(
     * Code: 400, Message: Bad request, DataType: Problem
     * Code: 404, Message: Relationship not found, DataType: Problem
     */
-  override def deleteInstitutionRelationshipById(institutionId: String, relationshipId: String)(implicit
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
-    contexts: Seq[(String, String)]
-  ): Route = {
+  override def deleteRelationshipById(
+    relationshipId: String
+  )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
     val result = for {
       _                <- getCallerSubjectIdentifier(contexts)
-      institutionUUID  <- Try { UUID.fromString(institutionId) }.toFuture
       relationshipUUID <- Try { UUID.fromString(relationshipId) }.toFuture
-      relationships    <- partyManagementService.retrieveRelationships(None, Some(institutionUUID), None)
-      _ <- relationships.items
-        .find(r => r.id == relationshipUUID)
-        .toFuture(RelationshipNotFoundInInstitution(institutionId = institutionUUID, relationshipId = relationshipUUID))
-      _ <- partyManagementService.deleteRelationshipById(relationshipUUID)
-
+      _                <- partyManagementService.deleteRelationshipById(relationshipUUID)
     } yield ()
 
     onComplete(result) {
-      case Success(_) => deleteInstitutionRelationshipById204
-      case Failure(ex: RelationshipNotFoundInInstitution) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 404, "Not found")
-        deleteInstitutionRelationshipById404(errorResponse)
+      case Success(_) => deleteRelationshipById204
+      case Failure(ex: SubjectValidationError) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 401, "Unauthorized")
+        complete((401, errorResponse))
       case Failure(ex) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
-        deleteInstitutionRelationshipById400(errorResponse)
+        deleteRelationshipById404(errorResponse)
     }
   }
 }

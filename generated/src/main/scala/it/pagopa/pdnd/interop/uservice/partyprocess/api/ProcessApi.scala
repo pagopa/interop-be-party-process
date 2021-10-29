@@ -70,9 +70,9 @@ processService.confirmOnBoarding(token = token, contract = contract)
         }
         }
         } ~
-        path("institutions" / Segment / "relationships" / Segment) { (institutionId, relationshipId) => 
+        path("relationships" / Segment) { (relationshipId) => 
         delete { wrappingDirective { implicit contexts =>  
-            processService.deleteInstitutionRelationshipById(institutionId = institutionId, relationshipId = relationshipId)
+            processService.deleteRelationshipById(relationshipId = relationshipId)
         }
         }
         } ~
@@ -167,18 +167,18 @@ processService.confirmOnBoarding(token = token, contract = contract)
         def createOperators(onBoardingRequest: OnBoardingRequest)
             (implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route
 
-          def deleteInstitutionRelationshipById204: Route =
+          def deleteRelationshipById204: Route =
             complete((204, "relationship deleted"))
-  def deleteInstitutionRelationshipById400(responseProblem: Problem)(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem]): Route =
+  def deleteRelationshipById400(responseProblem: Problem)(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem]): Route =
             complete((400, responseProblem))
-  def deleteInstitutionRelationshipById404(responseProblem: Problem)(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem]): Route =
+  def deleteRelationshipById404(responseProblem: Problem)(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem]): Route =
             complete((404, responseProblem))
         /**
            * Code: 204, Message: relationship deleted
    * Code: 400, Message: Bad request, DataType: Problem
    * Code: 404, Message: Relationship not found, DataType: Problem
         */
-        def deleteInstitutionRelationshipById(institutionId: String, relationshipId: String)
+        def deleteRelationshipById(relationshipId: String)
             (implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route
 
           def getOnBoardingInfo200(responseOnBoardingInfo: OnBoardingInfo)(implicit toEntityMarshallerOnBoardingInfo: ToEntityMarshaller[OnBoardingInfo]): Route =
