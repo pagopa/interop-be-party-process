@@ -70,6 +70,14 @@ processService.confirmOnBoarding(token = token, contract = contract)
         }
         }
         } ~
+        path("onboarding" / "users") { 
+        post { wrappingDirective { implicit contexts =>  
+            entity(as[OnBoardingRequest]){ onBoardingRequest =>
+              processService.createUsers(onBoardingRequest = onBoardingRequest)
+            }
+        }
+        }
+        } ~
         path("onboarding" / "info") { 
         get { wrappingDirective { implicit contexts => 
             parameters("institutionId".as[String].?) { (institutionId) => 
@@ -160,6 +168,17 @@ processService.confirmOnBoarding(token = token, contract = contract)
         */
         def createOperators(onBoardingRequest: OnBoardingRequest)
             (implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route
+
+          def createUsers200(responseOnBoardingResponse: OnBoardingResponse)(implicit toEntityMarshallerOnBoardingResponse: ToEntityMarshaller[OnBoardingResponse]): Route =
+            complete((200, responseOnBoardingResponse))
+  def createUsers400(responseProblem: Problem)(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem]): Route =
+            complete((400, responseProblem))
+        /**
+           * Code: 200, Message: successful operation, DataType: OnBoardingResponse
+   * Code: 400, Message: Invalid ID supplied, DataType: Problem
+        */
+        def createUsers(onBoardingRequest: OnBoardingRequest)
+            (implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], toEntityMarshallerOnBoardingResponse: ToEntityMarshaller[OnBoardingResponse], contexts: Seq[(String, String)]): Route
 
           def getOnBoardingInfo200(responseOnBoardingInfo: OnBoardingInfo)(implicit toEntityMarshallerOnBoardingInfo: ToEntityMarshaller[OnBoardingInfo]): Route =
             complete((200, responseOnBoardingInfo))
