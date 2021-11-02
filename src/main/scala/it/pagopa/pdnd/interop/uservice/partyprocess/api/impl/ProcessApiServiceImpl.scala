@@ -544,4 +544,42 @@ class ProcessApiServiceImpl(
         getRelationship400(errorResponse)
     }
   }
+
+  /** Code: 201, Message: successful operation, DataType: OnBoardingResponse
+    * Code: 400, Message: Invalid ID supplied, DataType: Problem
+    */
+  override def createUsers(onBoardingRequest: OnBoardingRequest)(implicit
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerOnBoardingResponse: ToEntityMarshaller[OnBoardingResponse],
+    contexts: Seq[(String, String)]
+  ): Route = {
+    val result: Future[OnBoardingResponse] = for {
+      organization     <- partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)
+      validUsers       <- verifyUsersByRoles(onBoardingRequest.users, Set(Manager.toString, Delegate.toString))
+      personsWithRoles <- Future.traverse(validUsers)(addUser)
+      _ <- Future.traverse(personsWithRoles)(pr =>
+        partyManagementService.createRelationship(pr._1.id, organization.id, pr._2, pr._3)
+      )
+      relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, platformRole) =>
+        createRelationship(organization.id, person.id, role, platformRole)
+      })
+      pdf   <- pdfCreator.create(validUsers, organization)
+      token <- partyManagementService.createToken(relationships, pdf._2)
+      _ <- mailer.send(
+        ApplicationConfiguration.destinationMails,
+        pdf._1,
+        token.token
+      ) //TODO address must be the digital address
+      _ = logger.info(s"$token")
+    } yield OnBoardingResponse(token.token, pdf._1)
+
+    onComplete(result) {
+      case Success(response) =>
+        createUsers200(response)
+      case Failure(ex) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        createUsers400(errorResponse)
+
+    }
+  }
 }

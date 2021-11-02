@@ -1257,4 +1257,119 @@ class PartyProcessSpec
 
   }
 
+  "Users creation" must {
+    "create users" in {
+      val taxCode1       = "managerTaxCode"
+      val taxCode2       = "delegateTaxCode"
+      val institutionId1 = "IST2"
+      val orgPartyId1    = "bf80fac0-2775-4646-8fcf-28e083751901"
+
+      val organization1 = Organization(
+        institutionId = institutionId1,
+        description = "org1",
+        digitalAddress = "digitalAddress1",
+        id = UUID.fromString(orgPartyId1),
+        attributes = Seq.empty
+      )
+
+      val file = new File("src/test/resources/fake.file")
+
+      val managerId  = UUID.randomUUID()
+      val delegateId = UUID.randomUUID()
+      val manager =
+        User(
+          name = "manager",
+          surname = "manager",
+          taxCode = taxCode1,
+          role = "Manager",
+          platformRole = "admin",
+          email = None
+        )
+      val delegate =
+        User(
+          name = "delegate",
+          surname = "delegate",
+          taxCode = taxCode2,
+          role = "Delegate",
+          platformRole = "admin",
+          email = None
+        )
+
+      (mockPartyManagementService.retrieveOrganizationByExternalId _)
+        .expects(*)
+        .returning(Future.successful(organization1))
+        .once()
+      (mockUserRegistryService.createUser _)
+        .expects(
+          UserRegistryUserSeed(
+            externalId = manager.taxCode,
+            name = manager.name,
+            surname = manager.surname,
+            certification = CertificationEnumsNone,
+            extras = UserRegistryUserExtras(email = manager.email, birthDate = None)
+          )
+        )
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = managerId,
+              externalId = manager.taxCode,
+              name = manager.name,
+              surname = manager.surname,
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(email = manager.email, birthDate = None)
+            )
+          )
+        )
+        .once()
+
+      (mockPartyManagementService.createPerson _)
+        .expects(PersonSeed(managerId))
+        .returning(Future.successful(Person(managerId)))
+        .once()
+
+      (mockUserRegistryService.createUser _)
+        .expects(
+          UserRegistryUserSeed(
+            externalId = delegate.taxCode,
+            name = delegate.name,
+            surname = delegate.surname,
+            certification = CertificationEnumsNone,
+            extras = UserRegistryUserExtras(email = delegate.email, birthDate = None)
+          )
+        )
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = delegateId,
+              externalId = delegate.taxCode,
+              name = delegate.name,
+              surname = delegate.surname,
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(email = delegate.email, birthDate = None)
+            )
+          )
+        )
+        .once()
+
+      (mockPartyManagementService.createPerson _)
+        .expects(PersonSeed(delegateId))
+        .returning(Future.successful(Person(delegateId)))
+        .once()
+
+      (mockPartyManagementService.createRelationship _).expects(*, *, *, *).returning(Future.successful(())).repeat(2)
+      (mockPdfCreator.create _).expects(*, *).returning(Future.successful((file, "hash"))).once()
+      (mockPartyManagementService.createToken _).expects(*, *).returning(Future.successful(TokenText("token"))).once()
+      (mockMailer.send _).expects(*, *, *).returning(Future.successful(())).once()
+
+      val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
+
+      val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
+      val response = request(data, "onboarding/users", HttpMethods.POST)
+
+      response.status mustBe StatusCodes.OK
+
+    }
+  }
+
 }
