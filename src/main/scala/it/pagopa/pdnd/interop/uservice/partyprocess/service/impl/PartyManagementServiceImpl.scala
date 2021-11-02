@@ -311,4 +311,26 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
           Future.failed[Relationship](ex)
       }
   }
+
+  override def deleteRelationshipById(relationshipId: UUID): Future[Unit] = {
+    logger.info(s"Deleting relationship $relationshipId")
+
+    val request = api.deleteRelationshipById(relationshipId)
+    invoker
+      .execute(request)
+      .map { x =>
+        logger.info(s"Relationship deleted ${x.code}")
+        x.content
+      }
+      .recoverWith {
+        case ApiError(code, message, _, _, _) =>
+          logger.error(s"Relationship deletion ERROR code > $code")
+          logger.error(s"Relationship deletion ERROR message > $message")
+
+          Future.failed[Unit](new RuntimeException(message))
+        case ex =>
+          logger.error(s"Relationship deletion ERROR message > ${ex.getMessage}")
+          Future.failed[Unit](ex)
+      }
+  }
 }

@@ -1257,6 +1257,68 @@ class PartyProcessSpec
 
   }
 
+  "Relationship removal" must {
+    "succeed when the relationship id is bound to the selected institution" in {
+      val relationshipId = UUID.randomUUID()
+
+      mockSubjectAuthorizationValidation(UUID.randomUUID())
+
+      (mockPartyManagementService.deleteRelationshipById _)
+        .expects(relationshipId)
+        .returning(Future.successful(()))
+
+      val response = Await.result(
+        Http().singleRequest(
+          HttpRequest(uri = s"$url/relationships/$relationshipId", method = HttpMethods.DELETE, headers = authorization)
+        ),
+        Duration.Inf
+      )
+
+      response.status mustBe StatusCodes.NoContent
+
+    }
+
+    "fail if party management deletion returns a failed future" in {
+      val relationshipId = UUID.randomUUID()
+
+      mockSubjectAuthorizationValidation(UUID.randomUUID())
+
+      (mockPartyManagementService.deleteRelationshipById _)
+        .expects(relationshipId)
+        .returning(Future.failed(new RuntimeException("Party Management Error")))
+
+      val response = Await.result(
+        Http().singleRequest(
+          HttpRequest(uri = s"$url/relationships/$relationshipId", method = HttpMethods.DELETE, headers = authorization)
+        ),
+        Duration.Inf
+      )
+
+      response.status mustBe StatusCodes.NotFound
+
+    }
+  }
+
+  private def mockSubjectAuthorizationValidation(mockUUID: UUID) = {
+    val mockSubjectUUID = mockUUID.toString
+    (mockAuthorizationProcessService.validateToken _)
+      .expects(*)
+      .returning(
+        Future.successful(
+          ValidJWT(
+            iss = UUID.randomUUID().toString,
+            sub = mockSubjectUUID,
+            aud = List("test"),
+            exp = OffsetDateTime.now(),
+            nbf = OffsetDateTime.now(),
+            iat = OffsetDateTime.now(),
+            jti = "123"
+          )
+        )
+      )
+      .once()
+  }
+
   "Users creation" must {
     "create users" in {
       val taxCode1       = "managerTaxCode"

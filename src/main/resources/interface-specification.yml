@@ -212,6 +212,37 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+    delete:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Relationship deletion
+      description: Given a relationship identifier, it relates the corresponding relationship.
+      operationId: deleteRelationshipById
+      parameters:
+        - name: relationshipId
+          description: the identifier of the relationship to be deleted
+          required: true
+          in: path
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: relationship deleted
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Relationship not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /relationships/{relationshipId}/activate:
     post:
       security:

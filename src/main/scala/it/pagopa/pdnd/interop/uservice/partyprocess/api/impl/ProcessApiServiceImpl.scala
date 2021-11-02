@@ -510,13 +510,18 @@ class ProcessApiServiceImpl(
   }
 
   private def getCallerSubjectIdentifier(contexts: Seq[(String, String)]): Future[UUID] = {
-    for {
+    val subject = for {
       bearer   <- tokenFromContext(contexts)
       validJWT <- authorizationProcessService.validateToken(bearer)
       subjectUUID <- Try {
         UUID.fromString(validJWT.sub)
       }.toFuture
     } yield subjectUUID
+
+    subject transform {
+      case s @ Success(_) => s
+      case Failure(cause) => Failure(SubjectValidationError(cause.getMessage))
+    }
   }
 
   /** Code: 200, Message: successful operation, DataType: RelationshipInfo
@@ -542,6 +547,30 @@ class ProcessApiServiceImpl(
       case Failure(ex) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
         getRelationship400(errorResponse)
+    }
+  }
+
+  /** Code: 204, Message: relationship deleted
+    * Code: 400, Message: Bad request, DataType: Problem
+    * Code: 404, Message: Relationship not found, DataType: Problem
+    */
+  override def deleteRelationshipById(
+    relationshipId: String
+  )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
+    val result = for {
+      _                <- getCallerSubjectIdentifier(contexts)
+      relationshipUUID <- Try { UUID.fromString(relationshipId) }.toFuture
+      _                <- partyManagementService.deleteRelationshipById(relationshipUUID)
+    } yield ()
+
+    onComplete(result) {
+      case Success(_) => deleteRelationshipById204
+      case Failure(ex: SubjectValidationError) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 401, "Unauthorized")
+        complete((401, errorResponse))
+      case Failure(ex) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        deleteRelationshipById404(errorResponse)
     }
   }
 

@@ -78,6 +78,12 @@ processService.confirmOnBoarding(token = token, contract = contract)
         }
         }
         } ~
+        path("relationships" / Segment) { (relationshipId) => 
+        delete { wrappingDirective { implicit contexts =>  
+            processService.deleteRelationshipById(relationshipId = relationshipId)
+        }
+        }
+        } ~
         path("onboarding" / "info") { 
         get { wrappingDirective { implicit contexts => 
             parameters("institutionId".as[String].?) { (institutionId) => 
@@ -179,6 +185,20 @@ processService.confirmOnBoarding(token = token, contract = contract)
         */
         def createUsers(onBoardingRequest: OnBoardingRequest)
             (implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], toEntityMarshallerOnBoardingResponse: ToEntityMarshaller[OnBoardingResponse], contexts: Seq[(String, String)]): Route
+
+          def deleteRelationshipById204: Route =
+            complete((204, "relationship deleted"))
+  def deleteRelationshipById400(responseProblem: Problem)(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem]): Route =
+            complete((400, responseProblem))
+  def deleteRelationshipById404(responseProblem: Problem)(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem]): Route =
+            complete((404, responseProblem))
+        /**
+           * Code: 204, Message: relationship deleted
+   * Code: 400, Message: Bad request, DataType: Problem
+   * Code: 404, Message: Relationship not found, DataType: Problem
+        */
+        def deleteRelationshipById(relationshipId: String)
+            (implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route
 
           def getOnBoardingInfo200(responseOnBoardingInfo: OnBoardingInfo)(implicit toEntityMarshallerOnBoardingInfo: ToEntityMarshaller[OnBoardingInfo]): Route =
             complete((200, responseOnBoardingInfo))
