@@ -19,7 +19,8 @@ case class User (
   taxCode: String,
   role: String,
   email: Option[UserEnums.Email] = None,
-  platformRole: String
+  product: Option[String] = None,
+  productRole: String
 ) extends ApiModel
 
 object UserEnums {

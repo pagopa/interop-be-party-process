@@ -7,6 +7,6 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.model
 */
 final case class OnBoardingInfo (
   person: PersonInfo,
-  institutions: Seq[InstitutionInfo]
+  institutions: Seq[OnboardingData]
 )
 

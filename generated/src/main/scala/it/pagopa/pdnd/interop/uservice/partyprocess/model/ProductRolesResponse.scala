@@ -2,7 +2,7 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.model
 
 
 /**
- * = PlatformRolesResponse =
+ * = ProductRolesResponse =
  *
  * This payload contains the currently defined bindings between roles and platform roles.
  *
@@ -10,7 +10,7 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.model
  * @param delegateRoles binding between delegate and its platform roles for example: ''null''
  * @param operatorRoles binding between operator and its platform roles for example: ''null''
 */
-final case class PlatformRolesResponse (
+final case class ProductRolesResponse (
   managerRoles: Seq[String],
   delegateRoles: Seq[String],
   operatorRoles: Seq[String]

@@ -11,10 +11,20 @@
  */
 package it.pagopa.pdnd.interop.uservice.partyprocess.client.model
 
+import java.util.UUID
 import it.pagopa.pdnd.interop.uservice.partyprocess.client.invoker.ApiModel
 
-case class OnBoardingInfo (
-  person: PersonInfo,
-  institutions: Seq[OnboardingData]
+case class Institution (
+  id: UUID,
+  /* DN */
+  institutionId: String,
+  /* an accessory code (e.g. codice ipa) */
+  code: Option[String] = None,
+  description: String,
+  digitalAddress: String,
+  /* organization fiscal code */
+  fiscalCode: String,
+  attributes: Seq[String],
+  products: Seq[String]
 ) extends ApiModel
 

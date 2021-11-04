@@ -20,7 +20,7 @@ case class RelationshipInfo (
   /* represents the generic available role types for the relationship */
   role: RelationshipInfoEnums.Role,
   /* user role in the application context (e.g.: administrator, security user). This MUST belong to the configured set of application specific platform roles */
-  platformRole: String,
+  productRole: String,
   status: RelationshipInfoEnums.Status
 ) extends ApiModel
 

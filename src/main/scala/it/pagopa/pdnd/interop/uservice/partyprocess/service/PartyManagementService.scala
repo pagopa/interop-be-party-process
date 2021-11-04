@@ -17,9 +17,15 @@ trait PartyManagementService {
 
   def createOrganization(organization: OrganizationSeed): Future[Organization]
 
-  def createRelationship(id: UUID, organizationId: UUID, operationRole: String, platformRole: String): Future[Unit]
+  def createRelationship(
+    id: UUID,
+    organizationId: UUID,
+    operationRole: String,
+    product: Option[String],
+    productRole: String
+  ): Future[Unit]
 
-  def retrieveRelationships(from: Option[UUID], to: Option[UUID], platformRole: Option[String]): Future[Relationships]
+  def retrieveRelationships(from: Option[UUID], to: Option[UUID], productRole: Option[String]): Future[Relationships]
 
   def getInstitutionRelationships(id: UUID): Future[Relationships]
 
@@ -34,4 +40,6 @@ trait PartyManagementService {
   def invalidateToken(token: String): Future[Unit]
 
   def getRelationshipById(relationshipId: UUID): Future[Relationship]
+
+  def replaceProducts(institutionId: UUID, products: Seq[String]): Future[Organization]
 }

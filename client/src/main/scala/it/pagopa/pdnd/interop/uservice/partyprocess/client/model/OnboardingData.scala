@@ -13,12 +13,17 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.client.model
 
 import it.pagopa.pdnd.interop.uservice.partyprocess.client.invoker.ApiModel
 
-case class PlatformRolesResponse (
-  /* binding between manager and its platform roles */
-  managerRoles: Seq[String],
-  /* binding between delegate and its platform roles */
-  delegateRoles: Seq[String],
-  /* binding between operator and its platform roles */
-  operatorRoles: Seq[String]
+case class OnboardingData (
+  institutionId: String,
+  description: String,
+  digitalAddress: String,
+  status: String,
+  role: String,
+  product: Option[String] = None,
+  productRole: String,
+  /* set of products bound to this institution */
+  institutionProducts: Seq[String],
+  /* certified attributes bound to this institution */
+  attributes: Seq[String]
 ) extends ApiModel
 

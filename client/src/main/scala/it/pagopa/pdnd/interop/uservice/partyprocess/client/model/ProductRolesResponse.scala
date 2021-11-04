@@ -13,14 +13,12 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.client.model
 
 import it.pagopa.pdnd.interop.uservice.partyprocess.client.invoker.ApiModel
 
-case class InstitutionInfo (
-  institutionId: String,
-  description: String,
-  digitalAddress: String,
-  status: String,
-  role: String,
-  platformRole: String,
-  /* certified attributes bound to this institution */
-  attributes: Seq[String]
+case class ProductRolesResponse (
+  /* binding between manager and its platform roles */
+  managerRoles: Seq[String],
+  /* binding between delegate and its platform roles */
+  delegateRoles: Seq[String],
+  /* binding between operator and its platform roles */
+  operatorRoles: Seq[String]
 ) extends ApiModel
 

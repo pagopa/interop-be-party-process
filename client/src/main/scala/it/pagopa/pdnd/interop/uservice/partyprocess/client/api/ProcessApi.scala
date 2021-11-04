@@ -12,10 +12,12 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.client.api
 
 import java.io.File
+import it.pagopa.pdnd.interop.uservice.partyprocess.client.model.Institution
 import it.pagopa.pdnd.interop.uservice.partyprocess.client.model.OnBoardingInfo
 import it.pagopa.pdnd.interop.uservice.partyprocess.client.model.OnBoardingRequest
 import it.pagopa.pdnd.interop.uservice.partyprocess.client.model.OnBoardingResponse
 import it.pagopa.pdnd.interop.uservice.partyprocess.client.model.Problem
+import it.pagopa.pdnd.interop.uservice.partyprocess.client.model.Products
 import it.pagopa.pdnd.interop.uservice.partyprocess.client.model.RelationshipInfo
 import java.util.UUID
 import it.pagopa.pdnd.interop.uservice.partyprocess.client.invoker._
@@ -200,11 +202,11 @@ class ProcessApi(baseUrl: String) {
    *   bearerAuth (http)
    * 
    * @param institutionId The identifier of the institution
-   * @param platformRoles comma separated sequence of platform roles to filter the response with
+   * @param productRoles comma separated sequence of platform roles to filter the response with
    */
-  def getUserInstitutionRelationships(institutionId: UUID, platformRoles: Option[String] = None)(implicit bearerToken: BearerToken): ApiRequest[Seq[RelationshipInfo]] =
+  def getUserInstitutionRelationships(institutionId: UUID, productRoles: Option[String] = None)(implicit bearerToken: BearerToken): ApiRequest[Seq[RelationshipInfo]] =
     ApiRequest[Seq[RelationshipInfo]](ApiMethods.GET, baseUrl, "/institutions/{institutionId}/relationships", "application/json")
-      .withCredentials(bearerToken).withQueryParam("platformRoles", platformRoles)
+      .withCredentials(bearerToken).withQueryParam("productRoles", productRoles)
       .withPathParam("institutionId", institutionId)
       .withSuccessResponse[Seq[RelationshipInfo]](200)
       .withErrorResponse[Problem](400)
@@ -227,6 +229,27 @@ class ProcessApi(baseUrl: String) {
       .withCredentials(bearerToken).withPathParam("token", token)
       .withSuccessResponse[Unit](200)
       .withErrorResponse[Problem](400)
+      
+
+  /**
+   * replaces institution's products with the set passed as payload
+   * 
+   * Expected answers:
+   *   code 200 : Institution (successful operation)
+   *   code 404 : Problem (Organization not found)
+   * 
+   * Available security schemes:
+   *   bearerAuth (http)
+   * 
+   * @param institutionId The identifier of the institution
+   * @param products 
+   */
+  def replaceInstitutionProducts(institutionId: UUID, products: Products)(implicit bearerToken: BearerToken): ApiRequest[Institution] =
+    ApiRequest[Institution](ApiMethods.POST, baseUrl, "/institutions/{institutionId}/products", "application/json")
+      .withCredentials(bearerToken).withBody(products)
+      .withPathParam("institutionId", institutionId)
+      .withSuccessResponse[Institution](200)
+      .withErrorResponse[Problem](404)
       
 
   /**

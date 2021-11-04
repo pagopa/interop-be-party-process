@@ -13,8 +13,8 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.client.model
 
 import it.pagopa.pdnd.interop.uservice.partyprocess.client.invoker.ApiModel
 
-case class OnBoardingInfo (
-  person: PersonInfo,
-  institutions: Seq[OnboardingData]
+case class Products (
+  /* set of products to define for this institution */
+  products: Seq[String]
 ) extends ApiModel
 

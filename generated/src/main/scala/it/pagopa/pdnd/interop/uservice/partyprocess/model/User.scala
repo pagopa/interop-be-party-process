@@ -7,7 +7,8 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.model
  * @param taxCode  for example: ''null''
  * @param role  for example: ''null''
  * @param email  for example: ''null''
- * @param platformRole  for example: ''null''
+ * @param product  for example: ''null''
+ * @param productRole  for example: ''null''
 */
 final case class User (
   name: String,
@@ -15,6 +16,7 @@ final case class User (
   taxCode: String,
   role: String,
   email: Option[String],
-  platformRole: String
+  product: Option[String],
+  productRole: String
 )
 

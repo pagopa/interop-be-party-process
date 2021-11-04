@@ -31,7 +31,7 @@ private class MockPartyApiInvoker(implicit json4sFormats: Formats, system: actor
       from = UUID.randomUUID(),
       to = UUID.randomUUID(),
       role = Manager,
-      platformRole = "admin",
+      productRole = "admin",
       status = Active
     )
     Future.successful(new ApiResponse[T](200, mockRelationshipResponse.asInstanceOf[T]))
@@ -68,19 +68,31 @@ class PartyManagementServiceImplSpec
       val invalidRole = "JavaScriptNinja"
       //when
       val operation =
-        partyManagementService.createRelationship(UUID.randomUUID(), UUID.randomUUID(), invalidRole, "admin")
+        partyManagementService.createRelationship(
+          UUID.randomUUID(),
+          UUID.randomUUID(),
+          invalidRole,
+          productRole = "admin",
+          product = None
+        )
       //then
       operation.failed.futureValue.getMessage shouldBe s"No value found for '$invalidRole'"
     }
 
     "return a failure when the platform role is not contained in the configured list for the defined role" in {
       //given
-      val invalidPlatformRole = "foobar"
+      val invalidProductRole = "foobar"
       //when
       val createRelationshipOp =
-        partyManagementService.createRelationship(UUID.randomUUID(), UUID.randomUUID(), "Manager", invalidPlatformRole)
+        partyManagementService.createRelationship(
+          UUID.randomUUID(),
+          UUID.randomUUID(),
+          "Manager",
+          productRole = "foobar",
+          product = None
+        )
       //then
-      createRelationshipOp.failed.futureValue.getMessage shouldBe s"Invalid platform role => $invalidPlatformRole not supported for ManagerRoles"
+      createRelationshipOp.failed.futureValue.getMessage shouldBe s"Invalid platform role => $invalidProductRole not supported for ManagerRoles"
     }
 
     "return a success when the platform role is contained in the configured list for the defined role" in {
@@ -88,7 +100,7 @@ class PartyManagementServiceImplSpec
       val userId           = UUID.randomUUID()
       val partyIdTo        = UUID.randomUUID()
       val relationshipRole = "Operator"
-      val platformRole     = "api"
+      val productRole      = "api"
 
       //given mocked integration API behavior
       val partyRelationship: RelationshipSeed =
@@ -96,7 +108,8 @@ class PartyManagementServiceImplSpec
           from = userId,
           to = partyIdTo,
           role = RelationshipSeedEnums.Role.withName(relationshipRole),
-          platformRole = platformRole
+          productRole = productRole,
+          product = Some("PDND")
         )
       val mockApiRequest =
         ApiRequest[Relationship](ApiMethods.POST, "http://localhost", "/relationships", "application/json")
@@ -107,7 +120,13 @@ class PartyManagementServiceImplSpec
 
       //when
       val operation =
-        partyManagementService.createRelationship(userId, partyIdTo, relationshipRole, platformRole)
+        partyManagementService.createRelationship(
+          userId,
+          partyIdTo,
+          relationshipRole,
+          productRole = productRole,
+          product = Some("PDND")
+        )
 
       //then
       operation.futureValue shouldBe ()

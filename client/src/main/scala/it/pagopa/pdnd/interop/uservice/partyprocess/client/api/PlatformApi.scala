@@ -11,8 +11,8 @@
  */
 package it.pagopa.pdnd.interop.uservice.partyprocess.client.api
 
-import it.pagopa.pdnd.interop.uservice.partyprocess.client.model.PlatformRolesResponse
 import it.pagopa.pdnd.interop.uservice.partyprocess.client.model.Problem
+import it.pagopa.pdnd.interop.uservice.partyprocess.client.model.ProductRolesResponse
 import it.pagopa.pdnd.interop.uservice.partyprocess.client.invoker._
 import it.pagopa.pdnd.interop.uservice.partyprocess.client.invoker.CollectionFormats._
 import it.pagopa.pdnd.interop.uservice.partyprocess.client.invoker.ApiKeyLocations._
@@ -28,15 +28,15 @@ class PlatformApi(baseUrl: String) {
    * Returns all the available bindings between roles and platform roles.
    * 
    * Expected answers:
-   *   code 200 : PlatformRolesResponse (Available platform roles' bindings.)
+   *   code 200 : ProductRolesResponse (Available platform roles' bindings.)
    *   code 400 : Problem (Bad Request)
    * 
    * Available security schemes:
    *   bearerAuth (http)
    */
-  def getPlatformRoles()(implicit bearerToken: BearerToken): ApiRequest[PlatformRolesResponse] =
-    ApiRequest[PlatformRolesResponse](ApiMethods.GET, baseUrl, "/platform/roles", "application/json")
-      .withCredentials(bearerToken).withSuccessResponse[PlatformRolesResponse](200)
+  def getProductRoles()(implicit bearerToken: BearerToken): ApiRequest[ProductRolesResponse] =
+    ApiRequest[ProductRolesResponse](ApiMethods.GET, baseUrl, "/platform/roles", "application/json")
+      .withCredentials(bearerToken).withSuccessResponse[ProductRolesResponse](200)
       .withErrorResponse[Problem](400)
       
 

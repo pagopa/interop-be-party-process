@@ -12,10 +12,12 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.server.MultipartDirectives
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.FileField
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.PartsAndFiles
 import java.io.File
+import it.pagopa.pdnd.interop.uservice.partyprocess.model.Institution
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.OnBoardingInfo
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.OnBoardingRequest
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.OnBoardingResponse
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.Problem
+import it.pagopa.pdnd.interop.uservice.partyprocess.model.Products
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.RelationshipInfo
 import java.util.UUID
 import scala.util.Try
@@ -98,8 +100,8 @@ processService.confirmOnBoarding(token = token, contract = contract)
         } ~
         path("institutions" / Segment / "relationships") { (institutionId) => 
         get { wrappingDirective { implicit contexts => 
-            parameters("platformRoles".as[String].?) { (platformRoles) => 
-            processService.getUserInstitutionRelationships(institutionId = institutionId, platformRoles = platformRoles)
+            parameters("productRoles".as[String].?) { (productRoles) => 
+            processService.getUserInstitutionRelationships(institutionId = institutionId, productRoles = productRoles)
             }
         }
         }
@@ -107,6 +109,14 @@ processService.confirmOnBoarding(token = token, contract = contract)
         path("onboarding" / "complete" / Segment) { (token) => 
         delete { wrappingDirective { implicit contexts =>  
             processService.invalidateOnboarding(token = token)
+        }
+        }
+        } ~
+        path("institutions" / Segment / "products") { (institutionId) => 
+        post { wrappingDirective { implicit contexts =>  
+            entity(as[Products]){ products =>
+              processService.replaceInstitutionProducts(institutionId = institutionId, products = products)
+            }
         }
         }
         } ~
@@ -228,7 +238,7 @@ processService.confirmOnBoarding(token = token, contract = contract)
            * Code: 200, Message: successful operation, DataType: Seq[RelationshipInfo]
    * Code: 400, Message: Invalid institution id supplied, DataType: Problem
         */
-        def getUserInstitutionRelationships(institutionId: String, platformRoles: Option[String])
+        def getUserInstitutionRelationships(institutionId: String, productRoles: Option[String])
             (implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], toEntityMarshallerRelationshipInfoarray: ToEntityMarshaller[Seq[RelationshipInfo]], contexts: Seq[(String, String)]): Route
 
           def invalidateOnboarding200: Route =
@@ -241,6 +251,17 @@ processService.confirmOnBoarding(token = token, contract = contract)
         */
         def invalidateOnboarding(token: String)
             (implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route
+
+          def replaceInstitutionProducts200(responseInstitution: Institution)(implicit toEntityMarshallerInstitution: ToEntityMarshaller[Institution]): Route =
+            complete((200, responseInstitution))
+  def replaceInstitutionProducts404(responseProblem: Problem)(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem]): Route =
+            complete((404, responseProblem))
+        /**
+           * Code: 200, Message: successful operation, DataType: Institution
+   * Code: 404, Message: Organization not found, DataType: Problem
+        */
+        def replaceInstitutionProducts(institutionId: String, products: Products)
+            (implicit toEntityMarshallerInstitution: ToEntityMarshaller[Institution], toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route
 
           def suspendRelationship204: Route =
             complete((204, "Successful operation"))
@@ -259,13 +280,17 @@ processService.confirmOnBoarding(token = token, contract = contract)
     }
 
         trait ProcessApiMarshaller {
-          implicit def fromEntityUnmarshallerOnBoardingRequest: FromEntityUnmarshaller[OnBoardingRequest]
+          implicit def fromEntityUnmarshallerProducts: FromEntityUnmarshaller[Products]
+
+  implicit def fromEntityUnmarshallerOnBoardingRequest: FromEntityUnmarshaller[OnBoardingRequest]
 
 
         
           implicit def toEntityMarshallerOnBoardingInfo: ToEntityMarshaller[OnBoardingInfo]
 
   implicit def toEntityMarshallerRelationshipInfo: ToEntityMarshaller[RelationshipInfo]
+
+  implicit def toEntityMarshallerInstitution: ToEntityMarshaller[Institution]
 
   implicit def toEntityMarshallerProblem: ToEntityMarshaller[Problem]
 
