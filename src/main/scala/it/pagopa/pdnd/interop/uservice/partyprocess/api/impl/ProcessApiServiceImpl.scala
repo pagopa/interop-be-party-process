@@ -73,9 +73,9 @@ class ProcessApiServiceImpl(
       personInfo = PersonInfo(user.name, user.surname, user.externalId)
       relationships <- partyManagementService.retrieveRelationships(Some(subjectUUID), institutionUUID, None)
       organizations <- Future.traverse(relationships.items)(r =>
-        getOrganization(r.to).map(o => (o, r.status, r.role, r.product, r.productRole))
+        getOrganization(r.to).map(o => (o, r.status, r.role, r.products, r.productRole))
       )
-      onboardingData = organizations.map { case (o, status, role, product, productRole) =>
+      onboardingData = organizations.map { case (o, status, role, products, productRole) =>
         OnboardingData(
           o.institutionId,
           o.description,
@@ -83,9 +83,9 @@ class ProcessApiServiceImpl(
           status.toString,
           role.toString,
           productRole = productRole,
-          product = product,
+          relationshipProducts = products,
           attributes = o.attributes,
-          institutionProducts = o.products
+          institutionProducts = o.products.toSet
         )
       }
     } yield OnBoardingInfo(personInfo, onboardingData)
@@ -245,24 +245,24 @@ class ProcessApiServiceImpl(
       .toTry
   }
 
-  private def addUser(user: User): Future[(UserRegistryUser, String, Option[String], String)] = {
+  private def addUser(user: User): Future[(UserRegistryUser, String, Set[String], String)] = {
     logger.info(s"Adding user ${user.toString}")
     createPerson(user)
       .recoverWith {
         // TODO Once errors are defined, we should check that error is "person already exists"
         case _ => userRegistryManagementService.getUserByExternalId(user.taxCode)
       }
-      .map((_, user.role, user.product, user.productRole))
+      .map((_, user.role, user.products, user.productRole))
   }
 
   private def createRelationship(
     organizationId: UUID,
     personId: UUID,
     role: String,
-    product: Option[String],
+    products: Set[String],
     productRole: String
   ): RelationshipSeed =
-    RelationshipSeed(personId, organizationId, RelationshipSeedEnums.Role.withName(role), product, productRole)
+    RelationshipSeed(personId, organizationId, RelationshipSeedEnums.Role.withName(role), products, productRole)
 
   private def createPerson(user: User): Future[UserRegistryUser] =
     for {
@@ -305,7 +305,7 @@ class ProcessApiServiceImpl(
         digitalAddress = institution.digitalAddress.getOrElse(""), // TODO Must be non optional
         fiscalCode = institution.taxCode.getOrElse(""),
         attributes = attributes.attributes.filter(attr => institution.category == attr.code).map(_.id),
-        products = Seq.empty
+        products = Set.empty
       )
       organization <- partyManagementService.createOrganization(seed)
       _ = logger.info(s"createOrganization ${organization.institutionId}")
@@ -506,6 +506,7 @@ class ProcessApiServiceImpl(
       id = relationship.id,
       from = relationship.from,
       role = relationship.role.toString,
+      products = relationship.products,
       productRole = relationship.productRole,
       // TODO This conversion is temporary, while we implement a naming convention for enums
       status = relationship.status.toString.toLowerCase
@@ -588,7 +589,7 @@ class ProcessApiServiceImpl(
     val result = for {
       _               <- getCallerSubjectIdentifier(contexts)
       institutionUUID <- Try { UUID.fromString(institutionId) }.toFuture
-      organization    <- partyManagementService.replaceProducts(institutionUUID, products.products)
+      organization    <- partyManagementService.replaceOrganizationProducts(institutionUUID, products.products)
     } yield Institution(
       id = organization.id,
       institutionId = organization.institutionId,
@@ -608,6 +609,28 @@ class ProcessApiServiceImpl(
       case Failure(ex) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
         replaceInstitutionProducts404(errorResponse)
+    }
+  }
+
+  override def replaceRelationshipProducts(relationshipId: String, products: Products)(implicit
+    toEntityMarshallerInstitution: ToEntityMarshaller[RelationshipInfo],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    contexts: Seq[(String, String)]
+  ): Route = {
+    val result = for {
+      _                <- getCallerSubjectIdentifier(contexts)
+      relationshipUUID <- Try { UUID.fromString(relationshipId) }.toFuture
+      relationship     <- partyManagementService.replaceRelationshipProducts(relationshipUUID, products.products)
+    } yield relationshipToRelationshipInfo(relationship)
+
+    onComplete(result) {
+      case Success(relationship) => replaceRelationshipProducts200(relationship)
+      case Failure(ex: SubjectValidationError) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 401, "Unauthorized")
+        complete((401, errorResponse))
+      case Failure(ex) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        replaceRelationshipProducts404(errorResponse)
     }
   }
 }

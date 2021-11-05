@@ -15,6 +15,6 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.client.invoker.ApiModel
 
 case class Products (
   /* set of products to define for this institution */
-  products: Seq[String]
+  products: Set[String]
 ) extends ApiModel
 

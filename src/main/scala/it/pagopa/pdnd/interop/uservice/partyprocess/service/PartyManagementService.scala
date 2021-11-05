@@ -21,7 +21,7 @@ trait PartyManagementService {
     id: UUID,
     organizationId: UUID,
     operationRole: String,
-    product: Option[String],
+    products: Set[String],
     productRole: String
   ): Future[Unit]
 
@@ -41,5 +41,7 @@ trait PartyManagementService {
 
   def getRelationshipById(relationshipId: UUID): Future[Relationship]
 
-  def replaceProducts(institutionId: UUID, products: Seq[String]): Future[Organization]
+  def replaceOrganizationProducts(institutionId: UUID, products: Set[String]): Future[Organization]
+
+  def replaceRelationshipProducts(relationshipUUID: UUID, products: Set[String]): Future[Relationship]
 }

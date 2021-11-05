@@ -19,10 +19,11 @@ case class OnboardingData (
   digitalAddress: String,
   status: String,
   role: String,
-  product: Option[String] = None,
+  /* set of products bound to this relationship */
+  relationshipProducts: Set[String],
   productRole: String,
   /* set of products bound to this institution */
-  institutionProducts: Seq[String],
+  institutionProducts: Set[String],
   /* certified attributes bound to this institution */
   attributes: Seq[String]
 ) extends ApiModel

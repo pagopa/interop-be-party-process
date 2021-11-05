@@ -25,6 +25,6 @@ case class Institution (
   /* organization fiscal code */
   fiscalCode: String,
   attributes: Seq[String],
-  products: Seq[String]
+  products: Set[String]
 ) extends ApiModel
 

@@ -120,6 +120,14 @@ processService.confirmOnBoarding(token = token, contract = contract)
         }
         }
         } ~
+        path("relationships" / Segment / "products") { (relationshipId) => 
+        post { wrappingDirective { implicit contexts =>  
+            entity(as[Products]){ products =>
+              processService.replaceRelationshipProducts(relationshipId = relationshipId, products = products)
+            }
+        }
+        }
+        } ~
         path("relationships" / Segment / "suspend") { (relationshipId) => 
         post { wrappingDirective { implicit contexts =>  
             processService.suspendRelationship(relationshipId = relationshipId)
@@ -258,10 +266,21 @@ processService.confirmOnBoarding(token = token, contract = contract)
             complete((404, responseProblem))
         /**
            * Code: 200, Message: successful operation, DataType: Institution
-   * Code: 404, Message: Organization not found, DataType: Problem
+   * Code: 404, Message: Institution not found, DataType: Problem
         */
         def replaceInstitutionProducts(institutionId: String, products: Products)
             (implicit toEntityMarshallerInstitution: ToEntityMarshaller[Institution], toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route
+
+          def replaceRelationshipProducts200(responseRelationshipInfo: RelationshipInfo)(implicit toEntityMarshallerRelationshipInfo: ToEntityMarshaller[RelationshipInfo]): Route =
+            complete((200, responseRelationshipInfo))
+  def replaceRelationshipProducts404(responseProblem: Problem)(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem]): Route =
+            complete((404, responseProblem))
+        /**
+           * Code: 200, Message: successful operation, DataType: RelationshipInfo
+   * Code: 404, Message: Relationship not found, DataType: Problem
+        */
+        def replaceRelationshipProducts(relationshipId: String, products: Products)
+            (implicit toEntityMarshallerRelationshipInfo: ToEntityMarshaller[RelationshipInfo], toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route
 
           def suspendRelationship204: Route =
             complete((204, "Successful operation"))

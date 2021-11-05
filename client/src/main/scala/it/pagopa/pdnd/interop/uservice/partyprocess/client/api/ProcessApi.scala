@@ -236,7 +236,7 @@ class ProcessApi(baseUrl: String) {
    * 
    * Expected answers:
    *   code 200 : Institution (successful operation)
-   *   code 404 : Problem (Organization not found)
+   *   code 404 : Problem (Institution not found)
    * 
    * Available security schemes:
    *   bearerAuth (http)
@@ -249,6 +249,27 @@ class ProcessApi(baseUrl: String) {
       .withCredentials(bearerToken).withBody(products)
       .withPathParam("institutionId", institutionId)
       .withSuccessResponse[Institution](200)
+      .withErrorResponse[Problem](404)
+      
+
+  /**
+   * replaces relationships's products with the set passed as payload
+   * 
+   * Expected answers:
+   *   code 200 : RelationshipInfo (successful operation)
+   *   code 404 : Problem (Relationship not found)
+   * 
+   * Available security schemes:
+   *   bearerAuth (http)
+   * 
+   * @param relationshipId The identifier of the relationship
+   * @param products 
+   */
+  def replaceRelationshipProducts(relationshipId: UUID, products: Products)(implicit bearerToken: BearerToken): ApiRequest[RelationshipInfo] =
+    ApiRequest[RelationshipInfo](ApiMethods.POST, baseUrl, "/relationships/{relationshipId}/products", "application/json")
+      .withCredentials(bearerToken).withBody(products)
+      .withPathParam("relationshipId", relationshipId)
+      .withSuccessResponse[RelationshipInfo](200)
       .withErrorResponse[Problem](404)
       
 

@@ -19,6 +19,8 @@ case class RelationshipInfo (
   from: UUID,
   /* represents the generic available role types for the relationship */
   role: RelationshipInfoEnums.Role,
+  /* set of products bound to this relationship */
+  products: Set[String],
   /* user role in the application context (e.g.: administrator, security user). This MUST belong to the configured set of application specific platform roles */
   productRole: String,
   status: RelationshipInfoEnums.Status

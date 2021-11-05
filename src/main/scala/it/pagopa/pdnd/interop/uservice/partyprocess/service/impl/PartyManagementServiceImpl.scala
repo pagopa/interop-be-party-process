@@ -126,13 +126,13 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
     personId: UUID,
     organizationId: UUID,
     role: String,
-    product: Option[String],
+    products: Set[String],
     productRole: String
   ): Future[Unit] = {
     for {
       role <- Try { RelationshipSeedEnums.Role.withName(role) }.toFuture
       _    <- isProductRoleValid(role = role, productRole = productRole).toFuture
-      _    <- invokeCreateRelationship(personId, organizationId, role, product, productRole)
+      _    <- invokeCreateRelationship(personId, organizationId, role, products, productRole)
     } yield ()
   }
 
@@ -140,12 +140,18 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
     personId: UUID,
     organizationId: UUID,
     role: RelationshipSeedEnums.Role,
-    product: Option[String],
+    products: Set[String],
     productRole: String
   ): Future[Relationship] = {
     logger.info(s"Creating relationship $personId/$organizationId/$role/ with productRole = $productRole")
     val partyRelationship: RelationshipSeed =
-      RelationshipSeed(from = personId, to = organizationId, role = role, product = product, productRole = productRole)
+      RelationshipSeed(
+        from = personId,
+        to = organizationId,
+        role = role,
+        products = products,
+        productRole = productRole
+      )
 
     val request: ApiRequest[Relationship] = api.createRelationship(partyRelationship)
     invoker
@@ -336,7 +342,7 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  override def replaceProducts(institutionId: UUID, products: Seq[String]): Future[Organization] = {
+  override def replaceOrganizationProducts(institutionId: UUID, products: Set[String]): Future[Organization] = {
     logger.info(s"Replacing products for $institutionId")
 
     val request = api.addOrganizationProducts(institutionId, products = Products(products))
@@ -355,6 +361,28 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
         case ex =>
           logger.error(s"Products replacement ${ex.getMessage}")
           Future.failed[Organization](ex)
+      }
+  }
+
+  override def replaceRelationshipProducts(relationshipId: UUID, products: Set[String]): Future[Relationship] = {
+    logger.info(s"Replacing products for relationship $relationshipId")
+
+    val request = api.addRelationshipProducts(relationshipId, products = Products(products))
+    invoker
+      .execute(request)
+      .map { x =>
+        logger.info(s"Products replaced for relationship ${x.code}")
+        x.content
+      }
+      .recoverWith {
+        case ApiError(code, message, _, _, _) =>
+          logger.error(s"Products replacement for relationship error $code")
+          logger.error(s"Products replacement for relationship error message: $message")
+
+          Future.failed[Relationship](new RuntimeException(message))
+        case ex =>
+          logger.error(s"Products replacement for relationship ${ex.getMessage}")
+          Future.failed[Relationship](ex)
       }
   }
 }

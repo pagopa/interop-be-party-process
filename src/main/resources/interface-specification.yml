@@ -178,7 +178,7 @@ paths:
                 schema:
                   $ref: '#/components/schemas/Institution'
           '404':
-            description: Organization not found
+            description: Institution not found
             content:
               application/problem+json:
                 schema:
@@ -310,6 +310,42 @@ paths:
                 $ref: '#/components/schemas/Problem'
         '404':
           description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /relationships/{relationshipId}/products:
+    post:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: relationship products replacement
+      description: replaces relationships's products with the set passed as payload
+      operationId: replaceRelationshipProducts
+      parameters:
+        - name: relationshipId
+          in: path
+          description: The identifier of the relationship
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Products'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelationshipInfo'
+        '404':
+          description: Relationship not found
           content:
             application/problem+json:
               schema:
@@ -491,6 +527,12 @@ components:
             - Manager
             - Delegate
             - Operator
+        products:
+          type: array
+          description: set of products bound to this relationship
+          uniqueItems: true
+          items:
+            type: string
         productRole:
           type: string
           description: 'user role in the application context (e.g.: administrator, security user). This MUST belong to the configured set of application specific platform roles'
@@ -505,6 +547,7 @@ components:
         - id
         - from
         - role
+        - products
         - productRole
         - status
     RelationshipsResponse:
@@ -527,8 +570,12 @@ components:
             - Manager
             - Delegate
             - Operator
-        product:
-          type: string
+        products:
+          type: array
+          description: set of products bound to this user
+          uniqueItems: true
+          items:
+            type: string
         productRole:
           type: string
       additionalProperties: false
@@ -537,6 +584,7 @@ components:
         - surname
         - taxCode
         - role
+        - products
         - productRole
     PersonInfo:
       properties:
@@ -563,12 +611,17 @@ components:
           type: string
         role:
           type: string
-        product:
-          type: string
+        relationshipProducts:
+          type: array
+          uniqueItems: true
+          description: set of products bound to this relationship
+          items:
+            type: string
         productRole:
           type: string
         institutionProducts:
           type: array
+          uniqueItems: true
           description: set of products bound to this institution
           items:
             type: string
@@ -584,6 +637,7 @@ components:
         - digitalAddress
         - status
         - role
+        - relationshipProducts
         - productRole
         - attributes
         - institutionProducts
@@ -629,6 +683,7 @@ components:
             type: string
         products:
           type: array
+          uniqueItems: true
           items:
             type: string
             description: product names associated to this organization
@@ -648,6 +703,7 @@ components:
       properties:
         products:
           type: array
+          uniqueItems: true
           items:
             type: string
           description: set of products to define for this institution

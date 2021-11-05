@@ -32,7 +32,8 @@ private class MockPartyApiInvoker(implicit json4sFormats: Formats, system: actor
       to = UUID.randomUUID(),
       role = Manager,
       productRole = "admin",
-      status = Active
+      status = Active,
+      products = Set.empty
     )
     Future.successful(new ApiResponse[T](200, mockRelationshipResponse.asInstanceOf[T]))
   }
@@ -73,7 +74,7 @@ class PartyManagementServiceImplSpec
           UUID.randomUUID(),
           invalidRole,
           productRole = "admin",
-          product = None
+          products = Set.empty
         )
       //then
       operation.failed.futureValue.getMessage shouldBe s"No value found for '$invalidRole'"
@@ -89,7 +90,7 @@ class PartyManagementServiceImplSpec
           UUID.randomUUID(),
           "Manager",
           productRole = "foobar",
-          product = None
+          products = Set.empty
         )
       //then
       createRelationshipOp.failed.futureValue.getMessage shouldBe s"Invalid platform role => $invalidProductRole not supported for ManagerRoles"
@@ -109,7 +110,7 @@ class PartyManagementServiceImplSpec
           to = partyIdTo,
           role = RelationshipSeedEnums.Role.withName(relationshipRole),
           productRole = productRole,
-          product = Some("PDND")
+          products = Set("PDND")
         )
       val mockApiRequest =
         ApiRequest[Relationship](ApiMethods.POST, "http://localhost", "/relationships", "application/json")
@@ -125,7 +126,7 @@ class PartyManagementServiceImplSpec
           partyIdTo,
           relationshipRole,
           productRole = productRole,
-          product = Some("PDND")
+          products = Set("PDND")
         )
 
       //then

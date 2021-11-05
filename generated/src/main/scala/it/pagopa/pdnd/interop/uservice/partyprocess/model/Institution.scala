@@ -20,6 +20,6 @@ final case class Institution (
   digitalAddress: String,
   fiscalCode: String,
   attributes: Seq[String],
-  products: Seq[String]
+  products: Set[String]
 )
 
