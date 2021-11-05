@@ -8,6 +8,7 @@ import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.{Delegate, Manager, Operator}
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Status.Pending
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   Organization,
   OrganizationSeed,
@@ -300,7 +301,8 @@ class ProcessApiServiceImpl(
         institutionId = institution.id,
         description = institution.description,
         digitalAddress = institution.digitalAddress.getOrElse(""), // TODO Must be non optional
-        attributes = attributes.attributes.filter(attr => institution.category == attr.code).map(_.id)
+        attributes = attributes.attributes.filter(attr => institution.category == attr.code).map(_.id),
+        fiscalCode = institution.taxCode.getOrElse("")
       )
       organization <- partyManagementService.createOrganization(seed)
       _ = logger.info(s"createOrganization ${organization.institutionId}")
@@ -583,7 +585,13 @@ class ProcessApiServiceImpl(
     contexts: Seq[(String, String)]
   ): Route = {
     val result: Future[OnBoardingResponse] = for {
-      organization     <- partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)
+      organization <- partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)
+      organizationRelationships <- partyManagementService.retrieveRelationships(
+        None,
+        Some(organization.id),
+        platformRolesConfiguration.manager.roles.headOption
+      )
+      _                <- hasAnExistingManager(organizationRelationships)
       validUsers       <- verifyUsersByRoles(onBoardingRequest.users, Set(Manager.toString, Delegate.toString))
       personsWithRoles <- Future.traverse(validUsers)(addUser)
       _ <- Future.traverse(personsWithRoles)(pr =>
@@ -610,5 +618,18 @@ class ProcessApiServiceImpl(
         createUsers400(errorResponse)
 
     }
+  }
+
+  //TODO add rejected also
+  def hasAnExistingManager(organizationRelationships: Relationships): Future[Boolean] = {
+    val noManagers =
+      organizationRelationships.items
+        .filter(r => r.role == Manager && !Set(Pending.toString).contains(r.status.toString))
+        .isEmpty
+
+    if (noManagers)
+      Future.failed[Boolean](new RuntimeException("This organization does not have a Manager"))
+    else
+      Future.successful(true)
   }
 }

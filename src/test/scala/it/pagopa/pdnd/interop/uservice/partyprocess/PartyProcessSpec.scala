@@ -144,14 +144,16 @@ class PartyProcessSpec
         description = "org1",
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
-        attributes = Seq("1", "2", "3")
+        attributes = Seq("1", "2", "3"),
+        fiscalCode = "123"
       )
       val organization2 = Organization(
         institutionId = institutionId2.toString,
         description = "org2",
         digitalAddress = "digitalAddress2",
         id = UUID.fromString(orgPartyId2),
-        attributes = Seq("99", "100", "101")
+        attributes = Seq("99", "100", "101"),
+        fiscalCode = "123"
       )
 
       val expected = OnBoardingInfo(
@@ -271,7 +273,8 @@ class PartyProcessSpec
         description = "org1",
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
-        attributes = Seq("1", "2", "3")
+        attributes = Seq("1", "2", "3"),
+        fiscalCode = "123"
       )
 
       val expected = OnBoardingInfo(
@@ -409,7 +412,8 @@ class PartyProcessSpec
         description = "org1",
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
-        attributes = Seq.empty
+        attributes = Seq.empty,
+        fiscalCode = "123"
       )
 
       val attr1 = AttributesResponse(
@@ -559,7 +563,8 @@ class PartyProcessSpec
               institutionId = "d4r3",
               description = "test",
               digitalAddress = "big@fish.it",
-              attributes = Seq.empty
+              attributes = Seq.empty,
+              fiscalCode = "123"
             )
           )
         )
@@ -589,7 +594,8 @@ class PartyProcessSpec
         description = "org1",
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
-        attributes = Seq.empty
+        attributes = Seq.empty,
+        fiscalCode = "123"
       )
 
       val relationships =
@@ -1331,7 +1337,8 @@ class PartyProcessSpec
         description = "org1",
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
-        attributes = Seq.empty
+        attributes = Seq.empty,
+        fiscalCode = "123"
       )
 
       val file = new File("src/test/resources/fake.file")
@@ -1357,10 +1364,29 @@ class PartyProcessSpec
           email = None
         )
 
+      val relationship =
+        Relationship(
+          id = UUID.randomUUID(),
+          from = managerId,
+          to = organization1.id,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = RelationshipEnums.Role.Manager,
+          platformRole = "admin",
+          status = RelationshipEnums.Status.Active
+        )
+
       (mockPartyManagementService.retrieveOrganizationByExternalId _)
         .expects(*)
         .returning(Future.successful(organization1))
         .once()
+
+      (mockPartyManagementService.retrieveRelationships _)
+        .expects(None, Some(organization1.id), Some("admin"))
+        .returning(Future.successful(Relationships(items = Seq(relationship))))
+        .once()
+
       (mockUserRegistryService.createUser _)
         .expects(
           UserRegistryUserSeed(
@@ -1431,6 +1457,72 @@ class PartyProcessSpec
 
       response.status mustBe StatusCodes.OK
 
+    }
+
+    "not create users when no active manager exist for a relationship" in {
+      val taxCode1       = "managerTaxCode"
+      val taxCode2       = "delegateTaxCode"
+      val institutionId1 = "IST2"
+      val orgPartyId1    = "bf80fac0-2775-4646-8fcf-28e083751901"
+
+      val organization1 = Organization(
+        institutionId = institutionId1,
+        description = "org1",
+        digitalAddress = "digitalAddress1",
+        id = UUID.fromString(orgPartyId1),
+        attributes = Seq.empty,
+        fiscalCode = "123"
+      )
+
+      val managerId = UUID.randomUUID()
+      val manager =
+        User(
+          name = "manager",
+          surname = "manager",
+          taxCode = taxCode1,
+          role = "Manager",
+          platformRole = "admin",
+          email = None
+        )
+      val delegate =
+        User(
+          name = "delegate",
+          surname = "delegate",
+          taxCode = taxCode2,
+          role = "Delegate",
+          platformRole = "admin",
+          email = None
+        )
+
+      val relationship =
+        Relationship(
+          id = UUID.randomUUID(),
+          from = managerId,
+          to = organization1.id,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = RelationshipEnums.Role.Manager,
+          platformRole = "admin",
+          status = RelationshipEnums.Status.Pending
+        )
+
+      (mockPartyManagementService.retrieveOrganizationByExternalId _)
+        .expects(*)
+        .returning(Future.successful(organization1))
+        .once()
+
+      (mockPartyManagementService.retrieveRelationships _)
+        .expects(None, Some(organization1.id), Some("admin"))
+        .returning(Future.successful(Relationships(items = Seq(relationship))))
+        .once()
+
+      val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
+
+      val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
+      val response = request(data, "onboarding/users", HttpMethods.POST)
+
+      response.status mustBe StatusCodes.BadRequest
     }
   }
 
