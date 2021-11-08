@@ -345,7 +345,7 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
   override def replaceOrganizationProducts(institutionId: UUID, products: Set[String]): Future[Organization] = {
     logger.info(s"Replacing products for $institutionId")
 
-    val request = api.addOrganizationProducts(institutionId, products = Products(products))
+    val request = api.replaceOrganizationProducts(institutionId, products = Products(products))
     invoker
       .execute(request)
       .map { x =>
@@ -367,7 +367,7 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
   override def replaceRelationshipProducts(relationshipId: UUID, products: Set[String]): Future[Relationship] = {
     logger.info(s"Replacing products for relationship $relationshipId")
 
-    val request = api.addRelationshipProducts(relationshipId, products = Products(products))
+    val request = api.replaceRelationshipProducts(relationshipId, products = Products(products))
     invoker
       .execute(request)
       .map { x =>
