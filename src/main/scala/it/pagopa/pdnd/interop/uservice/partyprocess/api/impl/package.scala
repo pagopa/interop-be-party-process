@@ -58,12 +58,14 @@ package object impl extends DefaultJsonProtocol {
   final val formatter: DateTimeFormatter                                    = DateTimeFormatter.ISO_OFFSET_DATE_TIME
   implicit val tokenChecksumFormat: RootJsonFormat[TokenChecksum]           = jsonFormat1(TokenChecksum)
   implicit val problemFormat: RootJsonFormat[Problem]                       = jsonFormat3(Problem)
-  implicit val userFormat: RootJsonFormat[User]                             = jsonFormat6(User)
+  implicit val userFormat: RootJsonFormat[User]                             = jsonFormat7(User)
   implicit val onBoardingRequestFormat: RootJsonFormat[OnBoardingRequest]   = jsonFormat2(OnBoardingRequest)
   implicit val onBoardingResponseFormat: RootJsonFormat[OnBoardingResponse] = jsonFormat2(OnBoardingResponse)
   implicit val personInfoFormat: RootJsonFormat[PersonInfo]                 = jsonFormat3(PersonInfo)
-  implicit val institutionInfoFormat: RootJsonFormat[InstitutionInfo]       = jsonFormat7(InstitutionInfo)
+  implicit val onboardingDataFormat: RootJsonFormat[OnboardingData]         = jsonFormat9(OnboardingData)
+  implicit val institutionFormat: RootJsonFormat[Institution]               = jsonFormat8(Institution)
   implicit val onBoardingInfoFormat: RootJsonFormat[OnBoardingInfo]         = jsonFormat2(OnBoardingInfo)
-  implicit val relationshipInfoFormat: RootJsonFormat[RelationshipInfo]     = jsonFormat5(RelationshipInfo)
+  implicit val relationshipInfoFormat: RootJsonFormat[RelationshipInfo]     = jsonFormat6(RelationshipInfo)
+  implicit val productsFormat: RootJsonFormat[Products]                     = jsonFormat1(Products)
 
 }
