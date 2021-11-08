@@ -54,9 +54,9 @@ class PartyProcessSpec
     SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
 
   override def beforeAll(): Unit = {
-    System.setProperty("DELEGATE_PLATFORM_ROLES", "admin")
-    System.setProperty("OPERATOR_PLATFORM_ROLES", "security, api")
-    System.setProperty("MANAGER_PLATFORM_ROLES", "admin")
+    System.setProperty("DELEGATE_PRODUCT_ROLES", "admin")
+    System.setProperty("OPERATOR_PRODUCT_ROLES", "security, api")
+    System.setProperty("MANAGER_PRODUCT_ROLES", "admin")
     System.setProperty("STORAGE_TYPE", "File")
     System.setProperty("STORAGE_CONTAINER", "local")
     System.setProperty("STORAGE_ENDPOINT", "local")
@@ -124,8 +124,9 @@ class PartyProcessSpec
           from = person1.id,
           to = institutionId1,
           role = Role.Manager,
-          platformRole = "admin",
-          status = Status.Active
+          productRole = "admin",
+          status = Status.Active,
+          products = Set.empty
         )
       val relationship2 =
         Relationship(
@@ -133,8 +134,9 @@ class PartyProcessSpec
           from = person1.id,
           to = institutionId2,
           role = Role.Delegate,
-          platformRole = "admin",
-          status = Status.Active
+          productRole = "admin",
+          status = Status.Active,
+          products = Set.empty
         )
 
       val relationships = Relationships(items = Seq(relationship1, relationship2))
@@ -145,6 +147,7 @@ class PartyProcessSpec
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
         attributes = Seq("1", "2", "3"),
+        products = Set.empty,
         fiscalCode = "123"
       )
       val organization2 = Organization(
@@ -153,29 +156,34 @@ class PartyProcessSpec
         digitalAddress = "digitalAddress2",
         id = UUID.fromString(orgPartyId2),
         attributes = Seq("99", "100", "101"),
+        products = Set.empty,
         fiscalCode = "123"
       )
 
       val expected = OnBoardingInfo(
         person = PersonInfo(name = person1.name, surname = person1.surname, taxCode = person1.externalId),
         institutions = Seq(
-          InstitutionInfo(
+          OnboardingData(
             institutionId = organization1.institutionId,
             description = organization1.description,
             digitalAddress = organization1.digitalAddress,
             status = relationship1.status.toString,
             role = relationship1.role.toString,
-            platformRole = relationship1.platformRole,
-            attributes = Seq("1", "2", "3")
+            productRole = relationship1.productRole,
+            relationshipProducts = relationship1.products,
+            attributes = Seq("1", "2", "3"),
+            institutionProducts = Set.empty
           ),
-          InstitutionInfo(
+          OnboardingData(
             institutionId = organization2.institutionId,
             description = organization2.description,
             digitalAddress = organization2.digitalAddress,
             status = relationship2.status.toString,
             role = relationship2.role.toString,
-            platformRole = relationship2.platformRole,
-            attributes = Seq("99", "100", "101")
+            relationshipProducts = relationship2.products,
+            productRole = relationship2.productRole,
+            attributes = Seq("99", "100", "101"),
+            institutionProducts = Set.empty
           )
         )
       )
@@ -262,8 +270,9 @@ class PartyProcessSpec
           from = person1.id,
           to = institutionId1,
           role = Role.Manager,
-          platformRole = "admin",
-          status = Status.Active
+          productRole = "admin",
+          status = Status.Active,
+          products = Set.empty
         )
 
       val relationships = Relationships(items = Seq(relationship1))
@@ -274,20 +283,23 @@ class PartyProcessSpec
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
         attributes = Seq("1", "2", "3"),
+        products = Set.empty,
         fiscalCode = "123"
       )
 
       val expected = OnBoardingInfo(
         person = PersonInfo(name = person1.name, surname = person1.surname, taxCode = person1.externalId),
         institutions = Seq(
-          InstitutionInfo(
+          OnboardingData(
             institutionId = organization1.institutionId,
             description = organization1.description,
             digitalAddress = organization1.digitalAddress,
             status = relationship1.status.toString,
             role = relationship1.role.toString,
-            platformRole = relationship1.platformRole,
-            attributes = Seq("1", "2", "3")
+            productRole = relationship1.productRole,
+            attributes = Seq("1", "2", "3"),
+            institutionProducts = Set.empty,
+            relationshipProducts = Set.empty
           )
         )
       )
@@ -413,6 +425,7 @@ class PartyProcessSpec
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
         attributes = Seq.empty,
+        products = Set.empty,
         fiscalCode = "123"
       )
 
@@ -440,8 +453,9 @@ class PartyProcessSpec
           surname = "manager",
           taxCode = taxCode1,
           role = "Manager",
-          platformRole = "admin",
-          email = None
+          productRole = "admin",
+          email = None,
+          products = Set.empty
         )
       val delegate =
         User(
@@ -449,8 +463,9 @@ class PartyProcessSpec
           surname = "delegate",
           taxCode = taxCode2,
           role = "Delegate",
-          platformRole = "admin",
-          email = None
+          productRole = "admin",
+          email = None,
+          products = Set.empty
         )
 
       (mockPartyRegistryService.getInstitution _).expects(*).returning(Future.successful(institution1)).once()
@@ -517,7 +532,10 @@ class PartyProcessSpec
         .returning(Future.successful(Person(delegateId)))
         .once()
 
-      (mockPartyManagementService.createRelationship _).expects(*, *, *, *).returning(Future.successful(())).repeat(2)
+      (mockPartyManagementService.createRelationship _)
+        .expects(*, *, *, *, *)
+        .returning(Future.successful(()))
+        .repeat(2)
       (mockAttributeRegistryService.createAttribute _).expects(*, *, *).returning(Future.successful(attr1)).once()
       (mockPdfCreator.create _).expects(*, *).returning(Future.successful((file, "hash"))).once()
       (mockPartyManagementService.createToken _).expects(*, *).returning(Future.successful(TokenText("token"))).once()
@@ -542,16 +560,18 @@ class PartyProcessSpec
         surname = "operator1",
         taxCode = taxCode1,
         role = "Operator",
-        platformRole = "security",
-        email = Some("operat@ore.it")
+        productRole = "security",
+        email = Some("operat@ore.it"),
+        products = Set("PDND")
       )
       val operator2 = User(
         name = "operator2",
         surname = "operator2",
         taxCode = taxCode2,
         role = "Operator",
-        platformRole = "security",
-        email = None
+        productRole = "security",
+        email = None,
+        products = Set("PDND")
       )
 
       (mockPartyManagementService.retrieveOrganizationByExternalId _)
@@ -564,6 +584,7 @@ class PartyProcessSpec
               description = "test",
               digitalAddress = "big@fish.it",
               attributes = Seq.empty,
+              products = Set.empty,
               fiscalCode = "123"
             )
           )
@@ -595,6 +616,7 @@ class PartyProcessSpec
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
         attributes = Seq.empty,
+        products = Set.empty,
         fiscalCode = "123"
       )
 
@@ -606,8 +628,9 @@ class PartyProcessSpec
               from = UUID.fromString(personPartyId1),
               to = institutionId1,
               role = Role.Manager,
-              platformRole = "admin",
-              status = Status.Active
+              productRole = "admin",
+              status = Status.Active,
+              products = Set.empty
             )
           )
         )
@@ -620,16 +643,18 @@ class PartyProcessSpec
         surname = "operator1",
         taxCode = taxCode1,
         role = "Operator",
-        platformRole = "security",
-        email = Some("mario@ros.si")
+        productRole = "security",
+        email = Some("mario@ros.si"),
+        products = Set("PDND")
       )
       val operator2 = User(
         name = "operator2",
         surname = "operator2",
         taxCode = taxCode2,
         role = "Operator",
-        platformRole = "security",
-        email = None
+        productRole = "security",
+        email = None,
+        products = Set("PDND")
       )
 
       (mockPartyManagementService.retrieveOrganizationByExternalId _)
@@ -697,7 +722,10 @@ class PartyProcessSpec
         .returning(Future.successful(Person(operatorId2)))
         .once()
 
-      (mockPartyManagementService.createRelationship _).expects(*, *, *, *).returning(Future.successful(())).repeat(2)
+      (mockPartyManagementService.createRelationship _)
+        .expects(*, *, *, *, *)
+        .returning(Future.successful(()))
+        .repeat(2)
 
       val req = OnBoardingRequest(users = Seq(operator1, operator2), institutionId = institutionId1.toString)
 
@@ -772,8 +800,9 @@ class PartyProcessSpec
           from = userId,
           to = institutionId,
           role = Role.Manager,
-          platformRole = "admin",
-          status = Status.Active
+          productRole = "admin",
+          status = Status.Active,
+          products = Set.empty
         )
       val relationship2 =
         Relationship(
@@ -781,8 +810,9 @@ class PartyProcessSpec
           from = adminIdentifier,
           to = institutionId,
           role = Role.Delegate,
-          platformRole = "admin",
-          status = Status.Active
+          productRole = "admin",
+          status = Status.Active,
+          products = Set.empty
         )
 
       val relationship3 =
@@ -791,8 +821,9 @@ class PartyProcessSpec
           from = userId3,
           to = institutionId,
           role = Role.Operator,
-          platformRole = "security",
-          status = Status.Active
+          productRole = "security",
+          status = Status.Active,
+          products = Set("PDND")
         )
 
       val relationship4 =
@@ -801,8 +832,9 @@ class PartyProcessSpec
           from = userId4,
           to = institutionId,
           role = Role.Operator,
-          platformRole = "api",
-          status = Status.Active
+          productRole = "api",
+          status = Status.Active,
+          products = Set("PDND")
         )
 
       val relationships = Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
@@ -852,34 +884,38 @@ class PartyProcessSpec
         id = relationshipId1,
         from = userId,
         role = "Manager",
-        platformRole = "admin",
-        status = "active"
+        productRole = "admin",
+        status = "active",
+        products = Set.empty
       ),
       RelationshipInfo(
         id = relationshipId2,
         from = adminIdentifier,
         role = "Delegate",
-        platformRole = "admin",
-        status = "active"
+        productRole = "admin",
+        status = "active",
+        products = Set.empty
       ),
       RelationshipInfo(
         id = relationshipId3,
         from = userId3,
         role = "Operator",
-        platformRole = "security",
-        status = "active"
+        productRole = "security",
+        status = "active",
+        products = Set("PDND")
       ),
       RelationshipInfo(
         id = relationshipId4,
         from = userId4,
         role = "Operator",
-        platformRole = "api",
-        status = "active"
+        productRole = "api",
+        status = "active",
+        products = Set("PDND")
       ))
 
     }
 
-    "retrieve all the relationships of a specific institution with filter by platformRole" in {
+    "retrieve all the relationships of a specific institution with filter by productRole" in {
       val userId          = UUID.randomUUID()
       val adminIdentifier = UUID.randomUUID()
       val userId3         = UUID.randomUUID()
@@ -897,8 +933,9 @@ class PartyProcessSpec
           from = userId,
           to = institutionId,
           role = Role.Manager,
-          platformRole = "admin",
-          status = Status.Active
+          productRole = "admin",
+          status = Status.Active,
+          products = Set.empty
         )
       val relationship2 =
         Relationship(
@@ -906,8 +943,9 @@ class PartyProcessSpec
           from = adminIdentifier,
           to = institutionId,
           role = Role.Delegate,
-          platformRole = "admin",
-          status = Status.Active
+          productRole = "admin",
+          status = Status.Active,
+          products = Set.empty
         )
 
       val relationship3 =
@@ -916,8 +954,9 @@ class PartyProcessSpec
           from = userId3,
           to = institutionId,
           role = Role.Operator,
-          platformRole = "security",
-          status = Status.Active
+          productRole = "security",
+          status = Status.Active,
+          products = Set("PDND")
         )
 
       val relationship4 =
@@ -926,8 +965,9 @@ class PartyProcessSpec
           from = userId4,
           to = institutionId,
           role = Role.Operator,
-          platformRole = "api",
-          status = Status.Active
+          productRole = "api",
+          status = Status.Active,
+          products = Set("PDND")
         )
 
       val relationships = Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
@@ -964,7 +1004,7 @@ class PartyProcessSpec
         Http()
           .singleRequest(
             HttpRequest(
-              uri = s"$url/institutions/$institutionId/relationships?platformRoles=security,api",
+              uri = s"$url/institutions/$institutionId/relationships?productRoles=security,api",
               method = HttpMethods.GET,
               headers = authorization
             )
@@ -977,15 +1017,17 @@ class PartyProcessSpec
         id = relationshipId3,
         from = userId3,
         role = "Operator",
-        platformRole = "security",
-        status = "active"
+        productRole = "security",
+        status = "active",
+        products = Set("PDND")
       ),
       RelationshipInfo(
         id = relationshipId4,
         from = userId4,
         role = "Operator",
-        platformRole = "api",
-        status = "active"
+        productRole = "api",
+        status = "active",
+        products = Set("PDND")
       ))
 
     }
@@ -1008,8 +1050,9 @@ class PartyProcessSpec
           from = userId,
           to = institutionId,
           role = Role.Manager,
-          platformRole = "admin",
-          status = Status.Active
+          productRole = "admin",
+          status = Status.Active,
+          products = Set.empty
         )
       val relationship2 =
         Relationship(
@@ -1017,8 +1060,9 @@ class PartyProcessSpec
           from = adminIdentifier,
           to = institutionId,
           role = Role.Delegate,
-          platformRole = "admin",
-          status = Status.Active
+          productRole = "admin",
+          status = Status.Active,
+          products = Set.empty
         )
 
       val relationship3 =
@@ -1027,8 +1071,9 @@ class PartyProcessSpec
           from = userId3,
           to = institutionId,
           role = Role.Operator,
-          platformRole = "security",
-          status = Status.Active
+          productRole = "security",
+          status = Status.Active,
+          products = Set("PDND")
         )
 
       val relationship4 =
@@ -1037,8 +1082,9 @@ class PartyProcessSpec
           from = userId4,
           to = institutionId,
           role = Role.Operator,
-          platformRole = "api",
-          status = Status.Active
+          productRole = "api",
+          status = Status.Active,
+          products = Set("PDND")
         )
 
       val relationships         = Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
@@ -1090,8 +1136,9 @@ class PartyProcessSpec
           id = relationshipId3,
           from = userId3,
           role = "Operator",
-          platformRole = "security",
-          status = "active"
+          productRole = "security",
+          status = "active",
+          products = Set("PDND")
         )
     }
   }
@@ -1101,7 +1148,7 @@ class PartyProcessSpec
 
       val userId         = UUID.randomUUID()
       val institutionId  = UUID.randomUUID()
-      val platformRole   = "platformRole"
+      val productRole    = "productRole"
       val relationshipId = UUID.randomUUID()
 
       val relationship =
@@ -1113,8 +1160,9 @@ class PartyProcessSpec
           fileName = None,
           contentType = None,
           role = RelationshipEnums.Role.Operator,
-          platformRole = platformRole,
-          status = RelationshipEnums.Status.Suspended
+          productRole = productRole,
+          status = RelationshipEnums.Status.Suspended,
+          products = Set.empty
         )
 
       (mockPartyManagementService.getRelationshipById _)
@@ -1143,7 +1191,7 @@ class PartyProcessSpec
     "fail if relationship is not Suspended" in {
 
       val fromId         = UUID.randomUUID()
-      val platformRole   = "platformRole"
+      val productRole    = "productRole"
       val relationshipId = UUID.randomUUID()
 
       val relationships =
@@ -1155,8 +1203,9 @@ class PartyProcessSpec
           fileName = None,
           contentType = None,
           role = RelationshipEnums.Role.Operator,
-          platformRole = platformRole,
-          status = RelationshipEnums.Status.Pending
+          productRole = productRole,
+          status = RelationshipEnums.Status.Pending,
+          products = Set.empty
         )
 
       (mockPartyManagementService.getRelationshipById _)
@@ -1184,7 +1233,7 @@ class PartyProcessSpec
     "succeed" in {
 
       val fromId         = UUID.randomUUID()
-      val platformRole   = "platformRole"
+      val productRole    = "productRole"
       val relationshipId = UUID.randomUUID()
 
       val relationship =
@@ -1196,8 +1245,9 @@ class PartyProcessSpec
           fileName = None,
           contentType = None,
           role = RelationshipEnums.Role.Operator,
-          platformRole = platformRole,
-          status = RelationshipEnums.Status.Active
+          productRole = productRole,
+          status = RelationshipEnums.Status.Active,
+          products = Set.empty
         )
 
       (mockPartyManagementService.getRelationshipById _)
@@ -1226,7 +1276,7 @@ class PartyProcessSpec
     "fail if relationship is not Active" in {
 
       val fromId         = UUID.randomUUID()
-      val platformRole   = "platformRole"
+      val productRole    = "productRole"
       val relationshipId = UUID.randomUUID()
 
       val relationship =
@@ -1238,8 +1288,9 @@ class PartyProcessSpec
           fileName = None,
           contentType = None,
           role = RelationshipEnums.Role.Operator,
-          platformRole = platformRole,
-          status = RelationshipEnums.Status.Pending
+          productRole = productRole,
+          status = RelationshipEnums.Status.Pending,
+          products = Set.empty
         )
 
       (mockPartyManagementService.getRelationshipById _)
@@ -1338,6 +1389,7 @@ class PartyProcessSpec
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
         attributes = Seq.empty,
+        products = Set.empty,
         fiscalCode = "123"
       )
 
@@ -1351,7 +1403,8 @@ class PartyProcessSpec
           surname = "manager",
           taxCode = taxCode1,
           role = "Manager",
-          platformRole = "admin",
+          productRole = "admin",
+          products = Set.empty,
           email = None
         )
       val delegate =
@@ -1360,7 +1413,8 @@ class PartyProcessSpec
           surname = "delegate",
           taxCode = taxCode2,
           role = "Delegate",
-          platformRole = "admin",
+          productRole = "admin",
+          products = Set.empty,
           email = None
         )
 
@@ -1373,7 +1427,8 @@ class PartyProcessSpec
           fileName = None,
           contentType = None,
           role = RelationshipEnums.Role.Manager,
-          platformRole = "admin",
+          productRole = "admin",
+          products = Set.empty,
           status = RelationshipEnums.Status.Active
         )
 
@@ -1445,7 +1500,10 @@ class PartyProcessSpec
         .returning(Future.successful(Person(delegateId)))
         .once()
 
-      (mockPartyManagementService.createRelationship _).expects(*, *, *, *).returning(Future.successful(())).repeat(2)
+      (mockPartyManagementService.createRelationship _)
+        .expects(*, *, *, *, *)
+        .returning(Future.successful(()))
+        .repeat(2)
       (mockPdfCreator.create _).expects(*, *).returning(Future.successful((file, "hash"))).once()
       (mockPartyManagementService.createToken _).expects(*, *).returning(Future.successful(TokenText("token"))).once()
       (mockMailer.send _).expects(*, *, *).returning(Future.successful(())).once()
@@ -1471,6 +1529,7 @@ class PartyProcessSpec
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
         attributes = Seq.empty,
+        products = Set.empty,
         fiscalCode = "123"
       )
 
@@ -1481,7 +1540,8 @@ class PartyProcessSpec
           surname = "manager",
           taxCode = taxCode1,
           role = "Manager",
-          platformRole = "admin",
+          productRole = "admin",
+          products = Set.empty,
           email = None
         )
       val delegate =
@@ -1490,7 +1550,8 @@ class PartyProcessSpec
           surname = "delegate",
           taxCode = taxCode2,
           role = "Delegate",
-          platformRole = "admin",
+          productRole = "admin",
+          products = Set.empty,
           email = None
         )
 
@@ -1503,7 +1564,8 @@ class PartyProcessSpec
           fileName = None,
           contentType = None,
           role = RelationshipEnums.Role.Manager,
-          platformRole = "admin",
+          productRole = "admin",
+          products = Set.empty,
           status = RelationshipEnums.Status.Pending
         )
 

@@ -22,7 +22,7 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   Problem => _
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApiService
-import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration.platformRolesConfiguration
+import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration.productRolesConfiguration
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.{OptionOps, StringOps, TryOps}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{ApplicationConfiguration, Digester}
 import it.pagopa.pdnd.interop.uservice.partyprocess.error._
@@ -74,20 +74,22 @@ class ProcessApiServiceImpl(
       personInfo = PersonInfo(user.name, user.surname, user.externalId)
       relationships <- partyManagementService.retrieveRelationships(Some(subjectUUID), institutionUUID, None)
       organizations <- Future.traverse(relationships.items)(r =>
-        getOrganization(r.to).map(o => (o, r.status, r.role, r.platformRole))
+        getOrganization(r.to).map(o => (o, r.status, r.role, r.products, r.productRole))
       )
-      institutionsInfo = organizations.map { case (o, status, role, platformRole) =>
-        InstitutionInfo(
+      onboardingData = organizations.map { case (o, status, role, products, productRole) =>
+        OnboardingData(
           o.institutionId,
           o.description,
           o.digitalAddress,
           status.toString,
           role.toString,
-          platformRole,
-          attributes = o.attributes
+          productRole = productRole,
+          relationshipProducts = products,
+          attributes = o.attributes,
+          institutionProducts = o.products.toSet
         )
       }
-    } yield OnBoardingInfo(personInfo, institutionsInfo)
+    } yield OnBoardingInfo(personInfo, onboardingData)
 
     onComplete(result) {
       case Success(res) => getOnBoardingInfo200(res)
@@ -124,10 +126,10 @@ class ProcessApiServiceImpl(
       validUsers       <- verifyUsersByRoles(onBoardingRequest.users, Set(Manager.toString, Delegate.toString))
       personsWithRoles <- Future.traverse(validUsers)(addUser)
       _ <- Future.traverse(personsWithRoles)(pr =>
-        partyManagementService.createRelationship(pr._1.id, organization.id, pr._2, pr._3)
+        partyManagementService.createRelationship(pr._1.id, organization.id, pr._2, pr._3, pr._4)
       )
-      relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, platformRole) =>
-        createRelationship(organization.id, person.id, role, platformRole)
+      relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, product, productRole) =>
+        createRelationship(organization.id, person.id, role, product, productRole)
       })
       pdf   <- pdfCreator.create(validUsers, organization)
       token <- partyManagementService.createToken(relationships, pdf._2)
@@ -164,7 +166,7 @@ class ProcessApiServiceImpl(
       validUsers <- verifyUsersByRoles(onBoardingRequest.users, Set(Operator.toString))
       operators  <- Future.traverse(validUsers)(addUser)
       _ <- Future.traverse(operators)(pr =>
-        partyManagementService.createRelationship(pr._1.id, organization.id, pr._2, pr._3)
+        partyManagementService.createRelationship(pr._1.id, organization.id, pr._2, pr._3, pr._4)
       )
       _ = logger.info(s"Operators created ${operators.map(_.toString).mkString(",")}")
     } yield ()
@@ -244,23 +246,24 @@ class ProcessApiServiceImpl(
       .toTry
   }
 
-  private def addUser(user: User): Future[(UserRegistryUser, String, String)] = {
+  private def addUser(user: User): Future[(UserRegistryUser, String, Set[String], String)] = {
     logger.info(s"Adding user ${user.toString}")
     createPerson(user)
       .recoverWith {
         // TODO Once errors are defined, we should check that error is "person already exists"
         case _ => userRegistryManagementService.getUserByExternalId(user.taxCode)
       }
-      .map((_, user.role, user.platformRole))
+      .map((_, user.role, user.products, user.productRole))
   }
 
   private def createRelationship(
     organizationId: UUID,
     personId: UUID,
     role: String,
-    platformRole: String
+    products: Set[String],
+    productRole: String
   ): RelationshipSeed =
-    RelationshipSeed(personId, organizationId, RelationshipSeedEnums.Role.withName(role), platformRole)
+    RelationshipSeed(personId, organizationId, RelationshipSeedEnums.Role.withName(role), products, productRole)
 
   private def createPerson(user: User): Future[UserRegistryUser] =
     for {
@@ -301,8 +304,9 @@ class ProcessApiServiceImpl(
         institutionId = institution.id,
         description = institution.description,
         digitalAddress = institution.digitalAddress.getOrElse(""), // TODO Must be non optional
+        fiscalCode = institution.taxCode.getOrElse(""),
         attributes = attributes.attributes.filter(attr => institution.category == attr.code).map(_.id),
-        fiscalCode = institution.taxCode.getOrElse("")
+        products = Set.empty
       )
       organization <- partyManagementService.createOrganization(seed)
       _ = logger.info(s"createOrganization ${organization.institutionId}")
@@ -334,9 +338,9 @@ class ProcessApiServiceImpl(
   def filterFoundRelationshipsByCurrentUser(
     currentUserId: UUID,
     currentUserRole: String
-  )(foundRelationships: Relationships, platformRolesFilter: Option[String]): Future[Relationships] = Try {
-    val filterRoles = platformRolesFilter.getOrElse("").split(",").map(_.trim).toList.filterNot(entry => entry == "")
-    val isUserAdmin = platformRolesConfiguration.manager.roles.contains(currentUserRole)
+  )(foundRelationships: Relationships, productRolesFilter: Option[String]): Future[Relationships] = Try {
+    val filterRoles = productRolesFilter.getOrElse("").split(",").map(_.trim).toList.filterNot(entry => entry == "")
+    val isUserAdmin = productRolesConfiguration.manager.roles.contains(currentUserRole)
 
     val filteredRelationships = if (!isUserAdmin) {
       foundRelationships.copy(items = foundRelationships.items.filter(r => r.from == currentUserId))
@@ -347,16 +351,14 @@ class ProcessApiServiceImpl(
     filterRoles match {
       case Nil => filteredRelationships
       case _ =>
-        filteredRelationships.copy(items =
-          filteredRelationships.items.filter(r => filterRoles.contains(r.platformRole))
-        )
+        filteredRelationships.copy(items = filteredRelationships.items.filter(r => filterRoles.contains(r.productRole)))
     }
   }.toFuture
 
   /** Code: 200, Message: successful operation, DataType: RelationshipInfo
     * Code: 400, Message: Invalid institution id supplied, DataType: Problem
     */
-  override def getUserInstitutionRelationships(institutionId: String, platformRoles: Option[String])(implicit
+  override def getUserInstitutionRelationships(institutionId: String, productRoles: Option[String])(implicit
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerRelationshipInfoarray: ToEntityMarshaller[Seq[RelationshipInfo]],
     contexts: Seq[(String, String)]
@@ -367,12 +369,12 @@ class ProcessApiServiceImpl(
       institutionUUID <- Try { UUID.fromString(institutionId) }.toFuture
       relationships   <- partyManagementService.retrieveRelationships(Some(subjectUUID), Some(institutionUUID), None)
       currentUserRoleInInstitution <- relationships.items.headOption
-        .map(_.platformRole)
+        .map(_.productRole)
         .toFuture(RelationshipNotFound(institutionUUID, subjectUUID, ""))
       institutionIdRelationships <- partyManagementService.retrieveRelationships(None, Some(institutionUUID), None)
       filteredRelationships <- filterFoundRelationshipsByCurrentUser(subjectUUID, currentUserRoleInInstitution)(
         institutionIdRelationships,
-        platformRoles
+        productRoles
       )
       response = relationshipsToRelationshipsResponse(filteredRelationships)
     } yield response
@@ -505,7 +507,8 @@ class ProcessApiServiceImpl(
       id = relationship.id,
       from = relationship.from,
       role = relationship.role.toString,
-      platformRole = relationship.platformRole,
+      products = relationship.products,
+      productRole = relationship.productRole,
       // TODO This conversion is temporary, while we implement a naming convention for enums
       status = relationship.status.toString.toLowerCase
     )
@@ -576,6 +579,62 @@ class ProcessApiServiceImpl(
     }
   }
 
+  /** Code: 200, Message: successful operation, DataType: Institution
+    * Code: 404, Message: Organization not found, DataType: Problem
+    */
+  override def replaceInstitutionProducts(institutionId: String, products: Products)(implicit
+    toEntityMarshallerInstitution: ToEntityMarshaller[Institution],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    contexts: Seq[(String, String)]
+  ): Route = {
+    val result = for {
+      _               <- getCallerSubjectIdentifier(contexts)
+      institutionUUID <- Try { UUID.fromString(institutionId) }.toFuture
+      organization    <- partyManagementService.replaceOrganizationProducts(institutionUUID, products.products)
+    } yield Institution(
+      id = organization.id,
+      institutionId = organization.institutionId,
+      code = organization.code,
+      description = organization.description,
+      digitalAddress = organization.digitalAddress,
+      fiscalCode = organization.fiscalCode,
+      attributes = organization.attributes,
+      products = organization.products
+    )
+
+    onComplete(result) {
+      case Success(institution) => replaceInstitutionProducts200(institution)
+      case Failure(ex: SubjectValidationError) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 401, "Unauthorized")
+        complete((401, errorResponse))
+      case Failure(ex) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        replaceInstitutionProducts404(errorResponse)
+    }
+  }
+
+  override def replaceRelationshipProducts(relationshipId: String, products: Products)(implicit
+    toEntityMarshallerInstitution: ToEntityMarshaller[RelationshipInfo],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    contexts: Seq[(String, String)]
+  ): Route = {
+    val result = for {
+      _                <- getCallerSubjectIdentifier(contexts)
+      relationshipUUID <- Try { UUID.fromString(relationshipId) }.toFuture
+      relationship     <- partyManagementService.replaceRelationshipProducts(relationshipUUID, products.products)
+    } yield relationshipToRelationshipInfo(relationship)
+
+    onComplete(result) {
+      case Success(relationship) => replaceRelationshipProducts200(relationship)
+      case Failure(ex: SubjectValidationError) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 401, "Unauthorized")
+        complete((401, errorResponse))
+      case Failure(ex) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        replaceRelationshipProducts404(errorResponse)
+    }
+  }
+
   /** Code: 201, Message: successful operation, DataType: OnBoardingResponse
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
@@ -589,16 +648,16 @@ class ProcessApiServiceImpl(
       organizationRelationships <- partyManagementService.retrieveRelationships(
         None,
         Some(organization.id),
-        platformRolesConfiguration.manager.roles.headOption
+        productRolesConfiguration.manager.roles.headOption
       )
       _                <- hasAnExistingManager(organizationRelationships)
       validUsers       <- verifyUsersByRoles(onBoardingRequest.users, Set(Manager.toString, Delegate.toString))
       personsWithRoles <- Future.traverse(validUsers)(addUser)
       _ <- Future.traverse(personsWithRoles)(pr =>
-        partyManagementService.createRelationship(pr._1.id, organization.id, pr._2, pr._3)
+        partyManagementService.createRelationship(pr._1.id, organization.id, pr._2, pr._3, pr._4)
       )
-      relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, platformRole) =>
-        createRelationship(organization.id, person.id, role, platformRole)
+      relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, products, productRole) =>
+        createRelationship(organization.id, person.id, role, products, productRole)
       })
       pdf   <- pdfCreator.create(validUsers, organization)
       token <- partyManagementService.createToken(relationships, pdf._2)

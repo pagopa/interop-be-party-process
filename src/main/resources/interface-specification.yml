@@ -158,7 +158,7 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: platformRoles
+        - name: productRoles
           description: comma separated sequence of platform roles to filter the response with
           in: query
           schema:
@@ -176,6 +176,42 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /institutions/{institutionId}/products:
+    post:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: institution products replacement
+      description: replaces institution's products with the set passed as payload
+      operationId: replaceInstitutionProducts
+      parameters:
+        - name: institutionId
+          in: path
+          description: The identifier of the institution
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Products'
+      responses:
+          '200':
+            description: successful operation
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Institution'
+          '404':
+            description: Institution not found
+            content:
+              application/problem+json:
+                schema:
+                  $ref: '#/components/schemas/Problem'
   /relationships/{relationshipId}:
     get:
       security:
@@ -307,6 +343,42 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /relationships/{relationshipId}/products:
+    post:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: relationship products replacement
+      description: replaces relationships's products with the set passed as payload
+      operationId: replaceRelationshipProducts
+      parameters:
+        - name: relationshipId
+          in: path
+          description: The identifier of the relationship
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Products'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelationshipInfo'
+        '404':
+          description: Relationship not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   '/onboarding/complete/{token}':
     post:
       security:
@@ -434,14 +506,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PlatformRolesResponse'
+                $ref: '#/components/schemas/ProductRolesResponse'
         '400':
           description: Bad Request
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-      operationId: getPlatformRoles
+      operationId: getProductRoles
       description: Returns all the available bindings between roles and platform roles.
 components:
   schemas:
@@ -484,7 +556,13 @@ components:
             - Manager
             - Delegate
             - Operator
-        platformRole:
+        products:
+          type: array
+          description: set of products bound to this relationship
+          uniqueItems: true
+          items:
+            type: string
+        productRole:
           type: string
           description: 'user role in the application context (e.g.: administrator, security user). This MUST belong to the configured set of application specific platform roles'
         status:
@@ -498,7 +576,8 @@ components:
         - id
         - from
         - role
-        - platformRole
+        - products
+        - productRole
         - status
     RelationshipsResponse:
       type: array
@@ -520,7 +599,13 @@ components:
             - Manager
             - Delegate
             - Operator
-        platformRole:
+        products:
+          type: array
+          description: set of products bound to this user
+          uniqueItems: true
+          items:
+            type: string
+        productRole:
           type: string
       additionalProperties: false
       required:
@@ -528,7 +613,8 @@ components:
         - surname
         - taxCode
         - role
-        - platformRole
+        - products
+        - productRole
     PersonInfo:
       properties:
         name:
@@ -542,7 +628,7 @@ components:
         - name
         - surname
         - taxCode
-    InstitutionInfo:
+    OnboardingData:
       properties:
         institutionId:
           type: string
@@ -554,8 +640,20 @@ components:
           type: string
         role:
           type: string
-        platformRole:
+        relationshipProducts:
+          type: array
+          uniqueItems: true
+          description: set of products bound to this relationship
+          items:
+            type: string
+        productRole:
           type: string
+        institutionProducts:
+          type: array
+          uniqueItems: true
+          description: set of products bound to this institution
+          items:
+            type: string
         attributes:
           type: array
           description: certified attributes bound to this institution
@@ -568,8 +666,10 @@ components:
         - digitalAddress
         - status
         - role
-        - platformRole
+        - relationshipProducts
+        - productRole
         - attributes
+        - institutionProducts
     OnBoardingInfo:
       properties:
         person:
@@ -577,13 +677,67 @@ components:
         institutions:
           type: array
           items:
-            $ref: '#/components/schemas/InstitutionInfo'
+            $ref: '#/components/schemas/OnboardingData'
       additionalProperties: false
       required:
         - person
         - institutions
-    PlatformRolesResponse:
-      title: PlatformRolesResponse
+    Institution:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 97c0f418-bcb3-48d4-825a-fe8b29ae68e5
+        institutionId:
+          description: DN
+          example: 'aoo=c_f205,o=c_f205,c=it'
+          type: string
+        code:
+          description: an accessory code (e.g. codice ipa)
+          type: string
+        description:
+          type: string
+          example: AGENCY X
+        digitalAddress:
+          example: email@pec.mail.org
+          format: email
+          type: string
+        fiscalCode:
+          description: organization fiscal code
+          type: string
+        attributes:
+          type: array
+          items:
+            type: string
+        products:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            description: product names associated to this organization
+      required:
+        - id
+        - institutionId
+        - description
+        - digitalAddress
+        - fiscalCode
+        - attributes
+        - products
+      additionalProperties: false
+    Products:
+      type: object
+      required:
+        - products
+      properties:
+        products:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: set of products to define for this institution
+    ProductRolesResponse:
+      title: ProductRolesResponse
       type: object
       description: This payload contains the currently defined bindings between roles and platform roles.
       properties:
