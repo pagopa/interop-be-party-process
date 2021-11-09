@@ -8,7 +8,6 @@ import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.{Delegate, Manager, Operator}
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Status.Pending
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   Organization,
   OrganizationSeed,
@@ -155,13 +154,13 @@ class ProcessApiServiceImpl(
   /** Code: 201, Message: successful operation
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
-  override def createOperators(
+  override def onboardingOperators(
     onBoardingRequest: OnBoardingRequest
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
     val result: Future[Unit] = for {
       organization  <- partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)
       relationships <- partyManagementService.retrieveRelationships(None, Some(organization.id), None)
-      _             <- existsAManagerActive(relationships)
+      _             <- existsAnOnboardedManager(relationships)
 
       validUsers <- verifyUsersByRoles(onBoardingRequest.users, Set(Operator.toString))
       operators  <- Future.traverse(validUsers)(addUser)
@@ -172,10 +171,10 @@ class ProcessApiServiceImpl(
     } yield ()
 
     onComplete(result) {
-      case Success(_) => createOperators201
+      case Success(_) => onboardingOperators201
       case Failure(ex) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
-        createOperators400(errorResponse)
+        onboardingOperators400(errorResponse)
     }
   }
 
@@ -233,15 +232,15 @@ class ProcessApiServiceImpl(
     )
   }
 
-  private def existsAManagerActive(relationships: Relationships): Future[Unit] = Future.fromTry {
+  private def existsAnOnboardedManager(relationships: Relationships): Future[Unit] = Future.fromTry {
     Either
       .cond(
         relationships.items.exists(rl =>
           rl.role == RelationshipEnums.Role.Manager &&
-            rl.status == RelationshipEnums.Status.Active
+            (rl.status != RelationshipEnums.Status.Pending) //TODO add Rejected also
         ),
         (),
-        new RuntimeException("No active legals for this institution ")
+        new RuntimeException("No onboarded managers for this institution.")
       )
       .toTry
   }
@@ -644,15 +643,11 @@ class ProcessApiServiceImpl(
     contexts: Seq[(String, String)]
   ): Route = {
     val result: Future[OnBoardingResponse] = for {
-      organization <- partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)
-      organizationRelationships <- partyManagementService.retrieveRelationships(
-        None,
-        Some(organization.id),
-        productRolesConfiguration.manager.roles.headOption
-      )
-      _                <- hasAnExistingManager(organizationRelationships)
-      validUsers       <- verifyUsersByRoles(onBoardingRequest.users, Set(Manager.toString, Delegate.toString))
-      personsWithRoles <- Future.traverse(validUsers)(addUser)
+      organization              <- partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)
+      organizationRelationships <- partyManagementService.retrieveRelationships(None, Some(organization.id), None)
+      _                         <- existsAnOnboardedManager(organizationRelationships)
+      validUsers                <- verifyUsersByRoles(onBoardingRequest.users, Set(Manager.toString, Delegate.toString))
+      personsWithRoles          <- Future.traverse(validUsers)(addUser)
       _ <- Future.traverse(personsWithRoles)(pr =>
         partyManagementService.createRelationship(pr._1.id, organization.id, pr._2, pr._3, pr._4)
       )
@@ -679,15 +674,5 @@ class ProcessApiServiceImpl(
   }
 
   //TODO add rejected also
-  def hasAnExistingManager(organizationRelationships: Relationships): Future[Boolean] = {
-    val noManagers =
-      organizationRelationships.items
-        .filter(r => r.role == Manager && !Set(Pending.toString).contains(r.status.toString))
-        .isEmpty
 
-    if (noManagers)
-      Future.failed[Boolean](new RuntimeException("This organization does not have a Manager"))
-    else
-      Future.successful(true)
-  }
 }
