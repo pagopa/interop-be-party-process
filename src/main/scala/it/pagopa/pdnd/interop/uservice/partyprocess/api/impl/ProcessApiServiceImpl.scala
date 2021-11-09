@@ -334,12 +334,14 @@ class ProcessApiServiceImpl(
   /*
    currentUserRole is calculated over the relationship of the JWT subject with the required institution id.
    */
-  def filterFoundRelationshipsByCurrentUser(
-    currentUserId: UUID,
-    currentUserRole: String
-  )(foundRelationships: Relationships, productRolesFilter: Option[String]): Future[Relationships] = Try {
-    val filterRoles = productRolesFilter.getOrElse("").split(",").map(_.trim).toList.filterNot(entry => entry == "")
-    val isUserAdmin = productRolesConfiguration.manager.roles.contains(currentUserRole)
+  def filterFoundRelationshipsByCurrentUser(currentUserId: UUID, currentUserRole: String)(
+    foundRelationships: Relationships,
+    productRolesFilter: Option[String],
+    productsFilter: Option[String]
+  ): Future[Relationships] = Try {
+    val productRolesFilterList = productRolesFilter.getOrElse("").parseCommaSeparated
+    val productsFilterList     = productsFilter.getOrElse("").parseCommaSeparated
+    val isUserAdmin            = productRolesConfiguration.manager.roles.contains(currentUserRole)
 
     val filteredRelationships = if (!isUserAdmin) {
       foundRelationships.copy(items = foundRelationships.items.filter(r => r.from == currentUserId))
@@ -347,17 +349,26 @@ class ProcessApiServiceImpl(
       foundRelationships
     }
 
-    filterRoles match {
-      case Nil => filteredRelationships
-      case _ =>
-        filteredRelationships.copy(items = filteredRelationships.items.filter(r => filterRoles.contains(r.productRole)))
+    val filteredItems = (productRolesFilterList, productsFilterList) match {
+      case (Nil, Nil) => filteredRelationships.items
+      case (_, Nil)   => filteredRelationships.items.filter(r => productRolesFilterList.contains(r.productRole))
+      case (Nil, _)   => filteredRelationships.items.filter(r => r.products.intersect(productsFilterList.toSet).nonEmpty)
+      case (_, _) =>
+        filteredRelationships.items.filter(r =>
+          productRolesFilterList.contains(r.productRole) && r.products.intersect(productsFilterList.toSet).nonEmpty
+        )
     }
+    filteredRelationships.copy(items = filteredItems)
   }.toFuture
 
   /** Code: 200, Message: successful operation, DataType: RelationshipInfo
     * Code: 400, Message: Invalid institution id supplied, DataType: Problem
     */
-  override def getUserInstitutionRelationships(institutionId: String, productRoles: Option[String])(implicit
+  override def getUserInstitutionRelationships(
+    institutionId: String,
+    products: Option[String],
+    productRoles: Option[String]
+  )(implicit
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerRelationshipInfoarray: ToEntityMarshaller[Seq[RelationshipInfo]],
     contexts: Seq[(String, String)]
@@ -373,7 +384,8 @@ class ProcessApiServiceImpl(
       institutionIdRelationships <- partyManagementService.retrieveRelationships(None, Some(institutionUUID), None)
       filteredRelationships <- filterFoundRelationshipsByCurrentUser(subjectUUID, currentUserRoleInInstitution)(
         institutionIdRelationships,
-        productRoles
+        productRolesFilter = productRoles,
+        productsFilter = products
       )
       response = relationshipsToRelationshipsResponse(filteredRelationships)
     } yield response
