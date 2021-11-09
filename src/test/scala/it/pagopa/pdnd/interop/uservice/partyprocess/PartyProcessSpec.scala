@@ -1647,7 +1647,7 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService.retrieveRelationships _)
-        .expects(None, Some(organization1.id), Some("admin"))
+        .expects(None, Some(organization1.id), None)
         .returning(Future.successful(Relationships(items = Seq(relationship))))
         .once()
 
@@ -1784,7 +1784,7 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService.retrieveRelationships _)
-        .expects(None, Some(organization1.id), Some("admin"))
+        .expects(None, Some(organization1.id), None)
         .returning(Future.successful(Relationships(items = Seq(relationship))))
         .once()
 

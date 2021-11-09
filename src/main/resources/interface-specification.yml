@@ -123,9 +123,9 @@ paths:
         - bearerAuth: []
       tags:
         - process
-      summary: create an onboarding entry
-      description: Return ok
-      operationId: createOperators
+      summary: operators onboarding
+      description: performs operators onboarding on an already existing organization
+      operationId: onboardingOperators
       requestBody:
         required: true
         content:
