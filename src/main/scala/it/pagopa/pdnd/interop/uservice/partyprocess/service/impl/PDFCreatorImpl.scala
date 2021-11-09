@@ -4,9 +4,8 @@ import com.itextpdf.kernel.pdf.{PdfDocument, PdfWriter}
 import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.Paragraph
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.Organization
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.Manager
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.Digester
-import it.pagopa.pdnd.interop.uservice.partyprocess.model.User
+import it.pagopa.pdnd.interop.uservice.partyprocess.model.{MANAGER, User}
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.PDFCreator
 
 import java.io.{File, FileOutputStream}
@@ -27,7 +26,7 @@ class PDFCreatorImpl extends PDFCreator {
       val writer: PdfWriter        = new PdfWriter(stream)
       val pdf: PdfDocument         = new PdfDocument(writer)
       val document: Document       = new Document(pdf)
-      val manager                  = users.find(u => u.role == Manager.toString).get
+      val manager                  = users.find(u => u.role == MANAGER).get
 
       val _ = document
         .add(new Paragraph(s"Le persone\n${users.map(userToText).mkString("\n")}"))

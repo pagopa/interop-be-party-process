@@ -3,21 +3,15 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 import akka.http.scaladsl.server.directives.FileInfo
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.{ApiError, ApiRequest}
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipSeedEnums.Role.{
-  Delegate,
-  Manager,
-  Operator
-}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model._
+import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration.productRolesConfiguration._
+import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.EitherOps
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.{PartyManagementInvoker, PartyManagementService}
 import org.slf4j.{Logger, LoggerFactory}
-import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration.productRolesConfiguration._
-import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.{EitherOps, TryOps}
 
 import java.io.File
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
 
 final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api: PartyApi)(implicit
   ec: ExecutionContext
@@ -125,21 +119,20 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
   override def createRelationship(
     personId: UUID,
     organizationId: UUID,
-    role: String,
+    role: PartyRoleEnum,
     products: Set[String],
     productRole: String
   ): Future[Unit] = {
     for {
-      role <- Try { RelationshipSeedEnums.Role.withName(role) }.toFuture
-      _    <- isProductRoleValid(role = role, productRole = productRole).toFuture
-      _    <- invokeCreateRelationship(personId, organizationId, role, products, productRole)
+      _ <- isProductRoleValid(role = role, productRole = productRole).toFuture
+      _ <- invokeCreateRelationship(personId, organizationId, role, products, productRole)
     } yield ()
   }
 
   private def invokeCreateRelationship(
     personId: UUID,
     organizationId: UUID,
-    role: RelationshipSeedEnums.Role,
+    role: PartyRoleEnum,
     products: Set[String],
     productRole: String
   ): Future[Relationship] = {
@@ -173,12 +166,12 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  private def isProductRoleValid(role: RelationshipSeedEnums.Role, productRole: String): Either[Throwable, String] = {
+  private def isProductRoleValid(role: PartyRoleEnum, productRole: String): Either[Throwable, String] = {
     logger.info(s"Checking if the productRole '$productRole' is valid for a '$role'")
     role match {
-      case Manager  => manager.validateProductRoleMapping(productRole)
-      case Delegate => delegate.validateProductRoleMapping(productRole)
-      case Operator => operator.validateProductRoleMapping(productRole)
+      case MANAGER  => manager.validateProductRoleMapping(productRole)
+      case DELEGATE => delegate.validateProductRoleMapping(productRole)
+      case OPERATOR => operator.validateProductRoleMapping(productRole)
     }
   }
 

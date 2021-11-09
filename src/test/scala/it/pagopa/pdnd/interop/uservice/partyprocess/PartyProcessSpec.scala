@@ -9,12 +9,13 @@ import akka.http.scaladsl.server.directives.{AuthenticationDirective, SecurityDi
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{Attribute, AttributesResponse}
 import it.pagopa.pdnd.interop.uservice.authorizationprocess.client.model.ValidJWT
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.{Role, Status}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model._
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.ProcessApiServiceImpl
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{Authenticator, classicActorSystem, executionContext}
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
+import it.pagopa.pdnd.interop.uservice.partyprocess.{model => PartyProcess}
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.{Categories, Category, Institution}
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{
@@ -124,9 +125,9 @@ class PartyProcessSpec
           id = UUID.randomUUID(),
           from = person1.id,
           to = institutionId1,
-          role = Role.Manager,
+          role = PartyManagementDependency.MANAGER,
           productRole = "admin",
-          status = Status.Active,
+          status = PartyManagementDependency.ACTIVE,
           products = Set.empty
         )
       val relationship2 =
@@ -134,9 +135,9 @@ class PartyProcessSpec
           id = UUID.randomUUID(),
           from = person1.id,
           to = institutionId2,
-          role = Role.Delegate,
+          role = PartyManagementDependency.DELEGATE,
           productRole = "admin",
-          status = Status.Active,
+          status = PartyManagementDependency.ACTIVE,
           products = Set.empty
         )
 
@@ -270,9 +271,9 @@ class PartyProcessSpec
           id = UUID.randomUUID(),
           from = person1.id,
           to = institutionId1,
-          role = Role.Manager,
+          role = PartyManagementDependency.MANAGER,
           productRole = "admin",
-          status = Status.Active,
+          status = PartyManagementDependency.ACTIVE,
           products = Set.empty
         )
 
@@ -353,7 +354,7 @@ class PartyProcessSpec
         Http()
           .singleRequest(
             HttpRequest(
-              uri = s"$url/onboarding/info?institutionId=${institutionId1}",
+              uri = s"$url/onboarding/info?institutionId=$institutionId1",
               method = HttpMethods.GET,
               headers = authorization
             )
@@ -453,7 +454,7 @@ class PartyProcessSpec
           name = "manager",
           surname = "manager",
           taxCode = taxCode1,
-          role = "Manager",
+          role = PartyProcess.MANAGER,
           productRole = "admin",
           email = None,
           products = Set.empty
@@ -463,7 +464,7 @@ class PartyProcessSpec
           name = "delegate",
           surname = "delegate",
           taxCode = taxCode2,
-          role = "Delegate",
+          role = PartyProcess.DELEGATE,
           productRole = "admin",
           email = None,
           products = Set.empty
@@ -560,7 +561,7 @@ class PartyProcessSpec
         name = "operator1",
         surname = "operator1",
         taxCode = taxCode1,
-        role = "Operator",
+        role = PartyProcess.OPERATOR,
         productRole = "security",
         email = Some("operat@ore.it"),
         products = Set("PDND")
@@ -569,7 +570,7 @@ class PartyProcessSpec
         name = "operator2",
         surname = "operator2",
         taxCode = taxCode2,
-        role = "Operator",
+        role = PartyProcess.OPERATOR,
         productRole = "security",
         email = None,
         products = Set("PDND")
@@ -628,9 +629,9 @@ class PartyProcessSpec
               id = UUID.randomUUID(),
               from = UUID.fromString(personPartyId1),
               to = institutionId1,
-              role = Role.Manager,
+              role = PartyManagementDependency.MANAGER,
               productRole = "admin",
-              status = Status.Active,
+              status = PartyManagementDependency.ACTIVE,
               products = Set.empty
             )
           )
@@ -643,7 +644,7 @@ class PartyProcessSpec
         name = "operator1",
         surname = "operator1",
         taxCode = taxCode1,
-        role = "Operator",
+        role = PartyProcess.OPERATOR,
         productRole = "security",
         email = Some("mario@ros.si"),
         products = Set("PDND")
@@ -652,7 +653,7 @@ class PartyProcessSpec
         name = "operator2",
         surname = "operator2",
         taxCode = taxCode2,
-        role = "Operator",
+        role = PartyProcess.OPERATOR,
         productRole = "security",
         email = None,
         products = Set("PDND")
@@ -800,9 +801,9 @@ class PartyProcessSpec
           id = relationshipId1,
           from = userId,
           to = institutionId,
-          role = Role.Manager,
+          role = PartyManagementDependency.MANAGER,
           productRole = "admin",
-          status = Status.Active,
+          status = PartyManagementDependency.ACTIVE,
           products = Set.empty
         )
       val relationship2 =
@@ -810,9 +811,9 @@ class PartyProcessSpec
           id = relationshipId2,
           from = adminIdentifier,
           to = institutionId,
-          role = Role.Delegate,
+          role = PartyManagementDependency.DELEGATE,
           productRole = "admin",
-          status = Status.Active,
+          status = PartyManagementDependency.ACTIVE,
           products = Set.empty
         )
 
@@ -821,9 +822,9 @@ class PartyProcessSpec
           id = relationshipId3,
           from = userId3,
           to = institutionId,
-          role = Role.Operator,
+          role = PartyManagementDependency.OPERATOR,
           productRole = "security",
-          status = Status.Active,
+          status = PartyManagementDependency.ACTIVE,
           products = Set("PDND")
         )
 
@@ -832,9 +833,9 @@ class PartyProcessSpec
           id = relationshipId4,
           from = userId4,
           to = institutionId,
-          role = Role.Operator,
+          role = PartyManagementDependency.OPERATOR,
           productRole = "api",
-          status = Status.Active,
+          status = PartyManagementDependency.ACTIVE,
           products = Set("PDND")
         )
 
@@ -884,33 +885,33 @@ class PartyProcessSpec
       body must contain only (RelationshipInfo(
         id = relationshipId1,
         from = userId,
-        role = "Manager",
+        role = PartyProcess.MANAGER,
         productRole = "admin",
-        status = "active",
+        status = PartyProcess.ACTIVE,
         products = Set.empty
       ),
       RelationshipInfo(
         id = relationshipId2,
         from = adminIdentifier,
-        role = "Delegate",
+        role = PartyProcess.DELEGATE,
         productRole = "admin",
-        status = "active",
+        status = PartyProcess.ACTIVE,
         products = Set.empty
       ),
       RelationshipInfo(
         id = relationshipId3,
         from = userId3,
-        role = "Operator",
+        role = PartyProcess.OPERATOR,
         productRole = "security",
-        status = "active",
+        status = PartyProcess.ACTIVE,
         products = Set("PDND")
       ),
       RelationshipInfo(
         id = relationshipId4,
         from = userId4,
-        role = "Operator",
+        role = PartyProcess.OPERATOR,
         productRole = "api",
-        status = "active",
+        status = PartyProcess.ACTIVE,
         products = Set("PDND")
       ))
 
@@ -933,9 +934,9 @@ class PartyProcessSpec
           id = relationshipId1,
           from = userId,
           to = institutionId,
-          role = Role.Manager,
+          role = PartyManagementDependency.MANAGER,
           productRole = "admin",
-          status = Status.Active,
+          status = PartyManagementDependency.ACTIVE,
           products = Set.empty
         )
       val relationship2 =
@@ -943,9 +944,9 @@ class PartyProcessSpec
           id = relationshipId2,
           from = adminIdentifier,
           to = institutionId,
-          role = Role.Delegate,
+          role = PartyManagementDependency.DELEGATE,
           productRole = "admin",
-          status = Status.Active,
+          status = PartyManagementDependency.ACTIVE,
           products = Set.empty
         )
 
@@ -954,9 +955,9 @@ class PartyProcessSpec
           id = relationshipId3,
           from = userId3,
           to = institutionId,
-          role = Role.Operator,
+          role = PartyManagementDependency.OPERATOR,
           productRole = "security",
-          status = Status.Active,
+          status = PartyManagementDependency.ACTIVE,
           products = Set("PDND")
         )
 
@@ -965,9 +966,9 @@ class PartyProcessSpec
           id = relationshipId4,
           from = userId4,
           to = institutionId,
-          role = Role.Operator,
+          role = PartyManagementDependency.OPERATOR,
           productRole = "api",
-          status = Status.Active,
+          status = PartyManagementDependency.ACTIVE,
           products = Set("PDND")
         )
 
@@ -1017,17 +1018,17 @@ class PartyProcessSpec
       body must contain only (RelationshipInfo(
         id = relationshipId3,
         from = userId3,
-        role = "Operator",
+        role = PartyProcess.OPERATOR,
         productRole = "security",
-        status = "active",
+        status = PartyProcess.ACTIVE,
         products = Set("PDND")
       ),
       RelationshipInfo(
         id = relationshipId4,
         from = userId4,
-        role = "Operator",
+        role = PartyProcess.OPERATOR,
         productRole = "api",
-        status = "active",
+        status = PartyProcess.ACTIVE,
         products = Set("PDND")
       ))
 
@@ -1050,9 +1051,9 @@ class PartyProcessSpec
           id = relationshipId1,
           from = userId,
           to = institutionId,
-          role = Role.Manager,
+          role = PartyManagementDependency.MANAGER,
           productRole = "admin",
-          status = Status.Active,
+          status = PartyManagementDependency.ACTIVE,
           products = Set.empty
         )
       val relationship2 =
@@ -1060,9 +1061,9 @@ class PartyProcessSpec
           id = relationshipId2,
           from = adminIdentifier,
           to = institutionId,
-          role = Role.Delegate,
+          role = PartyManagementDependency.DELEGATE,
           productRole = "admin",
-          status = Status.Active,
+          status = PartyManagementDependency.ACTIVE,
           products = Set.empty
         )
 
@@ -1071,9 +1072,9 @@ class PartyProcessSpec
           id = relationshipId3,
           from = userId3,
           to = institutionId,
-          role = Role.Operator,
+          role = PartyManagementDependency.OPERATOR,
           productRole = "security",
-          status = Status.Active,
+          status = PartyManagementDependency.ACTIVE,
           products = Set("PDND")
         )
 
@@ -1082,9 +1083,9 @@ class PartyProcessSpec
           id = relationshipId4,
           from = userId4,
           to = institutionId,
-          role = Role.Operator,
+          role = PartyManagementDependency.OPERATOR,
           productRole = "api",
-          status = Status.Active,
+          status = PartyManagementDependency.ACTIVE,
           products = Set("PDND")
         )
 
@@ -1136,9 +1137,9 @@ class PartyProcessSpec
         RelationshipInfo(
           id = relationshipId3,
           from = userId3,
-          role = "Operator",
+          role = PartyProcess.OPERATOR,
           productRole = "security",
-          status = "active",
+          status = PartyProcess.ACTIVE,
           products = Set("PDND")
         )
     }
@@ -1369,9 +1370,9 @@ class PartyProcessSpec
           filePath = None,
           fileName = None,
           contentType = None,
-          role = RelationshipEnums.Role.Operator,
+          role = PartyManagementDependency.OPERATOR,
           productRole = productRole,
-          status = RelationshipEnums.Status.Suspended,
+          status = PartyManagementDependency.SUSPENDED,
           products = Set.empty
         )
 
@@ -1412,9 +1413,9 @@ class PartyProcessSpec
           filePath = None,
           fileName = None,
           contentType = None,
-          role = RelationshipEnums.Role.Operator,
+          role = PartyManagementDependency.OPERATOR,
           productRole = productRole,
-          status = RelationshipEnums.Status.Pending,
+          status = PartyManagementDependency.PENDING,
           products = Set.empty
         )
 
@@ -1454,9 +1455,9 @@ class PartyProcessSpec
           filePath = None,
           fileName = None,
           contentType = None,
-          role = RelationshipEnums.Role.Operator,
+          role = PartyManagementDependency.OPERATOR,
           productRole = productRole,
-          status = RelationshipEnums.Status.Active,
+          status = PartyManagementDependency.ACTIVE,
           products = Set.empty
         )
 
@@ -1497,9 +1498,9 @@ class PartyProcessSpec
           filePath = None,
           fileName = None,
           contentType = None,
-          role = RelationshipEnums.Role.Operator,
+          role = PartyManagementDependency.OPERATOR,
           productRole = productRole,
-          status = RelationshipEnums.Status.Pending,
+          status = PartyManagementDependency.PENDING,
           products = Set.empty
         )
 

@@ -584,12 +584,7 @@ components:
           type: string
           format: uuid
         role:
-          type: string
-          description: represents the generic available role types for the relationship
-          enum:
-            - Manager
-            - Delegate
-            - Operator
+          $ref: '#/components/schemas/PartyRoleEnum'
         products:
           type: array
           description: set of products bound to this relationship
@@ -600,11 +595,7 @@ components:
           type: string
           description: 'user role in the application context (e.g.: administrator, security user). This MUST belong to the configured set of application specific platform roles'
         status:
-          type: string
-          enum:
-            - pending
-            - active
-            - inactive
+          $ref: '#/components/schemas/RelationshipStatusEnum'
       additionalProperties: false
       required:
         - id
@@ -626,13 +617,9 @@ components:
         taxCode:
           type: string
         role:
-          type: string
+          $ref: '#/components/schemas/PartyRoleEnum'
         email:
           type: string
-          enum:
-            - Manager
-            - Delegate
-            - Operator
         products:
           type: array
           description: set of products bound to this user
@@ -794,6 +781,22 @@ components:
         - managerRoles
         - delegateRoles
         - operatorRoles
+    PartyRoleEnum:
+      type: string
+      description: Represents the generic available role types for the relationship
+      enum:
+        - MANAGER
+        - DELEGATE
+        - OPERATOR
+    RelationshipStatusEnum:
+      type: string
+      description: Represents the party relationship status
+      enum:
+        - PENDING
+        - ACTIVE
+        - SUSPENDED
+        - DELETED
+        - REJECTED
     Problem:
       properties:
         detail:

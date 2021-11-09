@@ -4,14 +4,7 @@ import akka.actor
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker._
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.Manager
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Status.Active
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
-  Problem,
-  Relationship,
-  RelationshipSeed,
-  RelationshipSeedEnums
-}
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.SpecConfig
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.PartyManagementService
 import org.json4s.Formats
@@ -30,9 +23,9 @@ private class MockPartyApiInvoker(implicit json4sFormats: Formats, system: actor
       id = UUID.randomUUID(),
       from = UUID.randomUUID(),
       to = UUID.randomUUID(),
-      role = Manager,
+      role = MANAGER,
       productRole = "admin",
-      status = Active,
+      status = ACTIVE,
       products = Set.empty
     )
     Future.successful(new ApiResponse[T](200, mockRelationshipResponse.asInstanceOf[T]))
@@ -64,22 +57,6 @@ class PartyManagementServiceImplSpec
 
   "when the service creates a relationship" must {
 
-    "return a failure when the organization role is not contained in the supported enumeration set" in {
-      //given
-      val invalidRole = "JavaScriptNinja"
-      //when
-      val operation =
-        partyManagementService.createRelationship(
-          UUID.randomUUID(),
-          UUID.randomUUID(),
-          invalidRole,
-          productRole = "admin",
-          products = Set.empty
-        )
-      //then
-      operation.failed.futureValue.getMessage shouldBe s"No value found for '$invalidRole'"
-    }
-
     "return a failure when the platform role is not contained in the configured list for the defined role" in {
       //given
       val invalidProductRole = "foobar"
@@ -88,7 +65,7 @@ class PartyManagementServiceImplSpec
         partyManagementService.createRelationship(
           UUID.randomUUID(),
           UUID.randomUUID(),
-          "Manager",
+          MANAGER,
           productRole = "foobar",
           products = Set.empty
         )
@@ -100,7 +77,7 @@ class PartyManagementServiceImplSpec
       //given the request payload
       val userId           = UUID.randomUUID()
       val partyIdTo        = UUID.randomUUID()
-      val relationshipRole = "Operator"
+      val relationshipRole = OPERATOR
       val productRole      = "api"
 
       //given mocked integration API behavior
@@ -108,7 +85,7 @@ class PartyManagementServiceImplSpec
         RelationshipSeed(
           from = userId,
           to = partyIdTo,
-          role = RelationshipSeedEnums.Role.withName(relationshipRole),
+          role = relationshipRole,
           productRole = productRole,
           products = Set("PDND")
         )
