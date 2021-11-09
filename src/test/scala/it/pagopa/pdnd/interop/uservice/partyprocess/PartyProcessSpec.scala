@@ -1511,7 +1511,7 @@ class PartyProcessSpec
       val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
-      val response = request(data, "onboarding/users", HttpMethods.POST)
+      val response = request(data, "onboarding/legals", HttpMethods.POST)
 
       response.status mustBe StatusCodes.OK
 
@@ -1582,7 +1582,7 @@ class PartyProcessSpec
       val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
-      val response = request(data, "onboarding/users", HttpMethods.POST)
+      val response = request(data, "onboarding/legals", HttpMethods.POST)
 
       response.status mustBe StatusCodes.BadRequest
     }

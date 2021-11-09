@@ -88,15 +88,15 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  /onboarding/users:
+  /onboarding/legals:
     post:
       security:
         - bearerAuth: [ ]
       tags:
         - process
-      summary: users onboarding
-      description: creates users entry on already onboarded institution
-      operationId: onboardingUsersOnOrganization
+      summary: legals onboarding
+      description: creates legals entries on already onboarded institution
+      operationId: onboardingLegalsOnOrganization
       requestBody:
         required: true
         content:
