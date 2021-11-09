@@ -401,7 +401,7 @@ class PartyProcessSpec
 
     }
 
-    "create a legal" in {
+    "onboard an organization with a legal and a delegate" in {
       val taxCode1       = "managerTaxCode"
       val taxCode2       = "delegateTaxCode"
       val institutionId1 = "IST2"
@@ -544,7 +544,7 @@ class PartyProcessSpec
       val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
-      val response = request(data, "onboarding/legals", HttpMethods.POST)
+      val response = request(data, "onboarding/organization", HttpMethods.POST)
 
       response.status mustBe StatusCodes.Created
 

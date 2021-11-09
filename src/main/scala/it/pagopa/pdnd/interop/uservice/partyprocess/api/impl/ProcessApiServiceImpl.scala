@@ -112,7 +112,7 @@ class ProcessApiServiceImpl(
   /** Code: 201, Message: successful operation, DataType: OnBoardingResponse
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
-  override def createLegals(onBoardingRequest: OnBoardingRequest)(implicit
+  override def onboardingOrganization(onBoardingRequest: OnBoardingRequest)(implicit
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerOnBoardingResponse: ToEntityMarshaller[OnBoardingResponse],
     contexts: Seq[(String, String)]
@@ -143,10 +143,10 @@ class ProcessApiServiceImpl(
 
     onComplete(result) {
       case Success(response) =>
-        createLegals201(response)
+        onboardingOrganization201(response)
       case Failure(ex) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
-        createLegals400(errorResponse)
+        onboardingOrganization400(errorResponse)
 
     }
 
@@ -638,7 +638,7 @@ class ProcessApiServiceImpl(
   /** Code: 201, Message: successful operation, DataType: OnBoardingResponse
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
-  override def createUsers(onBoardingRequest: OnBoardingRequest)(implicit
+  override def onboardingUsersOnOrganization(onBoardingRequest: OnBoardingRequest)(implicit
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerOnBoardingResponse: ToEntityMarshaller[OnBoardingResponse],
     contexts: Seq[(String, String)]
@@ -671,11 +671,10 @@ class ProcessApiServiceImpl(
 
     onComplete(result) {
       case Success(response) =>
-        createUsers200(response)
+        onboardingUsersOnOrganization200(response)
       case Failure(ex) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
-        createUsers400(errorResponse)
-
+        onboardingUsersOnOrganization400(errorResponse)
     }
   }
 
