@@ -1141,6 +1141,215 @@ class PartyProcessSpec
           products = Set("PDND")
         )
     }
+
+    "retrieve all the relationships of a specific institution with filter by productRole and products" in {
+      val userId          = UUID.randomUUID()
+      val adminIdentifier = UUID.randomUUID()
+      val userId3         = UUID.randomUUID()
+      val userId4         = UUID.randomUUID()
+      val institutionId   = UUID.randomUUID()
+
+      val relationshipId1 = UUID.randomUUID()
+      val relationshipId2 = UUID.randomUUID()
+      val relationshipId3 = UUID.randomUUID()
+      val relationshipId4 = UUID.randomUUID()
+
+      val relationship1 =
+        Relationship(
+          id = relationshipId1,
+          from = userId,
+          to = institutionId,
+          role = Role.Manager,
+          productRole = "admin",
+          status = Status.Active,
+          products = Set.empty
+        )
+      val relationship2 =
+        Relationship(
+          id = relationshipId2,
+          from = adminIdentifier,
+          to = institutionId,
+          role = Role.Delegate,
+          productRole = "admin",
+          status = Status.Active,
+          products = Set.empty
+        )
+
+      val relationship3 =
+        Relationship(
+          id = relationshipId3,
+          from = userId3,
+          to = institutionId,
+          role = Role.Operator,
+          productRole = "security",
+          status = Status.Active,
+          products = Set("PDND")
+        )
+
+      val relationship4 =
+        Relationship(
+          id = relationshipId4,
+          from = userId4,
+          to = institutionId,
+          role = Role.Operator,
+          productRole = "api",
+          status = Status.Active,
+          products = Set("AppIO")
+        )
+
+      val relationships = Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
+
+      (mockAuthorizationProcessService.validateToken _)
+        .expects(*)
+        .returning(
+          Future.successful(
+            ValidJWT(
+              iss = UUID.randomUUID().toString,
+              sub = adminIdentifier.toString,
+              aud = List("test"),
+              exp = OffsetDateTime.now(),
+              nbf = OffsetDateTime.now(),
+              iat = OffsetDateTime.now(),
+              jti = "123"
+            )
+          )
+        )
+        .once()
+
+      (mockPartyManagementService.retrieveRelationships _)
+        .expects(Some(adminIdentifier), Some(institutionId), None)
+        .returning(Future.successful(relationships))
+        .once()
+
+      (mockPartyManagementService.retrieveRelationships _)
+        .expects(None, Some(institutionId), None)
+        .returning(Future.successful(relationships))
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/institutions/$institutionId/relationships?productRoles=security,api&products=PDND",
+              method = HttpMethods.GET,
+              headers = authorization
+            )
+          )
+          .futureValue
+
+      val body = Unmarshal(response.entity).to[Seq[RelationshipInfo]].futureValue
+      response.status mustBe StatusCodes.OK
+      body must contain only RelationshipInfo(
+        id = relationshipId3,
+        from = userId3,
+        role = "Operator",
+        productRole = "security",
+        status = "active",
+        products = Set("PDND")
+      )
+    }
+
+    "retrieve all the relationships of a specific institution with filter by productRole and products when no intersection occurs" in {
+      val userId          = UUID.randomUUID()
+      val adminIdentifier = UUID.randomUUID()
+      val userId3         = UUID.randomUUID()
+      val userId4         = UUID.randomUUID()
+      val institutionId   = UUID.randomUUID()
+
+      val relationshipId1 = UUID.randomUUID()
+      val relationshipId2 = UUID.randomUUID()
+      val relationshipId3 = UUID.randomUUID()
+      val relationshipId4 = UUID.randomUUID()
+
+      val relationship1 =
+        Relationship(
+          id = relationshipId1,
+          from = userId,
+          to = institutionId,
+          role = Role.Manager,
+          productRole = "admin",
+          status = Status.Active,
+          products = Set.empty
+        )
+      val relationship2 =
+        Relationship(
+          id = relationshipId2,
+          from = adminIdentifier,
+          to = institutionId,
+          role = Role.Delegate,
+          productRole = "admin",
+          status = Status.Active,
+          products = Set.empty
+        )
+
+      val relationship3 =
+        Relationship(
+          id = relationshipId3,
+          from = userId3,
+          to = institutionId,
+          role = Role.Operator,
+          productRole = "security",
+          status = Status.Active,
+          products = Set("PDND")
+        )
+
+      val relationship4 =
+        Relationship(
+          id = relationshipId4,
+          from = userId4,
+          to = institutionId,
+          role = Role.Operator,
+          productRole = "api",
+          status = Status.Active,
+          products = Set("AppIO")
+        )
+
+      val relationships = Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
+
+      (mockAuthorizationProcessService.validateToken _)
+        .expects(*)
+        .returning(
+          Future.successful(
+            ValidJWT(
+              iss = UUID.randomUUID().toString,
+              sub = adminIdentifier.toString,
+              aud = List("test"),
+              exp = OffsetDateTime.now(),
+              nbf = OffsetDateTime.now(),
+              iat = OffsetDateTime.now(),
+              jti = "123"
+            )
+          )
+        )
+        .once()
+
+      (mockPartyManagementService.retrieveRelationships _)
+        .expects(Some(adminIdentifier), Some(institutionId), None)
+        .returning(Future.successful(relationships))
+        .once()
+
+      (mockPartyManagementService.retrieveRelationships _)
+        .expects(None, Some(institutionId), None)
+        .returning(Future.successful(relationships))
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/institutions/$institutionId/relationships?productRoles=security,api&products=Interop,Test",
+              method = HttpMethods.GET,
+              headers = authorization
+            )
+          )
+          .futureValue
+
+      val body = Unmarshal(response.entity).to[Seq[RelationshipInfo]].futureValue
+      response.status mustBe StatusCodes.OK
+      body mustBe empty
+    }
   }
 
   "Relationship activation" must {

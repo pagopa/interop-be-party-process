@@ -18,7 +18,8 @@ package object utils {
   }
 
   implicit class StringOps(val str: String) extends AnyVal {
-    def toUUID: Try[UUID]          = Try { UUID.fromString(str) }
-    def toFutureUUID: Future[UUID] = toUUID.toFuture
+    def toUUID: Try[UUID]                 = Try { UUID.fromString(str) }
+    def toFutureUUID: Future[UUID]        = toUUID.toFuture
+    def parseCommaSeparated: List[String] = str.split(",").map(_.trim).toList.filterNot(entry => entry == "")
   }
 }
