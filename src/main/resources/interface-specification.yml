@@ -123,9 +123,9 @@ paths:
         - bearerAuth: []
       tags:
         - process
-      summary: create an onboarding entry
-      description: Return ok
-      operationId: createOperators
+      summary: operators onboarding
+      description: performs operators onboarding on an already existing organization
+      operationId: onboardingOperators
       requestBody:
         required: true
         content:
@@ -158,8 +158,13 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: products
+          description: comma separated sequence of products to filter the response with
+          in: query
+          schema:
+            type: string
         - name: productRoles
-          description: comma separated sequence of platform roles to filter the response with
+          description: comma separated sequence of product roles to filter the response with
           in: query
           schema:
             type: string
