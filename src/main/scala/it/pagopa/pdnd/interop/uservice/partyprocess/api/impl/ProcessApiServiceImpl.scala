@@ -698,7 +698,7 @@ class ProcessApiServiceImpl(
       institutionUUID           <- Try { UUID.fromString(institutionId) }.toFuture
       organization              <- partyManagementService.retrieveOrganization(institutionUUID)
       organizationRelationships <- partyManagementService.retrieveRelationships(None, Some(organization.id), None)
-      _                         <- existsAManagerActive(organizationRelationships)
+      _                         <- existsAnOnboardedManager(organizationRelationships)
     } yield Products(products = organization.products)
 
     onComplete(result) {
@@ -711,7 +711,5 @@ class ProcessApiServiceImpl(
         retrieveInstitutionProducts404(errorResponse)
     }
   }
-
-  //TODO add rejected also
 
 }
