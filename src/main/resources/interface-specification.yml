@@ -60,15 +60,15 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  /onboarding/legals:
+  /onboarding/organization:
     post:
       security:
         - bearerAuth: []
       tags:
         - process
-      summary: create an onboarding entry
-      description: Return ok
-      operationId: createLegals
+      summary: Organization onboarding on the platform
+      description: it performs the onboarding of a new organization on the platform
+      operationId: onboardingOrganization
       requestBody:
         required: true
         content:
@@ -88,6 +88,35 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /onboarding/legals:
+    post:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: legals onboarding
+      description: creates legals entries on already onboarded institution
+      operationId: onboardingLegalsOnOrganization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnBoardingRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnBoardingResponse'
+        '400':
+          description: Invalid ID supplied
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
   /onboarding/operators:
     post:
       security:

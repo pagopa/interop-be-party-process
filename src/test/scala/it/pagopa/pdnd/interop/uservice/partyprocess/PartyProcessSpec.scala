@@ -401,7 +401,7 @@ class PartyProcessSpec
 
     }
 
-    "create a legal" in {
+    "onboard an organization with a legal and a delegate" in {
       val taxCode1       = "managerTaxCode"
       val taxCode2       = "delegateTaxCode"
       val institutionId1 = "IST2"
@@ -544,7 +544,7 @@ class PartyProcessSpec
       val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
-      val response = request(data, "onboarding/legals", HttpMethods.POST)
+      val response = request(data, "onboarding/organization", HttpMethods.POST)
 
       response.status mustBe StatusCodes.Created
 
@@ -1374,6 +1374,218 @@ class PartyProcessSpec
         )
       )
       .once()
+  }
+
+  "Users creation" must {
+    "create users" in {
+      val taxCode1       = "managerTaxCode"
+      val taxCode2       = "delegateTaxCode"
+      val institutionId1 = "IST2"
+      val orgPartyId1    = "bf80fac0-2775-4646-8fcf-28e083751901"
+
+      val organization1 = Organization(
+        institutionId = institutionId1,
+        description = "org1",
+        digitalAddress = "digitalAddress1",
+        id = UUID.fromString(orgPartyId1),
+        attributes = Seq.empty,
+        products = Set.empty,
+        fiscalCode = "123"
+      )
+
+      val file = new File("src/test/resources/fake.file")
+
+      val managerId  = UUID.randomUUID()
+      val delegateId = UUID.randomUUID()
+      val manager =
+        User(
+          name = "manager",
+          surname = "manager",
+          taxCode = taxCode1,
+          role = "Manager",
+          productRole = "admin",
+          products = Set.empty,
+          email = None
+        )
+      val delegate =
+        User(
+          name = "delegate",
+          surname = "delegate",
+          taxCode = taxCode2,
+          role = "Delegate",
+          productRole = "admin",
+          products = Set.empty,
+          email = None
+        )
+
+      val relationship =
+        Relationship(
+          id = UUID.randomUUID(),
+          from = managerId,
+          to = organization1.id,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = RelationshipEnums.Role.Manager,
+          productRole = "admin",
+          products = Set.empty,
+          status = RelationshipEnums.Status.Active
+        )
+
+      (mockPartyManagementService.retrieveOrganizationByExternalId _)
+        .expects(*)
+        .returning(Future.successful(organization1))
+        .once()
+
+      (mockPartyManagementService.retrieveRelationships _)
+        .expects(None, Some(organization1.id), Some("admin"))
+        .returning(Future.successful(Relationships(items = Seq(relationship))))
+        .once()
+
+      (mockUserRegistryService.createUser _)
+        .expects(
+          UserRegistryUserSeed(
+            externalId = manager.taxCode,
+            name = manager.name,
+            surname = manager.surname,
+            certification = CertificationEnumsNone,
+            extras = UserRegistryUserExtras(email = manager.email, birthDate = None)
+          )
+        )
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = managerId,
+              externalId = manager.taxCode,
+              name = manager.name,
+              surname = manager.surname,
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(email = manager.email, birthDate = None)
+            )
+          )
+        )
+        .once()
+
+      (mockPartyManagementService.createPerson _)
+        .expects(PersonSeed(managerId))
+        .returning(Future.successful(Person(managerId)))
+        .once()
+
+      (mockUserRegistryService.createUser _)
+        .expects(
+          UserRegistryUserSeed(
+            externalId = delegate.taxCode,
+            name = delegate.name,
+            surname = delegate.surname,
+            certification = CertificationEnumsNone,
+            extras = UserRegistryUserExtras(email = delegate.email, birthDate = None)
+          )
+        )
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = delegateId,
+              externalId = delegate.taxCode,
+              name = delegate.name,
+              surname = delegate.surname,
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(email = delegate.email, birthDate = None)
+            )
+          )
+        )
+        .once()
+
+      (mockPartyManagementService.createPerson _)
+        .expects(PersonSeed(delegateId))
+        .returning(Future.successful(Person(delegateId)))
+        .once()
+
+      (mockPartyManagementService.createRelationship _)
+        .expects(*, *, *, *, *)
+        .returning(Future.successful(()))
+        .repeat(2)
+      (mockPdfCreator.create _).expects(*, *).returning(Future.successful((file, "hash"))).once()
+      (mockPartyManagementService.createToken _).expects(*, *).returning(Future.successful(TokenText("token"))).once()
+      (mockMailer.send _).expects(*, *, *).returning(Future.successful(())).once()
+
+      val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
+
+      val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
+      val response = request(data, "onboarding/legals", HttpMethods.POST)
+
+      response.status mustBe StatusCodes.OK
+
+    }
+
+    "not create users when no active manager exist for a relationship" in {
+      val taxCode1       = "managerTaxCode"
+      val taxCode2       = "delegateTaxCode"
+      val institutionId1 = "IST2"
+      val orgPartyId1    = "bf80fac0-2775-4646-8fcf-28e083751901"
+
+      val organization1 = Organization(
+        institutionId = institutionId1,
+        description = "org1",
+        digitalAddress = "digitalAddress1",
+        id = UUID.fromString(orgPartyId1),
+        attributes = Seq.empty,
+        products = Set.empty,
+        fiscalCode = "123"
+      )
+
+      val managerId = UUID.randomUUID()
+      val manager =
+        User(
+          name = "manager",
+          surname = "manager",
+          taxCode = taxCode1,
+          role = "Manager",
+          productRole = "admin",
+          products = Set.empty,
+          email = None
+        )
+      val delegate =
+        User(
+          name = "delegate",
+          surname = "delegate",
+          taxCode = taxCode2,
+          role = "Delegate",
+          productRole = "admin",
+          products = Set.empty,
+          email = None
+        )
+
+      val relationship =
+        Relationship(
+          id = UUID.randomUUID(),
+          from = managerId,
+          to = organization1.id,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = RelationshipEnums.Role.Manager,
+          productRole = "admin",
+          products = Set.empty,
+          status = RelationshipEnums.Status.Pending
+        )
+
+      (mockPartyManagementService.retrieveOrganizationByExternalId _)
+        .expects(*)
+        .returning(Future.successful(organization1))
+        .once()
+
+      (mockPartyManagementService.retrieveRelationships _)
+        .expects(None, Some(organization1.id), Some("admin"))
+        .returning(Future.successful(Relationships(items = Seq(relationship))))
+        .once()
+
+      val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
+
+      val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
+      val response = request(data, "onboarding/legals", HttpMethods.POST)
+
+      response.status mustBe StatusCodes.BadRequest
+    }
   }
 
 }

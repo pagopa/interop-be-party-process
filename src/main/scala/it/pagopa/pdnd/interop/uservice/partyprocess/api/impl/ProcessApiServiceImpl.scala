@@ -8,6 +8,7 @@ import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.{Delegate, Manager, Operator}
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Status.Pending
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   Organization,
   OrganizationSeed,
@@ -111,7 +112,7 @@ class ProcessApiServiceImpl(
   /** Code: 201, Message: successful operation, DataType: OnBoardingResponse
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
-  override def createLegals(onBoardingRequest: OnBoardingRequest)(implicit
+  override def onboardingOrganization(onBoardingRequest: OnBoardingRequest)(implicit
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerOnBoardingResponse: ToEntityMarshaller[OnBoardingResponse],
     contexts: Seq[(String, String)]
@@ -142,10 +143,10 @@ class ProcessApiServiceImpl(
 
     onComplete(result) {
       case Success(response) =>
-        createLegals201(response)
+        onboardingOrganization201(response)
       case Failure(ex) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
-        createLegals400(errorResponse)
+        onboardingOrganization400(errorResponse)
 
     }
 
@@ -632,5 +633,61 @@ class ProcessApiServiceImpl(
         val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
         replaceRelationshipProducts404(errorResponse)
     }
+  }
+
+  /** Code: 201, Message: successful operation, DataType: OnBoardingResponse
+    * Code: 400, Message: Invalid ID supplied, DataType: Problem
+    */
+  override def onboardingLegalsOnOrganization(onBoardingRequest: OnBoardingRequest)(implicit
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerOnBoardingResponse: ToEntityMarshaller[OnBoardingResponse],
+    contexts: Seq[(String, String)]
+  ): Route = {
+    val result: Future[OnBoardingResponse] = for {
+      organization <- partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)
+      organizationRelationships <- partyManagementService.retrieveRelationships(
+        None,
+        Some(organization.id),
+        productRolesConfiguration.manager.roles.headOption
+      )
+      _                <- hasAnExistingManager(organizationRelationships)
+      validUsers       <- verifyUsersByRoles(onBoardingRequest.users, Set(Manager.toString, Delegate.toString))
+      personsWithRoles <- Future.traverse(validUsers)(addUser)
+      _ <- Future.traverse(personsWithRoles)(pr =>
+        partyManagementService.createRelationship(pr._1.id, organization.id, pr._2, pr._3, pr._4)
+      )
+      relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, products, productRole) =>
+        createRelationship(organization.id, person.id, role, products, productRole)
+      })
+      pdf   <- pdfCreator.create(validUsers, organization)
+      token <- partyManagementService.createToken(relationships, pdf._2)
+      _ <- mailer.send(
+        ApplicationConfiguration.destinationMails,
+        pdf._1,
+        token.token
+      ) //TODO address must be the digital address
+      _ = logger.info(s"$token")
+    } yield OnBoardingResponse(token.token, pdf._1)
+
+    onComplete(result) {
+      case Success(response) =>
+        onboardingLegalsOnOrganization200(response)
+      case Failure(ex) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        onboardingLegalsOnOrganization400(errorResponse)
+    }
+  }
+
+  //TODO add rejected also
+  def hasAnExistingManager(organizationRelationships: Relationships): Future[Boolean] = {
+    val noManagers =
+      organizationRelationships.items
+        .filter(r => r.role == Manager && !Set(Pending.toString).contains(r.status.toString))
+        .isEmpty
+
+    if (noManagers)
+      Future.failed[Boolean](new RuntimeException("This organization does not have a Manager"))
+    else
+      Future.successful(true)
   }
 }
