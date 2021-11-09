@@ -23,6 +23,7 @@ import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{
   UserExtras => UserRegistryUserExtras,
   UserSeed => UserRegistryUserSeed
 }
+import it.pagopa.pdnd.interop.uservice.partyprocess.model.{Products => ModelProducts}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
@@ -1795,6 +1796,155 @@ class PartyProcessSpec
 
       response.status mustBe StatusCodes.BadRequest
     }
+  }
+
+  "Institution products retrieval" must {
+    "retrieve products when the organization had an onboarding" in {
+      val institutionId1 = "TAXCODE"
+      val orgPartyId1    = "bf80fac0-2775-4646-8fcf-28e083751901"
+
+      val organization1 = Organization(
+        institutionId = institutionId1,
+        description = "org1",
+        digitalAddress = "digitalAddress1",
+        id = UUID.fromString(orgPartyId1),
+        attributes = Seq.empty,
+        products = Set("PDND", "APP IO", "APP VOI"),
+        fiscalCode = "123"
+      )
+
+      val managerId = UUID.randomUUID()
+
+      val relationship =
+        Relationship(
+          id = UUID.randomUUID(),
+          from = managerId,
+          to = organization1.id,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = RelationshipEnums.Role.Manager,
+          productRole = "admin",
+          products = Set.empty,
+          status = RelationshipEnums.Status.Active
+        )
+
+      val mockSubjectUUID = UUID.randomUUID()
+      (mockAuthorizationProcessService.validateToken _)
+        .expects(*)
+        .returning(
+          Future.successful(
+            ValidJWT(
+              iss = UUID.randomUUID().toString,
+              sub = mockSubjectUUID.toString,
+              aud = List("test"),
+              exp = OffsetDateTime.now(),
+              nbf = OffsetDateTime.now(),
+              iat = OffsetDateTime.now(),
+              jti = "123"
+            )
+          )
+        )
+        .once()
+
+      (mockPartyManagementService.retrieveOrganization _)
+        .expects(*)
+        .returning(Future.successful(organization1))
+        .once()
+
+      (mockPartyManagementService.retrieveRelationships _)
+        .expects(None, Some(organization1.id), None)
+        .returning(Future.successful(Relationships(items = Seq(relationship))))
+        .once()
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/institutions/$orgPartyId1/products",
+              method = HttpMethods.GET,
+              headers = authorization
+            )
+          )
+          .futureValue
+
+      val body = Unmarshal(response.entity).to[ModelProducts].futureValue
+
+      body.products must contain only ("PDND", "APP IO", "APP VOI")
+    }
+
+    "retrieve no products when the organization had not an onboarding" in {
+      val institutionId1 = "TAXCODE"
+      val orgPartyId1    = "bf80fac0-2775-4646-8fcf-28e083751901"
+
+      val organization1 = Organization(
+        institutionId = institutionId1,
+        description = "org1",
+        digitalAddress = "digitalAddress1",
+        id = UUID.fromString(orgPartyId1),
+        attributes = Seq.empty,
+        products = Set("PDND", "APP IO", "APP VOI"),
+        fiscalCode = "123"
+      )
+
+      val managerId = UUID.randomUUID()
+
+      val relationship =
+        Relationship(
+          id = UUID.randomUUID(),
+          from = managerId,
+          to = organization1.id,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = RelationshipEnums.Role.Manager,
+          productRole = "admin",
+          products = Set.empty,
+          status = RelationshipEnums.Status.Pending
+        )
+
+      val mockSubjectUUID = UUID.randomUUID()
+      (mockAuthorizationProcessService.validateToken _)
+        .expects(*)
+        .returning(
+          Future.successful(
+            ValidJWT(
+              iss = UUID.randomUUID().toString,
+              sub = mockSubjectUUID.toString,
+              aud = List("test"),
+              exp = OffsetDateTime.now(),
+              nbf = OffsetDateTime.now(),
+              iat = OffsetDateTime.now(),
+              jti = "123"
+            )
+          )
+        )
+        .once()
+
+      (mockPartyManagementService.retrieveOrganization _)
+        .expects(*)
+        .returning(Future.successful(organization1))
+        .once()
+
+      (mockPartyManagementService.retrieveRelationships _)
+        .expects(None, Some(organization1.id), None)
+        .returning(Future.successful(Relationships(items = Seq(relationship))))
+        .once()
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/institutions/$orgPartyId1/products",
+              method = HttpMethods.GET,
+              headers = authorization
+            )
+          )
+          .futureValue
+
+      response.status mustBe StatusCodes.NotFound
+    }
+
   }
 
 }

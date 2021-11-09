@@ -685,6 +685,31 @@ class ProcessApiServiceImpl(
     }
   }
 
-  //TODO add rejected also
+  /** Code: 200, Message: successful operation, DataType: Products
+    * Code: 404, Message: Institution not found, DataType: Problem
+    */
+  override def retrieveInstitutionProducts(institutionId: String)(implicit
+    toEntityMarshallerProducts: ToEntityMarshaller[Products],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    contexts: Seq[(String, String)]
+  ): Route = {
+    val result = for {
+      _                         <- getCallerSubjectIdentifier(contexts)
+      institutionUUID           <- Try { UUID.fromString(institutionId) }.toFuture
+      organization              <- partyManagementService.retrieveOrganization(institutionUUID)
+      organizationRelationships <- partyManagementService.retrieveRelationships(None, Some(organization.id), None)
+      _                         <- existsAnOnboardedManager(organizationRelationships)
+    } yield Products(products = organization.products)
+
+    onComplete(result) {
+      case Success(institution) => retrieveInstitutionProducts200(institution)
+      case Failure(ex: SubjectValidationError) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 401, "Unauthorized")
+        complete((401, errorResponse))
+      case Failure(ex) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        retrieveInstitutionProducts404(errorResponse)
+    }
+  }
 
 }

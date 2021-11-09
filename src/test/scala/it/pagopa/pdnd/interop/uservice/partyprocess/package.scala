@@ -10,7 +10,13 @@ import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl._
-import it.pagopa.pdnd.interop.uservice.partyprocess.model.{OnBoardingInfo, OnBoardingRequest, RelationshipInfo, User}
+import it.pagopa.pdnd.interop.uservice.partyprocess.model.{
+  OnBoardingInfo,
+  OnBoardingRequest,
+  Products,
+  RelationshipInfo,
+  User
+}
 import spray.json.RootJsonFormat
 
 import scala.concurrent.Await
@@ -22,6 +28,9 @@ package object partyprocess extends SprayJsonSupport {
 
   implicit val fromEntityUnmarshallerOnBoardingInfo: FromEntityUnmarshaller[OnBoardingInfo] =
     sprayJsonUnmarshaller[OnBoardingInfo]
+
+  implicit val fromEntityUnmarshallerProducts: FromEntityUnmarshaller[Products] =
+    sprayJsonUnmarshaller[Products]
 
   implicit val fromEntityUnmarshallerRelationshipsResponse: FromEntityUnmarshaller[Seq[RelationshipInfo]] =
     sprayJsonUnmarshaller[Seq[RelationshipInfo]]
