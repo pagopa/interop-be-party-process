@@ -7,9 +7,10 @@ import com.typesafe.config.{Config, ConfigFactory}
   * @param delegate - the amittable delegate platform roles
   * @param operator - the admittable operator platform roles
   */
-final case class PlatformRolesConfiguration(manager: ManagerRoles, delegate: DelegateRoles, operator: OperatorRoles)
+final case class ProductRolesConfiguration(manager: ManagerRoles, delegate: DelegateRoles, operator: OperatorRoles)
 
-@SuppressWarnings(Array("org.wartremover.warts.Throw"))
+case class StorageAccountInfo(applicationId: String, applicationSecret: String, endpoint: String, container: String)
+
 object ApplicationConfiguration {
   lazy val config: Config = ConfigFactory.load()
 
@@ -21,7 +22,9 @@ object ApplicationConfiguration {
 
   def getPartyProxyUrl: String = config.getString("services.party-proxy")
 
-  def getAttributeRegistryUrl: String = config.getString("services.attribute-registry")
+  def getAttributeRegistryUrl: String    = config.getString("services.attribute-registry")
+  def getAuthorizationProcessURL: String = config.getString("services.authorization-process")
+  def getUserRegistryURL: String         = config.getString("services.user-registry-management")
 
   def destinationMails: Seq[String] = {
     Option(System.getenv("DESTINATION_MAILS"))
@@ -35,9 +38,9 @@ object ApplicationConfiguration {
     * <br/>
     * <br/>
     * <ul>
-    *   <li>MANAGER_PLATFORM_ROLES</li>
-    *   <li>DELEGATE_PLATFORM_ROLES</li>
-    *   <li>OPERATOR_PLATFORM_ROLES</li>
+    *   <li>MANAGER_PRODUCT_ROLES</li>
+    *   <li>DELEGATE_PRODUCT_ROLES</li>
+    *   <li>OPERATOR_PRODUCT_ROLES</li>
     *  </ul>
     * <br>
     * They MUST be populated with comma separated strings
@@ -46,19 +49,31 @@ object ApplicationConfiguration {
     *    <br/>
     *   E.g.:
     *  <ul>
-    *   <li>export MANAGER_PLATFORM_ROLES=admin</li>
-    *   <li>export DELEGATE_PLATFORM_ROLES=delegate, superuser</li>
-    *   <li>export OPERATOR_PLATFORM_ROLES=api, security</li>
+    *   <li>export MANAGER_PRODUCT_ROLES=admin</li>
+    *   <li>export DELEGATE_PRODUCT_ROLES=delegate, superuser</li>
+    *   <li>export OPERATOR_PRODUCT_ROLES=api, security</li>
     *  </ul>
     */
-  lazy val platformRolesConfiguration: PlatformRolesConfiguration = {
-    PlatformRolesConfiguration(
-      manager = ManagerRoles(sequencedParameter("uservice-party-process.platform.roles.manager")),
-      delegate = DelegateRoles(sequencedParameter("uservice-party-process.platform.roles.delegate")),
-      operator = OperatorRoles(sequencedParameter("uservice-party-process.platform.roles.operator"))
+  lazy val productRolesConfiguration: ProductRolesConfiguration = {
+    ProductRolesConfiguration(
+      manager = ManagerRoles(sequencedParameter("uservice-party-process.product.roles.manager")),
+      delegate = DelegateRoles(sequencedParameter("uservice-party-process.product.roles.delegate")),
+      operator = OperatorRoles(sequencedParameter("uservice-party-process.product.roles.operator"))
     )
   }
 
   private def sequencedParameter(parameterName: String) = config.getString(parameterName).split(",").map(_.trim).toSeq
 
+  def runtimeFileManager: String = {
+    config.getString("uservice-party-process.storage.type")
+  }
+
+  def storageAccountInfo = {
+    StorageAccountInfo(
+      applicationId = config.getString("uservice-party-process.storage.application.id"),
+      applicationSecret = config.getString("uservice-party-process.storage.application.secret"),
+      endpoint = config.getString("uservice-party-process.storage.endpoint"),
+      container = config.getString("uservice-party-process.storage.container")
+    )
+  }
 }

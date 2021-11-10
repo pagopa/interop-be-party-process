@@ -20,6 +20,8 @@ kubectl create secret generic smtp --from-literal=SMTP_USR=$SMTP_USR --from-lite
 
 kubectl create secret generic mail --from-literal=DESTINATION_MAILS=$DESTINATION_MAILS -n $NAMESPACE
 
+kubectl create secret generic storage --from-literal=STORAGE_USR=$STORAGE_USR --from-literal=STORAGE_PSW=$STORAGE_PSW -n $NAMESPACE
+
 $SCRIPT_PATH/templater.sh $SCRIPT_PATH/deployment.yaml.template -s -f $SCRIPT_PATH/config > $SCRIPT_PATH/deployment.yaml
 
 kubectl create -f $SCRIPT_PATH/deployment.yaml && rm -rf $SCRIPT_PATH/deployment.yaml
