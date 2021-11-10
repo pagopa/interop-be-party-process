@@ -288,7 +288,7 @@ paths:
       tags:
         - process
       summary: Relationship deletion
-      description: Given a relationship identifier, it relates the corresponding relationship.
+      description: Given a relationship identifier, it deletes the corresponding relationship.
       operationId: deleteRelationshipById
       parameters:
         - name: relationshipId
