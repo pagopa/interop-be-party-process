@@ -660,13 +660,13 @@ class ProcessApiServiceImpl(
       organization              <- partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)
       organizationRelationships <- partyManagementService.retrieveRelationships(None, Some(organization.id), None)
       _                         <- existsAnOnboardedManager(organizationRelationships)
-      validUsers                <- verifyUsersByRoles(onBoardingRequest.users, Set(Manager.toString, Delegate.toString))
+      validUsers                <- verifyUsersByRoles(onBoardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
       personsWithRoles          <- Future.traverse(validUsers)(addUser)
       _ <- Future.traverse(personsWithRoles)(pr =>
-        partyManagementService.createRelationship(pr._1.id, organization.id, pr._2, pr._3, pr._4)
+        partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)
       )
       relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, products, productRole) =>
-        createRelationship(organization.id, person.id, role, products, productRole)
+        createRelationship(organization.id, person.id, roleToDependency(role), products, productRole)
       })
       pdf   <- pdfCreator.create(validUsers, organization)
       token <- partyManagementService.createToken(relationships, pdf._2)
