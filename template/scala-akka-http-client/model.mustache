@@ -44,26 +44,19 @@ object {{classname}}Enums {
 
 
 {{#isEnum}}
+
 sealed trait {{classname}}
 
-{{#allowableValues}}
-{{#values}}
-case object {{.}} extends {{classname}}
-{{/values}}
+object {{classname}} {
+
+  {{#allowableValues}}
+  {{#values}}
+  case object {{.}} extends {{classname}}
+  {{/values}}
   {{/allowableValues}}
 
-
-object {{classname}} {
-    def fromValue(value: String): Either[Throwable, {{classname}}] =
-      value match {
-      {{#allowableValues}}
-      {{#values}}
-         case "{{.}}" => Right({{.}})
-      {{/values}}
-      {{/allowableValues}}
-         case other => Left(new RuntimeException(s"Unable to decode value $other"))
-      }
 }
+
 {{/isEnum}}
 {{/model}}
 {{/models}}

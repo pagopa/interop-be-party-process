@@ -1,30 +1,30 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.api.impl
 
-import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
+import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 
 object Conversions {
-  def roleToDependency(role: PartyRoleEnum): PartyManagementDependency.PartyRoleEnum =
+  def roleToDependency(role: PartyRole): PartyManagementDependency.PartyRole =
     role match {
-      case MANAGER  => PartyManagementDependency.MANAGER
-      case DELEGATE => PartyManagementDependency.DELEGATE
-      case OPERATOR => PartyManagementDependency.OPERATOR
+      case PartyRole.MANAGER  => PartyManagementDependency.PartyRole.MANAGER
+      case PartyRole.DELEGATE => PartyManagementDependency.PartyRole.DELEGATE
+      case PartyRole.OPERATOR => PartyManagementDependency.PartyRole.OPERATOR
     }
 
-  def roleToApi(role: PartyManagementDependency.PartyRoleEnum): PartyRoleEnum =
+  def roleToApi(role: PartyManagementDependency.PartyRole): PartyRole =
     role match {
-      case PartyManagementDependency.MANAGER  => MANAGER
-      case PartyManagementDependency.DELEGATE => DELEGATE
-      case PartyManagementDependency.OPERATOR => OPERATOR
+      case PartyManagementDependency.PartyRole.MANAGER  => PartyRole.MANAGER
+      case PartyManagementDependency.PartyRole.DELEGATE => PartyRole.DELEGATE
+      case PartyManagementDependency.PartyRole.OPERATOR => PartyRole.OPERATOR
     }
 
-  def relationshipStatusToApi(status: PartyManagementDependency.RelationshipStatusEnum): RelationshipStatusEnum =
+  def relationshipStateToApi(status: PartyManagementDependency.RelationshipState): RelationshipState =
     status match {
-      case PartyManagementDependency.PENDING   => PENDING
-      case PartyManagementDependency.ACTIVE    => ACTIVE
-      case PartyManagementDependency.SUSPENDED => SUSPENDED
-      case PartyManagementDependency.DELETED   => DELETED
-      case PartyManagementDependency.REJECTED  => REJECTED
+      case PartyManagementDependency.RelationshipState.PENDING   => RelationshipState.PENDING
+      case PartyManagementDependency.RelationshipState.ACTIVE    => RelationshipState.ACTIVE
+      case PartyManagementDependency.RelationshipState.SUSPENDED => RelationshipState.SUSPENDED
+      case PartyManagementDependency.RelationshipState.DELETED   => RelationshipState.DELETED
+      case PartyManagementDependency.RelationshipState.REJECTED  => RelationshipState.REJECTED
     }
 
 }

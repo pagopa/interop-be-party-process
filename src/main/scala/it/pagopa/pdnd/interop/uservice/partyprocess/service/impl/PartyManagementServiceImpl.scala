@@ -119,7 +119,7 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
   override def createRelationship(
     personId: UUID,
     organizationId: UUID,
-    role: PartyRoleEnum,
+    role: PartyRole,
     products: Set[String],
     productRole: String
   ): Future[Unit] = {
@@ -132,7 +132,7 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
   private def invokeCreateRelationship(
     personId: UUID,
     organizationId: UUID,
-    role: PartyRoleEnum,
+    role: PartyRole,
     products: Set[String],
     productRole: String
   ): Future[Relationship] = {
@@ -166,12 +166,12 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  private def isProductRoleValid(role: PartyRoleEnum, productRole: String): Either[Throwable, String] = {
+  private def isProductRoleValid(role: PartyRole, productRole: String): Either[Throwable, String] = {
     logger.info(s"Checking if the productRole '$productRole' is valid for a '$role'")
     role match {
-      case MANAGER  => manager.validateProductRoleMapping(productRole)
-      case DELEGATE => delegate.validateProductRoleMapping(productRole)
-      case OPERATOR => operator.validateProductRoleMapping(productRole)
+      case PartyRole.MANAGER  => manager.validateProductRoleMapping(productRole)
+      case PartyRole.DELEGATE => delegate.validateProductRoleMapping(productRole)
+      case PartyRole.OPERATOR => operator.validateProductRoleMapping(productRole)
     }
   }
 

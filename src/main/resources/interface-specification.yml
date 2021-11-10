@@ -584,7 +584,7 @@ components:
           type: string
           format: uuid
         role:
-          $ref: '#/components/schemas/PartyRoleEnum'
+          $ref: '#/components/schemas/PartyRole'
         products:
           type: array
           description: set of products bound to this relationship
@@ -594,8 +594,8 @@ components:
         productRole:
           type: string
           description: 'user role in the application context (e.g.: administrator, security user). This MUST belong to the configured set of application specific platform roles'
-        status:
-          $ref: '#/components/schemas/RelationshipStatusEnum'
+        state:
+          $ref: '#/components/schemas/RelationshipState'
       additionalProperties: false
       required:
         - id
@@ -603,7 +603,7 @@ components:
         - role
         - products
         - productRole
-        - status
+        - state
     RelationshipsResponse:
       type: array
       items:
@@ -617,7 +617,7 @@ components:
         taxCode:
           type: string
         role:
-          $ref: '#/components/schemas/PartyRoleEnum'
+          $ref: '#/components/schemas/PartyRole'
         email:
           type: string
         products:
@@ -657,10 +657,10 @@ components:
           type: string
         digitalAddress:
           type: string
-        status:
-          type: string
+        state:
+          $ref: '#/components/schemas/RelationshipState'
         role:
-          type: string
+          $ref: '#/components/schemas/PartyRole'
         relationshipProducts:
           type: array
           uniqueItems: true
@@ -685,7 +685,7 @@ components:
         - institutionId
         - description
         - digitalAddress
-        - status
+        - state
         - role
         - relationshipProducts
         - productRole
@@ -781,16 +781,16 @@ components:
         - managerRoles
         - delegateRoles
         - operatorRoles
-    PartyRoleEnum:
+    PartyRole:
       type: string
       description: Represents the generic available role types for the relationship
       enum:
         - MANAGER
         - DELEGATE
         - OPERATOR
-    RelationshipStatusEnum:
+    RelationshipState:
       type: string
-      description: Represents the party relationship status
+      description: Represents the party relationship state
       enum:
         - PENDING
         - ACTIVE

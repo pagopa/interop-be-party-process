@@ -23,9 +23,9 @@ private class MockPartyApiInvoker(implicit json4sFormats: Formats, system: actor
       id = UUID.randomUUID(),
       from = UUID.randomUUID(),
       to = UUID.randomUUID(),
-      role = MANAGER,
+      role = PartyRole.MANAGER,
       productRole = "admin",
-      status = ACTIVE,
+      state = RelationshipState.ACTIVE,
       products = Set.empty
     )
     Future.successful(new ApiResponse[T](200, mockRelationshipResponse.asInstanceOf[T]))
@@ -65,7 +65,7 @@ class PartyManagementServiceImplSpec
         partyManagementService.createRelationship(
           UUID.randomUUID(),
           UUID.randomUUID(),
-          MANAGER,
+          PartyRole.MANAGER,
           productRole = "foobar",
           products = Set.empty
         )
@@ -77,7 +77,7 @@ class PartyManagementServiceImplSpec
       //given the request payload
       val userId           = UUID.randomUUID()
       val partyIdTo        = UUID.randomUUID()
-      val relationshipRole = OPERATOR
+      val relationshipRole = PartyRole.OPERATOR
       val productRole      = "api"
 
       //given mocked integration API behavior
