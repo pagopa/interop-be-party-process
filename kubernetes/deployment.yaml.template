@@ -92,15 +92,15 @@ spec:
                   name: storage
                   key: STORAGE_PSW
             - name: PARTY_MANAGEMENT_URL
-              value: {{partyManagementUrl}}
+              value: "{{partyManagementUrl}}"
             - name: PARTY_PROXY_URL
-              value: {{partyProxyUrl}}
+              value: "{{partyProxyUrl}}"
             - name: ATTRIBUTE_REGISTRY_URL
-              value: {{attributeRegistryUrl}}
+              value: "{{attributeRegistryUrl}}"
             - name: AUTHORIZATION_PROCESS_URL
-              value: {{authorizationProcessUrl}}
+              value: "{{authorizationProcessUrl}}"
             - name: USER_REGISTRY_MANAGEMENT_URL
-              value: {{userRegistryManagementUrl}}
+              value: "{{userRegistryManagementUrl}}"
       volumes:
       - name: snapshots-volume
         emptyDir: {}
