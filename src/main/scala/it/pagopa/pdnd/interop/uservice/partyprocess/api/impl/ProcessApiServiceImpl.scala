@@ -7,20 +7,23 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipEnums.Role.{Delegate, Manager, Operator}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   Organization,
   OrganizationSeed,
   PersonSeed,
   Relationship,
-  RelationshipEnums,
   RelationshipSeed,
-  RelationshipSeedEnums,
   Relationships,
   RelationshipsSeed,
   Problem => _
 }
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApiService
+import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{
+  relationshipStateToApi,
+  roleToApi,
+  roleToDependency
+}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration.productRolesConfiguration
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.{OptionOps, StringOps, TryOps}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{ApplicationConfiguration, Digester}
@@ -73,19 +76,19 @@ class ProcessApiServiceImpl(
       personInfo = PersonInfo(user.name, user.surname, user.externalId)
       relationships <- partyManagementService.retrieveRelationships(Some(subjectUUID), institutionUUID, None)
       organizations <- Future.traverse(relationships.items)(r =>
-        getOrganization(r.to).map(o => (o, r.status, r.role, r.products, r.productRole))
+        getOrganization(r.to).map(o => (o, r.state, r.role, r.products, r.productRole))
       )
       onboardingData = organizations.map { case (o, status, role, products, productRole) =>
         OnboardingData(
           o.institutionId,
           o.description,
           o.digitalAddress,
-          status.toString,
-          role.toString,
+          relationshipStateToApi(status),
+          roleToApi(role),
           productRole = productRole,
           relationshipProducts = products,
           attributes = o.attributes,
-          institutionProducts = o.products.toSet
+          institutionProducts = o.products
         )
       }
     } yield OnBoardingInfo(personInfo, onboardingData)
@@ -122,13 +125,13 @@ class ProcessApiServiceImpl(
 
     val result: Future[OnBoardingResponse] = for {
       organization     <- organizationF
-      validUsers       <- verifyUsersByRoles(onBoardingRequest.users, Set(Manager.toString, Delegate.toString))
+      validUsers       <- verifyUsersByRoles(onBoardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
       personsWithRoles <- Future.traverse(validUsers)(addUser)
       _ <- Future.traverse(personsWithRoles)(pr =>
-        partyManagementService.createRelationship(pr._1.id, organization.id, pr._2, pr._3, pr._4)
+        partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)
       )
       relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, product, productRole) =>
-        createRelationship(organization.id, person.id, role, product, productRole)
+        createRelationship(organization.id, person.id, roleToDependency(role), product, productRole)
       })
       pdf   <- pdfCreator.create(validUsers, organization)
       token <- partyManagementService.createToken(relationships, pdf._2)
@@ -162,10 +165,10 @@ class ProcessApiServiceImpl(
       relationships <- partyManagementService.retrieveRelationships(None, Some(organization.id), None)
       _             <- existsAnOnboardedManager(relationships)
 
-      validUsers <- verifyUsersByRoles(onBoardingRequest.users, Set(Operator.toString))
+      validUsers <- verifyUsersByRoles(onBoardingRequest.users, Set(PartyRole.OPERATOR))
       operators  <- Future.traverse(validUsers)(addUser)
       _ <- Future.traverse(operators)(pr =>
-        partyManagementService.createRelationship(pr._1.id, organization.id, pr._2, pr._3, pr._4)
+        partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)
       )
       _ = logger.info(s"Operators created ${operators.map(_.toString).mkString(",")}")
     } yield ()
@@ -217,7 +220,7 @@ class ProcessApiServiceImpl(
     }
   }
 
-  private def verifyUsersByRoles(users: Seq[User], roles: Set[String]): Future[Seq[User]] = {
+  private def verifyUsersByRoles(users: Seq[User], roles: Set[PartyRole]): Future[Seq[User]] = {
     val areValidUsers: Boolean = users.forall(user => roles.contains(user.role))
     Future.fromTry(
       Either
@@ -236,8 +239,8 @@ class ProcessApiServiceImpl(
     Either
       .cond(
         relationships.items.exists(rl =>
-          rl.role == RelationshipEnums.Role.Manager &&
-            (rl.status != RelationshipEnums.Status.Pending) //TODO add Rejected also
+          rl.role == PartyManagementDependency.PartyRole.MANAGER &&
+            (rl.state != PartyManagementDependency.RelationshipState.PENDING) //TODO add Rejected also
         ),
         (),
         new RuntimeException("No onboarded managers for this institution.")
@@ -245,7 +248,7 @@ class ProcessApiServiceImpl(
       .toTry
   }
 
-  private def addUser(user: User): Future[(UserRegistryUser, String, Set[String], String)] = {
+  private def addUser(user: User): Future[(UserRegistryUser, PartyRole, Set[String], String)] = {
     logger.info(s"Adding user ${user.toString}")
     createPerson(user)
       .recoverWith {
@@ -258,11 +261,11 @@ class ProcessApiServiceImpl(
   private def createRelationship(
     organizationId: UUID,
     personId: UUID,
-    role: String,
+    role: PartyManagementDependency.PartyRole,
     products: Set[String],
     productRole: String
   ): RelationshipSeed =
-    RelationshipSeed(personId, organizationId, RelationshipSeedEnums.Role.withName(role), products, productRole)
+    RelationshipSeed(personId, organizationId, role, products, productRole)
 
   private def createPerson(user: User): Future[UserRegistryUser] =
     for {
@@ -498,15 +501,15 @@ class ProcessApiServiceImpl(
   }
 
   private def relationshipMustBeActivable(relationship: Relationship): Future[Unit] =
-    relationship.status match {
-      case RelationshipEnums.Status.Suspended => Future.successful(())
-      case status                             => Future.failed(RelationshipNotActivable(relationship.id.toString, status.toString))
+    relationship.state match {
+      case PartyManagementDependency.RelationshipState.SUSPENDED => Future.successful(())
+      case status                                                => Future.failed(RelationshipNotActivable(relationship.id.toString, status.toString))
     }
 
   private def relationshipMustBeSuspendable(relationship: Relationship): Future[Unit] =
-    relationship.status match {
-      case RelationshipEnums.Status.Active => Future.successful(())
-      case status                          => Future.failed(RelationshipNotSuspendable(relationship.id.toString, status.toString))
+    relationship.state match {
+      case PartyManagementDependency.RelationshipState.ACTIVE => Future.successful(())
+      case status                                             => Future.failed(RelationshipNotSuspendable(relationship.id.toString, status.toString))
     }
 
   private def relationshipsToRelationshipsResponse(relationships: Relationships): Seq[RelationshipInfo] = {
@@ -517,11 +520,10 @@ class ProcessApiServiceImpl(
     RelationshipInfo(
       id = relationship.id,
       from = relationship.from,
-      role = relationship.role.toString,
+      role = roleToApi(relationship.role),
       products = relationship.products,
       productRole = relationship.productRole,
-      // TODO This conversion is temporary, while we implement a naming convention for enums
-      status = relationship.status.toString.toLowerCase
+      state = relationshipStateToApi(relationship.state)
     )
   }
 
@@ -658,13 +660,13 @@ class ProcessApiServiceImpl(
       organization              <- partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)
       organizationRelationships <- partyManagementService.retrieveRelationships(None, Some(organization.id), None)
       _                         <- existsAnOnboardedManager(organizationRelationships)
-      validUsers                <- verifyUsersByRoles(onBoardingRequest.users, Set(Manager.toString, Delegate.toString))
+      validUsers                <- verifyUsersByRoles(onBoardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
       personsWithRoles          <- Future.traverse(validUsers)(addUser)
       _ <- Future.traverse(personsWithRoles)(pr =>
-        partyManagementService.createRelationship(pr._1.id, organization.id, pr._2, pr._3, pr._4)
+        partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)
       )
       relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, products, productRole) =>
-        createRelationship(organization.id, person.id, role, products, productRole)
+        createRelationship(organization.id, person.id, roleToDependency(role), products, productRole)
       })
       pdf   <- pdfCreator.create(validUsers, organization)
       token <- partyManagementService.createToken(relationships, pdf._2)

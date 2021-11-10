@@ -20,7 +20,7 @@ trait PartyManagementService {
   def createRelationship(
     id: UUID,
     organizationId: UUID,
-    operationRole: String,
+    operationRole: PartyRole,
     products: Set[String],
     productRole: String
   ): Future[Unit]
