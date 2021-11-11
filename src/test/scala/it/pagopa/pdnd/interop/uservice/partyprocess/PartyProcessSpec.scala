@@ -17,7 +17,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{Authenticator
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.{model => PartyProcess}
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
-import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.{Categories, Category, Institution}
+import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.{Categories, Category, Institution, Manager}
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{
   NONE => CertificationEnumsNone,
   User => UserRegistryUser,
@@ -150,7 +150,7 @@ class PartyProcessSpec
         id = UUID.fromString(orgPartyId1),
         attributes = Seq("1", "2", "3"),
         products = Set.empty,
-        fiscalCode = "123"
+        taxCode = "123"
       )
       val organization2 = PartyManagementDependency.Organization(
         institutionId = institutionId2.toString,
@@ -159,7 +159,7 @@ class PartyProcessSpec
         id = UUID.fromString(orgPartyId2),
         attributes = Seq("99", "100", "101"),
         products = Set.empty,
-        fiscalCode = "123"
+        taxCode = "123"
       )
 
       val expected = OnBoardingInfo(
@@ -286,7 +286,7 @@ class PartyProcessSpec
         id = UUID.fromString(orgPartyId1),
         attributes = Seq("1", "2", "3"),
         products = Set.empty,
-        fiscalCode = "123"
+        taxCode = "123"
       )
 
       val expected = OnBoardingInfo(
@@ -408,19 +408,19 @@ class PartyProcessSpec
       val taxCode2       = "delegateTaxCode"
       val institutionId1 = "IST2"
       val orgPartyId1    = "bf80fac0-2775-4646-8fcf-28e083751901"
-      val institution1 = Institution(
-        id = institutionId1,
-        o = None,
-        ou = None,
-        aoo = None,
-        taxCode = None,
-        administrationCode = None,
-        category = Some("C17"),
-        managerName = None,
-        managerSurname = None,
-        description = "institution",
-        digitalAddress = None
-      )
+      val institution1 =
+        Institution(
+          id = institutionId1,
+          o = Some(institutionId1),
+          ou = None,
+          aoo = None,
+          taxCode = "taxCode",
+          category = "category",
+          manager = Manager("name", "surname"),
+          description = "description",
+          digitalAddress = "digitalAddress"
+        )
+
       val organization1 = PartyManagementDependency.Organization(
         institutionId = institutionId1,
         description = "org1",
@@ -428,7 +428,7 @@ class PartyProcessSpec
         id = UUID.fromString(orgPartyId1),
         attributes = Seq.empty,
         products = Set.empty,
-        fiscalCode = "123"
+        taxCode = "123"
       )
 
       val attr1 = AttributesResponse(
@@ -590,7 +590,7 @@ class PartyProcessSpec
               digitalAddress = "big@fish.it",
               attributes = Seq.empty,
               products = Set.empty,
-              fiscalCode = "123"
+              taxCode = "123"
             )
           )
         )
@@ -622,7 +622,7 @@ class PartyProcessSpec
         id = UUID.fromString(orgPartyId1),
         attributes = Seq.empty,
         products = Set.empty,
-        fiscalCode = "123"
+        taxCode = "123"
       )
 
       val relationships =
@@ -1609,7 +1609,7 @@ class PartyProcessSpec
         id = UUID.fromString(orgPartyId1),
         attributes = Seq.empty,
         products = Set.empty,
-        fiscalCode = "123"
+        taxCode = "123"
       )
 
       val file = new File("src/test/resources/fake.file")
@@ -1752,7 +1752,7 @@ class PartyProcessSpec
         id = UUID.fromString(orgPartyId1),
         attributes = Seq.empty,
         products = Set.empty,
-        fiscalCode = "123"
+        taxCode = "123"
       )
 
       val managerId = UUID.randomUUID()
@@ -1822,7 +1822,7 @@ class PartyProcessSpec
         id = UUID.fromString(orgPartyId1),
         attributes = Seq.empty,
         products = Set("PDND", "APP IO", "APP VOI"),
-        fiscalCode = "123"
+        taxCode = "123"
       )
 
       val managerId = UUID.randomUUID()
@@ -1896,7 +1896,7 @@ class PartyProcessSpec
         id = UUID.fromString(orgPartyId1),
         attributes = Seq.empty,
         products = Set("PDND", "APP IO", "APP VOI"),
-        fiscalCode = "123"
+        taxCode = "123"
       )
 
       val managerId = UUID.randomUUID()

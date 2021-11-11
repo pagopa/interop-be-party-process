@@ -78,17 +78,17 @@ class ProcessApiServiceImpl(
       organizations <- Future.traverse(relationships.items)(r =>
         getOrganization(r.to).map(o => (o, r.state, r.role, r.products, r.productRole))
       )
-      onboardingData = organizations.map { case (o, status, role, products, productRole) =>
+      onboardingData = organizations.map { case (o, state, role, products, productRole) =>
         OnboardingData(
-          o.institutionId,
-          o.description,
-          o.digitalAddress,
-          relationshipStateToApi(status),
-          roleToApi(role),
-          productRole = productRole,
+          institutionId = o.institutionId,
+          description = o.description,
+          digitalAddress = o.digitalAddress,
+          state = relationshipStateToApi(state),
+          role = roleToApi(role),
           relationshipProducts = products,
-          attributes = o.attributes,
-          institutionProducts = o.products
+          productRole = productRole,
+          institutionProducts = o.products,
+          attributes = o.attributes
         )
       }
     } yield OnBoardingInfo(personInfo, onboardingData)
@@ -297,17 +297,17 @@ class ProcessApiServiceImpl(
       category <- categories.items
         .find(cat => institution.category.contains(cat.code))
         .map(Future.successful)
-        .getOrElse(
-          Future.failed(new RuntimeException(s"Invalid category ${institution.category.getOrElse("UNKNOWN")}"))
-        )
+        .getOrElse(Future.failed(new RuntimeException(s"Invalid category ${institution.category}")))
       attributes <- attributeRegistryService.createAttribute("IPA", category.name, category.code)
       _ = logger.info(s"getInstitution ${institution.id}")
       seed = OrganizationSeed(
         institutionId = institution.id,
+        code = Some(institution.id),
+        label = Some(category.name),
         description = institution.description,
-        digitalAddress = institution.digitalAddress.getOrElse(""), // TODO Must be non optional
-        fiscalCode = institution.taxCode.getOrElse(""),
-        attributes = attributes.attributes.filter(attr => institution.category == attr.code).map(_.id),
+        digitalAddress = institution.digitalAddress, // TODO Must be non optional
+        taxCode = institution.taxCode,
+        attributes = attributes.attributes.filter(attr => attr.code.contains(institution.category)).map(_.id),
         products = Set.empty
       )
       organization <- partyManagementService.createOrganization(seed)
@@ -610,7 +610,7 @@ class ProcessApiServiceImpl(
       code = organization.code,
       description = organization.description,
       digitalAddress = organization.digitalAddress,
-      fiscalCode = organization.fiscalCode,
+      taxCode = organization.taxCode,
       attributes = organization.attributes,
       products = organization.products
     )

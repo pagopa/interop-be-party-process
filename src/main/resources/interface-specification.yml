@@ -717,6 +717,9 @@ components:
         code:
           description: an accessory code (e.g. codice ipa)
           type: string
+        label:
+          description: an accessory label (e.g. ipa category description)
+          type: string
         description:
           type: string
           example: AGENCY X
@@ -724,8 +727,8 @@ components:
           example: email@pec.mail.org
           format: email
           type: string
-        fiscalCode:
-          description: organization fiscal code
+        taxCode:
+          description: organization tax code
           type: string
         attributes:
           type: array
@@ -742,7 +745,7 @@ components:
         - institutionId
         - description
         - digitalAddress
-        - fiscalCode
+        - taxCode
         - attributes
         - products
       additionalProperties: false
