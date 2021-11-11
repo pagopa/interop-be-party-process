@@ -7,7 +7,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, SecurityDirectives}
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{Attribute, AttributesResponse}
+import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{Attribute => ClientAttribute, AttributesResponse}
 import it.pagopa.pdnd.interop.uservice.authorizationprocess.client.model.ValidJWT
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApi
@@ -173,7 +173,7 @@ class PartyProcessSpec
             role = roleToApi(relationship1.role),
             productRole = relationship1.productRole,
             relationshipProducts = relationship1.products,
-            attributes = Seq("1", "2", "3"),
+            attributes = Seq(Attribute("1", "name1", "description1")),
             institutionProducts = Set.empty
           ),
           OnboardingData(
@@ -184,7 +184,7 @@ class PartyProcessSpec
             role = roleToApi(relationship2.role),
             relationshipProducts = relationship2.products,
             productRole = relationship2.productRole,
-            attributes = Seq("99", "100", "101"),
+            attributes = Seq(Attribute("2", "name2", "description2")),
             institutionProducts = Set.empty
           )
         )
@@ -299,7 +299,7 @@ class PartyProcessSpec
             state = relationshipStateToApi(relationship1.state),
             role = roleToApi(relationship1.role),
             productRole = relationship1.productRole,
-            attributes = Seq("1", "2", "3"),
+            attributes = Seq(Attribute("1", "name", "description")),
             institutionProducts = Set.empty,
             relationshipProducts = Set.empty
           )
@@ -433,7 +433,7 @@ class PartyProcessSpec
 
       val attr1 = AttributesResponse(
         Seq(
-          Attribute(
+          ClientAttribute(
             id = "1",
             code = Some("1"),
             certified = true,

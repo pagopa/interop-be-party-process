@@ -2,10 +2,15 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.api.AttributeApi
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.invoker.ApiRequest
-import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{AttributeSeed, AttributesResponse}
+import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{
+  Attribute,
+  AttributeSeed,
+  AttributesResponse
+}
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.{AttributeRegistryInvoker, AttributeRegistryService}
 import org.slf4j.{Logger, LoggerFactory}
 
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
 final case class AttributeRegistryServiceImpl(attributeRegistryInvoker: AttributeRegistryInvoker, api: AttributeApi)(
@@ -37,6 +42,23 @@ final case class AttributeRegistryServiceImpl(attributeRegistryInvoker: Attribut
       .recoverWith { case ex =>
         logger.error(s"Retrieving attributes ${ex.getMessage}")
         Future.failed[AttributesResponse](ex)
+      }
+  }
+
+  def getAttribute(id: String): Future[Attribute] = {
+
+    val request: ApiRequest[Attribute] = api.getAttributeById(UUID.fromString(id))
+
+    attributeRegistryInvoker
+      .execute(request)
+      .map { x =>
+        logger.info(s"Retrieving attribute ${x.code}")
+        logger.info(s"Retrieving attribute ${x.content}")
+        x.content
+      }
+      .recoverWith { case ex =>
+        logger.error(s"Retrieving attribute ${ex.getMessage}")
+        Future.failed[Attribute](ex)
       }
   }
 

@@ -74,23 +74,8 @@ class ProcessApiServiceImpl(
       institutionUUID <- institutionId.traverse(_.toFutureUUID)
       user            <- userRegistryManagementService.getUserById(subjectUUID)
       personInfo = PersonInfo(user.name, user.surname, user.externalId)
-      relationships <- partyManagementService.retrieveRelationships(Some(subjectUUID), institutionUUID, None)
-      organizations <- Future.traverse(relationships.items)(r =>
-        getOrganization(r.to).map(o => (o, r.state, r.role, r.products, r.productRole))
-      )
-      onboardingData = organizations.map { case (o, state, role, products, productRole) =>
-        OnboardingData(
-          institutionId = o.institutionId,
-          description = o.description,
-          digitalAddress = o.digitalAddress,
-          state = relationshipStateToApi(state),
-          role = roleToApi(role),
-          relationshipProducts = products,
-          productRole = productRole,
-          institutionProducts = o.products,
-          attributes = o.attributes
-        )
-      }
+      relationships  <- partyManagementService.retrieveRelationships(Some(subjectUUID), institutionUUID, None)
+      onboardingData <- Future.traverse(relationships.items)(getOnboardingData)
     } yield OnBoardingInfo(personInfo, onboardingData)
 
     onComplete(result) {
@@ -100,6 +85,28 @@ class ProcessApiServiceImpl(
         getOnBoardingInfo400(errorResponse)
 
     }
+  }
+
+  private def getOnboardingData(relationship: Relationship): Future[OnboardingData] = {
+    for {
+      organization <- getOrganization(relationship.to)
+      attributes <- Future.traverse(organization.attributes)(attribute =>
+        attributeRegistryService.getAttribute(attribute)
+      )
+    } yield OnboardingData(
+      institutionId = organization.institutionId,
+      description = organization.description,
+      digitalAddress = organization.digitalAddress,
+      state = relationshipStateToApi(relationship.state),
+      role = roleToApi(relationship.role),
+      relationshipProducts = relationship.products,
+      productRole = relationship.productRole,
+      institutionProducts = organization.products,
+      attributes = attributes.map(attribute =>
+        Attribute(id = attribute.id, name = attribute.name, description = attribute.description)
+      )
+    )
+
   }
 
   private[this] def tokenFromContext(context: Seq[(String, String)]): Future[String] =
@@ -302,8 +309,6 @@ class ProcessApiServiceImpl(
       _ = logger.info(s"getInstitution ${institution.id}")
       seed = OrganizationSeed(
         institutionId = institution.id,
-        code = Some(institution.id),
-        label = Some(category.name),
         description = institution.description,
         digitalAddress = institution.digitalAddress, // TODO Must be non optional
         taxCode = institution.taxCode,
@@ -607,7 +612,6 @@ class ProcessApiServiceImpl(
     } yield Institution(
       id = organization.id,
       institutionId = organization.institutionId,
-      code = organization.code,
       description = organization.description,
       digitalAddress = organization.digitalAddress,
       taxCode = organization.taxCode,
