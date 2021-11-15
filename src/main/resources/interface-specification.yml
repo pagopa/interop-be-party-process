@@ -14,7 +14,7 @@ servers:
   - url: '/pdnd-interop-uservice-party-process/{{version}}'
     description: This service is the party process
 security:
-  - bearerAuth: []
+  - bearerAuth: [ ]
 tags:
   - name: process
     description: Implements party process
@@ -35,7 +35,7 @@ paths:
   '/onboarding/info/':
     get:
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       tags:
         - process
       summary: get on boarding info
@@ -63,7 +63,7 @@ paths:
   /onboarding/organization:
     post:
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       tags:
         - process
       summary: Organization onboarding on the platform
@@ -120,7 +120,7 @@ paths:
   /onboarding/operators:
     post:
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       tags:
         - process
       summary: operators onboarding
@@ -205,18 +205,18 @@ paths:
             schema:
               $ref: '#/components/schemas/Products'
       responses:
-          '200':
-            description: successful operation
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/Institution'
-          '404':
-            description: Institution not found
-            content:
-              application/problem+json:
-                schema:
-                  $ref: '#/components/schemas/Problem'
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Institution'
+        '404':
+          description: Institution not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
     get:
       security:
         - bearerAuth: [ ]
@@ -416,7 +416,7 @@ paths:
   '/onboarding/complete/{token}':
     post:
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       tags:
         - process
       summary: create an onboarding entry
@@ -456,7 +456,7 @@ paths:
                 $ref: '#/components/schemas/Problem'
     delete:
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       tags:
         - process
       summary: invalidate an onboarding request
@@ -516,7 +516,7 @@ paths:
   /status:
     get:
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       tags:
         - health
       summary: Health status endpoint
@@ -679,7 +679,7 @@ components:
           type: array
           description: certified attributes bound to this institution
           items:
-            type: string
+            $ref: '#/components/schemas/Attribute'
       additionalProperties: false
       required:
         - institutionId
@@ -691,6 +691,19 @@ components:
         - productRole
         - attributes
         - institutionProducts
+    Attribute:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+      required:
+        - id
+        - name
+        - description
     OnBoardingInfo:
       properties:
         person:
@@ -711,11 +724,8 @@ components:
           format: uuid
           example: 97c0f418-bcb3-48d4-825a-fe8b29ae68e5
         institutionId:
-          description: DN
-          example: 'aoo=c_f205,o=c_f205,c=it'
-          type: string
-        code:
-          description: an accessory code (e.g. codice ipa)
+          description: organization id (e.g iPA code)
+          example: 'c_f205'
           type: string
         description:
           type: string
@@ -724,8 +734,8 @@ components:
           example: email@pec.mail.org
           format: email
           type: string
-        fiscalCode:
-          description: organization fiscal code
+        taxCode:
+          description: organization tax code
           type: string
         attributes:
           type: array
@@ -742,7 +752,7 @@ components:
         - institutionId
         - description
         - digitalAddress
-        - fiscalCode
+        - taxCode
         - attributes
         - products
       additionalProperties: false

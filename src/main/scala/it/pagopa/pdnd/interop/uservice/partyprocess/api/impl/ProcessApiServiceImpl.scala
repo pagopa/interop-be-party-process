@@ -74,23 +74,8 @@ class ProcessApiServiceImpl(
       institutionUUID <- institutionId.traverse(_.toFutureUUID)
       user            <- userRegistryManagementService.getUserById(subjectUUID)
       personInfo = PersonInfo(user.name, user.surname, user.externalId)
-      relationships <- partyManagementService.retrieveRelationships(Some(subjectUUID), institutionUUID, None)
-      organizations <- Future.traverse(relationships.items)(r =>
-        getOrganization(r.to).map(o => (o, r.state, r.role, r.products, r.productRole))
-      )
-      onboardingData = organizations.map { case (o, status, role, products, productRole) =>
-        OnboardingData(
-          o.institutionId,
-          o.description,
-          o.digitalAddress,
-          relationshipStateToApi(status),
-          roleToApi(role),
-          productRole = productRole,
-          relationshipProducts = products,
-          attributes = o.attributes,
-          institutionProducts = o.products
-        )
-      }
+      relationships  <- partyManagementService.retrieveRelationships(Some(subjectUUID), institutionUUID, None)
+      onboardingData <- Future.traverse(relationships.items)(getOnboardingData)
     } yield OnBoardingInfo(personInfo, onboardingData)
 
     onComplete(result) {
@@ -100,6 +85,28 @@ class ProcessApiServiceImpl(
         getOnBoardingInfo400(errorResponse)
 
     }
+  }
+
+  private def getOnboardingData(relationship: Relationship): Future[OnboardingData] = {
+    for {
+      organization <- getOrganization(relationship.to)
+      attributes <- Future.traverse(organization.attributes)(attribute =>
+        attributeRegistryService.getAttribute(attribute)
+      )
+    } yield OnboardingData(
+      institutionId = organization.institutionId,
+      description = organization.description,
+      digitalAddress = organization.digitalAddress,
+      state = relationshipStateToApi(relationship.state),
+      role = roleToApi(relationship.role),
+      relationshipProducts = relationship.products,
+      productRole = relationship.productRole,
+      institutionProducts = organization.products,
+      attributes = attributes.map(attribute =>
+        Attribute(id = attribute.id, name = attribute.name, description = attribute.description)
+      )
+    )
+
   }
 
   private[this] def tokenFromContext(context: Seq[(String, String)]): Future[String] =
@@ -297,17 +304,15 @@ class ProcessApiServiceImpl(
       category <- categories.items
         .find(cat => institution.category.contains(cat.code))
         .map(Future.successful)
-        .getOrElse(
-          Future.failed(new RuntimeException(s"Invalid category ${institution.category.getOrElse("UNKNOWN")}"))
-        )
+        .getOrElse(Future.failed(new RuntimeException(s"Invalid category ${institution.category}")))
       attributes <- attributeRegistryService.createAttribute("IPA", category.name, category.code)
       _ = logger.info(s"getInstitution ${institution.id}")
       seed = OrganizationSeed(
         institutionId = institution.id,
         description = institution.description,
-        digitalAddress = institution.digitalAddress.getOrElse(""), // TODO Must be non optional
-        fiscalCode = institution.taxCode.getOrElse(""),
-        attributes = attributes.attributes.filter(attr => institution.category == attr.code).map(_.id),
+        digitalAddress = institution.digitalAddress, // TODO Must be non optional
+        taxCode = institution.taxCode,
+        attributes = attributes.attributes.filter(attr => attr.code.contains(institution.category)).map(_.id),
         products = Set.empty
       )
       organization <- partyManagementService.createOrganization(seed)
@@ -607,10 +612,9 @@ class ProcessApiServiceImpl(
     } yield Institution(
       id = organization.id,
       institutionId = organization.institutionId,
-      code = organization.code,
       description = organization.description,
       digitalAddress = organization.digitalAddress,
-      fiscalCode = organization.fiscalCode,
+      taxCode = organization.taxCode,
       attributes = organization.attributes,
       products = organization.products
     )
