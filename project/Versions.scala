@@ -1,5 +1,5 @@
 object Versions {
-  lazy val akkaVersion             = "2.6.16"
+  lazy val akkaVersion             = "2.6.17"
   lazy val akkaHttpVersion         = "10.2.6"
   lazy val akkaHttpJson4sVersion   = "1.38.2"
   lazy val akkaManagementVersion   = "1.1.1"
@@ -22,8 +22,9 @@ object Versions {
 
 object PDNDVersions {
   lazy val attributeRegistryVersion      = "0.1.1-SNAPSHOT"
-  lazy val partyProxyVersion             = "0.1.1-SNAPSHOT"
-  lazy val partyManagementVersion        = "0.1.1-SNAPSHOT"
   lazy val authorizationProcessVersion   = "0.1.1-SNAPSHOT"
+  lazy val commonsVersion                = "0.1.1-SNAPSHOT"
+  lazy val partyManagementVersion        = "0.1.1-SNAPSHOT"
+  lazy val partyProxyVersion             = "0.1.1-SNAPSHOT"
   lazy val userRegistryManagementVersion = "0.1.1-SNAPSHOT"
 }

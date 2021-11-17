@@ -3,6 +3,14 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.server.impl
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.directives.SecurityDirectives
 import akka.management.scaladsl.AkkaManagement
+import it.pagopa.pdnd.interop.commons.files.StorageConfiguration
+import it.pagopa.pdnd.interop.commons.files.service.FileManager
+import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
+import it.pagopa.pdnd.interop.commons.mail.service.impl.CourierMailerConfiguration.CourierMailer
+import it.pagopa.pdnd.interop.commons.mail.service.impl.DefaultPDNDMailer
+import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.Authenticator
+import it.pagopa.pdnd.interop.commons.utils.CORSSupport
+import it.pagopa.pdnd.interop.commons.utils.TypeConversions.TryOps
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.api.AttributeApi
 import it.pagopa.pdnd.interop.uservice.authorizationprocess.client.api.AuthApi
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
@@ -17,117 +25,110 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.{HealthApi, PlatformApi, ProcessApi}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{
   ApplicationConfiguration,
-  Authenticator,
-  CorsSupport,
   classicActorSystem,
   executionContext
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
-import it.pagopa.pdnd.interop.uservice.partyprocess.service.impl.{
-  AttributeRegistryServiceImpl,
-  AuthorizationProcessServiceImpl,
-  MailerImpl,
-  PDFCreatorImpl,
-  PartyManagementServiceImpl,
-  PartyRegistryServiceImpl,
-  UserRegistryManagementServiceImpl
-}
-import it.pagopa.pdnd.interop.uservice.partyprocess.service.{
-  AttributeRegistryInvoker,
-  AttributeRegistryService,
-  FileManager,
-  AuthorizationProcessInvoker,
-  AuthorizationProcessService,
-  Mailer,
-  PDFCreator,
-  PartyManagementInvoker,
-  PartyManagementService,
-  PartyProxyInvoker,
-  PartyRegistryService,
-  UserRegistryManagementInvoker,
-  UserRegistryManagementService
-}
+import it.pagopa.pdnd.interop.uservice.partyprocess.service._
+import it.pagopa.pdnd.interop.uservice.partyprocess.service.impl._
 import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.api.InstitutionApi
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.api.UserApi
 import kamon.Kamon
 
 import scala.concurrent.Future
 
-object Main extends App with CorsSupport {
-
-  final val fileManager = FileManager
-    .getConcreteImplementation(ApplicationConfiguration.runtimeFileManager)
-    .get //end of the world here: if no valid file manager is configured, the application must break.
-
-  Kamon.init()
-
-  final val partyManagementInvoker: PartyManagementInvoker = PartyManagementInvoker()
-  final val partyApi: PartyApi                             = PartyApi(ApplicationConfiguration.getPartyManagementUrl)
-
-  final val partyProxyInvoker: PartyProxyInvoker = PartyProxyInvoker()
-  final val institutionApi: InstitutionApi       = InstitutionApi(ApplicationConfiguration.getPartyProxyUrl)
-
-  final val attributeRegistryInvoker: AttributeRegistryInvoker = AttributeRegistryInvoker()
-  final val attributeApi: AttributeApi                         = AttributeApi(ApplicationConfiguration.getAttributeRegistryUrl)
-
-  final val authorizationProcessInvoker: AuthorizationProcessInvoker = AuthorizationProcessInvoker()
-  final val authAPI: AuthApi                                         = AuthApi(ApplicationConfiguration.getAuthorizationProcessURL)
-
-  final val userRegistryManagementInvoker: UserRegistryManagementInvoker = UserRegistryManagementInvoker()
-  final val userAPI: UserApi                                             = UserApi(ApplicationConfiguration.getUserRegistryURL)
-
+trait PartyManagementDependency {
   final val partyManagementService: PartyManagementService =
-    PartyManagementServiceImpl(partyManagementInvoker, partyApi)
+    PartyManagementServiceImpl(PartyManagementInvoker(), PartyApi(ApplicationConfiguration.getPartyManagementUrl))
+}
 
-  final val partyProcessService: PartyRegistryService = PartyRegistryServiceImpl(partyProxyInvoker, institutionApi)
+trait PartyProxyDependency {
+  final val partyProcessService: PartyRegistryService =
+    PartyRegistryServiceImpl(PartyProxyInvoker(), InstitutionApi(ApplicationConfiguration.getPartyProxyUrl))
+}
 
+trait AttributeRegistryDependency {
   final val attributeRegistryService: AttributeRegistryService =
-    AttributeRegistryServiceImpl(attributeRegistryInvoker, attributeApi)
+    AttributeRegistryServiceImpl(
+      AttributeRegistryInvoker(),
+      AttributeApi(ApplicationConfiguration.getAttributeRegistryUrl)
+    )
+}
 
+trait AuthorizationProcessDependency {
   final val authorizationProcessService: AuthorizationProcessService =
-    AuthorizationProcessServiceImpl(authorizationProcessInvoker, authAPI)
+    AuthorizationProcessServiceImpl(
+      AuthorizationProcessInvoker(),
+      AuthApi(ApplicationConfiguration.getAuthorizationProcessURL)
+    )
+}
 
+trait UserRegistryManagementDependency {
   final val userRegistryManagementService: UserRegistryManagementService =
-    UserRegistryManagementServiceImpl(userRegistryManagementInvoker, userAPI)
+    UserRegistryManagementServiceImpl(
+      UserRegistryManagementInvoker(),
+      UserApi(ApplicationConfiguration.getUserRegistryURL)
+    )
+}
 
-  final val mailer: Mailer         = new MailerImpl
-  final val pdfCreator: PDFCreator = new PDFCreatorImpl
+object Main
+    extends App
+    with CORSSupport
+    with PartyManagementDependency
+    with PartyProxyDependency
+    with AttributeRegistryDependency
+    with AuthorizationProcessDependency
+    with UserRegistryManagementDependency {
 
-  val processApi: ProcessApi = new ProcessApi(
-    new ProcessApiServiceImpl(
-      partyManagementService,
-      partyProcessService,
-      attributeRegistryService,
-      authorizationProcessService,
-      userRegistryManagementService,
-      mailer,
-      pdfCreator,
-      fileManager
-    ),
-    new ProcessApiMarshallerImpl(),
-    SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
-  )
+  for {
+    fileManager  <- FileManager.getConcreteImplementation(StorageConfiguration.runtimeFileManager).toFuture
+    mailTemplate <- MailTemplate.get(ApplicationConfiguration.mailTemplatePath, fileManager)
+    _            <- launchApp(fileManager, mailTemplate)
+  } yield ()
 
-  val healthApi: HealthApi = new HealthApi(
-    new HealthServiceApiImpl(),
-    new HealthApiMarshallerImpl(),
-    SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
-  )
+  private def launchApp(fileManager: FileManager, mailTemplate: PersistedTemplate): Future[Http.ServerBinding] = {
+    Kamon.init()
 
-  val platformApi: PlatformApi = new PlatformApi(
-    new PlatformApiServiceImpl(),
-    new PlatformApiMarshallerImpl(),
-    SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
-  )
+    val mailer: MailEngine     = new PartyProcessMailer with DefaultPDNDMailer with CourierMailer
+    val pdfCreator: PDFCreator = new PDFCreatorImpl
 
-  locally {
-    val _ = AkkaManagement.get(classicActorSystem).start()
+    val processApi: ProcessApi = new ProcessApi(
+      new ProcessApiServiceImpl(
+        partyManagementService,
+        partyProcessService,
+        attributeRegistryService,
+        authorizationProcessService,
+        userRegistryManagementService,
+        pdfCreator,
+        fileManager,
+        mailer,
+        mailTemplate
+      ),
+      new ProcessApiMarshallerImpl(),
+      SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
+    )
 
+    val healthApi: HealthApi = new HealthApi(
+      new HealthServiceApiImpl(),
+      new HealthApiMarshallerImpl(),
+      SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
+    )
+
+    val platformApi: PlatformApi = new PlatformApi(
+      new PlatformApiServiceImpl(),
+      new PlatformApiMarshallerImpl(),
+      SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
+    )
+
+    locally {
+      val _ = AkkaManagement.get(classicActorSystem).start()
+    }
+
+    val controller: Controller = new Controller(healthApi, platformApi, processApi)
+
+    val server: Future[Http.ServerBinding] =
+      Http().newServerAt("0.0.0.0", ApplicationConfiguration.serverPort).bind(corsHandler(controller.routes))
+
+    server
   }
-
-  val controller: Controller = new Controller(healthApi, platformApi, processApi)
-
-  val bindingFuture: Future[Http.ServerBinding] =
-    Http().newServerAt("0.0.0.0", ApplicationConfiguration.serverPort).bind(corsHandler(controller.routes))
-
 }

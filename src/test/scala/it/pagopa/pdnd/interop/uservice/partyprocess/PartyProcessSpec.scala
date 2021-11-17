@@ -7,24 +7,31 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, SecurityDirectives}
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{Attribute => ClientAttribute, AttributesResponse}
+import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{
+  Attribute => ClientAttribute,
+  AttributesResponse
+}
 import it.pagopa.pdnd.interop.uservice.authorizationprocess.client.model.ValidJWT
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{relationshipStateToApi, roleToApi}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.ProcessApiServiceImpl
-import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{Authenticator, classicActorSystem, executionContext}
+import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{classicActorSystem, executionContext}
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.{model => PartyProcess}
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.{Categories, Category, Institution, Manager}
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{
-  NONE => CertificationEnumsNone,
   User => UserRegistryUser,
   UserExtras => UserRegistryUserExtras,
   UserSeed => UserRegistryUserSeed
 }
+
+import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.Certification.{
+  NONE => CertificationEnumsNone
+}
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.{Products => ModelProducts}
+import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.Authenticator
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
@@ -70,6 +77,13 @@ class PartyProcessSpec
     System.setProperty("AUTHORIZATION_PROCESS_URL", "local")
     System.setProperty("USER_REGISTRY_MANAGEMENT_URL", "local")
 
+    System.setProperty("SMTP_SERVER", "localhost")
+    System.setProperty("SMTP_USR", "local")
+    System.setProperty("SMTP_PSW", "local")
+    System.setProperty("SMTP_PORT", "10")
+    System.setProperty("MAIL_SENDER_ADDRESS", "betta@dante.it")
+    System.setProperty("MAIL_TEMPLATE_PATH", "localPath")
+
     val processApi = new ProcessApi(
       new ProcessApiServiceImpl(
         mockPartyManagementService,
@@ -77,9 +91,10 @@ class PartyProcessSpec
         mockAttributeRegistryService,
         mockAuthorizationProcessService,
         mockUserRegistryService,
-        mockMailer,
         mockPdfCreator,
-        mockFileManager
+        mockFileManager,
+        mockMailer,
+        mockMailTemplate
       ),
       processApiMarshaller,
       wrappingDirective
@@ -544,7 +559,8 @@ class PartyProcessSpec
         .expects(*, *)
         .returning(Future.successful(PartyManagementDependency.TokenText("token")))
         .once()
-      (mockMailer.send _).expects(*, *, *).returning(Future.successful(())).once()
+
+      (mockMailerInvocation _).expects(*, *, *).returning(Future.successful(())).once()
 
       val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 
@@ -1728,7 +1744,7 @@ class PartyProcessSpec
         .expects(*, *)
         .returning(Future.successful(PartyManagementDependency.TokenText("token")))
         .once()
-      (mockMailer.send _).expects(*, *, *).returning(Future.successful(())).once()
+      (mockMailerInvocation _).expects(*, *, *).returning(Future.successful(())).once()
 
       val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 

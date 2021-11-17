@@ -6,6 +6,10 @@ import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
+import it.pagopa.pdnd.interop.commons.files.service.FileManager
+import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
+import it.pagopa.pdnd.interop.commons.utils.Digester
+import it.pagopa.pdnd.interop.commons.utils.TypeConversions.{OptionOps, StringOps, TryOps}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   Organization,
@@ -24,14 +28,15 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{
   roleToApi,
   roleToDependency
 }
+import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration.productRolesConfiguration
-import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.{OptionOps, StringOps, TryOps}
-import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{ApplicationConfiguration, Digester}
 import it.pagopa.pdnd.interop.uservice.partyprocess.error._
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.service._
+import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.Certification.{
+  NONE => CertificationEnumsNone
+}
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{
-  NONE => CertificationEnumsNone,
   User => UserRegistryUser,
   UserExtras => UserRegistryUserExtras,
   UserSeed => UserRegistryUserSeed
@@ -52,13 +57,22 @@ class ProcessApiServiceImpl(
   attributeRegistryService: AttributeRegistryService,
   authorizationProcessService: AuthorizationProcessService,
   userRegistryManagementService: UserRegistryManagementService,
-  mailer: Mailer,
   pdfCreator: PDFCreator,
-  fileManager: FileManager
+  fileManager: FileManager,
+  mailer: MailEngine,
+  mailTemplate: PersistedTemplate
 )(implicit ec: ExecutionContext)
     extends ProcessApiService {
 
   private val logger: Logger = LoggerFactory.getLogger(this.getClass)
+
+  private def sendOnboardingMail(addresses: Seq[String], file: File, token: String) = {
+    val bodyParameters = Map(
+      "confirmToken" -> s"https://gateway.interop.pdnd.dev/ui/conferma-registrazione?jwt=$token",
+      "rejectToken"  -> s"https://gateway.interop.pdnd.dev/ui/cancella-registrazione?jwt=$token"
+    )
+    mailer.sendMail(mailTemplate)(addresses, file, bodyParameters)
+  }
 
   /** Code: 200, Message: successful operation, DataType: OnBoardingInfo
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
@@ -142,7 +156,8 @@ class ProcessApiServiceImpl(
       })
       pdf   <- pdfCreator.create(validUsers, organization)
       token <- partyManagementService.createToken(relationships, pdf._2)
-      _ <- mailer.send(
+
+      _ <- sendOnboardingMail(
         ApplicationConfiguration.destinationMails,
         pdf._1,
         token.token
@@ -334,7 +349,7 @@ class ProcessApiServiceImpl(
   private def verifyChecksum[A](fileToCheck: File, checksum: String, output: A): Future[A] = {
     Future.fromTry(
       Either
-        .cond(Digester.createHash(fileToCheck) == checksum, output, new RuntimeException("Invalid checksum"))
+        .cond(Digester.createMD5Hash(fileToCheck) == checksum, output, new RuntimeException("Invalid checksum"))
         .toTry
     )
   }
@@ -674,7 +689,7 @@ class ProcessApiServiceImpl(
       })
       pdf   <- pdfCreator.create(validUsers, organization)
       token <- partyManagementService.createToken(relationships, pdf._2)
-      _ <- mailer.send(
+      _ <- sendOnboardingMail(
         ApplicationConfiguration.destinationMails,
         pdf._1,
         token.token
