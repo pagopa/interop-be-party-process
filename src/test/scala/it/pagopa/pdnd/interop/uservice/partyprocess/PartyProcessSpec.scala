@@ -560,7 +560,7 @@ class PartyProcessSpec
         .returning(Future.successful(PartyManagementDependency.TokenText("token")))
         .once()
 
-      (mockMailerInvocation _).expects(*, *, *).returning(Future.successful(())).once()
+      (mockMailer.sendMail(mockMailTemplate) _).expects(*, *, *).returning(Future.successful(())).once()
 
       val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 
@@ -1744,7 +1744,7 @@ class PartyProcessSpec
         .expects(*, *)
         .returning(Future.successful(PartyManagementDependency.TokenText("token")))
         .once()
-      (mockMailerInvocation _).expects(*, *, *).returning(Future.successful(())).once()
+      (mockMailer.sendMail(mockMailTemplate) _).expects(*, *, *).returning(Future.successful(())).once()
 
       val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 
