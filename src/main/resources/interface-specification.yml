@@ -32,7 +32,7 @@ tags:
       description: Find out more
       url: 'http://swagger.io'
 paths:
-  '/onboarding/info/':
+  '/onboarding/info':
     get:
       security:
         - bearerAuth: [ ]

@@ -97,8 +97,6 @@ spec:
               value: "{{partyProxyUrl}}"
             - name: ATTRIBUTE_REGISTRY_URL
               value: "{{attributeRegistryUrl}}"
-            - name: AUTHORIZATION_PROCESS_URL
-              value: "{{authorizationProcessUrl}}"
             - name: USER_REGISTRY_MANAGEMENT_URL
               value: "{{userRegistryManagementUrl}}"
       volumes:

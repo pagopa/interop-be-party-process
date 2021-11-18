@@ -30,9 +30,6 @@ object Dependencies {
     lazy val attributeRegistryClient =
       namespace %% "pdnd-interop-uservice-attribute-registry-management-client" % attributeRegistryVersion
 
-    lazy val authorizationProcessClient =
-      namespace %% "pdnd-interop-uservice-authorization-process-client" % authorizationProcessVersion
-
     lazy val userRegistryManagementClient =
       namespace %% "pdnd-interop-uservice-user-registry-management-client" % userRegistryManagementVersion
 
@@ -129,7 +126,6 @@ object Dependencies {
       pagopa.partyManagementClient        % Compile,
       pagopa.partyProxyClient             % Compile,
       pagopa.attributeRegistryClient      % Compile,
-      pagopa.authorizationProcessClient   % Compile,
       pagopa.userRegistryManagementClient % Compile,
       courier.mail                        % Compile,
       itextpdf.core                       % Compile,

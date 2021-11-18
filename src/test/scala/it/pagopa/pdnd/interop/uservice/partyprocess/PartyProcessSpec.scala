@@ -7,8 +7,10 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, SecurityDirectives}
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{Attribute => ClientAttribute, AttributesResponse}
-import it.pagopa.pdnd.interop.uservice.authorizationprocess.client.model.ValidJWT
+import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{
+  Attribute => ClientAttribute,
+  AttributesResponse
+}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{relationshipStateToApi, roleToApi}
@@ -18,8 +20,10 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.{model => PartyProcess}
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.{Categories, Category, Institution, Manager}
+import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.Certification.{
+  NONE => CertificationEnumsNone
+}
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{
-  NONE => CertificationEnumsNone,
   User => UserRegistryUser,
   UserExtras => UserRegistryUserExtras,
   UserSeed => UserRegistryUserSeed
@@ -67,7 +71,6 @@ class PartyProcessSpec
     System.setProperty("PARTY_MANAGEMENT_URL", "local")
     System.setProperty("PARTY_PROXY_URL", "local")
     System.setProperty("ATTRIBUTE_REGISTRY_URL", "local")
-    System.setProperty("AUTHORIZATION_PROCESS_URL", "local")
     System.setProperty("USER_REGISTRY_MANAGEMENT_URL", "local")
 
     val processApi = new ProcessApi(
@@ -75,7 +78,6 @@ class PartyProcessSpec
         mockPartyManagementService,
         mockPartyRegistryService,
         mockAttributeRegistryService,
-        mockAuthorizationProcessService,
         mockUserRegistryService,
         mockMailer,
         mockPdfCreator,
@@ -173,7 +175,11 @@ class PartyProcessSpec
             role = roleToApi(relationship1.role),
             productRole = relationship1.productRole,
             relationshipProducts = relationship1.products,
-            attributes = Seq(Attribute("1", "name1", "description1")),
+            attributes = Seq(
+              Attribute("1", "name1", "description1"),
+              Attribute("2", "name2", "description2"),
+              Attribute("3", "name3", "description3")
+            ),
             institutionProducts = Set.empty
           ),
           OnboardingData(
@@ -184,29 +190,17 @@ class PartyProcessSpec
             role = roleToApi(relationship2.role),
             relationshipProducts = relationship2.products,
             productRole = relationship2.productRole,
-            attributes = Seq(Attribute("2", "name2", "description2")),
+            attributes = Seq(
+              Attribute("99", "name99", "description99"),
+              Attribute("100", "name100", "description100"),
+              Attribute("101", "name101", "description101")
+            ),
             institutionProducts = Set.empty
           )
         )
       )
 
       val mockSubjectUUID = "af80fac0-2775-4646-8fcf-28e083751988"
-      (mockAuthorizationProcessService.validateToken _)
-        .expects(*)
-        .returning(
-          Future.successful(
-            ValidJWT(
-              iss = UUID.randomUUID().toString,
-              sub = mockSubjectUUID,
-              aud = List("test"),
-              exp = OffsetDateTime.now(),
-              nbf = OffsetDateTime.now(),
-              iat = OffsetDateTime.now(),
-              jti = "123"
-            )
-          )
-        )
-        .once()
 
       (mockUserRegistryService.getUserById _)
         .expects(UUID.fromString(mockSubjectUUID))
@@ -237,7 +231,110 @@ class PartyProcessSpec
         .returning(Future.successful(organization2))
         .once()
 
-      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
+      (mockAttributeRegistryService.getAttribute _)
+        .expects("1")
+        .returning(
+          Future.successful(
+            ClientAttribute(
+              id = "1",
+              name = "name1",
+              description = "description1",
+              code = None,
+              certified = true,
+              origin = None,
+              creationTime = OffsetDateTime.now()
+            )
+          )
+        )
+        .once()
+
+      (mockAttributeRegistryService.getAttribute _)
+        .expects("2")
+        .returning(
+          Future.successful(
+            ClientAttribute(
+              id = "2",
+              name = "name2",
+              description = "description2",
+              code = None,
+              certified = true,
+              origin = None,
+              creationTime = OffsetDateTime.now()
+            )
+          )
+        )
+        .once()
+
+      (mockAttributeRegistryService.getAttribute _)
+        .expects("3")
+        .returning(
+          Future.successful(
+            ClientAttribute(
+              id = "3",
+              name = "name3",
+              description = "description3",
+              code = None,
+              certified = true,
+              origin = None,
+              creationTime = OffsetDateTime.now()
+            )
+          )
+        )
+        .once()
+
+      (mockAttributeRegistryService.getAttribute _)
+        .expects("99")
+        .returning(
+          Future.successful(
+            ClientAttribute(
+              id = "99",
+              name = "name99",
+              description = "description99",
+              code = None,
+              certified = true,
+              origin = None,
+              creationTime = OffsetDateTime.now()
+            )
+          )
+        )
+        .once()
+
+      (mockAttributeRegistryService.getAttribute _)
+        .expects("100")
+        .returning(
+          Future.successful(
+            ClientAttribute(
+              id = "100",
+              name = "name100",
+              description = "description100",
+              code = None,
+              certified = true,
+              origin = None,
+              creationTime = OffsetDateTime.now()
+            )
+          )
+        )
+        .once()
+
+      (mockAttributeRegistryService.getAttribute _)
+        .expects("101")
+        .returning(
+          Future.successful(
+            ClientAttribute(
+              id = "101",
+              name = "name101",
+              description = "description101",
+              code = None,
+              certified = true,
+              origin = None,
+              creationTime = OffsetDateTime.now()
+            )
+          )
+        )
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(mockSubjectUUID)))
+
       val response = Await.result(
         Http().singleRequest(
           HttpRequest(uri = s"$url/onboarding/info", method = HttpMethods.GET, headers = authorization)
@@ -299,7 +396,11 @@ class PartyProcessSpec
             state = relationshipStateToApi(relationship1.state),
             role = roleToApi(relationship1.role),
             productRole = relationship1.productRole,
-            attributes = Seq(Attribute("1", "name", "description")),
+            attributes = Seq(
+              Attribute("1", "name1", "description1"),
+              Attribute("2", "name2", "description2"),
+              Attribute("3", "name3", "description3")
+            ),
             institutionProducts = Set.empty,
             relationshipProducts = Set.empty
           )
@@ -307,22 +408,6 @@ class PartyProcessSpec
       )
 
       val mockSubjectUUID = UUID.randomUUID().toString
-      (mockAuthorizationProcessService.validateToken _)
-        .expects(*)
-        .returning(
-          Future.successful(
-            ValidJWT(
-              iss = UUID.randomUUID().toString,
-              sub = mockSubjectUUID,
-              aud = List("test"),
-              exp = OffsetDateTime.now(),
-              nbf = OffsetDateTime.now(),
-              iat = OffsetDateTime.now(),
-              jti = "123"
-            )
-          )
-        )
-        .once()
 
       (mockUserRegistryService.getUserById _)
         .expects(UUID.fromString(mockSubjectUUID))
@@ -349,7 +434,59 @@ class PartyProcessSpec
         .returning(Future.successful(organization1))
         .once()
 
-      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
+      (mockAttributeRegistryService.getAttribute _)
+        .expects("1")
+        .returning(
+          Future.successful(
+            ClientAttribute(
+              id = "1",
+              name = "name1",
+              description = "description1",
+              code = None,
+              certified = true,
+              origin = None,
+              creationTime = OffsetDateTime.now()
+            )
+          )
+        )
+        .once()
+
+      (mockAttributeRegistryService.getAttribute _)
+        .expects("2")
+        .returning(
+          Future.successful(
+            ClientAttribute(
+              id = "2",
+              name = "name2",
+              description = "description2",
+              code = None,
+              certified = true,
+              origin = None,
+              creationTime = OffsetDateTime.now()
+            )
+          )
+        )
+        .once()
+
+      (mockAttributeRegistryService.getAttribute _)
+        .expects("3")
+        .returning(
+          Future.successful(
+            ClientAttribute(
+              id = "3",
+              name = "name3",
+              description = "description3",
+              code = None,
+              certified = true,
+              origin = None,
+              creationTime = OffsetDateTime.now()
+            )
+          )
+        )
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(mockSubjectUUID)))
+
       val response =
         Http()
           .singleRequest(
@@ -369,23 +506,6 @@ class PartyProcessSpec
     }
 
     "fail the onboarding info retrieval when the institution id filter contains an invalid string" in {
-      val mockSubjectUUID = "af80fac0-2775-4646-8fcf-28e083751988"
-      (mockAuthorizationProcessService.validateToken _)
-        .expects(*)
-        .returning(
-          Future.successful(
-            ValidJWT(
-              iss = UUID.randomUUID().toString,
-              sub = mockSubjectUUID,
-              aud = List("test"),
-              exp = OffsetDateTime.now(),
-              nbf = OffsetDateTime.now(),
-              iat = OffsetDateTime.now(),
-              jti = "123"
-            )
-          )
-        )
-        .once()
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
       val response =
@@ -415,7 +535,7 @@ class PartyProcessSpec
           ou = None,
           aoo = None,
           taxCode = "taxCode",
-          category = "category",
+          category = "C17",
           manager = Manager("name", "surname"),
           description = "description",
           digitalAddress = "digitalAddress"
@@ -548,7 +668,8 @@ class PartyProcessSpec
 
       val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 
-      val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
+      val data = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
+
       val response = request(data, "onboarding/organization", HttpMethods.POST)
 
       response.status mustBe StatusCodes.Created
@@ -845,23 +966,6 @@ class PartyProcessSpec
       val relationships =
         PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
 
-      (mockAuthorizationProcessService.validateToken _)
-        .expects(*)
-        .returning(
-          Future.successful(
-            ValidJWT(
-              iss = UUID.randomUUID().toString,
-              sub = adminIdentifier.toString,
-              aud = List("test"),
-              exp = OffsetDateTime.now(),
-              nbf = OffsetDateTime.now(),
-              iat = OffsetDateTime.now(),
-              jti = "123"
-            )
-          )
-        )
-        .once()
-
       (mockPartyManagementService.retrieveRelationships _)
         .expects(Some(adminIdentifier), Some(institutionId), None)
         .returning(Future.successful(relationships))
@@ -872,7 +976,7 @@ class PartyProcessSpec
         .returning(Future.successful(relationships))
         .once()
 
-      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(adminIdentifier.toString)))
       val response =
         Http()
           .singleRequest(
@@ -979,23 +1083,6 @@ class PartyProcessSpec
       val relationships =
         PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
 
-      (mockAuthorizationProcessService.validateToken _)
-        .expects(*)
-        .returning(
-          Future.successful(
-            ValidJWT(
-              iss = UUID.randomUUID().toString,
-              sub = adminIdentifier.toString,
-              aud = List("test"),
-              exp = OffsetDateTime.now(),
-              nbf = OffsetDateTime.now(),
-              iat = OffsetDateTime.now(),
-              jti = "123"
-            )
-          )
-        )
-        .once()
-
       (mockPartyManagementService.retrieveRelationships _)
         .expects(Some(adminIdentifier), Some(institutionId), None)
         .returning(Future.successful(relationships))
@@ -1006,7 +1093,7 @@ class PartyProcessSpec
         .returning(Future.successful(relationships))
         .once()
 
-      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(adminIdentifier.toString)))
       val response =
         Http()
           .singleRequest(
@@ -1098,23 +1185,6 @@ class PartyProcessSpec
         PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
       val selectedRelationships = PartyManagementDependency.Relationships(items = Seq(relationship3))
 
-      (mockAuthorizationProcessService.validateToken _)
-        .expects(*)
-        .returning(
-          Future.successful(
-            ValidJWT(
-              iss = UUID.randomUUID().toString,
-              sub = userId3.toString,
-              aud = List("test"),
-              exp = OffsetDateTime.now(),
-              nbf = OffsetDateTime.now(),
-              iat = OffsetDateTime.now(),
-              jti = "123"
-            )
-          )
-        )
-        .once()
-
       (mockPartyManagementService.retrieveRelationships _)
         .expects(Some(userId3), Some(institutionId), None)
         .returning(Future.successful(selectedRelationships))
@@ -1125,7 +1195,8 @@ class PartyProcessSpec
         .returning(Future.successful(relationships))
         .once()
 
-      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(userId3.toString)))
+
       val response =
         Http()
           .singleRequest(
@@ -1208,23 +1279,6 @@ class PartyProcessSpec
       val relationships =
         PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
 
-      (mockAuthorizationProcessService.validateToken _)
-        .expects(*)
-        .returning(
-          Future.successful(
-            ValidJWT(
-              iss = UUID.randomUUID().toString,
-              sub = adminIdentifier.toString,
-              aud = List("test"),
-              exp = OffsetDateTime.now(),
-              nbf = OffsetDateTime.now(),
-              iat = OffsetDateTime.now(),
-              jti = "123"
-            )
-          )
-        )
-        .once()
-
       (mockPartyManagementService.retrieveRelationships _)
         .expects(Some(adminIdentifier), Some(institutionId), None)
         .returning(Future.successful(relationships))
@@ -1235,7 +1289,7 @@ class PartyProcessSpec
         .returning(Future.successful(relationships))
         .once()
 
-      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(adminIdentifier.toString)))
       val response =
         Http()
           .singleRequest(
@@ -1317,23 +1371,6 @@ class PartyProcessSpec
       val relationships =
         PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
 
-      (mockAuthorizationProcessService.validateToken _)
-        .expects(*)
-        .returning(
-          Future.successful(
-            ValidJWT(
-              iss = UUID.randomUUID().toString,
-              sub = adminIdentifier.toString,
-              aud = List("test"),
-              exp = OffsetDateTime.now(),
-              nbf = OffsetDateTime.now(),
-              iat = OffsetDateTime.now(),
-              jti = "123"
-            )
-          )
-        )
-        .once()
-
       (mockPartyManagementService.retrieveRelationships _)
         .expects(Some(adminIdentifier), Some(institutionId), None)
         .returning(Future.successful(relationships))
@@ -1344,7 +1381,7 @@ class PartyProcessSpec
         .returning(Future.successful(relationships))
         .once()
 
-      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(adminIdentifier.toString)))
       val response =
         Http()
           .singleRequest(
@@ -1537,11 +1574,11 @@ class PartyProcessSpec
     "succeed when the relationship id is bound to the selected institution" in {
       val relationshipId = UUID.randomUUID()
 
-      mockSubjectAuthorizationValidation(UUID.randomUUID())
-
       (mockPartyManagementService.deleteRelationshipById _)
         .expects(relationshipId)
         .returning(Future.successful(()))
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(relationshipId.toString)))
 
       val response = Await.result(
         Http().singleRequest(
@@ -1557,11 +1594,11 @@ class PartyProcessSpec
     "fail if party management deletion returns a failed future" in {
       val relationshipId = UUID.randomUUID()
 
-      mockSubjectAuthorizationValidation(UUID.randomUUID())
-
       (mockPartyManagementService.deleteRelationshipById _)
         .expects(relationshipId)
         .returning(Future.failed(new RuntimeException("Party Management Error")))
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(relationshipId.toString)))
 
       val response = Await.result(
         Http().singleRequest(
@@ -1573,26 +1610,6 @@ class PartyProcessSpec
       response.status mustBe StatusCodes.NotFound
 
     }
-  }
-
-  private def mockSubjectAuthorizationValidation(mockUUID: UUID) = {
-    val mockSubjectUUID = mockUUID.toString
-    (mockAuthorizationProcessService.validateToken _)
-      .expects(*)
-      .returning(
-        Future.successful(
-          ValidJWT(
-            iss = UUID.randomUUID().toString,
-            sub = mockSubjectUUID,
-            aud = List("test"),
-            exp = OffsetDateTime.now(),
-            nbf = OffsetDateTime.now(),
-            iat = OffsetDateTime.now(),
-            jti = "123"
-          )
-        )
-      )
-      .once()
   }
 
   "Users creation" must {
@@ -1841,24 +1858,6 @@ class PartyProcessSpec
           state = PartyManagementDependency.RelationshipState.ACTIVE
         )
 
-      val mockSubjectUUID = UUID.randomUUID()
-      (mockAuthorizationProcessService.validateToken _)
-        .expects(*)
-        .returning(
-          Future.successful(
-            ValidJWT(
-              iss = UUID.randomUUID().toString,
-              sub = mockSubjectUUID.toString,
-              aud = List("test"),
-              exp = OffsetDateTime.now(),
-              nbf = OffsetDateTime.now(),
-              iat = OffsetDateTime.now(),
-              jti = "123"
-            )
-          )
-        )
-        .once()
-
       (mockPartyManagementService.retrieveOrganization _)
         .expects(*)
         .returning(Future.successful(organization1))
@@ -1868,6 +1867,8 @@ class PartyProcessSpec
         .expects(None, Some(organization1.id), None)
         .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(relationship))))
         .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(managerId.toString)))
 
       val response =
         Http()
@@ -1915,24 +1916,6 @@ class PartyProcessSpec
           state = PartyManagementDependency.RelationshipState.PENDING
         )
 
-      val mockSubjectUUID = UUID.randomUUID()
-      (mockAuthorizationProcessService.validateToken _)
-        .expects(*)
-        .returning(
-          Future.successful(
-            ValidJWT(
-              iss = UUID.randomUUID().toString,
-              sub = mockSubjectUUID.toString,
-              aud = List("test"),
-              exp = OffsetDateTime.now(),
-              nbf = OffsetDateTime.now(),
-              iat = OffsetDateTime.now(),
-              jti = "123"
-            )
-          )
-        )
-        .once()
-
       (mockPartyManagementService.retrieveOrganization _)
         .expects(*)
         .returning(Future.successful(organization1))
@@ -1942,6 +1925,8 @@ class PartyProcessSpec
         .expects(None, Some(organization1.id), None)
         .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(relationship))))
         .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(managerId.toString)))
 
       val response =
         Http()
