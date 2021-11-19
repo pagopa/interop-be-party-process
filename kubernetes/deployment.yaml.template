@@ -99,9 +99,6 @@ spec:
               value: "{{attributeRegistryUrl}}"
             - name: USER_REGISTRY_MANAGEMENT_URL
               value: "{{userRegistryManagementUrl}}"
-      volumes:
-      - name: snapshots-volume
-        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
