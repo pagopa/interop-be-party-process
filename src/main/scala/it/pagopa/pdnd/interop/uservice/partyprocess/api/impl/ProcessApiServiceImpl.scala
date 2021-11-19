@@ -66,10 +66,10 @@ class ProcessApiServiceImpl(
   private val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
   private def sendOnboardingMail(addresses: Seq[String], file: File, token: String) = {
-    val bodyParameters = Map(
-      "confirmToken" -> s"https://gateway.interop.pdnd.dev/ui/conferma-registrazione?jwt=$token",
-      "rejectToken"  -> s"https://gateway.interop.pdnd.dev/ui/cancella-registrazione?jwt=$token"
-    )
+    val bodyParameters =
+      ApplicationConfiguration.onboardingMailPlaceholdersReplacement.map { case (k, placeholder) =>
+        (k, s"${placeholder}${token}")
+      }
     mailer.sendMail(mailTemplate)(addresses, file, bodyParameters)
   }
 

@@ -29,7 +29,18 @@ object ApplicationConfiguration {
       .getOrElse(throw new RuntimeException("No destination email set"))
   }
 
-  def mailTemplatePath: String = config.getString("uservice-party-process.mail-template-path")
+  def mailTemplatePath: String = config.getString("uservice-party-process.mail-template.path")
+
+  def onboardingMailPlaceholdersReplacement: Map[String, String] = {
+    Map(
+      config.getString("uservice-party-process.mail-template.confirm-token.name") -> config.getString(
+        "uservice-party-process.mail-template.confirm-token.placeholder"
+      ),
+      config.getString("uservice-party-process.mail-template.reject-token.name") -> config.getString(
+        "uservice-party-process.mail-template.reject-token.placeholder"
+      )
+    )
+  }
 
   /** Returns the data structure containing all the platform roles currently defined for this deployment.
     * <br/>

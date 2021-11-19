@@ -62,26 +62,7 @@ class PartyProcessSpec
     SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
 
   override def beforeAll(): Unit = {
-    System.setProperty("DELEGATE_PRODUCT_ROLES", "admin")
-    System.setProperty("OPERATOR_PRODUCT_ROLES", "security, api")
-    System.setProperty("MANAGER_PRODUCT_ROLES", "admin")
-    System.setProperty("STORAGE_TYPE", "File")
-    System.setProperty("STORAGE_CONTAINER", "local")
-    System.setProperty("STORAGE_ENDPOINT", "local")
-    System.setProperty("STORAGE_APPLICATION_ID", "local")
-    System.setProperty("STORAGE_APPLICATION_SECRET", "local")
-    System.setProperty("PARTY_MANAGEMENT_URL", "local")
-    System.setProperty("PARTY_PROXY_URL", "local")
-    System.setProperty("ATTRIBUTE_REGISTRY_URL", "local")
-    System.setProperty("USER_REGISTRY_MANAGEMENT_URL", "local")
-
-    System.setProperty("SMTP_SERVER", "localhost")
-    System.setProperty("SMTP_USR", "local")
-    System.setProperty("SMTP_PSW", "local")
-    System.setProperty("SMTP_PORT", "10")
-    System.setProperty("MAIL_SENDER_ADDRESS", "betta@dante.it")
-    System.setProperty("MAIL_TEMPLATE_PATH", "localPath")
-
+    loadEnvVars()
     val processApi = new ProcessApi(
       new ProcessApiServiceImpl(
         mockPartyManagementService,
