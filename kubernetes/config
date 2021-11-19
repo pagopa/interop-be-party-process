@@ -20,13 +20,11 @@ storageEndpoint=$STORAGE_ENDPOINT
 partyManagementVersion="0.1"
 partyProxyVersion="0.1"
 attributeRegistryVersion="0.1"
-authorizationProcessVersion="0.1"
 userRegistryManagementVersion="0.1"
 
 partyManagementUrl="http://pdnd-interop-uservice-party-management.pdnd-interop-uservice-party-management.svc.cluster.local:8088/pdnd-interop-uservice-party-management/"$partyManagementVersion
 partyProxyUrl="http://pdnd-interop-uservice-party-registry-proxy.pdnd-interop-uservice-party-registry-proxy.svc.cluster.local:8088/pdnd-interop-uservice-party-registry-proxy/"$partyProxyVersion
 attributeRegistryUrl="http://pdnd-interop-uservice-attribute-registry-management.pdnd-interop-uservice-attribute-registry-management.svc.cluster.local:8088/pdnd-interop-uservice-attribute-registry-management/"$attributeRegistryVersion
-authorizationProcessUrl="http://pdnd-interop-uservice-authorization-process.pdnd-interop-uservice-authorization-process.svc.cluster.local:8088/pdnd-interop-uservice-authorization-process/"$authorizationProcessVersion
 userRegistryManagementUrl="http://pdnd-interop-uservice-user-registry-management.pdnd-interop-uservice-user-registry-management.svc.cluster.local:8088/pdnd-interop-uservice-user-registry-management/"$userRegistryManagementVersion
 
 name=$(cat $SCRIPT_PATH/../build.sbt | grep "name :=" | awk -F:= '{ print $2 }' | sed 's/\"//' | sed 's/\",//' | sed 's/ //' | tr '[:upper:]' '[:lower:]' | grep -v client)

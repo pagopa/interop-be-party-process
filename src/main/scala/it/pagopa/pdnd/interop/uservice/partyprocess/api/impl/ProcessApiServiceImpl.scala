@@ -30,8 +30,10 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{ApplicationCo
 import it.pagopa.pdnd.interop.uservice.partyprocess.error._
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.service._
+import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.Certification.{
+  NONE => CertificationEnumsNone
+}
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{
-  NONE => CertificationEnumsNone,
   User => UserRegistryUser,
   UserExtras => UserRegistryUserExtras,
   UserSeed => UserRegistryUserSeed
@@ -50,7 +52,6 @@ class ProcessApiServiceImpl(
   partyManagementService: PartyManagementService,
   partyRegistryService: PartyRegistryService,
   attributeRegistryService: AttributeRegistryService,
-  authorizationProcessService: AuthorizationProcessService,
   userRegistryManagementService: UserRegistryManagementService,
   mailer: Mailer,
   pdfCreator: PDFCreator,
@@ -302,7 +303,7 @@ class ProcessApiServiceImpl(
       institution <- partyRegistryService.getInstitution(institutionId)
       categories  <- partyRegistryService.getCategories
       category <- categories.items
-        .find(cat => institution.category.contains(cat.code))
+        .find(cat => institution.category == cat.code)
         .map(Future.successful)
         .getOrElse(Future.failed(new RuntimeException(s"Invalid category ${institution.category}")))
       attributes <- attributeRegistryService.createAttribute("IPA", category.name, category.code)
@@ -534,10 +535,13 @@ class ProcessApiServiceImpl(
 
   private def getCallerSubjectIdentifier(contexts: Seq[(String, String)]): Future[UUID] = {
     val subject = for {
-      bearer   <- tokenFromContext(contexts)
-      validJWT <- authorizationProcessService.validateToken(bearer)
+      bearer <- tokenFromContext(contexts)
+//TODO      validJWT <- add jws validation
+//      subjectUUID <- Try {
+//        UUID.fromString(validJWT.sub)
+//      }.toFuture
       subjectUUID <- Try {
-        UUID.fromString(validJWT.sub)
+        UUID.fromString(bearer)
       }.toFuture
     } yield subjectUUID
 

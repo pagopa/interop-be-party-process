@@ -24,6 +24,5 @@ object PDNDVersions {
   lazy val attributeRegistryVersion      = "0.1.1-SNAPSHOT"
   lazy val partyProxyVersion             = "0.1.1-SNAPSHOT"
   lazy val partyManagementVersion        = "0.1.1-SNAPSHOT"
-  lazy val authorizationProcessVersion   = "0.1.1-SNAPSHOT"
   lazy val userRegistryManagementVersion = "0.1.1-SNAPSHOT"
 }
