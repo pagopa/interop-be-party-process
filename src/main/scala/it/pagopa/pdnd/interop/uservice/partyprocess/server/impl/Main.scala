@@ -1,5 +1,6 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.server.impl
 
+import akka.actor.CoordinatedShutdown
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.directives.SecurityDirectives
 import akka.management.scaladsl.AkkaManagement
@@ -35,6 +36,10 @@ import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.api.UserApi
 import kamon.Kamon
 
 import scala.concurrent.Future
+import scala.util.{Failure, Success}
+
+//shuts down the actor system in case of startup errors
+case object StartupErrorShutdown extends CoordinatedShutdown.Reason
 
 trait PartyManagementDependency {
   final val partyManagementService: PartyManagementService =
@@ -70,11 +75,15 @@ object Main
     with AttributeRegistryDependency
     with UserRegistryManagementDependency {
 
-  for {
+  val dependenciesLoaded = for {
     fileManager  <- FileManager.getConcreteImplementation(StorageConfiguration.runtimeFileManager).toFuture
     mailTemplate <- MailTemplate.get(ApplicationConfiguration.mailTemplatePath, fileManager)
-    _            <- launchApp(fileManager, mailTemplate)
-  } yield ()
+  } yield (fileManager, mailTemplate)
+
+  dependenciesLoaded.transformWith {
+    case Success((fileManager, mailTemplate)) => launchApp(fileManager, mailTemplate)
+    case Failure(_)                           => CoordinatedShutdown(classicActorSystem).run(StartupErrorShutdown)
+  }
 
   private def launchApp(fileManager: FileManager, mailTemplate: PersistedTemplate): Future[Http.ServerBinding] = {
     Kamon.init()
