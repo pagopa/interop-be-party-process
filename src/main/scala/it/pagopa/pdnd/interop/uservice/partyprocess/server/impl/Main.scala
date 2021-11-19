@@ -12,7 +12,6 @@ import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.Authenticator
 import it.pagopa.pdnd.interop.commons.utils.CORSSupport
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions.TryOps
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.api.AttributeApi
-import it.pagopa.pdnd.interop.uservice.authorizationprocess.client.api.AuthApi
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{
   HealthApiMarshallerImpl,
@@ -55,14 +54,6 @@ trait AttributeRegistryDependency {
     )
 }
 
-trait AuthorizationProcessDependency {
-  final val authorizationProcessService: AuthorizationProcessService =
-    AuthorizationProcessServiceImpl(
-      AuthorizationProcessInvoker(),
-      AuthApi(ApplicationConfiguration.getAuthorizationProcessURL)
-    )
-}
-
 trait UserRegistryManagementDependency {
   final val userRegistryManagementService: UserRegistryManagementService =
     UserRegistryManagementServiceImpl(
@@ -77,7 +68,6 @@ object Main
     with PartyManagementDependency
     with PartyProxyDependency
     with AttributeRegistryDependency
-    with AuthorizationProcessDependency
     with UserRegistryManagementDependency {
 
   for {
@@ -97,7 +87,6 @@ object Main
         partyManagementService,
         partyProcessService,
         attributeRegistryService,
-        authorizationProcessService,
         userRegistryManagementService,
         pdfCreator,
         fileManager,

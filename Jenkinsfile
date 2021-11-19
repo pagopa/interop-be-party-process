@@ -54,9 +54,10 @@ pipeline {
     stage('Apply Kubernetes files') {
       agent { label 'sbt-template' }
       environment {
-        CASSANDRA = credentials('cassandra-db')
-        CASSANDRA_HOST = 'cluster1-dc1-service.cassandra-operator.svc.cluster.local:9042'
         DOCKER_REPO = 'gateway.interop.pdnd.dev'
+        AWS = credentials('jenkins-aws')
+        STORAGE_USR="${AWS_USR}"
+        STORAGE_PSW="${AWS_PSW}"
         SMTP = credentials('smtp')
         DESTINATION_MAILS = credentials('destination-mails')
         //REPLICAS_NR = 1

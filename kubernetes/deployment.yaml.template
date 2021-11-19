@@ -77,6 +77,8 @@ spec:
               value: {{delegateProductRoles}}
             - name: OPERATOR_PRODUCT_ROLES
               value: {{operatorProductRoles}}
+            - name: STORAGE_TYPE
+              value: {{storageType}}
             - name: STORAGE_CONTAINER
               value: {{storageContainer}}
             - name: STORAGE_ENDPOINT
@@ -97,13 +99,8 @@ spec:
               value: "{{partyProxyUrl}}"
             - name: ATTRIBUTE_REGISTRY_URL
               value: "{{attributeRegistryUrl}}"
-            - name: AUTHORIZATION_PROCESS_URL
-              value: "{{authorizationProcessUrl}}"
             - name: USER_REGISTRY_MANAGEMENT_URL
               value: "{{userRegistryManagementUrl}}"
-      volumes:
-      - name: snapshots-volume
-        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

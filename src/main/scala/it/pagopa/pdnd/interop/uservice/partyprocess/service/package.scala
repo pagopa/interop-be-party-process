@@ -6,7 +6,6 @@ package object service {
   type PartyProxyInvoker             = partyregistryproxy.client.invoker.ApiInvoker
   type PartyManagementInvoker        = partymanagement.client.invoker.ApiInvoker
   type AttributeRegistryInvoker      = attributeregistrymanagement.client.invoker.ApiInvoker
-  type AuthorizationProcessInvoker   = authorizationprocess.client.invoker.ApiInvoker
   type UserRegistryManagementInvoker = userregistrymanagement.client.invoker.ApiInvoker
 
   object PartyProxyInvoker {
@@ -21,11 +20,6 @@ package object service {
   object AttributeRegistryInvoker {
     def apply()(implicit actorSystem: ActorSystem): AttributeRegistryInvoker =
       attributeregistrymanagement.client.invoker.ApiInvoker(attributeregistrymanagement.client.api.EnumsSerializers.all)
-  }
-
-  object AuthorizationProcessInvoker {
-    def apply()(implicit actorSystem: ActorSystem): AuthorizationProcessInvoker =
-      authorizationprocess.client.invoker.ApiInvoker(authorizationprocess.client.api.EnumsSerializers.all)
   }
 
   object UserRegistryManagementInvoker {
