@@ -40,9 +40,9 @@ These properties define the configuration for building a proper onboarding templ
 | Variable name | Variable type | Notes |
 | ------------- | ------------- | ----- |
 | **MAIL_TEMPLATE_PATH** | String | Defines the link to the storage path containing the [mail template](#mail-template) |
-| **MAIL_CONFIRM_PLACEHOLDER_NAME** | String | **Optional** variable. It defines the name of the placeholder holding the onboarding confirmation link. By default, the placeholder name is `confirmToken` |
+| **MAIL_CONFIRM_PLACEHOLDER_NAME** | String | **Optional** variable. It defines the name of the placeholder holding the onboarding confirmation link. By default, the placeholder name is `confirmTokenURL` |
 | **MAIL_ONBOARDING_CONFIRMATION_LINK** | String | Defines the link to the onboarding confirmation (e.g.: `http://pagopa.it/onboarding-confirmation?token=`)|
-| **MAIL_REJECT_PLACEHOLDER_NAME** | String | **Optional** variable. It defines the name of the placeholder holding the onboarding rejection link. By default, the placeholder name is `rejectToken` |
+| **MAIL_REJECT_PLACEHOLDER_NAME** | String | **Optional** variable. It defines the name of the placeholder holding the onboarding rejection link. By default, the placeholder name is `rejectTokenURL` |
 | **MAIL_ONBOARDING_REJECTION_LINK** | String | Defines the link to the onboarding rejection (e.g.: `http://pagopa.it/onboarding-reject?token=`)|
 
 
@@ -80,7 +80,7 @@ For example:
 ```json
    {
     "subject": "hello there", //mail subject, currently placeholders not supported here
-    "body": "This is an onboarding confirmation link: ${confirmToken}", // template with placeholder 
+    "body": "This is an onboarding confirmation link: ${confirmTokenURL}", // template with placeholder 
     "encoded": false //optional
    }
 ```
@@ -97,18 +97,18 @@ where:
 
 So far, the mail template supports two different placeholders:
 
-- a placeholder for the onboarding confirmation link, (`${confirmToken}`)
-- a placeholder for the onboarding rejection link (`${rejectToken}`)
+- a placeholder for the onboarding confirmation link, (`${confirmTokenURL}`)
+- a placeholder for the onboarding rejection link (`${rejectTokenURL}`)
 
 The placeholders MUST be defined according to the following syntax: `${PLACEHOLDER_NAME}`.  
-E.g.: `this is the confirmation token: ${confirmToken}`.
+E.g.: `this is the confirmation token: ${confirmTokenURL}`.
 
 Please, [see here](#onboarding-mail-template-configuration) for further details.
 
 ---
 
 For each email, this service automatically interpolates the current onboarding token value to each of the placeholders. For example, assuming that:
-- you've defined the following `confirmToken` placeholder: `http://pagopa.it/onboarding-confirmation?token=`
+- you've defined the following `confirmTokenURL` placeholder: `http://pagopa.it/onboarding-confirmation?token=`
 - you're doing an onboarding with token value `y4d4y4d4`
 
 at runtime the email will contain the following link:
