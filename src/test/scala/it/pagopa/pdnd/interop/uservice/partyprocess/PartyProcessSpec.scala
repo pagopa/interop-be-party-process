@@ -15,7 +15,7 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyMan
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{relationshipStateToApi, roleToApi}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.ProcessApiServiceImpl
-import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{Authenticator, classicActorSystem, executionContext}
+import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{classicActorSystem, executionContext}
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.{model => PartyProcess}
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
@@ -28,7 +28,9 @@ import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{
   UserExtras => UserRegistryUserExtras,
   UserSeed => UserRegistryUserSeed
 }
+
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.{Products => ModelProducts}
+import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.Authenticator
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
@@ -60,28 +62,17 @@ class PartyProcessSpec
     SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
 
   override def beforeAll(): Unit = {
-    System.setProperty("DELEGATE_PRODUCT_ROLES", "admin")
-    System.setProperty("OPERATOR_PRODUCT_ROLES", "security, api")
-    System.setProperty("MANAGER_PRODUCT_ROLES", "admin")
-    System.setProperty("STORAGE_TYPE", "File")
-    System.setProperty("STORAGE_CONTAINER", "local")
-    System.setProperty("STORAGE_ENDPOINT", "local")
-    System.setProperty("STORAGE_APPLICATION_ID", "local")
-    System.setProperty("STORAGE_APPLICATION_SECRET", "local")
-    System.setProperty("PARTY_MANAGEMENT_URL", "local")
-    System.setProperty("PARTY_PROXY_URL", "local")
-    System.setProperty("ATTRIBUTE_REGISTRY_URL", "local")
-    System.setProperty("USER_REGISTRY_MANAGEMENT_URL", "local")
-
+    loadEnvVars()
     val processApi = new ProcessApi(
       new ProcessApiServiceImpl(
         mockPartyManagementService,
         mockPartyRegistryService,
         mockAttributeRegistryService,
         mockUserRegistryService,
-        mockMailer,
         mockPdfCreator,
-        mockFileManager
+        mockFileManager,
+        mockMailer,
+        mockMailTemplate
       ),
       processApiMarshaller,
       wrappingDirective
@@ -664,7 +655,6 @@ class PartyProcessSpec
         .expects(*, *)
         .returning(Future.successful(PartyManagementDependency.TokenText("token")))
         .once()
-      (mockMailer.send _).expects(*, *, *).returning(Future.successful(())).once()
 
       val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 
@@ -1745,7 +1735,6 @@ class PartyProcessSpec
         .expects(*, *)
         .returning(Future.successful(PartyManagementDependency.TokenText("token")))
         .once()
-      (mockMailer.send _).expects(*, *, *).returning(Future.successful(())).once()
 
       val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 

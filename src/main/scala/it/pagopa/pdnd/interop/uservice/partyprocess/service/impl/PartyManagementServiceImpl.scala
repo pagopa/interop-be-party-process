@@ -5,7 +5,7 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.{ApiError, ApiRequest}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration.productRolesConfiguration._
-import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.utils.EitherOps
+import it.pagopa.pdnd.interop.commons.utils.TypeConversions.EitherOps
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.{PartyManagementInvoker, PartyManagementService}
 import org.slf4j.{Logger, LoggerFactory}
 

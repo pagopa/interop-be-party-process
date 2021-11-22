@@ -33,6 +33,10 @@ object Dependencies {
     lazy val userRegistryManagementClient =
       namespace %% "pdnd-interop-uservice-user-registry-management-client" % userRegistryManagementVersion
 
+    lazy val commons     = namespace %% "pdnd-interop-commons-utils"        % commonsVersion
+    lazy val commonsMail = namespace %% "pdnd-interop-commons-mail-manager" % commonsVersion
+    lazy val commonsFile = namespace %% "pdnd-interop-commons-file-manager" % commonsVersion
+
   }
 
   private[this] object courier {
@@ -127,6 +131,9 @@ object Dependencies {
       pagopa.partyProxyClient             % Compile,
       pagopa.attributeRegistryClient      % Compile,
       pagopa.userRegistryManagementClient % Compile,
+      pagopa.commons                      % Compile,
+      pagopa.commonsFile                  % Compile,
+      pagopa.commonsMail                  % Compile,
       courier.mail                        % Compile,
       itextpdf.core                       % Compile,
       logback.classic                     % Compile,

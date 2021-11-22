@@ -3,8 +3,8 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 import com.itextpdf.kernel.pdf.{PdfDocument, PdfWriter}
 import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.Paragraph
+import it.pagopa.pdnd.interop.commons.utils.Digester
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.Organization
-import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.Digester
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.{PartyRole, User}
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.PDFCreator
 
@@ -60,7 +60,7 @@ class PDFCreatorImpl extends PDFCreator {
           )
         )
       document.close()
-      val hash = Digester.createHash(file)
+      val hash = Digester.createMD5Hash(file)
       (file, hash)
     }
   }

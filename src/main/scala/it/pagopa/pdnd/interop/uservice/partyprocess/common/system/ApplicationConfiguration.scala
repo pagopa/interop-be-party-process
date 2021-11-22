@@ -9,8 +9,6 @@ import com.typesafe.config.{Config, ConfigFactory}
   */
 final case class ProductRolesConfiguration(manager: ManagerRoles, delegate: DelegateRoles, operator: OperatorRoles)
 
-case class StorageAccountInfo(applicationId: String, applicationSecret: String, endpoint: String, container: String)
-
 object ApplicationConfiguration {
   lazy val config: Config = ConfigFactory.load()
 
@@ -29,6 +27,19 @@ object ApplicationConfiguration {
     Option(System.getenv("DESTINATION_MAILS"))
       .map(_.split(",").toSeq)
       .getOrElse(throw new RuntimeException("No destination email set"))
+  }
+
+  def mailTemplatePath: String = config.getString("uservice-party-process.mail-template.path")
+
+  def onboardingMailPlaceholdersReplacement: Map[String, String] = {
+    Map(
+      config.getString("uservice-party-process.mail-template.confirm-token.name") -> config.getString(
+        "uservice-party-process.mail-template.confirm-token.placeholder"
+      ),
+      config.getString("uservice-party-process.mail-template.reject-token.name") -> config.getString(
+        "uservice-party-process.mail-template.reject-token.placeholder"
+      )
+    )
   }
 
   /** Returns the data structure containing all the platform roles currently defined for this deployment.
@@ -63,16 +74,4 @@ object ApplicationConfiguration {
 
   private def sequencedParameter(parameterName: String) = config.getString(parameterName).split(",").map(_.trim).toSeq
 
-  def runtimeFileManager: String = {
-    config.getString("uservice-party-process.storage.type")
-  }
-
-  def storageAccountInfo = {
-    StorageAccountInfo(
-      applicationId = config.getString("uservice-party-process.storage.application.id"),
-      applicationSecret = config.getString("uservice-party-process.storage.application.secret"),
-      endpoint = config.getString("uservice-party-process.storage.endpoint"),
-      container = config.getString("uservice-party-process.storage.container")
-    )
-  }
 }
