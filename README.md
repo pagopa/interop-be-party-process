@@ -19,7 +19,7 @@ These variables configure the connection to the storage holding the component fi
 | **STORAGE_APPLICATION_ID** | String | Defines the user credential to access the remote endpoint |
 | **STORAGE_APPLICATION_SECRET** | String | Defines the user password to access the remote endpoint |
 
-:warning: - the usage of **STORAGE_TYPE** `File` should be only for development or testing purposes. For this specific type, all the other File storage property values are necessary, but basically useless. 
+:warning: - for the usage of **STORAGE_TYPE** `File` all the other File storage property values are necessary, but basically useless. 
 
 ### Mail engine
 
