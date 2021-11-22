@@ -75,7 +75,7 @@ object Main
     with AttributeRegistryDependency
     with UserRegistryManagementDependency {
 
-  val dependenciesLoaded = for {
+  val dependenciesLoaded: Future[(FileManager, PersistedTemplate)] = for {
     fileManager  <- FileManager.getConcreteImplementation(StorageConfiguration.runtimeFileManager).toFuture
     mailTemplate <- MailTemplate.get(ApplicationConfiguration.mailTemplatePath, fileManager)
   } yield (fileManager, mailTemplate)
