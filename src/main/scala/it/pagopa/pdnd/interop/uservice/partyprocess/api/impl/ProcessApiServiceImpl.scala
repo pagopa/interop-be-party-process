@@ -403,7 +403,7 @@ class ProcessApiServiceImpl(
     val result: Future[Seq[RelationshipInfo]] = for {
       bearer          <- contexts.getFutureBearer
       subjectUUID     <- getCallerSubjectIdentifier(bearer)
-      institutionUUID <- Try { UUID.fromString(institutionId) }.toFuture
+      institutionUUID <- institutionId.toFutureUUID
       relationships <- partyManagementService.retrieveRelationships(Some(subjectUUID), Some(institutionUUID), None)(
         bearer
       )
@@ -439,7 +439,7 @@ class ProcessApiServiceImpl(
     logger.info(s"Activating relationship $relationshipId")
     val result: Future[Unit] = for {
       bearer           <- contexts.getFutureBearer
-      relationshipUUID <- Try { UUID.fromString(relationshipId) }.toFuture
+      relationshipUUID <- relationshipId.toFutureUUID
       relationship     <- partyManagementService.getRelationshipById(relationshipUUID)(bearer)
       _                <- relationshipMustBeActivable(relationship)
       _                <- partyManagementService.activateRelationship(relationship.id)(bearer)
@@ -465,7 +465,7 @@ class ProcessApiServiceImpl(
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
     val result: Future[Unit] = for {
       bearer           <- contexts.getFutureBearer
-      relationshipUUID <- Try { UUID.fromString(relationshipId) }.toFuture
+      relationshipUUID <- relationshipId.toFutureUUID
       relationship     <- partyManagementService.getRelationshipById(relationshipUUID)(bearer)
       _                <- relationshipMustBeSuspendable(relationship)
       _                <- partyManagementService.suspendRelationship(relationship.id)(bearer)
@@ -490,7 +490,7 @@ class ProcessApiServiceImpl(
     val result: Future[DocumentDetails] =
       for {
         bearer         <- contexts.getFutureBearer
-        uuid           <- Try { UUID.fromString(relationshipId) }.toFuture
+        uuid           <- relationshipId.toFutureUUID
         relationship   <- partyManagementService.getRelationshipById(uuid)(bearer)
         filePath       <- relationship.filePath.toFuture(RelationshipDocumentNotFound(relationshipId))
         fileName       <- relationship.fileName.toFuture(RelationshipDocumentNotFound(relationshipId))
@@ -563,9 +563,7 @@ class ProcessApiServiceImpl(
 //      subjectUUID <- Try {
 //        UUID.fromString(validJWT.sub)
 //      }.toFuture
-      subjectUUID <- Try {
-        UUID.fromString(bearer)
-      }.toFuture
+      subjectUUID <- bearer.toFutureUUID
     } yield subjectUUID
 
     subject transform {
@@ -586,7 +584,7 @@ class ProcessApiServiceImpl(
     logger.info(s"Getting relationship $relationshipId")
     val result: Future[Relationship] = for {
       bearer           <- contexts.getFutureBearer
-      relationshipUUID <- Try { UUID.fromString(relationshipId) }.toFuture
+      relationshipUUID <- relationshipId.toFutureUUID
       relationship     <- partyManagementService.getRelationshipById(relationshipUUID)(bearer)
     } yield relationship
 
@@ -611,7 +609,7 @@ class ProcessApiServiceImpl(
     val result = for {
       bearer           <- contexts.getFutureBearer
       _                <- getCallerSubjectIdentifier(bearer)
-      relationshipUUID <- Try { UUID.fromString(relationshipId) }.toFuture
+      relationshipUUID <- relationshipId.toFutureUUID
       _                <- partyManagementService.deleteRelationshipById(relationshipUUID)(bearer)
     } yield ()
 
@@ -637,7 +635,7 @@ class ProcessApiServiceImpl(
     val result = for {
       bearer          <- contexts.getFutureBearer
       _               <- getCallerSubjectIdentifier(bearer)
-      institutionUUID <- Try { UUID.fromString(institutionId) }.toFuture
+      institutionUUID <- institutionId.toFutureUUID
       organization    <- partyManagementService.replaceOrganizationProducts(institutionUUID, products.products)(bearer)
     } yield Institution(
       id = organization.id,
@@ -668,7 +666,7 @@ class ProcessApiServiceImpl(
     val result = for {
       bearer           <- contexts.getFutureBearer
       _                <- getCallerSubjectIdentifier(bearer)
-      relationshipUUID <- Try { UUID.fromString(relationshipId) }.toFuture
+      relationshipUUID <- relationshipId.toFutureUUID
       relationship     <- partyManagementService.replaceRelationshipProducts(relationshipUUID, products.products)(bearer)
     } yield relationshipToRelationshipInfo(relationship)
 
@@ -738,7 +736,7 @@ class ProcessApiServiceImpl(
     val result = for {
       bearer          <- contexts.getFutureBearer
       _               <- getCallerSubjectIdentifier(bearer)
-      institutionUUID <- Try { UUID.fromString(institutionId) }.toFuture
+      institutionUUID <- institutionId.toFutureUUID
       organization    <- partyManagementService.retrieveOrganization(institutionUUID)(bearer)
       organizationRelationships <- partyManagementService.retrieveRelationships(None, Some(organization.id), None)(
         bearer
