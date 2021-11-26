@@ -5,20 +5,22 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
-import akka.http.scaladsl.server.directives.{AuthenticationDirective, SecurityDirectives}
+import akka.http.scaladsl.server.directives.{AuthenticationDirective, FileInfo, SecurityDirectives}
 import akka.http.scaladsl.unmarshalling.Unmarshal
+import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.Authenticator
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{
-  Attribute => ClientAttribute,
-  AttributesResponse
+  AttributesResponse,
+  Attribute => ClientAttribute
 }
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.OrganizationSeed
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{relationshipStateToApi, roleToApi}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.ProcessApiServiceImpl
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{classicActorSystem, executionContext}
-import it.pagopa.pdnd.interop.uservice.partyprocess.model._
-import it.pagopa.pdnd.interop.uservice.partyprocess.{model => PartyProcess}
+import it.pagopa.pdnd.interop.uservice.partyprocess.model.{Products => ModelProducts, _}
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
+import it.pagopa.pdnd.interop.uservice.partyprocess.{model => PartyProcess}
 import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.{Categories, Category, Institution, Manager}
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.Certification.{
   NONE => CertificationEnumsNone
@@ -28,9 +30,6 @@ import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{
   UserExtras => UserRegistryUserExtras,
   UserSeed => UserRegistryUserSeed
 }
-
-import it.pagopa.pdnd.interop.uservice.partyprocess.model.{Products => ModelProducts}
-import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.Authenticator
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
@@ -193,8 +192,9 @@ class PartyProcessSpec
 
       val mockSubjectUUID = "af80fac0-2775-4646-8fcf-28e083751988"
 
-      (mockUserRegistryService.getUserById _)
-        .expects(UUID.fromString(mockSubjectUUID))
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(UUID.fromString(mockSubjectUUID), *)
         .returning(
           Future.successful(
             UserRegistryUser(
@@ -209,21 +209,25 @@ class PartyProcessSpec
         )
         .once()
 
-      (mockPartyManagementService.retrieveRelationships _)
-        .expects(Some(UUID.fromString(mockSubjectUUID)), None, None)
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String])(_: String))
+        .expects(Some(UUID.fromString(mockSubjectUUID)), None, None, *)
         .returning(Future.successful(relationships))
         .once()
-      (mockPartyManagementService.retrieveOrganization _)
-        .expects(institutionId1)
+      (mockPartyManagementService
+        .retrieveOrganization(_: UUID)(_: String))
+        .expects(institutionId1, *)
         .returning(Future.successful(organization1))
         .once()
-      (mockPartyManagementService.retrieveOrganization _)
-        .expects(institutionId2)
+      (mockPartyManagementService
+        .retrieveOrganization(_: UUID)(_: String))
+        .expects(institutionId2, *)
         .returning(Future.successful(organization2))
         .once()
 
-      (mockAttributeRegistryService.getAttribute _)
-        .expects("1")
+      (mockAttributeRegistryService
+        .getAttribute(_: String)(_: String))
+        .expects("1", *)
         .returning(
           Future.successful(
             ClientAttribute(
@@ -239,8 +243,9 @@ class PartyProcessSpec
         )
         .once()
 
-      (mockAttributeRegistryService.getAttribute _)
-        .expects("2")
+      (mockAttributeRegistryService
+        .getAttribute(_: String)(_: String))
+        .expects("2", *)
         .returning(
           Future.successful(
             ClientAttribute(
@@ -256,8 +261,9 @@ class PartyProcessSpec
         )
         .once()
 
-      (mockAttributeRegistryService.getAttribute _)
-        .expects("3")
+      (mockAttributeRegistryService
+        .getAttribute(_: String)(_: String))
+        .expects("3", *)
         .returning(
           Future.successful(
             ClientAttribute(
@@ -273,8 +279,9 @@ class PartyProcessSpec
         )
         .once()
 
-      (mockAttributeRegistryService.getAttribute _)
-        .expects("99")
+      (mockAttributeRegistryService
+        .getAttribute(_: String)(_: String))
+        .expects("99", *)
         .returning(
           Future.successful(
             ClientAttribute(
@@ -290,8 +297,9 @@ class PartyProcessSpec
         )
         .once()
 
-      (mockAttributeRegistryService.getAttribute _)
-        .expects("100")
+      (mockAttributeRegistryService
+        .getAttribute(_: String)(_: String))
+        .expects("100", *)
         .returning(
           Future.successful(
             ClientAttribute(
@@ -307,8 +315,9 @@ class PartyProcessSpec
         )
         .once()
 
-      (mockAttributeRegistryService.getAttribute _)
-        .expects("101")
+      (mockAttributeRegistryService
+        .getAttribute(_: String)(_: String))
+        .expects("101", *)
         .returning(
           Future.successful(
             ClientAttribute(
@@ -400,8 +409,9 @@ class PartyProcessSpec
 
       val mockSubjectUUID = UUID.randomUUID().toString
 
-      (mockUserRegistryService.getUserById _)
-        .expects(UUID.fromString(mockSubjectUUID))
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(UUID.fromString(mockSubjectUUID), *)
         .returning(
           Future.successful(
             UserRegistryUser(
@@ -416,17 +426,20 @@ class PartyProcessSpec
         )
         .once()
 
-      (mockPartyManagementService.retrieveRelationships _)
-        .expects(Some(UUID.fromString(mockSubjectUUID)), Some(institutionId1), None)
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String])(_: String))
+        .expects(Some(UUID.fromString(mockSubjectUUID)), Some(institutionId1), None, *)
         .returning(Future.successful(relationships))
         .once()
-      (mockPartyManagementService.retrieveOrganization _)
-        .expects(institutionId1)
+      (mockPartyManagementService
+        .retrieveOrganization(_: UUID)(_: String))
+        .expects(institutionId1, *)
         .returning(Future.successful(organization1))
         .once()
 
-      (mockAttributeRegistryService.getAttribute _)
-        .expects("1")
+      (mockAttributeRegistryService
+        .getAttribute(_: String)(_: String))
+        .expects("1", *)
         .returning(
           Future.successful(
             ClientAttribute(
@@ -442,8 +455,9 @@ class PartyProcessSpec
         )
         .once()
 
-      (mockAttributeRegistryService.getAttribute _)
-        .expects("2")
+      (mockAttributeRegistryService
+        .getAttribute(_: String)(_: String))
+        .expects("2", *)
         .returning(
           Future.successful(
             ClientAttribute(
@@ -459,8 +473,9 @@ class PartyProcessSpec
         )
         .once()
 
-      (mockAttributeRegistryService.getAttribute _)
-        .expects("3")
+      (mockAttributeRegistryService
+        .getAttribute(_: String)(_: String))
+        .expects("3", *)
         .returning(
           Future.successful(
             ClientAttribute(
@@ -581,13 +596,22 @@ class PartyProcessSpec
           products = Set.empty
         )
 
-      (mockPartyRegistryService.getInstitution _).expects(*).returning(Future.successful(institution1)).once()
-      (() => mockPartyRegistryService.getCategories)
-        .expects()
+      (mockPartyRegistryService
+        .getInstitution(_: String)(_: String))
+        .expects(*, *)
+        .returning(Future.successful(institution1))
+        .once()
+      (mockPartyRegistryService.getCategories _)
+        .expects(*)
         .returning(Future.successful(Categories(Seq(Category("C17", "attrs", "test")))))
         .once()
-      (mockPartyManagementService.createOrganization _).expects(*).returning(Future.successful(organization1)).once()
-      (mockUserRegistryService.createUser _)
+      (mockPartyManagementService
+        .createOrganization(_: OrganizationSeed)(_: String))
+        .expects(*, *)
+        .returning(Future.successful(organization1))
+        .once()
+      (mockUserRegistryService
+        .createUser(_: UserRegistryUserSeed)(_: String))
         .expects(
           UserRegistryUserSeed(
             externalId = manager.taxCode,
@@ -595,7 +619,8 @@ class PartyProcessSpec
             surname = manager.surname,
             certification = CertificationEnumsNone,
             extras = UserRegistryUserExtras(email = manager.email, birthDate = None)
-          )
+          ),
+          *
         )
         .returning(
           Future.successful(
@@ -611,12 +636,14 @@ class PartyProcessSpec
         )
         .once()
 
-      (mockPartyManagementService.createPerson _)
-        .expects(PartyManagementDependency.PersonSeed(managerId))
+      (mockPartyManagementService
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
+        .expects(PartyManagementDependency.PersonSeed(managerId), *)
         .returning(Future.successful(PartyManagementDependency.Person(managerId)))
         .once()
 
-      (mockUserRegistryService.createUser _)
+      (mockUserRegistryService
+        .createUser(_: UserRegistryUserSeed)(_: String))
         .expects(
           UserRegistryUserSeed(
             externalId = delegate.taxCode,
@@ -624,7 +651,8 @@ class PartyProcessSpec
             surname = delegate.surname,
             certification = CertificationEnumsNone,
             extras = UserRegistryUserExtras(email = delegate.email, birthDate = None)
-          )
+          ),
+          *
         )
         .returning(
           Future.successful(
@@ -640,19 +668,28 @@ class PartyProcessSpec
         )
         .once()
 
-      (mockPartyManagementService.createPerson _)
-        .expects(PartyManagementDependency.PersonSeed(delegateId))
+      (mockPartyManagementService
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
+        .expects(PartyManagementDependency.PersonSeed(delegateId), *)
         .returning(Future.successful(PartyManagementDependency.Person(delegateId)))
         .once()
 
-      (mockPartyManagementService.createRelationship _)
-        .expects(*, *, *, *, *)
+      (mockPartyManagementService
+        .createRelationship(_: UUID, _: UUID, _: PartyManagementDependency.PartyRole, _: Set[String], _: String)(
+          _: String
+        ))
+        .expects(*, *, *, *, *, *)
         .returning(Future.successful(()))
         .repeat(2)
-      (mockAttributeRegistryService.createAttribute _).expects(*, *, *).returning(Future.successful(attr1)).once()
+      (mockAttributeRegistryService
+        .createAttribute(_: String, _: String, _: String)(_: String))
+        .expects(*, *, *, *)
+        .returning(Future.successful(attr1))
+        .once()
       (mockPdfCreator.create _).expects(*, *).returning(Future.successful((file, "hash"))).once()
-      (mockPartyManagementService.createToken _)
-        .expects(*, *)
+      (mockPartyManagementService
+        .createToken(_: PartyManagementDependency.RelationshipsSeed, _: String)(_: String))
+        .expects(*, *, *)
         .returning(Future.successful(PartyManagementDependency.TokenText("token")))
         .once()
 
@@ -690,8 +727,9 @@ class PartyProcessSpec
         products = Set("PDND")
       )
 
-      (mockPartyManagementService.retrieveOrganizationByExternalId _)
-        .expects(*)
+      (mockPartyManagementService
+        .retrieveOrganizationByExternalId(_: String)(_: String))
+        .expects(*, *)
         .returning(
           Future.successful(
             PartyManagementDependency.Organization(
@@ -705,8 +743,9 @@ class PartyProcessSpec
             )
           )
         )
-      (mockPartyManagementService.retrieveRelationships _)
-        .expects(*, *, *)
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String])(_: String))
+        .expects(*, *, *, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(Seq.empty)))
 
       val req = OnBoardingRequest(users = Seq(operator1, operator2), institutionId = "institutionId1")
@@ -773,14 +812,18 @@ class PartyProcessSpec
         products = Set("PDND")
       )
 
-      (mockPartyManagementService.retrieveOrganizationByExternalId _)
-        .expects(*)
+      (mockPartyManagementService
+        .retrieveOrganizationByExternalId(_: String)(_: String))
+        .expects(*, *)
         .returning(Future.successful(organization1))
-      (mockPartyManagementService.retrieveRelationships _)
-        .expects(None, Some(UUID.fromString(orgPartyId1)), None)
+
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String])(_: String))
+        .expects(None, Some(UUID.fromString(orgPartyId1)), None, *)
         .returning(Future.successful(relationships))
 
-      (mockUserRegistryService.createUser _)
+      (mockUserRegistryService
+        .createUser(_: UserRegistryUserSeed)(_: String))
         .expects(
           UserRegistryUserSeed(
             externalId = operator1.taxCode,
@@ -788,7 +831,8 @@ class PartyProcessSpec
             surname = operator1.surname,
             certification = CertificationEnumsNone,
             extras = UserRegistryUserExtras(email = operator1.email, birthDate = None)
-          )
+          ),
+          *
         )
         .returning(
           Future.successful(
@@ -804,12 +848,14 @@ class PartyProcessSpec
         )
         .once()
 
-      (mockPartyManagementService.createPerson _)
-        .expects(PartyManagementDependency.PersonSeed(operatorId1))
+      (mockPartyManagementService
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
+        .expects(PartyManagementDependency.PersonSeed(operatorId1), *)
         .returning(Future.successful(PartyManagementDependency.Person(operatorId1)))
         .once()
 
-      (mockUserRegistryService.createUser _)
+      (mockUserRegistryService
+        .createUser(_: UserRegistryUserSeed)(_: String))
         .expects(
           UserRegistryUserSeed(
             externalId = operator2.taxCode,
@@ -817,7 +863,8 @@ class PartyProcessSpec
             surname = operator2.surname,
             certification = CertificationEnumsNone,
             extras = UserRegistryUserExtras(email = operator2.email, birthDate = None)
-          )
+          ),
+          *
         )
         .returning(
           Future.successful(
@@ -833,13 +880,17 @@ class PartyProcessSpec
         )
         .once()
 
-      (mockPartyManagementService.createPerson _)
-        .expects(PartyManagementDependency.PersonSeed(operatorId2))
+      (mockPartyManagementService
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
+        .expects(PartyManagementDependency.PersonSeed(operatorId2), *)
         .returning(Future.successful(PartyManagementDependency.Person(operatorId2)))
         .once()
 
-      (mockPartyManagementService.createRelationship _)
-        .expects(*, *, *, *, *)
+      (mockPartyManagementService
+        .createRelationship(_: UUID, _: UUID, _: PartyManagementDependency.PartyRole, _: Set[String], _: String)(
+          _: String
+        ))
+        .expects(*, *, *, *, *, *)
         .returning(Future.successful(()))
         .repeat(2)
 
@@ -859,7 +910,10 @@ class PartyProcessSpec
 
       val path = Paths.get("src/test/resources/contract-test-01.pdf")
 
-      (mockPartyManagementService.consumeToken _).expects(token, *).returning(Future.successful(()))
+      (mockPartyManagementService
+        .consumeToken(_: String, _: (FileInfo, File))(_: String))
+        .expects(token, *, *)
+        .returning(Future.successful(()))
 
       val formData =
         Multipart.FormData.fromPath(name = "contract", MediaTypes.`application/octet-stream`, file = path, 100000)
@@ -885,7 +939,10 @@ class PartyProcessSpec
       val token: String =
         "eyJjaGVja3N1bSI6IjZkZGVlODIwZDA2MzgzMTI3ZWYwMjlmNTcxMjg1MzM5IiwiaWQiOiI0YjJmY2Y3My1iMmI0LTQ4N2QtYjk2MC1jM2MwNGQ5NDc3YzItM2RiZDk0ZDUtMzY0MS00MWI0LWJlMGItZjJmZjZjODU4Zjg5LU1hbmFnZXIiLCJsZWdhbHMiOlt7ImZyb20iOiI0NjAwNzg4Mi0wMDNlLTRlM2EtODMzMC1iNGYyYjA0NGJmNGUiLCJyb2xlIjoiRGVsZWdhdGUiLCJ0byI6IjNkYmQ5NGQ1LTM2NDEtNDFiNC1iZTBiLWYyZmY2Yzg1OGY4OSJ9LHsiZnJvbSI6IjRiMmZjZjczLWIyYjQtNDg3ZC1iOTYwLWMzYzA0ZDk0NzdjMiIsInJvbGUiOiJNYW5hZ2VyIiwidG8iOiIzZGJkOTRkNS0zNjQxLTQxYjQtYmUwYi1mMmZmNmM4NThmODkifV0sInNlZWQiOiJkMmE2ZWYyNy1hZTYwLTRiM2QtOGE5ZS1iMDIwMzViZDUyYzkiLCJ2YWxpZGl0eSI6IjIwMjEtMDctMTNUMTU6MTY6NDguNTU1NDM1KzAyOjAwIn0="
 
-      (mockPartyManagementService.invalidateToken _).expects(token).returning(Future.successful(()))
+      (mockPartyManagementService
+        .invalidateToken(_: String)(_: String))
+        .expects(token, *)
+        .returning(Future.successful(()))
 
       val response =
         Http()
@@ -956,13 +1013,15 @@ class PartyProcessSpec
       val relationships =
         PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
 
-      (mockPartyManagementService.retrieveRelationships _)
-        .expects(Some(adminIdentifier), Some(institutionId), None)
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String])(_: String))
+        .expects(Some(adminIdentifier), Some(institutionId), None, *)
         .returning(Future.successful(relationships))
         .once()
 
-      (mockPartyManagementService.retrieveRelationships _)
-        .expects(None, Some(institutionId), None)
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String])(_: String))
+        .expects(None, Some(institutionId), None, *)
         .returning(Future.successful(relationships))
         .once()
 
@@ -1073,13 +1132,15 @@ class PartyProcessSpec
       val relationships =
         PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
 
-      (mockPartyManagementService.retrieveRelationships _)
-        .expects(Some(adminIdentifier), Some(institutionId), None)
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String])(_: String))
+        .expects(Some(adminIdentifier), Some(institutionId), None, *)
         .returning(Future.successful(relationships))
         .once()
 
-      (mockPartyManagementService.retrieveRelationships _)
-        .expects(None, Some(institutionId), None)
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String])(_: String))
+        .expects(None, Some(institutionId), None, *)
         .returning(Future.successful(relationships))
         .once()
 
@@ -1175,13 +1236,15 @@ class PartyProcessSpec
         PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
       val selectedRelationships = PartyManagementDependency.Relationships(items = Seq(relationship3))
 
-      (mockPartyManagementService.retrieveRelationships _)
-        .expects(Some(userId3), Some(institutionId), None)
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String])(_: String))
+        .expects(Some(userId3), Some(institutionId), None, *)
         .returning(Future.successful(selectedRelationships))
         .once()
 
-      (mockPartyManagementService.retrieveRelationships _)
-        .expects(None, Some(institutionId), None)
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String])(_: String))
+        .expects(None, Some(institutionId), None, *)
         .returning(Future.successful(relationships))
         .once()
 
@@ -1269,13 +1332,15 @@ class PartyProcessSpec
       val relationships =
         PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
 
-      (mockPartyManagementService.retrieveRelationships _)
-        .expects(Some(adminIdentifier), Some(institutionId), None)
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String])(_: String))
+        .expects(Some(adminIdentifier), Some(institutionId), None, *)
         .returning(Future.successful(relationships))
         .once()
 
-      (mockPartyManagementService.retrieveRelationships _)
-        .expects(None, Some(institutionId), None)
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String])(_: String))
+        .expects(None, Some(institutionId), None, *)
         .returning(Future.successful(relationships))
         .once()
 
@@ -1361,13 +1426,15 @@ class PartyProcessSpec
       val relationships =
         PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
 
-      (mockPartyManagementService.retrieveRelationships _)
-        .expects(Some(adminIdentifier), Some(institutionId), None)
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String])(_: String))
+        .expects(Some(adminIdentifier), Some(institutionId), None, *)
         .returning(Future.successful(relationships))
         .once()
 
-      (mockPartyManagementService.retrieveRelationships _)
-        .expects(None, Some(institutionId), None)
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String])(_: String))
+        .expects(None, Some(institutionId), None, *)
         .returning(Future.successful(relationships))
         .once()
 
@@ -1411,12 +1478,14 @@ class PartyProcessSpec
           products = Set.empty
         )
 
-      (mockPartyManagementService.getRelationshipById _)
-        .expects(relationshipId)
+      (mockPartyManagementService
+        .getRelationshipById(_: UUID)(_: String))
+        .expects(relationshipId, *)
         .returning(Future.successful(relationship))
 
-      (mockPartyManagementService.activateRelationship _)
-        .expects(relationshipId)
+      (mockPartyManagementService
+        .activateRelationship(_: UUID)(_: String))
+        .expects(relationshipId, *)
         .returning(Future.successful(()))
 
       val response =
@@ -1454,8 +1523,9 @@ class PartyProcessSpec
           products = Set.empty
         )
 
-      (mockPartyManagementService.getRelationshipById _)
-        .expects(relationshipId)
+      (mockPartyManagementService
+        .getRelationshipById(_: UUID)(_: String))
+        .expects(relationshipId, *)
         .returning(Future.successful(relationships))
 
       val response =
@@ -1496,12 +1566,14 @@ class PartyProcessSpec
           products = Set.empty
         )
 
-      (mockPartyManagementService.getRelationshipById _)
-        .expects(relationshipId)
+      (mockPartyManagementService
+        .getRelationshipById(_: UUID)(_: String))
+        .expects(relationshipId, *)
         .returning(Future.successful(relationship))
 
-      (mockPartyManagementService.suspendRelationship _)
-        .expects(relationshipId)
+      (mockPartyManagementService
+        .suspendRelationship(_: UUID)(_: String))
+        .expects(relationshipId, *)
         .returning(Future.successful(()))
 
       val response =
@@ -1539,8 +1611,9 @@ class PartyProcessSpec
           products = Set.empty
         )
 
-      (mockPartyManagementService.getRelationshipById _)
-        .expects(relationshipId)
+      (mockPartyManagementService
+        .getRelationshipById(_: UUID)(_: String))
+        .expects(relationshipId, *)
         .returning(Future.successful(relationship))
 
       val response =
@@ -1564,8 +1637,9 @@ class PartyProcessSpec
     "succeed when the relationship id is bound to the selected institution" in {
       val relationshipId = UUID.randomUUID()
 
-      (mockPartyManagementService.deleteRelationshipById _)
-        .expects(relationshipId)
+      (mockPartyManagementService
+        .deleteRelationshipById(_: UUID)(_: String))
+        .expects(relationshipId, *)
         .returning(Future.successful(()))
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(relationshipId.toString)))
@@ -1584,8 +1658,9 @@ class PartyProcessSpec
     "fail if party management deletion returns a failed future" in {
       val relationshipId = UUID.randomUUID()
 
-      (mockPartyManagementService.deleteRelationshipById _)
-        .expects(relationshipId)
+      (mockPartyManagementService
+        .deleteRelationshipById(_: UUID)(_: String))
+        .expects(relationshipId, *)
         .returning(Future.failed(new RuntimeException("Party Management Error")))
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(relationshipId.toString)))
@@ -1658,17 +1733,20 @@ class PartyProcessSpec
           state = PartyManagementDependency.RelationshipState.ACTIVE
         )
 
-      (mockPartyManagementService.retrieveOrganizationByExternalId _)
-        .expects(*)
+      (mockPartyManagementService
+        .retrieveOrganizationByExternalId(_: String)(_: String))
+        .expects(*, *)
         .returning(Future.successful(organization1))
         .once()
 
-      (mockPartyManagementService.retrieveRelationships _)
-        .expects(None, Some(organization1.id), None)
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String])(_: String))
+        .expects(None, Some(organization1.id), None, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(relationship))))
         .once()
 
-      (mockUserRegistryService.createUser _)
+      (mockUserRegistryService
+        .createUser(_: UserRegistryUserSeed)(_: String))
         .expects(
           UserRegistryUserSeed(
             externalId = manager.taxCode,
@@ -1676,7 +1754,8 @@ class PartyProcessSpec
             surname = manager.surname,
             certification = CertificationEnumsNone,
             extras = UserRegistryUserExtras(email = manager.email, birthDate = None)
-          )
+          ),
+          *
         )
         .returning(
           Future.successful(
@@ -1692,12 +1771,14 @@ class PartyProcessSpec
         )
         .once()
 
-      (mockPartyManagementService.createPerson _)
-        .expects(PartyManagementDependency.PersonSeed(managerId))
+      (mockPartyManagementService
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
+        .expects(PartyManagementDependency.PersonSeed(managerId), *)
         .returning(Future.successful(PartyManagementDependency.Person(managerId)))
         .once()
 
-      (mockUserRegistryService.createUser _)
+      (mockUserRegistryService
+        .createUser(_: UserRegistryUserSeed)(_: String))
         .expects(
           UserRegistryUserSeed(
             externalId = delegate.taxCode,
@@ -1705,7 +1786,8 @@ class PartyProcessSpec
             surname = delegate.surname,
             certification = CertificationEnumsNone,
             extras = UserRegistryUserExtras(email = delegate.email, birthDate = None)
-          )
+          ),
+          *
         )
         .returning(
           Future.successful(
@@ -1721,18 +1803,23 @@ class PartyProcessSpec
         )
         .once()
 
-      (mockPartyManagementService.createPerson _)
-        .expects(PartyManagementDependency.PersonSeed(delegateId))
+      (mockPartyManagementService
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
+        .expects(PartyManagementDependency.PersonSeed(delegateId), *)
         .returning(Future.successful(PartyManagementDependency.Person(delegateId)))
         .once()
 
-      (mockPartyManagementService.createRelationship _)
-        .expects(*, *, *, *, *)
+      (mockPartyManagementService
+        .createRelationship(_: UUID, _: UUID, _: PartyManagementDependency.PartyRole, _: Set[String], _: String)(
+          _: String
+        ))
+        .expects(*, *, *, *, *, *)
         .returning(Future.successful(()))
         .repeat(2)
       (mockPdfCreator.create _).expects(*, *).returning(Future.successful((file, "hash"))).once()
-      (mockPartyManagementService.createToken _)
-        .expects(*, *)
+      (mockPartyManagementService
+        .createToken(_: PartyManagementDependency.RelationshipsSeed, _: String)(_: String))
+        .expects(*, *, *)
         .returning(Future.successful(PartyManagementDependency.TokenText("token")))
         .once()
 
@@ -1797,13 +1884,15 @@ class PartyProcessSpec
           state = PartyManagementDependency.RelationshipState.PENDING
         )
 
-      (mockPartyManagementService.retrieveOrganizationByExternalId _)
-        .expects(*)
+      (mockPartyManagementService
+        .retrieveOrganizationByExternalId(_: String)(_: String))
+        .expects(*, *)
         .returning(Future.successful(organization1))
         .once()
 
-      (mockPartyManagementService.retrieveRelationships _)
-        .expects(None, Some(organization1.id), None)
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String])(_: String))
+        .expects(None, Some(organization1.id), None, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(relationship))))
         .once()
 
@@ -1847,13 +1936,15 @@ class PartyProcessSpec
           state = PartyManagementDependency.RelationshipState.ACTIVE
         )
 
-      (mockPartyManagementService.retrieveOrganization _)
-        .expects(*)
+      (mockPartyManagementService
+        .retrieveOrganization(_: UUID)(_: String))
+        .expects(*, *)
         .returning(Future.successful(organization1))
         .once()
 
-      (mockPartyManagementService.retrieveRelationships _)
-        .expects(None, Some(organization1.id), None)
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String])(_: String))
+        .expects(None, Some(organization1.id), None, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(relationship))))
         .once()
 
@@ -1905,13 +1996,15 @@ class PartyProcessSpec
           state = PartyManagementDependency.RelationshipState.PENDING
         )
 
-      (mockPartyManagementService.retrieveOrganization _)
-        .expects(*)
+      (mockPartyManagementService
+        .retrieveOrganization(_: UUID)(_: String))
+        .expects(*, *)
         .returning(Future.successful(organization1))
         .once()
 
-      (mockPartyManagementService.retrieveRelationships _)
-        .expects(None, Some(organization1.id), None)
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String])(_: String))
+        .expects(None, Some(organization1.id), None, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(relationship))))
         .once()
 

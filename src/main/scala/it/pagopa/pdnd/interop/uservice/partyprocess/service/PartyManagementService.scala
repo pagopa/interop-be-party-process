@@ -8,14 +8,14 @@ import java.util.UUID
 import scala.concurrent.Future
 
 trait PartyManagementService {
-  def deleteRelationshipById(relationshipUUID: UUID): Future[Unit]
+  def deleteRelationshipById(relationshipUUID: UUID)(bearerToken: String): Future[Unit]
 
-  def retrieveOrganization(organizationId: UUID): Future[Organization]
-  def retrieveOrganizationByExternalId(externalOrganizationId: String): Future[Organization]
+  def retrieveOrganization(organizationId: UUID)(bearerToken: String): Future[Organization]
+  def retrieveOrganizationByExternalId(externalOrganizationId: String)(bearerToken: String): Future[Organization]
 
-  def createPerson(person: PersonSeed): Future[Person]
+  def createPerson(person: PersonSeed)(bearerToken: String): Future[Person]
 
-  def createOrganization(organization: OrganizationSeed): Future[Organization]
+  def createOrganization(organization: OrganizationSeed)(bearerToken: String): Future[Organization]
 
   def createRelationship(
     id: UUID,
@@ -23,25 +23,29 @@ trait PartyManagementService {
     operationRole: PartyRole,
     products: Set[String],
     productRole: String
-  ): Future[Unit]
+  )(bearerToken: String): Future[Unit]
 
-  def retrieveRelationships(from: Option[UUID], to: Option[UUID], productRole: Option[String]): Future[Relationships]
+  def retrieveRelationships(from: Option[UUID], to: Option[UUID], productRole: Option[String])(
+    bearerToken: String
+  ): Future[Relationships]
 
-  def getInstitutionRelationships(id: UUID): Future[Relationships]
+  def getInstitutionRelationships(id: UUID)(bearerToken: String): Future[Relationships]
 
-  def activateRelationship(relationshipId: UUID): Future[Unit]
+  def activateRelationship(relationshipId: UUID)(bearerToken: String): Future[Unit]
 
-  def suspendRelationship(relationshipId: UUID): Future[Unit]
+  def suspendRelationship(relationshipId: UUID)(bearerToken: String): Future[Unit]
 
-  def createToken(relationshipsSeed: RelationshipsSeed, documentHash: String): Future[TokenText]
+  def createToken(relationshipsSeed: RelationshipsSeed, documentHash: String)(bearerToken: String): Future[TokenText]
 
-  def consumeToken(token: String, fileParts: (FileInfo, File)): Future[Unit]
+  def consumeToken(token: String, fileParts: (FileInfo, File))(bearerToken: String): Future[Unit]
 
-  def invalidateToken(token: String): Future[Unit]
+  def invalidateToken(token: String)(bearerToken: String): Future[Unit]
 
-  def getRelationshipById(relationshipId: UUID): Future[Relationship]
+  def getRelationshipById(relationshipId: UUID)(bearerToken: String): Future[Relationship]
 
-  def replaceOrganizationProducts(institutionId: UUID, products: Set[String]): Future[Organization]
+  def replaceOrganizationProducts(institutionId: UUID, products: Set[String])(bearerToken: String): Future[Organization]
 
-  def replaceRelationshipProducts(relationshipUUID: UUID, products: Set[String]): Future[Relationship]
+  def replaceRelationshipProducts(relationshipUUID: UUID, products: Set[String])(
+    bearerToken: String
+  ): Future[Relationship]
 }

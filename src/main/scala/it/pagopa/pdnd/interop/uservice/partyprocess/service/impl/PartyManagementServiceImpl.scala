@@ -2,7 +2,7 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
 import akka.http.scaladsl.server.directives.FileInfo
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.{ApiError, ApiRequest}
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.{ApiError, ApiRequest, BearerToken}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration.productRolesConfiguration._
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions.EitherOps
@@ -18,12 +18,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
 ) extends PartyManagementService {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  override def retrieveRelationships(
-    from: Option[UUID],
-    to: Option[UUID],
-    productRole: Option[String]
+  override def retrieveRelationships(from: Option[UUID], to: Option[UUID], productRole: Option[String])(
+    bearerToken: String
   ): Future[Relationships] = {
-    val request: ApiRequest[Relationships] = api.getRelationships(from, to, productRole)
+    val request: ApiRequest[Relationships] = api.getRelationships(from, to, productRole)(BearerToken(bearerToken))
     invoker
       .execute[Relationships](request)
       .map { x =>
@@ -37,8 +35,8 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  def getInstitutionRelationships(id: UUID): Future[Relationships] = {
-    val request: ApiRequest[Relationships] = api.getRelationships(to = Some(id))
+  def getInstitutionRelationships(id: UUID)(bearerToken: String): Future[Relationships] = {
+    val request: ApiRequest[Relationships] = api.getRelationships(to = Some(id))(BearerToken(bearerToken))
     invoker
       .execute[Relationships](request)
       .map { x =>
@@ -52,8 +50,8 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  override def retrieveOrganization(organizationId: UUID): Future[Organization] = {
-    val request: ApiRequest[Organization] = api.getOrganizationById(organizationId)
+  override def retrieveOrganization(organizationId: UUID)(bearerToken: String): Future[Organization] = {
+    val request: ApiRequest[Organization] = api.getOrganizationById(organizationId)(BearerToken(bearerToken))
     logger.info(s"Retrieving organization $organizationId")
     logger.info(s"Retrieving organization ${request.toString}")
     invoker
@@ -69,8 +67,11 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  override def retrieveOrganizationByExternalId(externalOrganizationId: String): Future[Organization] = {
-    val request: ApiRequest[Organization] = api.getOrganizationByExternalId(externalOrganizationId)
+  override def retrieveOrganizationByExternalId(
+    externalOrganizationId: String
+  )(bearerToken: String): Future[Organization] = {
+    val request: ApiRequest[Organization] =
+      api.getOrganizationByExternalId(externalOrganizationId)(BearerToken(bearerToken))
     logger.info(s"Retrieving organization by external id $externalOrganizationId")
     logger.info(s"Retrieving organization by external id ${request.toString}")
     invoker
@@ -86,8 +87,8 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  override def createPerson(person: PersonSeed): Future[Person] = {
-    val request: ApiRequest[Person] = api.createPerson(person)
+  override def createPerson(person: PersonSeed)(bearerToken: String): Future[Person] = {
+    val request: ApiRequest[Person] = api.createPerson(person)(BearerToken(bearerToken))
     invoker
       .execute(request)
       .map { x =>
@@ -101,8 +102,8 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  override def createOrganization(organization: OrganizationSeed): Future[Organization] = {
-    val request: ApiRequest[Organization] = api.createOrganization(organization)
+  override def createOrganization(organization: OrganizationSeed)(bearerToken: String): Future[Organization] = {
+    val request: ApiRequest[Organization] = api.createOrganization(organization)(BearerToken(bearerToken))
     invoker
       .execute(request)
       .map { x =>
@@ -122,10 +123,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
     role: PartyRole,
     products: Set[String],
     productRole: String
-  ): Future[Unit] = {
+  )(bearerToken: String): Future[Unit] = {
     for {
       _ <- isProductRoleValid(role = role, productRole = productRole).toFuture
-      _ <- invokeCreateRelationship(personId, organizationId, role, products, productRole)
+      _ <- invokeCreateRelationship(personId, organizationId, role, products, productRole)(bearerToken)
     } yield ()
   }
 
@@ -135,7 +136,7 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
     role: PartyRole,
     products: Set[String],
     productRole: String
-  ): Future[Relationship] = {
+  )(bearerToken: String): Future[Relationship] = {
     logger.info(s"Creating relationship $personId/$organizationId/$role/ with productRole = $productRole")
     val partyRelationship: RelationshipSeed =
       RelationshipSeed(
@@ -146,7 +147,7 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
         productRole = productRole
       )
 
-    val request: ApiRequest[Relationship] = api.createRelationship(partyRelationship)
+    val request: ApiRequest[Relationship] = api.createRelationship(partyRelationship)(BearerToken(bearerToken))
     invoker
       .execute(request)
       .map { x =>
@@ -175,11 +176,13 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
     }
   }
 
-  override def createToken(relationshipsSeed: RelationshipsSeed, documentHash: String): Future[TokenText] = {
+  override def createToken(relationshipsSeed: RelationshipsSeed, documentHash: String)(
+    bearerToken: String
+  ): Future[TokenText] = {
     logger.info(s"Creating token for [${relationshipsSeed.items.map(_.toString).mkString(",")}]")
     val tokenSeed: TokenSeed = TokenSeed(seed = UUID.randomUUID().toString, relationshipsSeed, documentHash)
 
-    val request = api.createToken(tokenSeed)
+    val request = api.createToken(tokenSeed)(BearerToken(bearerToken))
     invoker
       .execute(request)
       .map { x =>
@@ -200,10 +203,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
 
   }
 
-  override def consumeToken(token: String, fileParts: (FileInfo, File)): Future[Unit] = {
+  override def consumeToken(token: String, fileParts: (FileInfo, File))(bearerToken: String): Future[Unit] = {
     logger.info(s"Consuming token $token")
 
-    val request = api.consumeToken(token, fileParts._2)
+    val request = api.consumeToken(token, fileParts._2)(BearerToken(bearerToken))
     invoker
       .execute(request)
       .map { x =>
@@ -224,10 +227,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
 
   }
 
-  override def invalidateToken(token: String): Future[Unit] = {
+  override def invalidateToken(token: String)(bearerToken: String): Future[Unit] = {
     logger.info(s"Invalidating token $token")
 
-    val request = api.invalidateToken(token)
+    val request = api.invalidateToken(token)(BearerToken(bearerToken))
     invoker
       .execute(request)
       .map { x =>
@@ -247,10 +250,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  override def activateRelationship(relationshipId: UUID): Future[Unit] = {
+  override def activateRelationship(relationshipId: UUID)(bearerToken: String): Future[Unit] = {
     logger.info(s"Activating relationship $relationshipId")
 
-    val request = api.activatePartyRelationshipById(relationshipId)
+    val request = api.activatePartyRelationshipById(relationshipId)(BearerToken(bearerToken))
     invoker
       .execute(request)
       .map { x =>
@@ -269,10 +272,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  override def suspendRelationship(relationshipId: UUID): Future[Unit] = {
+  override def suspendRelationship(relationshipId: UUID)(bearerToken: String): Future[Unit] = {
     logger.info(s"Suspending relationship $relationshipId")
 
-    val request = api.suspendPartyRelationshipById(relationshipId)
+    val request = api.suspendPartyRelationshipById(relationshipId)(BearerToken(bearerToken))
     invoker
       .execute(request)
       .map { x =>
@@ -291,10 +294,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  override def getRelationshipById(relationshipId: UUID): Future[Relationship] = {
+  override def getRelationshipById(relationshipId: UUID)(bearerToken: String): Future[Relationship] = {
     logger.info(s"Getting relationship $relationshipId")
 
-    val request = api.getRelationshipById(relationshipId)
+    val request = api.getRelationshipById(relationshipId)(BearerToken(bearerToken))
     invoker
       .execute(request)
       .map { x =>
@@ -313,10 +316,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  override def deleteRelationshipById(relationshipId: UUID): Future[Unit] = {
+  override def deleteRelationshipById(relationshipId: UUID)(bearerToken: String): Future[Unit] = {
     logger.info(s"Deleting relationship $relationshipId")
 
-    val request = api.deleteRelationshipById(relationshipId)
+    val request = api.deleteRelationshipById(relationshipId)(BearerToken(bearerToken))
     invoker
       .execute(request)
       .map { x =>
@@ -335,10 +338,13 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  override def replaceOrganizationProducts(institutionId: UUID, products: Set[String]): Future[Organization] = {
+  override def replaceOrganizationProducts(institutionId: UUID, products: Set[String])(
+    bearerToken: String
+  ): Future[Organization] = {
     logger.info(s"Replacing products for $institutionId")
 
-    val request = api.replaceOrganizationProducts(institutionId, products = Products(products))
+    val request =
+      api.replaceOrganizationProducts(institutionId, products = Products(products))(BearerToken(bearerToken))
     invoker
       .execute(request)
       .map { x =>
@@ -357,10 +363,13 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  override def replaceRelationshipProducts(relationshipId: UUID, products: Set[String]): Future[Relationship] = {
+  override def replaceRelationshipProducts(relationshipId: UUID, products: Set[String])(
+    bearerToken: String
+  ): Future[Relationship] = {
     logger.info(s"Replacing products for relationship $relationshipId")
 
-    val request = api.replaceRelationshipProducts(relationshipId, products = Products(products))
+    val request =
+      api.replaceRelationshipProducts(relationshipId, products = Products(products))(BearerToken(bearerToken))
     invoker
       .execute(request)
       .map { x =>

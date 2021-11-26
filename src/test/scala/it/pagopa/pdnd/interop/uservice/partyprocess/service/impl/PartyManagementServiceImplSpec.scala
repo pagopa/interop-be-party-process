@@ -68,7 +68,7 @@ class PartyManagementServiceImplSpec
           PartyRole.MANAGER,
           productRole = "foobar",
           products = Set.empty
-        )
+        )("token")
       //then
       createRelationshipOp.failed.futureValue.getMessage shouldBe s"Invalid platform role => $invalidProductRole not supported for ManagerRoles"
     }
@@ -94,7 +94,11 @@ class PartyManagementServiceImplSpec
           .withBody(partyRelationship)
           .withSuccessResponse[Relationship](201)
           .withErrorResponse[Problem](400)
-      (mockPartyAPI.createRelationship _).expects(partyRelationship).returning(mockApiRequest).once()
+      (mockPartyAPI
+        .createRelationship(_: RelationshipSeed)(_: BearerToken))
+        .expects(partyRelationship, *)
+        .returning(mockApiRequest)
+        .once()
 
       //when
       val operation =
@@ -104,7 +108,7 @@ class PartyManagementServiceImplSpec
           relationshipRole,
           productRole = productRole,
           products = Set("PDND")
-        )
+        )("token")
 
       //then
       operation.futureValue shouldBe ()
