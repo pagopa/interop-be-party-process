@@ -21,11 +21,11 @@ trait PartyManagementService {
     id: UUID,
     organizationId: UUID,
     operationRole: PartyRole,
-    products: Set[String],
+    product: String,
     productRole: String
   )(bearerToken: String): Future[Unit]
 
-  def retrieveRelationships(from: Option[UUID], to: Option[UUID], productRole: Option[String])(
+  def retrieveRelationships(from: Option[UUID], to: Option[UUID], product: Option[String], productRole: Option[String])(
     bearerToken: String
   ): Future[Relationships]
 
@@ -43,9 +43,4 @@ trait PartyManagementService {
 
   def getRelationshipById(relationshipId: UUID)(bearerToken: String): Future[Relationship]
 
-  def replaceOrganizationProducts(institutionId: UUID, products: Set[String])(bearerToken: String): Future[Organization]
-
-  def replaceRelationshipProducts(relationshipUUID: UUID, products: Set[String])(
-    bearerToken: String
-  ): Future[Relationship]
 }
