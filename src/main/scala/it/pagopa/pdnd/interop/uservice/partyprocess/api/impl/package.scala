@@ -20,7 +20,7 @@ package object impl extends DefaultJsonProtocol {
   implicit val relationshipInfoFormat: RootJsonFormat[RelationshipInfo]     = jsonFormat5(RelationshipInfo)
   implicit val productsFormat: RootJsonFormat[Products]                     = jsonFormat1(Products)
 
-  implicit class RelationshipOps(val relationship: Relationship) extends AnyVal {
+  implicit case class RelationshipOps(relationship: Relationship) extends AnyVal {
     def verifyProducts(products: List[String]): Boolean = {
       products.isEmpty || products.contains(relationship.product.id)
     }
