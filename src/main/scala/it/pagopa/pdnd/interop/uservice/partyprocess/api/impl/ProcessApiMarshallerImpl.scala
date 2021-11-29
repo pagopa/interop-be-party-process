@@ -14,8 +14,8 @@ import scala.io.{BufferedSource, Codec}
 
 class ProcessApiMarshallerImpl extends ProcessApiMarshaller with SprayJsonSupport with DefaultJsonProtocol {
 
-  override implicit def toEntityMarshallerOnBoardingResponse: ToEntityMarshaller[OnBoardingResponse] =
-    sprayJsonMarshaller[OnBoardingResponse]
+  override implicit def toEntityMarshallerOnboardingResponse: ToEntityMarshaller[OnboardingResponse] =
+    sprayJsonMarshaller[OnboardingResponse]
 
   override implicit def toEntityMarshallerFile: ToEntityMarshaller[File] =
     Marshaller.withFixedContentType(ContentTypes.`application/octet-stream`) { f =>
@@ -25,11 +25,11 @@ class ProcessApiMarshallerImpl extends ProcessApiMarshaller with SprayJsonSuppor
       out.getBytes(StandardCharsets.UTF_8.name)
     }
 
-  override implicit def toEntityMarshallerOnBoardingInfo: ToEntityMarshaller[OnBoardingInfo] =
-    sprayJsonMarshaller[OnBoardingInfo]
+  override implicit def toEntityMarshallerOnboardingInfo: ToEntityMarshaller[OnboardingInfo] =
+    sprayJsonMarshaller[OnboardingInfo]
 
-  override implicit def fromEntityUnmarshallerOnBoardingRequest: FromEntityUnmarshaller[OnBoardingRequest] =
-    sprayJsonUnmarshaller[OnBoardingRequest]
+  override implicit def fromEntityUnmarshallerOnboardingRequest: FromEntityUnmarshaller[OnboardingRequest] =
+    sprayJsonUnmarshaller[OnboardingRequest]
 
   override implicit def toEntityMarshallerProblem: ToEntityMarshaller[Problem] = sprayJsonMarshaller[Problem]
 

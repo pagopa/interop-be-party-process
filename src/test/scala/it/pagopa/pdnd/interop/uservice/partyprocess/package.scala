@@ -11,8 +11,8 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl._
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.{
-  OnBoardingInfo,
-  OnBoardingRequest,
+  OnboardingInfo,
+  OnboardingRequest,
   Products,
   RelationshipInfo,
   User
@@ -26,8 +26,8 @@ package object partyprocess extends SprayJsonSupport {
   final lazy val url: String =
     s"http://localhost:8088/pdnd-interop-uservice-party-process/${buildinfo.BuildInfo.interfaceVersion}"
 
-  implicit val fromEntityUnmarshallerOnBoardingInfo: FromEntityUnmarshaller[OnBoardingInfo] =
-    sprayJsonUnmarshaller[OnBoardingInfo]
+  implicit val fromEntityUnmarshallerOnboardingInfo: FromEntityUnmarshaller[OnboardingInfo] =
+    sprayJsonUnmarshaller[OnboardingInfo]
 
   implicit val fromEntityUnmarshallerProducts: FromEntityUnmarshaller[Products] =
     sprayJsonUnmarshaller[Products]
@@ -36,10 +36,10 @@ package object partyprocess extends SprayJsonSupport {
     sprayJsonUnmarshaller[Seq[RelationshipInfo]]
 
   implicit val userFormat: RootJsonFormat[User]                           = jsonFormat7(User)
-  implicit val onBoardingRequestFormat: RootJsonFormat[OnBoardingRequest] = jsonFormat2(OnBoardingRequest)
+  implicit val onBoardingRequestFormat: RootJsonFormat[OnboardingRequest] = jsonFormat2(OnboardingRequest)
 
-  implicit def fromEntityUnmarshallerOnBoardingRequest: ToEntityMarshaller[OnBoardingRequest] =
-    sprayJsonMarshaller[OnBoardingRequest]
+  implicit def fromEntityUnmarshallerOnboardingRequest: ToEntityMarshaller[OnboardingRequest] =
+    sprayJsonMarshaller[OnboardingRequest]
 
   final val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
   def request(data: Source[ByteString, Any], path: String, verb: HttpMethod)(implicit

@@ -35,7 +35,7 @@ paths:
         - process
       summary: get on boarding info
       description: Return ok
-      operationId: getOnBoardingInfo
+      operationId: getOnboardingInfo
       parameters:
         - name: institutionId
           description: UUID of an institution you can filter the retrieval with
@@ -48,7 +48,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OnBoardingInfo'
+                $ref: '#/components/schemas/OnboardingInfo'
         '400':
           description: Invalid ID supplied
           content:
@@ -69,14 +69,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/OnBoardingRequest'
+              $ref: '#/components/schemas/OnboardingRequest'
       responses:
         '201':
           description: successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OnBoardingResponse'
+                $ref: '#/components/schemas/OnboardingResponse'
         '400':
           description: Invalid ID supplied
           content:
@@ -103,14 +103,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/OnBoardingRequest'
+              $ref: '#/components/schemas/OnboardingRequest'
       responses:
         '200':
           description: successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OnBoardingResponse'
+                $ref: '#/components/schemas/OnboardingResponse'
         '400':
           description: Invalid ID supplied
           content:
@@ -137,14 +137,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/OnBoardingRequest'
+              $ref: '#/components/schemas/OnboardingRequest'
       responses:
         '200':
           description: successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OnBoardingResponse'
+                $ref: '#/components/schemas/OnboardingResponse'
         '400':
           description: Invalid ID supplied
           content:
@@ -165,7 +165,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/OnBoardingRequest'
+              $ref: '#/components/schemas/OnboardingRequest'
       responses:
         '201':
           description: successful operation
@@ -394,7 +394,7 @@ paths:
         - process
       summary: create an onboarding entry
       description: Return ok
-      operationId: confirmOnBoarding
+      operationId: confirmOnboarding
       parameters:
         - name: token
           in: path
@@ -504,7 +504,7 @@ paths:
                 $ref: '#/components/schemas/Problem'
 components:
   schemas:
-    OnBoardingRequest:
+    OnboardingRequest:
       properties:
         users:
           type: array
@@ -516,7 +516,7 @@ components:
       required:
         - users
         - institutionId
-    OnBoardingResponse:
+    OnboardingResponse:
       properties:
         token:
           type: string
@@ -648,7 +648,7 @@ components:
         - id
         - name
         - description
-    OnBoardingInfo:
+    OnboardingInfo:
       properties:
         person:
           $ref: '#/components/schemas/PersonInfo'

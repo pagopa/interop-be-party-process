@@ -166,7 +166,7 @@ class PartyProcessSpec
         taxCode = "123"
       )
 
-      val expected = OnBoardingInfo(
+      val expected = OnboardingInfo(
         person = PersonInfo(name = person1.name, surname = person1.surname, taxCode = person1.externalId),
         institutions = Seq(
           OnboardingData(
@@ -352,7 +352,7 @@ class PartyProcessSpec
         Duration.Inf
       )
 
-      val body = Unmarshal(response.entity).to[OnBoardingInfo].futureValue
+      val body = Unmarshal(response.entity).to[OnboardingInfo].futureValue
 
       response.status mustBe StatusCodes.OK
       body mustBe expected
@@ -398,7 +398,7 @@ class PartyProcessSpec
         taxCode = "123"
       )
 
-      val expected = OnBoardingInfo(
+      val expected = OnboardingInfo(
         person = PersonInfo(name = person1.name, surname = person1.surname, taxCode = person1.externalId),
         institutions = Seq(
           OnboardingData(
@@ -515,7 +515,7 @@ class PartyProcessSpec
           )
           .futureValue
 
-      val body = Unmarshal(response.entity).to[OnBoardingInfo].futureValue
+      val body = Unmarshal(response.entity).to[OnboardingInfo].futureValue
 
       response.status mustBe StatusCodes.OK
       body mustBe expected
@@ -701,7 +701,7 @@ class PartyProcessSpec
         .returning(Future.successful(PartyManagementDependency.TokenText("token")))
         .once()
 
-      val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
+      val req = OnboardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 
       val data = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
 
@@ -755,7 +755,7 @@ class PartyProcessSpec
         .expects(*, *, *, *, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(Seq.empty)))
 
-      val req = OnBoardingRequest(users = Seq(operator1, operator2), institutionId = "institutionId1")
+      val req = OnboardingRequest(users = Seq(operator1, operator2), institutionId = "institutionId1")
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/operators", HttpMethods.POST)
@@ -897,7 +897,7 @@ class PartyProcessSpec
         .returning(Future.successful(()))
         .repeat(2)
 
-      val req = OnBoardingRequest(users = Seq(operator1, operator2), institutionId = institutionId1.toString)
+      val req = OnboardingRequest(users = Seq(operator1, operator2), institutionId = institutionId1.toString)
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/operators", HttpMethods.POST)
@@ -950,7 +950,7 @@ class PartyProcessSpec
         .expects(*, *, *, *, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(Seq.empty)))
 
-      val req = OnBoardingRequest(users = Seq(subdelegate1, subdelegate2), institutionId = "institutionId1")
+      val req = OnboardingRequest(users = Seq(subdelegate1, subdelegate2), institutionId = "institutionId1")
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/subdelegates", HttpMethods.POST)
@@ -1092,7 +1092,7 @@ class PartyProcessSpec
         .returning(Future.successful(()))
         .repeat(2)
 
-      val req = OnBoardingRequest(users = Seq(subdelegate1, subdelegate2), institutionId = institutionId1.toString)
+      val req = OnboardingRequest(users = Seq(subdelegate1, subdelegate2), institutionId = institutionId1.toString)
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/subdelegates", HttpMethods.POST)
@@ -2223,7 +2223,7 @@ class PartyProcessSpec
         .returning(Future.successful(PartyManagementDependency.TokenText("token")))
         .once()
 
-      val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
+      val req = OnboardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/legals", HttpMethods.POST)
@@ -2295,7 +2295,7 @@ class PartyProcessSpec
         .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(relationship))))
         .once()
 
-      val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
+      val req = OnboardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/legals", HttpMethods.POST)

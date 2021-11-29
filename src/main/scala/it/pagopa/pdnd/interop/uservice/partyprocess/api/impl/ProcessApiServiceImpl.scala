@@ -78,16 +78,16 @@ class ProcessApiServiceImpl(
     mailer.sendMail(mailTemplate)(addresses, file, bodyParameters)
   }
 
-  /** Code: 200, Message: successful operation, DataType: OnBoardingInfo
+  /** Code: 200, Message: successful operation, DataType: OnboardingInfo
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
-  override def getOnBoardingInfo(institutionId: Option[String])(implicit
-    toEntityMarshallerOnBoardingInfo: ToEntityMarshaller[OnBoardingInfo],
+  override def getOnboardingInfo(institutionId: Option[String])(implicit
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerOnboardingInfo: ToEntityMarshaller[OnboardingInfo],
     contexts: Seq[(String, String)]
   ): Route = {
 
-    val result: Future[OnBoardingInfo] = for {
+    val result: Future[OnboardingInfo] = for {
       bearer          <- getFutureBearer(contexts)
       subjectUUID     <- getCallerSubjectIdentifier(bearer)
       institutionUUID <- institutionId.traverse(_.toFutureUUID)
@@ -97,13 +97,13 @@ class ProcessApiServiceImpl(
         bearer
       )
       onboardingData <- Future.traverse(relationships.items)(getOnboardingData(bearer))
-    } yield OnBoardingInfo(personInfo, onboardingData)
+    } yield OnboardingInfo(personInfo, onboardingData)
 
     onComplete(result) {
-      case Success(res) => getOnBoardingInfo200(res)
+      case Success(res) => getOnboardingInfo200(res)
       case Failure(ex) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
-        getOnBoardingInfo400(errorResponse)
+        getOnboardingInfo400(errorResponse)
 
     }
   }
@@ -132,23 +132,24 @@ class ProcessApiServiceImpl(
 
   }
 
-  /** Code: 201, Message: successful operation, DataType: OnBoardingResponse
+  /** Code: 201, Message: successful operation, DataType: OnboardingResponse
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
+    * Code: 409, Message: Document validation failed, DataType: Problem
     */
-  override def onboardingOrganization(onBoardingRequest: OnBoardingRequest)(implicit
+  override def onboardingOrganization(onboardingRequest: OnboardingRequest)(implicit
+    toEntityMarshallerOnboardingResponse: ToEntityMarshaller[OnboardingResponse],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
-    toEntityMarshallerOnBoardingResponse: ToEntityMarshaller[OnBoardingResponse],
     contexts: Seq[(String, String)]
   ): Route = {
     def getOrganization(bearer: String): Future[Organization] =
-      createOrganization(onBoardingRequest.institutionId)(bearer).recoverWith { case _ =>
-        partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)(bearer)
+      createOrganization(onboardingRequest.institutionId)(bearer).recoverWith { case _ =>
+        partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
       }
 
-    val result: Future[OnBoardingResponse] = for {
+    val result: Future[OnboardingResponse] = for {
       bearer           <- getFutureBearer(contexts)
       organization     <- getOrganization(bearer)
-      validUsers       <- verifyUsersByRoles(onBoardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
+      validUsers       <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
       personsWithRoles <- Future.traverse(validUsers)(addUser(bearer))
       _ <- Future.traverse(personsWithRoles)(pr =>
         partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)(
@@ -166,7 +167,7 @@ class ProcessApiServiceImpl(
         token.token
       ) //TODO address must be the digital address
       _ = logger.info(s"$token")
-    } yield OnBoardingResponse(token.token, pdf._1)
+    } yield OnboardingResponse(token.token, pdf._1)
 
     onComplete(result) {
       case Success(response) =>
@@ -179,17 +180,18 @@ class ProcessApiServiceImpl(
 
   }
 
-  /** Code: 201, Message: successful operation, DataType: OnBoardingResponse
+  /** Code: 200, Message: successful operation, DataType: OnboardingResponse
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
+    * Code: 409, Message: Document validation failed, DataType: Problem
     */
-  override def onboardingLegalsOnOrganization(onBoardingRequest: OnBoardingRequest)(implicit
+  override def onboardingLegalsOnOrganization(onboardingRequest: OnboardingRequest)(implicit
+    toEntityMarshallerOnboardingResponse: ToEntityMarshaller[OnboardingResponse],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
-    toEntityMarshallerOnBoardingResponse: ToEntityMarshaller[OnBoardingResponse],
     contexts: Seq[(String, String)]
   ): Route = {
-    val result: Future[OnBoardingResponse] = for {
+    val result: Future[OnboardingResponse] = for {
       bearer       <- getFutureBearer(contexts)
-      organization <- partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)(bearer)
+      organization <- partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
       organizationRelationships <- partyManagementService.retrieveRelationships(
         None,
         Some(organization.id),
@@ -197,7 +199,7 @@ class ProcessApiServiceImpl(
         None
       )(bearer)
       _                <- existsAnOnboardedManager(organizationRelationships)
-      validUsers       <- verifyUsersByRoles(onBoardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
+      validUsers       <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
       personsWithRoles <- Future.traverse(validUsers)(addUser(bearer))
       _ <- Future.traverse(personsWithRoles)(pr =>
         partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)(
@@ -215,7 +217,7 @@ class ProcessApiServiceImpl(
         token.token
       ) //TODO address must be the digital address
       _ = logger.info(s"$token")
-    } yield OnBoardingResponse(token.token, pdf._1)
+    } yield OnboardingResponse(token.token, pdf._1)
 
     onComplete(result) {
       case Success(response) =>
@@ -226,20 +228,20 @@ class ProcessApiServiceImpl(
     }
   }
 
-  /** Code: 200, Message: successful operation, DataType: OnBoardingResponse
+  /** Code: 200, Message: successful operation, DataType: OnboardingResponse
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
-  override def onboardingSubDelegatesOnOrganization(onBoardingRequest: OnBoardingRequest)(implicit
+  override def onboardingSubDelegatesOnOrganization(onboardingRequest: OnboardingRequest)(implicit
+    toEntityMarshallerOnboardingResponse: ToEntityMarshaller[OnboardingResponse],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
-    toEntityMarshallerOnBoardingResponse: ToEntityMarshaller[OnBoardingResponse],
     contexts: Seq[(String, String)]
   ): Route = {
     val result: Future[Unit] = for {
       bearer        <- getFutureBearer(contexts)
-      organization  <- partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)(bearer)
+      organization  <- partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
       relationships <- partyManagementService.retrieveRelationships(None, Some(organization.id), None, None)(bearer)
       _             <- existsAnOnboardedManager(relationships)
-      validUsers    <- verifyUsersByRoles(onBoardingRequest.users, Set(PartyRole.SUB_DELEGATE))
+      validUsers    <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.SUB_DELEGATE))
       operators     <- Future.traverse(validUsers)(addUser(bearer))
       _ <- Future.traverse(operators)(pr =>
         partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)(
@@ -261,7 +263,7 @@ class ProcessApiServiceImpl(
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
   override def onboardingOperators(
-    onBoardingRequest: OnBoardingRequest
+    onBoardingRequest: OnboardingRequest
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
     val result: Future[Unit] = for {
       bearer        <- getFutureBearer(contexts)
@@ -290,7 +292,7 @@ class ProcessApiServiceImpl(
   /** Code: 200, Message: successful operation
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
-  override def confirmOnBoarding(token: String, contract: (FileInfo, File))(implicit
+  override def confirmOnboarding(token: String, contract: (FileInfo, File))(implicit
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     contexts: Seq[(String, String)]
   ): Route = {
@@ -303,10 +305,10 @@ class ProcessApiServiceImpl(
     } yield ()
 
     onComplete(result) {
-      case Success(_) => confirmOnBoarding200
+      case Success(_) => confirmOnboarding200
       case Failure(ex) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
-        confirmOnBoarding400(errorResponse)
+        confirmOnboarding400(errorResponse)
     }
   }
 
