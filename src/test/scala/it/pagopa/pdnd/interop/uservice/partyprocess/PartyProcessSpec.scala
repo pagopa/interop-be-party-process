@@ -1542,7 +1542,236 @@ class PartyProcessSpec
       )
     }
 
-    "retrieve all the relationships of a specific institution with filter by productRole and products when no intersection occurs" in {
+    "retrieve all the relationships of a specific institution with filter by states" in {
+      val userId1       = UUID.randomUUID()
+      val userId2       = UUID.randomUUID()
+      val institutionId = UUID.randomUUID()
+
+      val relationshipId1 = UUID.randomUUID()
+      val relationshipId2 = UUID.randomUUID()
+
+      val relationship1 =
+        PartyManagementDependency.Relationship(
+          id = relationshipId1,
+          from = userId1,
+          to = institutionId,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product,
+          state = PartyManagementDependency.RelationshipState.ACTIVE
+        )
+      val relationship2 =
+        PartyManagementDependency.Relationship(
+          id = relationshipId2,
+          from = userId2,
+          to = institutionId,
+          role = PartyManagementDependency.PartyRole.DELEGATE,
+          product = product,
+          state = PartyManagementDependency.RelationshipState.PENDING
+        )
+
+      val relationships =
+        PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2))
+
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
+        .expects(Some(userId1), Some(institutionId), None, None, *)
+        .returning(Future.successful(relationships))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
+        .expects(None, Some(institutionId), None, None, *)
+        .returning(Future.successful(relationships))
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(userId1.toString)))
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/institutions/$institutionId/relationships?states=ACTIVE",
+              method = HttpMethods.GET,
+              headers = authorization
+            )
+          )
+          .futureValue
+
+      val body = Unmarshal(response.entity).to[Seq[RelationshipInfo]].futureValue
+      response.status mustBe StatusCodes.OK
+      body must contain only RelationshipInfo(
+        id = relationshipId1,
+        from = userId1,
+        role = PartyRole.MANAGER,
+        product = productInfo,
+        state = RelationshipState.ACTIVE
+      )
+    }
+
+    "retrieve all the relationships of a specific institution with filter by roles" in {
+      val userId1       = UUID.randomUUID()
+      val userId2       = UUID.randomUUID()
+      val institutionId = UUID.randomUUID()
+
+      val relationshipId1 = UUID.randomUUID()
+      val relationshipId2 = UUID.randomUUID()
+
+      val relationship1 =
+        PartyManagementDependency.Relationship(
+          id = relationshipId1,
+          from = userId1,
+          to = institutionId,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product,
+          state = PartyManagementDependency.RelationshipState.ACTIVE
+        )
+      val relationship2 =
+        PartyManagementDependency.Relationship(
+          id = relationshipId2,
+          from = userId2,
+          to = institutionId,
+          role = PartyManagementDependency.PartyRole.DELEGATE,
+          product = product,
+          state = PartyManagementDependency.RelationshipState.PENDING
+        )
+
+      val relationships =
+        PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2))
+
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
+        .expects(Some(userId1), Some(institutionId), None, None, *)
+        .returning(Future.successful(relationships))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
+        .expects(None, Some(institutionId), None, None, *)
+        .returning(Future.successful(relationships))
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(userId1.toString)))
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/institutions/$institutionId/relationships?roles=DELEGATE",
+              method = HttpMethods.GET,
+              headers = authorization
+            )
+          )
+          .futureValue
+
+      val body = Unmarshal(response.entity).to[Seq[RelationshipInfo]].futureValue
+      response.status mustBe StatusCodes.OK
+      body must contain only RelationshipInfo(
+        id = relationshipId2,
+        from = userId2,
+        role = PartyRole.DELEGATE,
+        product = productInfo,
+        state = RelationshipState.PENDING
+      )
+    }
+
+    "retrieve all the relationships of a specific institution using all filters" in {
+      val userId1       = UUID.randomUUID()
+      val userId2       = UUID.randomUUID()
+      val userId3       = UUID.randomUUID()
+      val userId4       = UUID.randomUUID()
+      val institutionId = UUID.randomUUID()
+
+      val relationshipId1 = UUID.randomUUID()
+      val relationshipId2 = UUID.randomUUID()
+      val relationshipId3 = UUID.randomUUID()
+      val relationshipId4 = UUID.randomUUID()
+
+      val relationship1 =
+        PartyManagementDependency.Relationship(
+          id = relationshipId1,
+          from = userId1,
+          to = institutionId,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product,
+          state = PartyManagementDependency.RelationshipState.ACTIVE
+        )
+      val relationship2 =
+        PartyManagementDependency.Relationship(
+          id = relationshipId2,
+          from = userId2,
+          to = institutionId,
+          role = PartyManagementDependency.PartyRole.DELEGATE,
+          product = product,
+          state = PartyManagementDependency.RelationshipState.ACTIVE
+        )
+
+      val relationship3 =
+        PartyManagementDependency.Relationship(
+          id = relationshipId3,
+          from = userId3,
+          to = institutionId,
+          role = PartyManagementDependency.PartyRole.OPERATOR,
+          product = product.copy(id = "PDND", role = "security"),
+          state = PartyManagementDependency.RelationshipState.ACTIVE
+        )
+
+      val relationship4 =
+        PartyManagementDependency.Relationship(
+          id = relationshipId4,
+          from = userId4,
+          to = institutionId,
+          role = PartyManagementDependency.PartyRole.OPERATOR,
+          product = product.copy(id = "PDND", role = "api"),
+          state = PartyManagementDependency.RelationshipState.ACTIVE
+        )
+
+      val relationships =
+        PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
+
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
+        .expects(Some(userId1), Some(institutionId), None, None, *)
+        .returning(Future.successful(relationships))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
+        .expects(None, Some(institutionId), None, None, *)
+        .returning(Future.successful(relationships))
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(userId1.toString)))
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri =
+                s"$url/institutions/$institutionId/relationships?productRoles=security,api&products=PDND&roles=OPERATOR&states=ACTIVE",
+              method = HttpMethods.GET,
+              headers = authorization
+            )
+          )
+          .futureValue
+
+      val body = Unmarshal(response.entity).to[Seq[RelationshipInfo]].futureValue
+      response.status mustBe StatusCodes.OK
+      body mustBe Seq(
+        RelationshipInfo(
+          id = relationshipId3,
+          from = userId3,
+          role = PartyRole.OPERATOR,
+          product = productInfo.copy(id = "PDND", role = "security"),
+          state = RelationshipState.ACTIVE
+        ),
+        RelationshipInfo(
+          id = relationshipId4,
+          from = userId4,
+          role = PartyRole.OPERATOR,
+          product = productInfo.copy(id = "PDND", role = "api"),
+          state = RelationshipState.ACTIVE
+        )
+      )
+    }
+
+    "retrieve all the relationships of a specific institution with all filter  when no intersection occurs" in {
       val userId          = UUID.randomUUID()
       val adminIdentifier = UUID.randomUUID()
       val userId3         = UUID.randomUUID()
@@ -1613,7 +1842,8 @@ class PartyProcessSpec
         Http()
           .singleRequest(
             HttpRequest(
-              uri = s"$url/institutions/$institutionId/relationships?productRoles=security,api&products=Interop,Test",
+              uri =
+                s"$url/institutions/$institutionId/relationships?productRoles=security,api&products=Interop,PDND&roles=OPERATOR&state=PENDING",
               method = HttpMethods.GET,
               headers = authorization
             )
