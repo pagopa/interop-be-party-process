@@ -71,12 +71,6 @@ spec:
                 secretKeyRef:
                   name: mail
                   key: DESTINATION_MAILS
-            - name: MANAGER_PRODUCT_ROLES
-              value: {{managerProductRoles}}
-            - name: DELEGATE_PRODUCT_ROLES
-              value: {{delegateProductRoles}}
-            - name: OPERATOR_PRODUCT_ROLES
-              value: {{operatorProductRoles}}
             - name: STORAGE_TYPE
               value: {{storageType}}
             - name: STORAGE_CONTAINER
