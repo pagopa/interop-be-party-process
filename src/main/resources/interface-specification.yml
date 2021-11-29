@@ -123,15 +123,15 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  /onboarding/subdelagates:
+  /onboarding/subdelegates:
     post:
       security:
         - bearerAuth: [ ]
       tags:
         - process
-      summary: subdelagates onboarding
-      description: creates subdelagates entries on already onboarded institution
-      operationId: onboardingSubDelagatesOnOrganization
+      summary: subdelegates onboarding
+      description: creates subdelegates entries on already onboarded institution
+      operationId: onboardingSubDelegatesOnOrganization
       requestBody:
         required: true
         content:
@@ -199,6 +199,16 @@ paths:
             type: string
         - name: productRoles
           description: comma separated sequence of product roles to filter the response with
+          in: query
+          schema:
+            type: string
+        - name: roles
+          description: comma separated sequence of role to filter the response with
+          in: query
+          schema:
+            type: string
+        - name: states
+          description: comma separated sequence of state to filter the response with
           in: query
           schema:
             type: string

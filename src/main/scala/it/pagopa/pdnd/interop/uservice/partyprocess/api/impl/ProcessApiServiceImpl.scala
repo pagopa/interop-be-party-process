@@ -229,7 +229,7 @@ class ProcessApiServiceImpl(
   /** Code: 200, Message: successful operation, DataType: OnBoardingResponse
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
-  override def onboardingSubDelagatesOnOrganization(onBoardingRequest: OnBoardingRequest)(implicit
+  override def onboardingSubDelegatesOnOrganization(onBoardingRequest: OnBoardingRequest)(implicit
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerOnBoardingResponse: ToEntityMarshaller[OnBoardingResponse],
     contexts: Seq[(String, String)]
@@ -451,38 +451,48 @@ class ProcessApiServiceImpl(
   }
 
   private def filterFoundRelationshipsByCurrentUser(
+    currentUserId: UUID,
     userRelationships: Relationships,
     institutionIdRelationships: Relationships
-  )(productRolesFilter: Option[String], productsFilter: Option[String]): Relationships = {
-    val productRolesFilterList = productRolesFilter.getOrElse("").parseCommaSeparated
-    val productsFilterList     = productsFilter.getOrElse("").parseCommaSeparated
+  )(
+    productRolesFilter: Option[String],
+    productsFilter: Option[String],
+    roles: Option[String],
+    states: Option[String]
+  ): Relationships = {
+    val productRolesFilterList: List[String] = productRolesFilter.getOrElse("").parseCommaSeparated
+    val productsFilterList: List[String]     = productsFilter.getOrElse("").parseCommaSeparated
+    val rolesFilterList: List[String]        = roles.getOrElse("").parseCommaSeparated
+    val statesFilterList: List[String]       = states.getOrElse("").parseCommaSeparated
 
-    val admins: Seq[PartyRole] = userRelationships.items.map(rl => roleToApi(rl.role))
+    val isAdmin: Boolean =
+      userRelationships.items
+        .map(rl => roleToApi(rl.role))
+        .exists(rl => adminPartyRoles.contains(rl))
 
-    val isAdmin: Boolean      = admins.exists(rl => adminPartyRoles.contains(rl))
-    val filteredRelationships = if (isAdmin) institutionIdRelationships else userRelationships
+    val filteredRelationships: Relationships =
+      if (isAdmin) institutionIdRelationships
+      else
+        institutionIdRelationships.copy(items = institutionIdRelationships.items.filter(r => r.from == currentUserId))
 
-    val filteredItems: Seq[Relationship] = (productRolesFilterList, productsFilterList) match {
-      case (Nil, Nil) => filteredRelationships.items
-      case (_, Nil)   => filteredRelationships.items.filter(r => productRolesFilterList.contains(r.product.role))
-      case (Nil, _)   => filteredRelationships.items.filter(r => productsFilterList.contains(r.product.id))
-      case (_, _) =>
-        filteredRelationships.items.filter(r =>
-          productRolesFilterList.contains(r.product.role) && productsFilterList.contains(r.product.id)
-        )
-
-    }
+    val filteredItems: Seq[Relationship] = filteredRelationships.items
+      .filter(r => r.verifyProducts(productsFilterList))
+      .filter(r => r.verifyProductRoles(productRolesFilterList))
+      .filter(r => r.verifyRole(rolesFilterList))
+      .filter(r => r.verifyState(statesFilterList))
 
     Relationships(filteredItems)
   }
 
-  /** Code: 200, Message: successful operation, DataType: RelationshipInfo
+  /** Code: 200, Message: successful operation, DataType: Seq[RelationshipInfo]
     * Code: 400, Message: Invalid institution id supplied, DataType: Problem
     */
   override def getUserInstitutionRelationships(
     institutionId: String,
     products: Option[String],
-    productRoles: Option[String]
+    productRoles: Option[String],
+    roles: Option[String],
+    states: Option[String]
   )(implicit
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerRelationshipInfoarray: ToEntityMarshaller[Seq[RelationshipInfo]],
@@ -505,10 +515,11 @@ class ProcessApiServiceImpl(
         None,
         None
       )(bearer)
-      filteredRelationships = filterFoundRelationshipsByCurrentUser(userRelationships, institutionIdRelationships)(
-        productRoles,
-        products
-      )
+      filteredRelationships = filterFoundRelationshipsByCurrentUser(
+        subjectUUID,
+        userRelationships,
+        institutionIdRelationships
+      )(productRoles, products, roles, states)
     } yield relationshipsToRelationshipsResponse(filteredRelationships)
 
     onComplete(result) {

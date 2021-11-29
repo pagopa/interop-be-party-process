@@ -906,6 +906,201 @@ class PartyProcessSpec
 
     }
 
+    "not create subdelegates if does not exists any active legal for a given institution" in {
+
+      val taxCode1 = "subdelegate1TaxCode"
+      val taxCode2 = "subdelegate2TaxCode"
+
+      val subdelegate1 = User(
+        name = "subdelegate1",
+        surname = "subdelegate1",
+        taxCode = taxCode1,
+        role = PartyProcess.PartyRole.SUB_DELEGATE,
+        email = Some("subdel@ore.it"),
+        product = "product",
+        productRole = "admin"
+      )
+      val subdelegate2 = User(
+        name = "subdelegate2",
+        surname = "subdelegate2",
+        taxCode = taxCode2,
+        role = PartyProcess.PartyRole.SUB_DELEGATE,
+        email = None,
+        product = "product",
+        productRole = "security"
+      )
+
+      (mockPartyManagementService
+        .retrieveOrganizationByExternalId(_: String)(_: String))
+        .expects(*, *)
+        .returning(
+          Future.successful(
+            PartyManagementDependency.Organization(
+              id = UUID.randomUUID(),
+              institutionId = "d4r3",
+              description = "test",
+              digitalAddress = "big@fish.it",
+              attributes = Seq.empty,
+              taxCode = "123"
+            )
+          )
+        )
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
+        .expects(*, *, *, *, *)
+        .returning(Future.successful(PartyManagementDependency.Relationships(Seq.empty)))
+
+      val req = OnBoardingRequest(users = Seq(subdelegate1, subdelegate2), institutionId = "institutionId1")
+
+      val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
+      val response = request(data, "onboarding/subdelegates", HttpMethods.POST)
+
+      response.status mustBe StatusCodes.BadRequest
+
+    }
+
+    "create subdelegates if exists a legal active for a given institution" in {
+
+      val taxCode1       = "subdelegate1TaxCode"
+      val taxCode2       = "subdelegate2TaxCode"
+      val institutionId1 = UUID.randomUUID()
+      val personPartyId1 = "bf80fac0-2775-4646-8fcf-28e083751900"
+      val orgPartyId1    = "bf80fac0-2775-4646-8fcf-28e083751901"
+
+      val organization1 = PartyManagementDependency.Organization(
+        institutionId = institutionId1.toString,
+        description = "org1",
+        digitalAddress = "digitalAddress1",
+        id = UUID.fromString(orgPartyId1),
+        attributes = Seq.empty,
+        taxCode = "123"
+      )
+
+      val relationships =
+        PartyManagementDependency.Relationships(
+          Seq(
+            PartyManagementDependency.Relationship(
+              id = UUID.randomUUID(),
+              from = UUID.fromString(personPartyId1),
+              to = institutionId1,
+              role = PartyManagementDependency.PartyRole.MANAGER,
+              product = product,
+              state = PartyManagementDependency.RelationshipState.ACTIVE
+            )
+          )
+        )
+
+      val subdelegateId1 = UUID.randomUUID()
+      val subdelegateId2 = UUID.randomUUID()
+
+      val subdelegate1 = User(
+        name = "subdelegate1",
+        surname = "subdelegate1",
+        taxCode = taxCode1,
+        role = PartyProcess.PartyRole.SUB_DELEGATE,
+        email = Some("mario@ros.si"),
+        product = "product",
+        productRole = "admin"
+      )
+      val subdelegate2 = User(
+        name = "subdelegate2",
+        surname = "subdelegate2",
+        taxCode = taxCode2,
+        role = PartyProcess.PartyRole.SUB_DELEGATE,
+        email = None,
+        product = "product",
+        productRole = "admin"
+      )
+
+      (mockPartyManagementService
+        .retrieveOrganizationByExternalId(_: String)(_: String))
+        .expects(*, *)
+        .returning(Future.successful(organization1))
+
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
+        .expects(None, Some(UUID.fromString(orgPartyId1)), None, None, *)
+        .returning(Future.successful(relationships))
+
+      (mockUserRegistryService
+        .createUser(_: UserRegistryUserSeed)(_: String))
+        .expects(
+          UserRegistryUserSeed(
+            externalId = subdelegate1.taxCode,
+            name = subdelegate1.name,
+            surname = subdelegate1.surname,
+            certification = CertificationEnumsNone,
+            extras = UserRegistryUserExtras(email = subdelegate1.email, birthDate = None)
+          ),
+          *
+        )
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = subdelegateId1,
+              externalId = subdelegate1.taxCode,
+              name = subdelegate1.name,
+              surname = subdelegate1.surname,
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(email = subdelegate1.email, birthDate = None)
+            )
+          )
+        )
+        .once()
+
+      (mockPartyManagementService
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
+        .expects(PartyManagementDependency.PersonSeed(subdelegateId1), *)
+        .returning(Future.successful(PartyManagementDependency.Person(subdelegateId1)))
+        .once()
+
+      (mockUserRegistryService
+        .createUser(_: UserRegistryUserSeed)(_: String))
+        .expects(
+          UserRegistryUserSeed(
+            externalId = subdelegate2.taxCode,
+            name = subdelegate2.name,
+            surname = subdelegate2.surname,
+            certification = CertificationEnumsNone,
+            extras = UserRegistryUserExtras(email = subdelegate2.email, birthDate = None)
+          ),
+          *
+        )
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = subdelegateId2,
+              externalId = subdelegate2.taxCode,
+              name = subdelegate2.name,
+              surname = subdelegate2.surname,
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(email = subdelegate2.email, birthDate = None)
+            )
+          )
+        )
+        .once()
+
+      (mockPartyManagementService
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
+        .expects(PartyManagementDependency.PersonSeed(subdelegateId2), *)
+        .returning(Future.successful(PartyManagementDependency.Person(subdelegateId2)))
+        .once()
+
+      (mockPartyManagementService
+        .createRelationship(_: UUID, _: UUID, _: PartyManagementDependency.PartyRole, _: String, _: String)(_: String))
+        .expects(*, *, *, *, *, *)
+        .returning(Future.successful(()))
+        .repeat(2)
+
+      val req = OnBoardingRequest(users = Seq(subdelegate1, subdelegate2), institutionId = institutionId1.toString)
+
+      val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
+      val response = request(data, "onboarding/subdelegates", HttpMethods.POST)
+
+      response.status mustBe StatusCodes.Created
+
+    }
+
     "confirm token" in {
 
       val token: String =
