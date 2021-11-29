@@ -59,22 +59,6 @@ class PartyManagementServiceImplSpec
 
   "when the service creates a relationship" must {
 
-    "return a failure when the platform role is not contained in the configured list for the defined role" in {
-      //given
-      val invalidProductRole = "foobar"
-      //when
-      val createRelationshipOp =
-        partyManagementService.createRelationship(
-          UUID.randomUUID(),
-          UUID.randomUUID(),
-          PartyRole.MANAGER,
-          product = "product",
-          productRole = "foobar"
-        )("token")
-      //then
-      createRelationshipOp.failed.futureValue.getMessage shouldBe s"Invalid platform role => $invalidProductRole not supported for ManagerRoles"
-    }
-
     "return a success when the platform role is contained in the configured list for the defined role" in {
       //given the request payload
       val userId           = UUID.randomUUID()

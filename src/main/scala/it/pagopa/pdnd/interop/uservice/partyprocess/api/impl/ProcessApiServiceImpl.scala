@@ -1,7 +1,7 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.api.impl
 
 import akka.http.scaladsl.marshalling.ToEntityMarshaller
-import akka.http.scaladsl.model.{ContentType, HttpEntity, MessageEntity}
+import akka.http.scaladsl.model.{ContentType, HttpEntity, MessageEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
@@ -72,7 +72,7 @@ class ProcessApiServiceImpl(
   private def sendOnBoardingMail(addresses: Seq[String], file: File, token: String): Future[Unit] = {
     val bodyParameters =
       ApplicationConfiguration.onboardingMailPlaceholdersReplacement.map { case (k, placeholder) =>
-        (k, s"${placeholder}${token}")
+        (k, s"$placeholder$token")
       }
     mailer.sendMail(mailTemplate)(addresses, file, bodyParameters)
   }
@@ -173,6 +173,84 @@ class ProcessApiServiceImpl(
 
     }
 
+  }
+
+  /** Code: 201, Message: successful operation, DataType: OnBoardingResponse
+    * Code: 400, Message: Invalid ID supplied, DataType: Problem
+    */
+  override def onboardingLegalsOnOrganization(onBoardingRequest: OnBoardingRequest)(implicit
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerOnBoardingResponse: ToEntityMarshaller[OnBoardingResponse],
+    contexts: Seq[(String, String)]
+  ): Route = {
+    val result: Future[OnBoardingResponse] = for {
+      bearer       <- contexts.getFutureBearer
+      organization <- partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)(bearer)
+      organizationRelationships <- partyManagementService.retrieveRelationships(
+        None,
+        Some(organization.id),
+        None,
+        None
+      )(bearer)
+      _                <- existsAnOnboardedManager(organizationRelationships)
+      validUsers       <- verifyUsersByRoles(onBoardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
+      personsWithRoles <- Future.traverse(validUsers)(addUser(bearer))
+      _ <- Future.traverse(personsWithRoles)(pr =>
+        partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)(
+          bearer
+        )
+      )
+      relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, products, productRole) =>
+        createRelationship(organization.id, person.id, roleToDependency(role), products, productRole)
+      })
+      pdf   <- pdfCreator.create(validUsers, organization)
+      token <- partyManagementService.createToken(relationships, pdf._2)(bearer)
+      _ <- sendOnBoardingMail(
+        ApplicationConfiguration.destinationMails,
+        pdf._1,
+        token.token
+      ) //TODO address must be the digital address
+      _ = logger.info(s"$token")
+    } yield OnBoardingResponse(token.token, pdf._1)
+
+    onComplete(result) {
+      case Success(response) =>
+        onboardingLegalsOnOrganization200(response)
+      case Failure(ex) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        onboardingLegalsOnOrganization400(errorResponse)
+    }
+  }
+
+  /** Code: 200, Message: successful operation, DataType: OnBoardingResponse
+    * Code: 400, Message: Invalid ID supplied, DataType: Problem
+    */
+  override def onboardingSubDelagatesOnOrganization(onBoardingRequest: OnBoardingRequest)(implicit
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerOnBoardingResponse: ToEntityMarshaller[OnBoardingResponse],
+    contexts: Seq[(String, String)]
+  ): Route = {
+    val result: Future[Unit] = for {
+      bearer        <- contexts.getFutureBearer
+      organization  <- partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)(bearer)
+      relationships <- partyManagementService.retrieveRelationships(None, Some(organization.id), None, None)(bearer)
+      _             <- existsAnOnboardedManager(relationships)
+      validUsers    <- verifyUsersByRoles(onBoardingRequest.users, Set(PartyRole.SUB_DELEGATE))
+      operators     <- Future.traverse(validUsers)(addUser(bearer))
+      _ <- Future.traverse(operators)(pr =>
+        partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)(
+          bearer
+        )
+      )
+      _ = logger.info(s"Operators created ${operators.map(_.toString).mkString(",")}")
+    } yield ()
+
+    onComplete(result) {
+      case Success(_) => onboardingOperators201
+      case Failure(ex) =>
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        onboardingOperators400(errorResponse)
+    }
   }
 
   /** Code: 201, Message: successful operation
@@ -368,18 +446,34 @@ class ProcessApiServiceImpl(
     )
   }
 
-  def filterFoundRelationshipsByCurrentUser(
-    institutionIdRelationships: Relationships,
-    userRelationships: Relationships
-  ): Future[Relationships] = {
+  private def filterFoundRelationshipsByCurrentUser(
+    userRelationships: Relationships,
+    institutionIdRelationships: Relationships
+  )(productRolesFilter: Option[String], productsFilter: Option[String]): Future[Relationships] = {
+    val productRolesFilterList = productRolesFilter.getOrElse("").parseCommaSeparated
+    val productsFilterList     = productsFilter.getOrElse("").parseCommaSeparated
 
     val admins: Either[Throwable, Seq[PartyRole]] =
       userRelationships.items.traverse(rl => PartyRole.fromValue(rl.role.toString))
-    admins.map { ad =>
+
+    val filteredRelationships = admins.map { ad =>
       val isAdmin = ad.exists(rl => adminPartyRoles.contains(rl))
       if (isAdmin) institutionIdRelationships
       else userRelationships
-    }.toFuture
+    }
+
+    val filteredItems: Either[Throwable, Seq[Relationship]] = (productRolesFilterList, productsFilterList) match {
+      case (Nil, Nil) => filteredRelationships.map(_.items)
+      case (_, Nil)   => filteredRelationships.map(_.items.filter(r => productRolesFilterList.contains(r.product.role)))
+      case (Nil, _)   => filteredRelationships.map(_.items.filter(r => productsFilterList.contains(r.product.id)))
+      case (_, _) =>
+        filteredRelationships.map(
+          _.items.filter(r =>
+            productRolesFilterList.contains(r.product.role) && productsFilterList.contains(r.product.id)
+          )
+        )
+    }
+    filteredItems.map(Relationships).toFuture
   }
 
   /** Code: 200, Message: successful operation, DataType: RelationshipInfo
@@ -387,7 +481,7 @@ class ProcessApiServiceImpl(
     */
   override def getUserInstitutionRelationships(
     institutionId: String,
-    product: Option[String],
+    products: Option[String],
     productRoles: Option[String]
   )(implicit
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
@@ -402,16 +496,19 @@ class ProcessApiServiceImpl(
       institutionIdRelationships <- partyManagementService.retrieveRelationships(
         None,
         Some(institutionUUID),
-        product,
-        productRoles
+        None,
+        None
       )(bearer)
       userRelationships <- partyManagementService.retrieveRelationships(
         Some(subjectUUID),
         Some(institutionUUID),
-        product: Option[String],
-        productRoles: Option[String]
+        None,
+        None
       )(bearer)
-      filteredRelationships <- filterFoundRelationshipsByCurrentUser(institutionIdRelationships, userRelationships)
+      filteredRelationships <- filterFoundRelationshipsByCurrentUser(userRelationships, institutionIdRelationships)(
+        productRoles,
+        products
+      )
     } yield relationshipsToRelationshipsResponse(filteredRelationships)
 
     onComplete(result) {
@@ -616,53 +713,6 @@ class ProcessApiServiceImpl(
     }
   }
 
-  /** Code: 201, Message: successful operation, DataType: OnBoardingResponse
-    * Code: 400, Message: Invalid ID supplied, DataType: Problem
-    */
-  override def onboardingLegalsOnOrganization(onBoardingRequest: OnBoardingRequest)(implicit
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
-    toEntityMarshallerOnBoardingResponse: ToEntityMarshaller[OnBoardingResponse],
-    contexts: Seq[(String, String)]
-  ): Route = {
-    val result: Future[OnBoardingResponse] = for {
-      bearer       <- contexts.getFutureBearer
-      organization <- partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)(bearer)
-      organizationRelationships <- partyManagementService.retrieveRelationships(
-        None,
-        Some(organization.id),
-        None,
-        None
-      )(bearer)
-      _                <- existsAnOnboardedManager(organizationRelationships)
-      validUsers       <- verifyUsersByRoles(onBoardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
-      personsWithRoles <- Future.traverse(validUsers)(addUser(bearer))
-      _ <- Future.traverse(personsWithRoles)(pr =>
-        partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)(
-          bearer
-        )
-      )
-      relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, products, productRole) =>
-        createRelationship(organization.id, person.id, roleToDependency(role), products, productRole)
-      })
-      pdf   <- pdfCreator.create(validUsers, organization)
-      token <- partyManagementService.createToken(relationships, pdf._2)(bearer)
-      _ <- sendOnBoardingMail(
-        ApplicationConfiguration.destinationMails,
-        pdf._1,
-        token.token
-      ) //TODO address must be the digital address
-      _ = logger.info(s"$token")
-    } yield OnBoardingResponse(token.token, pdf._1)
-
-    onComplete(result) {
-      case Success(response) =>
-        onboardingLegalsOnOrganization200(response)
-      case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
-        onboardingLegalsOnOrganization400(errorResponse)
-    }
-  }
-
   /** Code: 200, Message: successful operation, DataType: Products
     * Code: 404, Message: Institution not found, DataType: Problem
     */
@@ -685,13 +735,16 @@ class ProcessApiServiceImpl(
     } yield Products(products = extractActiveProducts(organizationRelationships).map(relationshipProductToApi))
 
     onComplete(result) {
+      case Success(institution) if institution.products.isEmpty =>
+        val errorResponse: Problem = Problem(None, 404, s"Products not found for institution $institutionId")
+        retrieveInstitutionProducts404(errorResponse)
       case Success(institution) => retrieveInstitutionProducts200(institution)
       case Failure(ex: SubjectValidationError) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 401, "Unauthorized")
         complete((401, errorResponse))
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
-        retrieveInstitutionProducts404(errorResponse)
+        val errorResponse: Problem = Problem(Option(ex.getMessage), 500, "Something went wrong")
+        complete(StatusCodes.InternalServerError, errorResponse)
     }
   }
 

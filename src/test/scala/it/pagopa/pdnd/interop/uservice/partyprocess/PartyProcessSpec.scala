@@ -1116,7 +1116,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(None, Some(institutionId), None, None, *)
+        .expects(None, Some(institutionId), None, None, adminIdentifier.toString)
         .returning(Future.successful(relationships))
         .once()
 
@@ -1280,7 +1280,7 @@ class PartyProcessSpec
           from = userId3,
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
-          product = product.copy(role = "security"),
+          product = product.copy(id = "PDND", role = "security"),
           state = PartyManagementDependency.RelationshipState.ACTIVE
         )
 
@@ -1327,7 +1327,7 @@ class PartyProcessSpec
         id = relationshipId3,
         from = userId3,
         role = PartyRole.OPERATOR,
-        product = productInfo.copy(role = "security"),
+        product = productInfo.copy(id = "PDND", role = "security"),
         state = RelationshipState.ACTIVE
       )
     }
@@ -1920,7 +1920,7 @@ class PartyProcessSpec
 
       val body = Unmarshal(response.entity).to[ModelProducts].futureValue
 
-      body.products must contain only ("PDND", "APP IO", "APP VOI")
+      body.products must contain only (productInfo)
     }
 
     "retrieve no products when the organization had not an onboarding" in {
