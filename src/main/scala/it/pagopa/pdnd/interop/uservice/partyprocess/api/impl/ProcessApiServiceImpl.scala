@@ -8,8 +8,9 @@ import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
+import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.getFutureBearer
 import it.pagopa.pdnd.interop.commons.utils.Digester
-import it.pagopa.pdnd.interop.commons.utils.TypeConversions.{ContextsOps, EitherOps, OptionOps, StringOps}
+import it.pagopa.pdnd.interop.commons.utils.TypeConversions.{OptionOps, StringOps}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   Organization,
@@ -69,7 +70,7 @@ class ProcessApiServiceImpl(
 
   final val adminPartyRoles: Set[PartyRole] = Set(PartyRole.MANAGER, PartyRole.DELEGATE, PartyRole.SUB_DELEGATE)
 
-  private def sendOnBoardingMail(addresses: Seq[String], file: File, token: String): Future[Unit] = {
+  private def sendOnboardingMail(addresses: Seq[String], file: File, token: String): Future[Unit] = {
     val bodyParameters =
       ApplicationConfiguration.onboardingMailPlaceholdersReplacement.map { case (k, placeholder) =>
         (k, s"$placeholder$token")
@@ -87,7 +88,7 @@ class ProcessApiServiceImpl(
   ): Route = {
 
     val result: Future[OnBoardingInfo] = for {
-      bearer          <- contexts.getFutureBearer
+      bearer          <- getFutureBearer(contexts)
       subjectUUID     <- getCallerSubjectIdentifier(bearer)
       institutionUUID <- institutionId.traverse(_.toFutureUUID)
       user            <- userRegistryManagementService.getUserById(subjectUUID)(bearer)
@@ -110,8 +111,11 @@ class ProcessApiServiceImpl(
   private def getOnboardingData(bearer: String)(relationship: Relationship): Future[OnboardingData] = {
     for {
       organization <- getOrganization(relationship.to)(bearer)
-      attributes <- Future.traverse(organization.attributes)(attribute =>
-        attributeRegistryService.getAttribute(attribute)(bearer)
+      attributes <- Future.traverse(organization.attributes)(id =>
+        for {
+          uuid      <- id.toFutureUUID
+          attribute <- attributeRegistryService.getAttribute(uuid)(bearer)
+        } yield attribute
       )
     } yield OnboardingData(
       institutionId = organization.institutionId,
@@ -141,7 +145,7 @@ class ProcessApiServiceImpl(
       }
 
     val result: Future[OnBoardingResponse] = for {
-      bearer           <- contexts.getFutureBearer
+      bearer           <- getFutureBearer(contexts)
       organization     <- getOrganization(bearer)
       validUsers       <- verifyUsersByRoles(onBoardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
       personsWithRoles <- Future.traverse(validUsers)(addUser(bearer))
@@ -155,8 +159,7 @@ class ProcessApiServiceImpl(
       })
       pdf   <- pdfCreator.create(validUsers, organization)
       token <- partyManagementService.createToken(relationships, pdf._2)(bearer)
-
-      _ <- sendOnBoardingMail(
+      _ <- sendOnboardingMail(
         ApplicationConfiguration.destinationMails,
         pdf._1,
         token.token
@@ -260,7 +263,7 @@ class ProcessApiServiceImpl(
     onBoardingRequest: OnBoardingRequest
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
     val result: Future[Unit] = for {
-      bearer        <- contexts.getFutureBearer
+      bearer        <- getFutureBearer(contexts)
       organization  <- partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)(bearer)
       relationships <- partyManagementService.retrieveRelationships(None, Some(organization.id), None, None)(bearer)
       _             <- existsAnOnboardedManager(relationships)
@@ -292,7 +295,7 @@ class ProcessApiServiceImpl(
   ): Route = {
 
     val result: Future[Unit] = for {
-      bearer   <- contexts.getFutureBearer
+      bearer   <- getFutureBearer(contexts)
       checksum <- calculateCheckSum(token)
       verified <- verifyChecksum(contract._2, checksum, token)
       _        <- partyManagementService.consumeToken(verified, contract)(bearer)
@@ -313,7 +316,7 @@ class ProcessApiServiceImpl(
     token: String
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
     val result: Future[Unit] = for {
-      bearer <- contexts.getFutureBearer
+      bearer <- getFutureBearer(contexts)
       result <- partyManagementService.invalidateToken(token)(bearer)
     } yield result
 
@@ -490,7 +493,7 @@ class ProcessApiServiceImpl(
   ): Route = {
     logger.info(s"Getting relationship for institution $institutionId and current user")
     val result: Future[Seq[RelationshipInfo]] = for {
-      bearer          <- contexts.getFutureBearer
+      bearer          <- getFutureBearer(contexts)
       subjectUUID     <- getCallerSubjectIdentifier(bearer)
       institutionUUID <- institutionId.toFutureUUID
       institutionIdRelationships <- partyManagementService.retrieveRelationships(
@@ -528,7 +531,7 @@ class ProcessApiServiceImpl(
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
     logger.info(s"Activating relationship $relationshipId")
     val result: Future[Unit] = for {
-      bearer           <- contexts.getFutureBearer
+      bearer           <- getFutureBearer(contexts)
       relationshipUUID <- relationshipId.toFutureUUID
       relationship     <- partyManagementService.getRelationshipById(relationshipUUID)(bearer)
       _                <- relationshipMustBeActivable(relationship)
@@ -554,7 +557,7 @@ class ProcessApiServiceImpl(
     relationshipId: String
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
     val result: Future[Unit] = for {
-      bearer           <- contexts.getFutureBearer
+      bearer           <- getFutureBearer(contexts)
       relationshipUUID <- relationshipId.toFutureUUID
       relationship     <- partyManagementService.getRelationshipById(relationshipUUID)(bearer)
       _                <- relationshipMustBeSuspendable(relationship)
@@ -579,7 +582,7 @@ class ProcessApiServiceImpl(
   ): Route = {
     val result: Future[DocumentDetails] =
       for {
-        bearer         <- contexts.getFutureBearer
+        bearer         <- getFutureBearer(contexts)
         uuid           <- relationshipId.toFutureUUID
         relationship   <- partyManagementService.getRelationshipById(uuid)(bearer)
         filePath       <- relationship.filePath.toFuture(RelationshipDocumentNotFound(relationshipId))
@@ -672,7 +675,7 @@ class ProcessApiServiceImpl(
   ): Route = {
     logger.info(s"Getting relationship $relationshipId")
     val result: Future[Relationship] = for {
-      bearer           <- contexts.getFutureBearer
+      bearer           <- getFutureBearer(contexts)
       relationshipUUID <- relationshipId.toFutureUUID
       relationship     <- partyManagementService.getRelationshipById(relationshipUUID)(bearer)
     } yield relationship
@@ -696,7 +699,7 @@ class ProcessApiServiceImpl(
     relationshipId: String
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
     val result = for {
-      bearer           <- contexts.getFutureBearer
+      bearer           <- getFutureBearer(contexts)
       _                <- getCallerSubjectIdentifier(bearer)
       relationshipUUID <- relationshipId.toFutureUUID
       _                <- partyManagementService.deleteRelationshipById(relationshipUUID)(bearer)
@@ -722,7 +725,7 @@ class ProcessApiServiceImpl(
     contexts: Seq[(String, String)]
   ): Route = {
     val result = for {
-      bearer          <- contexts.getFutureBearer
+      bearer          <- getFutureBearer(contexts)
       _               <- getCallerSubjectIdentifier(bearer)
       institutionUUID <- institutionId.toFutureUUID
       organization    <- partyManagementService.retrieveOrganization(institutionUUID)(bearer)
