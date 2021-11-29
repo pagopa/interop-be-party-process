@@ -154,7 +154,7 @@ class PartyProcessSpec
         description = "org1",
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
-        attributes = Seq("1", "2", "3"),
+        attributes = Seq(attributeId1.toString, attributeId2.toString, attributeId3.toString),
         taxCode = "123"
       )
       val organization2 = PartyManagementDependency.Organization(
@@ -162,7 +162,7 @@ class PartyProcessSpec
         description = "org2",
         digitalAddress = "digitalAddress2",
         id = UUID.fromString(orgPartyId2),
-        attributes = Seq("99", "100", "101"),
+        attributes = Seq(attributeId4.toString, attributeId5.toString, attributeId6.toString),
         taxCode = "123"
       )
 
@@ -192,9 +192,9 @@ class PartyProcessSpec
             role = roleToApi(relationship2.role),
             productInfo = productInfo,
             attributes = Seq(
-              Attribute(attributeId4.toString, "name99", "description99"),
-              Attribute(attributeId5.toString, "name100", "description100"),
-              Attribute(attributeId6.toString, "name101", "description101")
+              Attribute(attributeId4.toString, "name4", "description4"),
+              Attribute(attributeId5.toString, "name5", "description5"),
+              Attribute(attributeId6.toString, "name6", "description6")
             )
           )
         )
@@ -296,8 +296,8 @@ class PartyProcessSpec
           Future.successful(
             ClientAttribute(
               id = attributeId4.toString,
-              name = "name99",
-              description = "description99",
+              name = "name4",
+              description = "description4",
               code = None,
               certified = true,
               origin = None,
@@ -314,8 +314,8 @@ class PartyProcessSpec
           Future.successful(
             ClientAttribute(
               id = attributeId5.toString,
-              name = "name100",
-              description = "description100",
+              name = "name5",
+              description = "description5",
               code = None,
               certified = true,
               origin = None,
@@ -332,8 +332,8 @@ class PartyProcessSpec
           Future.successful(
             ClientAttribute(
               id = attributeId6.toString,
-              name = "name101",
-              description = "description101",
+              name = "name6",
+              description = "description6",
               code = None,
               certified = true,
               origin = None,
@@ -394,7 +394,7 @@ class PartyProcessSpec
         description = "org1",
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
-        attributes = Seq("1", "2", "3"),
+        attributes = Seq(attributeId1.toString, attributeId2.toString, attributeId3.toString),
         taxCode = "123"
       )
 
@@ -410,9 +410,9 @@ class PartyProcessSpec
             role = roleToApi(relationship1.role),
             productInfo = productInfo,
             attributes = Seq(
-              Attribute("1", "name1", "description1"),
-              Attribute("2", "name2", "description2"),
-              Attribute("3", "name3", "description3")
+              Attribute(attributeId1.toString, "name1", "description1"),
+              Attribute(attributeId2.toString, "name2", "description2"),
+              Attribute(attributeId3.toString, "name3", "description3")
             )
           )
         )
@@ -472,7 +472,7 @@ class PartyProcessSpec
         .returning(
           Future.successful(
             ClientAttribute(
-              id = attributeId1.toString,
+              id = attributeId2.toString,
               name = "name2",
               description = "description2",
               code = None,
@@ -1935,7 +1935,7 @@ class PartyProcessSpec
 
       val body = Unmarshal(response.entity).to[ModelProducts].futureValue
 
-      body.products must contain only (productInfo)
+      body.products must contain only productInfo
     }
 
     "retrieve no products when the organization had not an onboarding" in {
