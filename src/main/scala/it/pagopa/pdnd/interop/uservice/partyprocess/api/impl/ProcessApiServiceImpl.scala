@@ -119,6 +119,7 @@ class ProcessApiServiceImpl(
       )
     } yield OnboardingData(
       institutionId = organization.institutionId,
+      taxCode = organization.taxCode,
       description = organization.description,
       digitalAddress = organization.digitalAddress,
       state = relationshipStateToApi(relationship.state),
@@ -187,7 +188,7 @@ class ProcessApiServiceImpl(
     contexts: Seq[(String, String)]
   ): Route = {
     val result: Future[OnBoardingResponse] = for {
-      bearer       <- contexts.getFutureBearer
+      bearer       <- getFutureBearer(contexts)
       organization <- partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)(bearer)
       organizationRelationships <- partyManagementService.retrieveRelationships(
         None,
@@ -208,7 +209,7 @@ class ProcessApiServiceImpl(
       })
       pdf   <- pdfCreator.create(validUsers, organization)
       token <- partyManagementService.createToken(relationships, pdf._2)(bearer)
-      _ <- sendOnBoardingMail(
+      _ <- sendOnboardingMail(
         ApplicationConfiguration.destinationMails,
         pdf._1,
         token.token
@@ -234,7 +235,7 @@ class ProcessApiServiceImpl(
     contexts: Seq[(String, String)]
   ): Route = {
     val result: Future[Unit] = for {
-      bearer        <- contexts.getFutureBearer
+      bearer        <- getFutureBearer(contexts)
       organization  <- partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)(bearer)
       relationships <- partyManagementService.retrieveRelationships(None, Some(organization.id), None, None)(bearer)
       _             <- existsAnOnboardedManager(relationships)
@@ -452,31 +453,27 @@ class ProcessApiServiceImpl(
   private def filterFoundRelationshipsByCurrentUser(
     userRelationships: Relationships,
     institutionIdRelationships: Relationships
-  )(productRolesFilter: Option[String], productsFilter: Option[String]): Future[Relationships] = {
+  )(productRolesFilter: Option[String], productsFilter: Option[String]): Relationships = {
     val productRolesFilterList = productRolesFilter.getOrElse("").parseCommaSeparated
     val productsFilterList     = productsFilter.getOrElse("").parseCommaSeparated
 
-    val admins: Either[Throwable, Seq[PartyRole]] =
-      userRelationships.items.traverse(rl => PartyRole.fromValue(rl.role.toString))
+    val admins: Seq[PartyRole] = userRelationships.items.map(rl => roleToApi(rl.role))
 
-    val filteredRelationships = admins.map { ad =>
-      val isAdmin = ad.exists(rl => adminPartyRoles.contains(rl))
-      if (isAdmin) institutionIdRelationships
-      else userRelationships
-    }
+    val isAdmin: Boolean      = admins.exists(rl => adminPartyRoles.contains(rl))
+    val filteredRelationships = if (isAdmin) institutionIdRelationships else userRelationships
 
-    val filteredItems: Either[Throwable, Seq[Relationship]] = (productRolesFilterList, productsFilterList) match {
-      case (Nil, Nil) => filteredRelationships.map(_.items)
-      case (_, Nil)   => filteredRelationships.map(_.items.filter(r => productRolesFilterList.contains(r.product.role)))
-      case (Nil, _)   => filteredRelationships.map(_.items.filter(r => productsFilterList.contains(r.product.id)))
+    val filteredItems: Seq[Relationship] = (productRolesFilterList, productsFilterList) match {
+      case (Nil, Nil) => filteredRelationships.items
+      case (_, Nil)   => filteredRelationships.items.filter(r => productRolesFilterList.contains(r.product.role))
+      case (Nil, _)   => filteredRelationships.items.filter(r => productsFilterList.contains(r.product.id))
       case (_, _) =>
-        filteredRelationships.map(
-          _.items.filter(r =>
-            productRolesFilterList.contains(r.product.role) && productsFilterList.contains(r.product.id)
-          )
+        filteredRelationships.items.filter(r =>
+          productRolesFilterList.contains(r.product.role) && productsFilterList.contains(r.product.id)
         )
+
     }
-    filteredItems.map(Relationships).toFuture
+
+    Relationships(filteredItems)
   }
 
   /** Code: 200, Message: successful operation, DataType: RelationshipInfo
@@ -508,7 +505,7 @@ class ProcessApiServiceImpl(
         None,
         None
       )(bearer)
-      filteredRelationships <- filterFoundRelationshipsByCurrentUser(userRelationships, institutionIdRelationships)(
+      filteredRelationships = filterFoundRelationshipsByCurrentUser(userRelationships, institutionIdRelationships)(
         productRoles,
         products
       )

@@ -172,6 +172,7 @@ class PartyProcessSpec
           OnboardingData(
             institutionId = organization1.institutionId,
             description = organization1.description,
+            taxCode = organization1.taxCode,
             digitalAddress = organization1.digitalAddress,
             state = relationshipStateToApi(relationship1.state),
             role = roleToApi(relationship1.role),
@@ -185,6 +186,7 @@ class PartyProcessSpec
           OnboardingData(
             institutionId = organization2.institutionId,
             description = organization2.description,
+            taxCode = organization2.taxCode,
             digitalAddress = organization2.digitalAddress,
             state = relationshipStateToApi(relationship2.state),
             role = roleToApi(relationship2.role),
@@ -402,6 +404,7 @@ class PartyProcessSpec
           OnboardingData(
             institutionId = organization1.institutionId,
             description = organization1.description,
+            taxCode = organization1.taxCode,
             digitalAddress = organization1.digitalAddress,
             state = relationshipStateToApi(relationship1.state),
             role = roleToApi(relationship1.role),

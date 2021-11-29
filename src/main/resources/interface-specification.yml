@@ -83,6 +83,12 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        '409':
+          description: Document validation failed
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /onboarding/legals:
     post:
       security:
@@ -107,6 +113,12 @@ paths:
                 $ref: '#/components/schemas/OnBoardingResponse'
         '400':
           description: Invalid ID supplied
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: Document validation failed
           content:
             application/problem+json:
               schema:
@@ -588,6 +600,8 @@ components:
           type: string
         description:
           type: string
+        taxCode:
+          type: string
         digitalAddress:
           type: string
         state:
@@ -604,6 +618,7 @@ components:
       additionalProperties: false
       required:
         - institutionId
+        - taxCode
         - description
         - digitalAddress
         - state
