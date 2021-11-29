@@ -69,7 +69,7 @@ class ProcessApiServiceImpl(
 
   final val adminPartyRoles: Set[PartyRole] = Set(PartyRole.MANAGER, PartyRole.DELEGATE, PartyRole.SUB_DELEGATE)
 
-  private def sendOnBoardingMail(addresses: Seq[String], file: File, token: String): Future[Unit] = {
+  private def sendOnboardingMail(addresses: Seq[String], file: File, token: String): Future[Unit] = {
     val bodyParameters =
       ApplicationConfiguration.onboardingMailPlaceholdersReplacement.map { case (k, placeholder) =>
         (k, s"${placeholder}${token}")
