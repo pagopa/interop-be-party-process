@@ -111,6 +111,14 @@ class PartyProcessSpec
       val personPartyId1 = "af80fac0-2775-4646-8fcf-28e083751900"
       val orgPartyId1    = "af80fac0-2775-4646-8fcf-28e083751901"
       val orgPartyId2    = "af80fac0-2775-4646-8fcf-28e083751902"
+
+      val attributeId1 = UUID.randomUUID()
+      val attributeId2 = UUID.randomUUID()
+      val attributeId3 = UUID.randomUUID()
+      val attributeId4 = UUID.randomUUID()
+      val attributeId5 = UUID.randomUUID()
+      val attributeId6 = UUID.randomUUID()
+
       val person1 = UserRegistryUser(
         id = UUID.fromString(personPartyId1),
         externalId = "CF1",
@@ -169,9 +177,9 @@ class PartyProcessSpec
             role = roleToApi(relationship1.role),
             productInfo = productInfo,
             attributes = Seq(
-              Attribute("1", "name1", "description1"),
-              Attribute("2", "name2", "description2"),
-              Attribute("3", "name3", "description3")
+              Attribute(attributeId1.toString, "name1", "description1"),
+              Attribute(attributeId2.toString, "name2", "description2"),
+              Attribute(attributeId3.toString, "name3", "description3")
             )
           ),
           OnboardingData(
@@ -182,9 +190,9 @@ class PartyProcessSpec
             role = roleToApi(relationship2.role),
             productInfo = productInfo,
             attributes = Seq(
-              Attribute("99", "name99", "description99"),
-              Attribute("100", "name100", "description100"),
-              Attribute("101", "name101", "description101")
+              Attribute(attributeId4.toString, "name99", "description99"),
+              Attribute(attributeId5.toString, "name100", "description100"),
+              Attribute(attributeId6.toString, "name101", "description101")
             )
           )
         )
@@ -226,12 +234,12 @@ class PartyProcessSpec
         .once()
 
       (mockAttributeRegistryService
-        .getAttribute(_: String)(_: String))
-        .expects("1", *)
+        .getAttribute(_: UUID)(_: String))
+        .expects(attributeId1, *)
         .returning(
           Future.successful(
             ClientAttribute(
-              id = "1",
+              id = attributeId1.toString,
               name = "name1",
               description = "description1",
               code = None,
@@ -244,12 +252,12 @@ class PartyProcessSpec
         .once()
 
       (mockAttributeRegistryService
-        .getAttribute(_: String)(_: String))
-        .expects("2", *)
+        .getAttribute(_: UUID)(_: String))
+        .expects(attributeId2, *)
         .returning(
           Future.successful(
             ClientAttribute(
-              id = "2",
+              id = attributeId2.toString,
               name = "name2",
               description = "description2",
               code = None,
@@ -262,12 +270,12 @@ class PartyProcessSpec
         .once()
 
       (mockAttributeRegistryService
-        .getAttribute(_: String)(_: String))
-        .expects("3", *)
+        .getAttribute(_: UUID)(_: String))
+        .expects(attributeId3, *)
         .returning(
           Future.successful(
             ClientAttribute(
-              id = "3",
+              id = attributeId3.toString,
               name = "name3",
               description = "description3",
               code = None,
@@ -280,12 +288,12 @@ class PartyProcessSpec
         .once()
 
       (mockAttributeRegistryService
-        .getAttribute(_: String)(_: String))
-        .expects("99", *)
+        .getAttribute(_: UUID)(_: String))
+        .expects(attributeId4, *)
         .returning(
           Future.successful(
             ClientAttribute(
-              id = "99",
+              id = attributeId4.toString,
               name = "name99",
               description = "description99",
               code = None,
@@ -298,12 +306,12 @@ class PartyProcessSpec
         .once()
 
       (mockAttributeRegistryService
-        .getAttribute(_: String)(_: String))
-        .expects("100", *)
+        .getAttribute(_: UUID)(_: String))
+        .expects(attributeId5, *)
         .returning(
           Future.successful(
             ClientAttribute(
-              id = "100",
+              id = attributeId5.toString,
               name = "name100",
               description = "description100",
               code = None,
@@ -316,12 +324,12 @@ class PartyProcessSpec
         .once()
 
       (mockAttributeRegistryService
-        .getAttribute(_: String)(_: String))
-        .expects("101", *)
+        .getAttribute(_: UUID)(_: String))
+        .expects(attributeId6, *)
         .returning(
           Future.successful(
             ClientAttribute(
-              id = "101",
+              id = attributeId6.toString,
               name = "name101",
               description = "description101",
               code = None,
@@ -354,6 +362,10 @@ class PartyProcessSpec
       val institutionId1 = UUID.randomUUID()
       val personPartyId1 = "af80fac0-2775-4646-8fcf-28e083751800"
       val orgPartyId1    = "af80fac0-2775-4646-8fcf-28e083751801"
+      val attributeId1   = UUID.randomUUID()
+      val attributeId2   = UUID.randomUUID()
+      val attributeId3   = UUID.randomUUID()
+
       val person1 = UserRegistryUser(
         id = UUID.fromString(personPartyId1),
         externalId = "CF1",
@@ -434,12 +446,12 @@ class PartyProcessSpec
         .once()
 
       (mockAttributeRegistryService
-        .getAttribute(_: String)(_: String))
-        .expects("1", *)
+        .getAttribute(_: UUID)(_: String))
+        .expects(attributeId1, *)
         .returning(
           Future.successful(
             ClientAttribute(
-              id = "1",
+              id = attributeId1.toString,
               name = "name1",
               description = "description1",
               code = None,
@@ -452,12 +464,12 @@ class PartyProcessSpec
         .once()
 
       (mockAttributeRegistryService
-        .getAttribute(_: String)(_: String))
-        .expects("2", *)
+        .getAttribute(_: UUID)(_: String))
+        .expects(attributeId2, *)
         .returning(
           Future.successful(
             ClientAttribute(
-              id = "2",
+              id = attributeId1.toString,
               name = "name2",
               description = "description2",
               code = None,
@@ -470,12 +482,12 @@ class PartyProcessSpec
         .once()
 
       (mockAttributeRegistryService
-        .getAttribute(_: String)(_: String))
-        .expects("3", *)
+        .getAttribute(_: UUID)(_: String))
+        .expects(attributeId3, *)
         .returning(
           Future.successful(
             ClientAttribute(
-              id = "3",
+              id = attributeId3.toString,
               name = "name3",
               description = "description3",
               code = None,

@@ -1,6 +1,5 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
-import it.pagopa.pdnd.interop.commons.utils.TypeConversions.StringOps
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.api.AttributeApi
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.invoker.{ApiRequest, ApiResponse, BearerToken}
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{
@@ -11,6 +10,7 @@ import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.{AttributeRegistryInvoker, AttributeRegistryService}
 import org.slf4j.{Logger, LoggerFactory}
 
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
 final case class AttributeRegistryServiceImpl(attributeRegistryInvoker: AttributeRegistryInvoker, api: AttributeApi)(
@@ -47,14 +47,10 @@ final case class AttributeRegistryServiceImpl(attributeRegistryInvoker: Attribut
       }
   }
 
-  def getAttribute(id: String)(bearerToken: String): Future[Attribute] = {
+  def getAttribute(id: UUID)(bearerToken: String): Future[Attribute] = {
 
-    val result: Future[ApiResponse[Attribute]] = for {
-      uuid <- id.toFutureUUID
-      request = api.getAttributeById(uuid)(BearerToken(bearerToken))
-      attribute <- attributeRegistryInvoker
-        .execute(request)
-    } yield attribute
+    val request: ApiRequest[Attribute]         = api.getAttributeById(id)(BearerToken(bearerToken))
+    val result: Future[ApiResponse[Attribute]] = attributeRegistryInvoker.execute(request)
 
     result
       .map { x =>
