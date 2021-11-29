@@ -2,7 +2,7 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.api
 
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import it.pagopa.pdnd.interop.commons.utils.SprayCommonFormats.{fileFormat, uuidFormat}
+import it.pagopa.pdnd.interop.commons.utils.SprayCommonFormats.{fileFormat, uuidFormat, offsetDateTimeFormat}
 
 package object impl extends DefaultJsonProtocol {
 
@@ -13,10 +13,10 @@ package object impl extends DefaultJsonProtocol {
   implicit val onBoardingResponseFormat: RootJsonFormat[OnBoardingResponse] = jsonFormat2(OnBoardingResponse)
   implicit val personInfoFormat: RootJsonFormat[PersonInfo]                 = jsonFormat3(PersonInfo)
   implicit val attributeDataFormat: RootJsonFormat[Attribute]               = jsonFormat3(Attribute.apply)
-  implicit val onboardingDataFormat: RootJsonFormat[OnboardingData]         = jsonFormat9(OnboardingData)
-  implicit val institutionFormat: RootJsonFormat[Institution]               = jsonFormat7(Institution)
+  implicit val productInfoDataFormat: RootJsonFormat[ProductInfo]           = jsonFormat3(ProductInfo)
+  implicit val onboardingDataFormat: RootJsonFormat[OnboardingData]         = jsonFormat7(OnboardingData)
   implicit val onBoardingInfoFormat: RootJsonFormat[OnBoardingInfo]         = jsonFormat2(OnBoardingInfo)
-  implicit val relationshipInfoFormat: RootJsonFormat[RelationshipInfo]     = jsonFormat6(RelationshipInfo)
+  implicit val relationshipInfoFormat: RootJsonFormat[RelationshipInfo]     = jsonFormat5(RelationshipInfo)
   implicit val productsFormat: RootJsonFormat[Products]                     = jsonFormat1(Products)
 
 }

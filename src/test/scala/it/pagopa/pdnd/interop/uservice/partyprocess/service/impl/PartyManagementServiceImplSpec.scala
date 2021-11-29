@@ -12,21 +12,23 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.wordspec.AnyWordSpecLike
 
+import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
 //ApiInvoker manually mocked because of scalamock limitations for this scenario (i.e.: Json4s formats MUST not be null)
 private class MockPartyApiInvoker(implicit json4sFormats: Formats, system: actor.ActorSystem)
     extends ApiInvoker(json4sFormats) {
+
+  val productTimestamp: OffsetDateTime = OffsetDateTime.now()
   override def execute[T](r: ApiRequest[T])(implicit evidence$2: Manifest[T]): Future[ApiResponse[T]] = {
     val mockRelationshipResponse = Relationship(
       id = UUID.randomUUID(),
       from = UUID.randomUUID(),
       to = UUID.randomUUID(),
       role = PartyRole.MANAGER,
-      productRole = "admin",
-      state = RelationshipState.ACTIVE,
-      products = Set.empty
+      product = RelationshipProduct(id = "product", role = "admin", timestamp = productTimestamp),
+      state = RelationshipState.ACTIVE
     )
     Future.successful(new ApiResponse[T](200, mockRelationshipResponse.asInstanceOf[T]))
   }
@@ -66,9 +68,9 @@ class PartyManagementServiceImplSpec
           UUID.randomUUID(),
           UUID.randomUUID(),
           PartyRole.MANAGER,
-          productRole = "foobar",
-          products = Set.empty
-        )
+          product = "product",
+          productRole = "foobar"
+        )("token")
       //then
       createRelationshipOp.failed.futureValue.getMessage shouldBe s"Invalid platform role => $invalidProductRole not supported for ManagerRoles"
     }
@@ -86,15 +88,18 @@ class PartyManagementServiceImplSpec
           from = userId,
           to = partyIdTo,
           role = relationshipRole,
-          productRole = productRole,
-          products = Set("PDND")
+          product = RelationshipProductSeed("product", productRole)
         )
       val mockApiRequest =
         ApiRequest[Relationship](ApiMethods.POST, "http://localhost", "/relationships", "application/json")
           .withBody(partyRelationship)
           .withSuccessResponse[Relationship](201)
           .withErrorResponse[Problem](400)
-      (mockPartyAPI.createRelationship _).expects(partyRelationship).returning(mockApiRequest).once()
+      (mockPartyAPI
+        .createRelationship(_: RelationshipSeed)(_: BearerToken))
+        .expects(partyRelationship, *)
+        .returning(mockApiRequest)
+        .once()
 
       //when
       val operation =
@@ -102,9 +107,9 @@ class PartyManagementServiceImplSpec
           userId,
           partyIdTo,
           relationshipRole,
-          productRole = productRole,
-          products = Set("PDND")
-        )
+          product = "product",
+          productRole = productRole
+        )("token")
 
       //then
       operation.futureValue shouldBe ()

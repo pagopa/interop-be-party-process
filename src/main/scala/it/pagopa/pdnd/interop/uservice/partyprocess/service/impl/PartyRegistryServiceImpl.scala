@@ -14,7 +14,7 @@ final case class PartyRegistryServiceImpl(invoker: PartyProxyInvoker, api: Insti
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  override def getInstitution(institutionId: String): Future[Institution] = {
+  override def getInstitution(institutionId: String)(bearerToken: String): Future[Institution] = {
     val request: ApiRequest[Institution] = api.getInstitutionById(institutionId)
     logger.info(s"getInstitution ${request.toString}")
     invoker
@@ -30,7 +30,7 @@ final case class PartyRegistryServiceImpl(invoker: PartyProxyInvoker, api: Insti
       }
   }
 
-  override def getCategories: Future[Categories] = {
+  override def getCategories(bearerToken: String): Future[Categories] = {
     val request: ApiRequest[Categories] = api.getCategories()
     logger.info(s"getCategories ${request.toString}")
     invoker
@@ -46,7 +46,9 @@ final case class PartyRegistryServiceImpl(invoker: PartyProxyInvoker, api: Insti
       }
   }
 
-  override def searchInstitution(text: String, offset: Int, limit: Int): Future[List[Institution]] = {
+  override def searchInstitution(text: String, offset: Int, limit: Int)(
+    bearerToken: String
+  ): Future[List[Institution]] = {
     val request: ApiRequest[Institutions] = api.searchInstitution(text, offset, limit)
     invoker.execute(request).map(_.content.items.toList)
   }

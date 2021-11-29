@@ -39,11 +39,5 @@ class ProcessApiMarshallerImpl extends ProcessApiMarshaller with SprayJsonSuppor
   override implicit def toEntityMarshallerRelationshipInfo: ToEntityMarshaller[RelationshipInfo] =
     sprayJsonMarshaller[RelationshipInfo]
 
-  override implicit def fromEntityUnmarshallerProducts: FromEntityUnmarshaller[Products] =
-    sprayJsonUnmarshaller[Products]
-
-  override implicit def toEntityMarshallerInstitution: ToEntityMarshaller[Institution] =
-    sprayJsonMarshaller[Institution]
-
   override implicit def toEntityMarshallerProducts: ToEntityMarshaller[Products] = sprayJsonMarshaller[Products]
 }

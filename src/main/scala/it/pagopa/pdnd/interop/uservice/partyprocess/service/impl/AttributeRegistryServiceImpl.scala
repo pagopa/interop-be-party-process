@@ -1,7 +1,7 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.api.AttributeApi
-import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.invoker.ApiRequest
+import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.invoker.{ApiRequest, ApiResponse, BearerToken}
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{
   Attribute,
   AttributeSeed,
@@ -19,7 +19,9 @@ final case class AttributeRegistryServiceImpl(attributeRegistryInvoker: Attribut
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  override def createAttribute(origin: String, description: String, attribute: String): Future[AttributesResponse] = {
+  override def createAttribute(origin: String, description: String, attribute: String)(
+    bearerToken: String
+  ): Future[AttributesResponse] = {
 
     val seed: AttributeSeed = AttributeSeed(
       code = Some(attribute),
@@ -30,7 +32,7 @@ final case class AttributeRegistryServiceImpl(attributeRegistryInvoker: Attribut
     )
     val seeds: Seq[AttributeSeed] = Seq(seed)
 
-    val request: ApiRequest[AttributesResponse] = api.createAttributes(seeds)
+    val request: ApiRequest[AttributesResponse] = api.createAttributes(seeds)(BearerToken(bearerToken))
 
     attributeRegistryInvoker
       .execute(request)
@@ -45,12 +47,12 @@ final case class AttributeRegistryServiceImpl(attributeRegistryInvoker: Attribut
       }
   }
 
-  def getAttribute(id: String): Future[Attribute] = {
+  def getAttribute(id: UUID)(bearerToken: String): Future[Attribute] = {
 
-    val request: ApiRequest[Attribute] = api.getAttributeById(UUID.fromString(id))
+    val request: ApiRequest[Attribute]         = api.getAttributeById(id)(BearerToken(bearerToken))
+    val result: Future[ApiResponse[Attribute]] = attributeRegistryInvoker.execute(request)
 
-    attributeRegistryInvoker
-      .execute(request)
+    result
       .map { x =>
         logger.info(s"Retrieving attribute ${x.code}")
         logger.info(s"Retrieving attribute ${x.content}")
