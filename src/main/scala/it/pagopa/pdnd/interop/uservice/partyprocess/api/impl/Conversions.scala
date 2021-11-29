@@ -31,7 +31,7 @@ object Conversions {
     }
 
   def relationshipProductToApi(product: RelationshipProduct): ProductInfo = {
-    ProductInfo(id = product.id, role = product.role, timestamp = product.timestamp)
+    ProductInfo(id = product.id, role = product.role, createdAt = product.timestamp)
   }
 
 }

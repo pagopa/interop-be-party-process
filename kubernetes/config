@@ -10,9 +10,6 @@ popd  > /dev/null
 
 repository=$DOCKER_REPO
 ## Setting up env vars for roles
-managerProductRoles=$MANAGER_PRODUCT_ROLES
-delegateProductRoles=$DELEGATE_PRODUCT_ROLES
-operatorProductRoles=$OPERATOR_PRODUCT_ROLES
 storageType=$STORAGE_TYPE
 storageContainer=$STORAGE_CONTAINER
 storageEndpoint=$STORAGE_ENDPOINT

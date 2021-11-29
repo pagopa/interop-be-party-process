@@ -66,7 +66,7 @@ class PartyProcessSpec
     PartyManagementDependency.RelationshipProduct(id = "product", role = "admin", timestamp = productTimestamp)
 
   final val productInfo: ProductInfo =
-    ProductInfo(id = "product", role = "admin", timestamp = productTimestamp)
+    ProductInfo(id = "product", role = "admin", createdAt = productTimestamp)
 
   override def beforeAll(): Unit = {
     loadEnvVars()
@@ -154,7 +154,7 @@ class PartyProcessSpec
         description = "org1",
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
-        attributes = Seq("1", "2", "3"),
+        attributes = Seq(attributeId1.toString, attributeId2.toString, attributeId3.toString),
         taxCode = "123"
       )
       val organization2 = PartyManagementDependency.Organization(
@@ -162,16 +162,17 @@ class PartyProcessSpec
         description = "org2",
         digitalAddress = "digitalAddress2",
         id = UUID.fromString(orgPartyId2),
-        attributes = Seq("99", "100", "101"),
+        attributes = Seq(attributeId4.toString, attributeId5.toString, attributeId6.toString),
         taxCode = "123"
       )
 
-      val expected = OnBoardingInfo(
+      val expected = OnboardingInfo(
         person = PersonInfo(name = person1.name, surname = person1.surname, taxCode = person1.externalId),
         institutions = Seq(
           OnboardingData(
             institutionId = organization1.institutionId,
             description = organization1.description,
+            taxCode = organization1.taxCode,
             digitalAddress = organization1.digitalAddress,
             state = relationshipStateToApi(relationship1.state),
             role = roleToApi(relationship1.role),
@@ -185,14 +186,15 @@ class PartyProcessSpec
           OnboardingData(
             institutionId = organization2.institutionId,
             description = organization2.description,
+            taxCode = organization2.taxCode,
             digitalAddress = organization2.digitalAddress,
             state = relationshipStateToApi(relationship2.state),
             role = roleToApi(relationship2.role),
             productInfo = productInfo,
             attributes = Seq(
-              Attribute(attributeId4.toString, "name99", "description99"),
-              Attribute(attributeId5.toString, "name100", "description100"),
-              Attribute(attributeId6.toString, "name101", "description101")
+              Attribute(attributeId4.toString, "name4", "description4"),
+              Attribute(attributeId5.toString, "name5", "description5"),
+              Attribute(attributeId6.toString, "name6", "description6")
             )
           )
         )
@@ -294,8 +296,8 @@ class PartyProcessSpec
           Future.successful(
             ClientAttribute(
               id = attributeId4.toString,
-              name = "name99",
-              description = "description99",
+              name = "name4",
+              description = "description4",
               code = None,
               certified = true,
               origin = None,
@@ -312,8 +314,8 @@ class PartyProcessSpec
           Future.successful(
             ClientAttribute(
               id = attributeId5.toString,
-              name = "name100",
-              description = "description100",
+              name = "name5",
+              description = "description5",
               code = None,
               certified = true,
               origin = None,
@@ -330,8 +332,8 @@ class PartyProcessSpec
           Future.successful(
             ClientAttribute(
               id = attributeId6.toString,
-              name = "name101",
-              description = "description101",
+              name = "name6",
+              description = "description6",
               code = None,
               certified = true,
               origin = None,
@@ -350,7 +352,7 @@ class PartyProcessSpec
         Duration.Inf
       )
 
-      val body = Unmarshal(response.entity).to[OnBoardingInfo].futureValue
+      val body = Unmarshal(response.entity).to[OnboardingInfo].futureValue
 
       response.status mustBe StatusCodes.OK
       body mustBe expected
@@ -392,24 +394,25 @@ class PartyProcessSpec
         description = "org1",
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
-        attributes = Seq("1", "2", "3"),
+        attributes = Seq(attributeId1.toString, attributeId2.toString, attributeId3.toString),
         taxCode = "123"
       )
 
-      val expected = OnBoardingInfo(
+      val expected = OnboardingInfo(
         person = PersonInfo(name = person1.name, surname = person1.surname, taxCode = person1.externalId),
         institutions = Seq(
           OnboardingData(
             institutionId = organization1.institutionId,
             description = organization1.description,
+            taxCode = organization1.taxCode,
             digitalAddress = organization1.digitalAddress,
             state = relationshipStateToApi(relationship1.state),
             role = roleToApi(relationship1.role),
             productInfo = productInfo,
             attributes = Seq(
-              Attribute("1", "name1", "description1"),
-              Attribute("2", "name2", "description2"),
-              Attribute("3", "name3", "description3")
+              Attribute(attributeId1.toString, "name1", "description1"),
+              Attribute(attributeId2.toString, "name2", "description2"),
+              Attribute(attributeId3.toString, "name3", "description3")
             )
           )
         )
@@ -469,7 +472,7 @@ class PartyProcessSpec
         .returning(
           Future.successful(
             ClientAttribute(
-              id = attributeId1.toString,
+              id = attributeId2.toString,
               name = "name2",
               description = "description2",
               code = None,
@@ -512,7 +515,7 @@ class PartyProcessSpec
           )
           .futureValue
 
-      val body = Unmarshal(response.entity).to[OnBoardingInfo].futureValue
+      val body = Unmarshal(response.entity).to[OnboardingInfo].futureValue
 
       response.status mustBe StatusCodes.OK
       body mustBe expected
@@ -698,7 +701,7 @@ class PartyProcessSpec
         .returning(Future.successful(PartyManagementDependency.TokenText("token")))
         .once()
 
-      val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
+      val req = OnboardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 
       val data = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
 
@@ -752,7 +755,7 @@ class PartyProcessSpec
         .expects(*, *, *, *, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(Seq.empty)))
 
-      val req = OnBoardingRequest(users = Seq(operator1, operator2), institutionId = "institutionId1")
+      val req = OnboardingRequest(users = Seq(operator1, operator2), institutionId = "institutionId1")
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/operators", HttpMethods.POST)
@@ -894,10 +897,205 @@ class PartyProcessSpec
         .returning(Future.successful(()))
         .repeat(2)
 
-      val req = OnBoardingRequest(users = Seq(operator1, operator2), institutionId = institutionId1.toString)
+      val req = OnboardingRequest(users = Seq(operator1, operator2), institutionId = institutionId1.toString)
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/operators", HttpMethods.POST)
+
+      response.status mustBe StatusCodes.Created
+
+    }
+
+    "not create subdelegates if does not exists any active legal for a given institution" in {
+
+      val taxCode1 = "subdelegate1TaxCode"
+      val taxCode2 = "subdelegate2TaxCode"
+
+      val subdelegate1 = User(
+        name = "subdelegate1",
+        surname = "subdelegate1",
+        taxCode = taxCode1,
+        role = PartyProcess.PartyRole.SUB_DELEGATE,
+        email = Some("subdel@ore.it"),
+        product = "product",
+        productRole = "admin"
+      )
+      val subdelegate2 = User(
+        name = "subdelegate2",
+        surname = "subdelegate2",
+        taxCode = taxCode2,
+        role = PartyProcess.PartyRole.SUB_DELEGATE,
+        email = None,
+        product = "product",
+        productRole = "security"
+      )
+
+      (mockPartyManagementService
+        .retrieveOrganizationByExternalId(_: String)(_: String))
+        .expects(*, *)
+        .returning(
+          Future.successful(
+            PartyManagementDependency.Organization(
+              id = UUID.randomUUID(),
+              institutionId = "d4r3",
+              description = "test",
+              digitalAddress = "big@fish.it",
+              attributes = Seq.empty,
+              taxCode = "123"
+            )
+          )
+        )
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
+        .expects(*, *, *, *, *)
+        .returning(Future.successful(PartyManagementDependency.Relationships(Seq.empty)))
+
+      val req = OnboardingRequest(users = Seq(subdelegate1, subdelegate2), institutionId = "institutionId1")
+
+      val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
+      val response = request(data, "onboarding/subdelegates", HttpMethods.POST)
+
+      response.status mustBe StatusCodes.BadRequest
+
+    }
+
+    "create subdelegates if exists a legal active for a given institution" in {
+
+      val taxCode1       = "subdelegate1TaxCode"
+      val taxCode2       = "subdelegate2TaxCode"
+      val institutionId1 = UUID.randomUUID()
+      val personPartyId1 = "bf80fac0-2775-4646-8fcf-28e083751900"
+      val orgPartyId1    = "bf80fac0-2775-4646-8fcf-28e083751901"
+
+      val organization1 = PartyManagementDependency.Organization(
+        institutionId = institutionId1.toString,
+        description = "org1",
+        digitalAddress = "digitalAddress1",
+        id = UUID.fromString(orgPartyId1),
+        attributes = Seq.empty,
+        taxCode = "123"
+      )
+
+      val relationships =
+        PartyManagementDependency.Relationships(
+          Seq(
+            PartyManagementDependency.Relationship(
+              id = UUID.randomUUID(),
+              from = UUID.fromString(personPartyId1),
+              to = institutionId1,
+              role = PartyManagementDependency.PartyRole.MANAGER,
+              product = product,
+              state = PartyManagementDependency.RelationshipState.ACTIVE
+            )
+          )
+        )
+
+      val subdelegateId1 = UUID.randomUUID()
+      val subdelegateId2 = UUID.randomUUID()
+
+      val subdelegate1 = User(
+        name = "subdelegate1",
+        surname = "subdelegate1",
+        taxCode = taxCode1,
+        role = PartyProcess.PartyRole.SUB_DELEGATE,
+        email = Some("mario@ros.si"),
+        product = "product",
+        productRole = "admin"
+      )
+      val subdelegate2 = User(
+        name = "subdelegate2",
+        surname = "subdelegate2",
+        taxCode = taxCode2,
+        role = PartyProcess.PartyRole.SUB_DELEGATE,
+        email = None,
+        product = "product",
+        productRole = "admin"
+      )
+
+      (mockPartyManagementService
+        .retrieveOrganizationByExternalId(_: String)(_: String))
+        .expects(*, *)
+        .returning(Future.successful(organization1))
+
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
+        .expects(None, Some(UUID.fromString(orgPartyId1)), None, None, *)
+        .returning(Future.successful(relationships))
+
+      (mockUserRegistryService
+        .createUser(_: UserRegistryUserSeed)(_: String))
+        .expects(
+          UserRegistryUserSeed(
+            externalId = subdelegate1.taxCode,
+            name = subdelegate1.name,
+            surname = subdelegate1.surname,
+            certification = CertificationEnumsNone,
+            extras = UserRegistryUserExtras(email = subdelegate1.email, birthDate = None)
+          ),
+          *
+        )
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = subdelegateId1,
+              externalId = subdelegate1.taxCode,
+              name = subdelegate1.name,
+              surname = subdelegate1.surname,
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(email = subdelegate1.email, birthDate = None)
+            )
+          )
+        )
+        .once()
+
+      (mockPartyManagementService
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
+        .expects(PartyManagementDependency.PersonSeed(subdelegateId1), *)
+        .returning(Future.successful(PartyManagementDependency.Person(subdelegateId1)))
+        .once()
+
+      (mockUserRegistryService
+        .createUser(_: UserRegistryUserSeed)(_: String))
+        .expects(
+          UserRegistryUserSeed(
+            externalId = subdelegate2.taxCode,
+            name = subdelegate2.name,
+            surname = subdelegate2.surname,
+            certification = CertificationEnumsNone,
+            extras = UserRegistryUserExtras(email = subdelegate2.email, birthDate = None)
+          ),
+          *
+        )
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = subdelegateId2,
+              externalId = subdelegate2.taxCode,
+              name = subdelegate2.name,
+              surname = subdelegate2.surname,
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(email = subdelegate2.email, birthDate = None)
+            )
+          )
+        )
+        .once()
+
+      (mockPartyManagementService
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
+        .expects(PartyManagementDependency.PersonSeed(subdelegateId2), *)
+        .returning(Future.successful(PartyManagementDependency.Person(subdelegateId2)))
+        .once()
+
+      (mockPartyManagementService
+        .createRelationship(_: UUID, _: UUID, _: PartyManagementDependency.PartyRole, _: String, _: String)(_: String))
+        .expects(*, *, *, *, *, *)
+        .returning(Future.successful(()))
+        .repeat(2)
+
+      val req = OnboardingRequest(users = Seq(subdelegate1, subdelegate2), institutionId = institutionId1.toString)
+
+      val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
+      val response = request(data, "onboarding/subdelegates", HttpMethods.POST)
 
       response.status mustBe StatusCodes.Created
 
@@ -1128,7 +1326,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(None, Some(institutionId), None, None, *)
+        .expects(None, Some(institutionId), None, None, adminIdentifier.toString)
         .returning(Future.successful(relationships))
         .once()
 
@@ -1292,7 +1490,7 @@ class PartyProcessSpec
           from = userId3,
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
-          product = product.copy(role = "security"),
+          product = product.copy(id = "PDND", role = "security"),
           state = PartyManagementDependency.RelationshipState.ACTIVE
         )
 
@@ -1339,12 +1537,241 @@ class PartyProcessSpec
         id = relationshipId3,
         from = userId3,
         role = PartyRole.OPERATOR,
-        product = productInfo.copy(role = "security"),
+        product = productInfo.copy(id = "PDND", role = "security"),
         state = RelationshipState.ACTIVE
       )
     }
 
-    "retrieve all the relationships of a specific institution with filter by productRole and products when no intersection occurs" in {
+    "retrieve all the relationships of a specific institution with filter by states" in {
+      val userId1       = UUID.randomUUID()
+      val userId2       = UUID.randomUUID()
+      val institutionId = UUID.randomUUID()
+
+      val relationshipId1 = UUID.randomUUID()
+      val relationshipId2 = UUID.randomUUID()
+
+      val relationship1 =
+        PartyManagementDependency.Relationship(
+          id = relationshipId1,
+          from = userId1,
+          to = institutionId,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product,
+          state = PartyManagementDependency.RelationshipState.ACTIVE
+        )
+      val relationship2 =
+        PartyManagementDependency.Relationship(
+          id = relationshipId2,
+          from = userId2,
+          to = institutionId,
+          role = PartyManagementDependency.PartyRole.DELEGATE,
+          product = product,
+          state = PartyManagementDependency.RelationshipState.PENDING
+        )
+
+      val relationships =
+        PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2))
+
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
+        .expects(Some(userId1), Some(institutionId), None, None, *)
+        .returning(Future.successful(relationships))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
+        .expects(None, Some(institutionId), None, None, *)
+        .returning(Future.successful(relationships))
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(userId1.toString)))
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/institutions/$institutionId/relationships?states=ACTIVE",
+              method = HttpMethods.GET,
+              headers = authorization
+            )
+          )
+          .futureValue
+
+      val body = Unmarshal(response.entity).to[Seq[RelationshipInfo]].futureValue
+      response.status mustBe StatusCodes.OK
+      body must contain only RelationshipInfo(
+        id = relationshipId1,
+        from = userId1,
+        role = PartyRole.MANAGER,
+        product = productInfo,
+        state = RelationshipState.ACTIVE
+      )
+    }
+
+    "retrieve all the relationships of a specific institution with filter by roles" in {
+      val userId1       = UUID.randomUUID()
+      val userId2       = UUID.randomUUID()
+      val institutionId = UUID.randomUUID()
+
+      val relationshipId1 = UUID.randomUUID()
+      val relationshipId2 = UUID.randomUUID()
+
+      val relationship1 =
+        PartyManagementDependency.Relationship(
+          id = relationshipId1,
+          from = userId1,
+          to = institutionId,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product,
+          state = PartyManagementDependency.RelationshipState.ACTIVE
+        )
+      val relationship2 =
+        PartyManagementDependency.Relationship(
+          id = relationshipId2,
+          from = userId2,
+          to = institutionId,
+          role = PartyManagementDependency.PartyRole.DELEGATE,
+          product = product,
+          state = PartyManagementDependency.RelationshipState.PENDING
+        )
+
+      val relationships =
+        PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2))
+
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
+        .expects(Some(userId1), Some(institutionId), None, None, *)
+        .returning(Future.successful(relationships))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
+        .expects(None, Some(institutionId), None, None, *)
+        .returning(Future.successful(relationships))
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(userId1.toString)))
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/institutions/$institutionId/relationships?roles=DELEGATE",
+              method = HttpMethods.GET,
+              headers = authorization
+            )
+          )
+          .futureValue
+
+      val body = Unmarshal(response.entity).to[Seq[RelationshipInfo]].futureValue
+      response.status mustBe StatusCodes.OK
+      body must contain only RelationshipInfo(
+        id = relationshipId2,
+        from = userId2,
+        role = PartyRole.DELEGATE,
+        product = productInfo,
+        state = RelationshipState.PENDING
+      )
+    }
+
+    "retrieve all the relationships of a specific institution using all filters" in {
+      val userId1       = UUID.randomUUID()
+      val userId2       = UUID.randomUUID()
+      val userId3       = UUID.randomUUID()
+      val userId4       = UUID.randomUUID()
+      val institutionId = UUID.randomUUID()
+
+      val relationshipId1 = UUID.randomUUID()
+      val relationshipId2 = UUID.randomUUID()
+      val relationshipId3 = UUID.randomUUID()
+      val relationshipId4 = UUID.randomUUID()
+
+      val relationship1 =
+        PartyManagementDependency.Relationship(
+          id = relationshipId1,
+          from = userId1,
+          to = institutionId,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product,
+          state = PartyManagementDependency.RelationshipState.ACTIVE
+        )
+      val relationship2 =
+        PartyManagementDependency.Relationship(
+          id = relationshipId2,
+          from = userId2,
+          to = institutionId,
+          role = PartyManagementDependency.PartyRole.DELEGATE,
+          product = product,
+          state = PartyManagementDependency.RelationshipState.ACTIVE
+        )
+
+      val relationship3 =
+        PartyManagementDependency.Relationship(
+          id = relationshipId3,
+          from = userId3,
+          to = institutionId,
+          role = PartyManagementDependency.PartyRole.OPERATOR,
+          product = product.copy(id = "PDND", role = "security"),
+          state = PartyManagementDependency.RelationshipState.ACTIVE
+        )
+
+      val relationship4 =
+        PartyManagementDependency.Relationship(
+          id = relationshipId4,
+          from = userId4,
+          to = institutionId,
+          role = PartyManagementDependency.PartyRole.OPERATOR,
+          product = product.copy(id = "PDND", role = "api"),
+          state = PartyManagementDependency.RelationshipState.ACTIVE
+        )
+
+      val relationships =
+        PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
+
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
+        .expects(Some(userId1), Some(institutionId), None, None, *)
+        .returning(Future.successful(relationships))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
+        .expects(None, Some(institutionId), None, None, *)
+        .returning(Future.successful(relationships))
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(userId1.toString)))
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri =
+                s"$url/institutions/$institutionId/relationships?productRoles=security,api&products=PDND&roles=OPERATOR&states=ACTIVE",
+              method = HttpMethods.GET,
+              headers = authorization
+            )
+          )
+          .futureValue
+
+      val body = Unmarshal(response.entity).to[Seq[RelationshipInfo]].futureValue
+      response.status mustBe StatusCodes.OK
+      body mustBe Seq(
+        RelationshipInfo(
+          id = relationshipId3,
+          from = userId3,
+          role = PartyRole.OPERATOR,
+          product = productInfo.copy(id = "PDND", role = "security"),
+          state = RelationshipState.ACTIVE
+        ),
+        RelationshipInfo(
+          id = relationshipId4,
+          from = userId4,
+          role = PartyRole.OPERATOR,
+          product = productInfo.copy(id = "PDND", role = "api"),
+          state = RelationshipState.ACTIVE
+        )
+      )
+    }
+
+    "retrieve all the relationships of a specific institution with all filter  when no intersection occurs" in {
       val userId          = UUID.randomUUID()
       val adminIdentifier = UUID.randomUUID()
       val userId3         = UUID.randomUUID()
@@ -1415,7 +1842,8 @@ class PartyProcessSpec
         Http()
           .singleRequest(
             HttpRequest(
-              uri = s"$url/institutions/$institutionId/relationships?productRoles=security,api&products=Interop,Test",
+              uri =
+                s"$url/institutions/$institutionId/relationships?productRoles=security,api&products=Interop,PDND&roles=OPERATOR&state=PENDING",
               method = HttpMethods.GET,
               headers = authorization
             )
@@ -1795,7 +2223,7 @@ class PartyProcessSpec
         .returning(Future.successful(PartyManagementDependency.TokenText("token")))
         .once()
 
-      val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
+      val req = OnboardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/legals", HttpMethods.POST)
@@ -1867,7 +2295,7 @@ class PartyProcessSpec
         .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(relationship))))
         .once()
 
-      val req = OnBoardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
+      val req = OnboardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/legals", HttpMethods.POST)
@@ -1932,7 +2360,7 @@ class PartyProcessSpec
 
       val body = Unmarshal(response.entity).to[ModelProducts].futureValue
 
-      body.products must contain only ("PDND", "APP IO", "APP VOI")
+      body.products must contain only productInfo
     }
 
     "retrieve no products when the organization had not an onboarding" in {
