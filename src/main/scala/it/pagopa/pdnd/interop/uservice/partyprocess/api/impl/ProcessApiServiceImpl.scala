@@ -263,15 +263,15 @@ class ProcessApiServiceImpl(
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
   override def onboardingOperators(
-    onBoardingRequest: OnboardingRequest
+    onboardingRequest: OnboardingRequest
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
     val result: Future[Unit] = for {
       bearer        <- getFutureBearer(contexts)
-      organization  <- partyManagementService.retrieveOrganizationByExternalId(onBoardingRequest.institutionId)(bearer)
+      organization  <- partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
       relationships <- partyManagementService.retrieveRelationships(None, Some(organization.id), None, None)(bearer)
       _             <- existsAnOnboardedManager(relationships)
 
-      validUsers <- verifyUsersByRoles(onBoardingRequest.users, Set(PartyRole.OPERATOR))
+      validUsers <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.OPERATOR))
       operators  <- Future.traverse(validUsers)(addUser(bearer))
       _ <- Future.traverse(operators)(pr =>
         partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)(
