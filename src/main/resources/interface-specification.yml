@@ -597,13 +597,13 @@ components:
           type: string
         role:
           type: string
-        timestamp:
+        createdAt:
           type: string
           format: date-time
       required:
         - id
         - role
-        - timestamp
+        - createdAt
     OnboardingData:
       properties:
         institutionId:

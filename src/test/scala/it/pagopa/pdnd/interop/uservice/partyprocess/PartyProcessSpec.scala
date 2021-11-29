@@ -66,7 +66,7 @@ class PartyProcessSpec
     PartyManagementDependency.RelationshipProduct(id = "product", role = "admin", timestamp = productTimestamp)
 
   final val productInfo: ProductInfo =
-    ProductInfo(id = "product", role = "admin", timestamp = productTimestamp)
+    ProductInfo(id = "product", role = "admin", createdAt = productTimestamp)
 
   override def beforeAll(): Unit = {
     loadEnvVars()
