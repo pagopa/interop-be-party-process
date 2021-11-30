@@ -59,8 +59,7 @@ pipeline {
         STORAGE_USR="${AWS_USR}"
         STORAGE_PSW="${AWS_PSW}"
         SMTP = credentials('smtp')
-        DESTINATION_MAILS = credentials('destination-mails')
-        //REPLICAS_NR = 1
+        REPLICAS_NR = 1
       }
       steps {
         container('sbt-container') {

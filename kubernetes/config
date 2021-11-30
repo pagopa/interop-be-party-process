@@ -9,6 +9,8 @@ SCRIPT_PATH=`pwd`;
 popd  > /dev/null
 
 repository=$DOCKER_REPO
+replicas=$REPLICAS_NR
+
 ## Setting up env vars for roles
 storageType=$STORAGE_TYPE
 storageContainer=$STORAGE_CONTAINER

@@ -161,11 +161,7 @@ class ProcessApiServiceImpl(
       })
       pdf   <- pdfCreator.create(validUsers, organization)
       token <- partyManagementService.createToken(relationships, pdf._2)(bearer)
-      _ <- sendOnboardingMail(
-        ApplicationConfiguration.destinationMails,
-        pdf._1,
-        token.token
-      ) //TODO address must be the digital address
+      _     <- sendOnboardingMail(Seq(organization.digitalAddress), pdf._1, token.token)
       _ = logger.info(s"$token")
     } yield OnboardingResponse(token.token, pdf._1)
 
@@ -211,11 +207,7 @@ class ProcessApiServiceImpl(
       })
       pdf   <- pdfCreator.create(validUsers, organization)
       token <- partyManagementService.createToken(relationships, pdf._2)(bearer)
-      _ <- sendOnboardingMail(
-        ApplicationConfiguration.destinationMails,
-        pdf._1,
-        token.token
-      ) //TODO address must be the digital address
+      _     <- sendOnboardingMail(Seq(organization.digitalAddress), pdf._1, token.token)
       _ = logger.info(s"$token")
     } yield OnboardingResponse(token.token, pdf._1)
 

@@ -16,12 +16,6 @@ object ApplicationConfiguration {
   def getAttributeRegistryUrl: String = config.getString("services.attribute-registry")
   def getUserRegistryURL: String      = config.getString("services.user-registry-management")
 
-  def destinationMails: Seq[String] = {
-    Option(System.getenv("DESTINATION_MAILS"))
-      .map(_.split(",").toSeq)
-      .getOrElse(throw new RuntimeException("No destination email set"))
-  }
-
   def mailTemplatePath: String = config.getString("uservice-party-process.mail-template.path")
 
   def onboardingMailPlaceholdersReplacement: Map[String, String] = {
