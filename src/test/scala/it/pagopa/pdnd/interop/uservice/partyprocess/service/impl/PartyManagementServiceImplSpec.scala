@@ -20,15 +20,19 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 private class MockPartyApiInvoker(implicit json4sFormats: Formats, system: actor.ActorSystem)
     extends ApiInvoker(json4sFormats) {
 
-  val productTimestamp: OffsetDateTime = OffsetDateTime.now()
+  val productTimestamp: OffsetDateTime      = OffsetDateTime.now()
+  val relationshipTimestamp: OffsetDateTime = OffsetDateTime.now()
+
   override def execute[T](r: ApiRequest[T])(implicit evidence$2: Manifest[T]): Future[ApiResponse[T]] = {
     val mockRelationshipResponse = Relationship(
       id = UUID.randomUUID(),
       from = UUID.randomUUID(),
       to = UUID.randomUUID(),
       role = PartyRole.MANAGER,
-      product = RelationshipProduct(id = "product", role = "admin", timestamp = productTimestamp),
-      state = RelationshipState.ACTIVE
+      product = RelationshipProduct(id = "product", role = "admin", createdAt = productTimestamp),
+      state = RelationshipState.ACTIVE,
+      createdAt = relationshipTimestamp,
+      updatedAt = None
     )
     Future.successful(new ApiResponse[T](200, mockRelationshipResponse.asInstanceOf[T]))
   }

@@ -60,10 +60,11 @@ class PartyProcessSpec
   val wrappingDirective: AuthenticationDirective[Seq[(String, String)]] =
     SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
 
-  final val productTimestamp: OffsetDateTime = OffsetDateTime.now()
+  final val productTimestamp: OffsetDateTime      = OffsetDateTime.now()
+  final val relationshipTimestamp: OffsetDateTime = OffsetDateTime.now()
 
   final val product: RelationshipProduct =
-    PartyManagementDependency.RelationshipProduct(id = "product", role = "admin", timestamp = productTimestamp)
+    PartyManagementDependency.RelationshipProduct(id = "product", role = "admin", createdAt = productTimestamp)
 
   final val productInfo: ProductInfo =
     ProductInfo(id = "product", role = "admin", createdAt = productTimestamp)
@@ -135,7 +136,9 @@ class PartyProcessSpec
           to = institutionId1,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
       val relationship2 =
         PartyManagementDependency.Relationship(
@@ -144,7 +147,9 @@ class PartyProcessSpec
           to = institutionId2,
           role = PartyManagementDependency.PartyRole.DELEGATE,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2))
@@ -384,7 +389,9 @@ class PartyProcessSpec
           to = institutionId1,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship1))
@@ -790,7 +797,9 @@ class PartyProcessSpec
               to = institutionId1,
               role = PartyManagementDependency.PartyRole.MANAGER,
               product = product,
-              state = PartyManagementDependency.RelationshipState.ACTIVE
+              state = PartyManagementDependency.RelationshipState.ACTIVE,
+              createdAt = relationshipTimestamp,
+              updatedAt = None
             )
           )
         )
@@ -985,7 +994,9 @@ class PartyProcessSpec
               to = institutionId1,
               role = PartyManagementDependency.PartyRole.MANAGER,
               product = product,
-              state = PartyManagementDependency.RelationshipState.ACTIVE
+              state = PartyManagementDependency.RelationshipState.ACTIVE,
+              createdAt = relationshipTimestamp,
+              updatedAt = None
             )
           )
         )
@@ -1172,7 +1183,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
       val relationship2 =
         PartyManagementDependency.Relationship(
@@ -1181,7 +1194,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.DELEGATE,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationship3 =
@@ -1191,7 +1206,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = product.copy(role = "security"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationship4 =
@@ -1201,7 +1218,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = product.copy(role = "api"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationships =
@@ -1283,7 +1302,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
       val relationship2 =
         PartyManagementDependency.Relationship(
@@ -1292,7 +1313,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.DELEGATE,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationship3 =
@@ -1302,7 +1325,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = product.copy(role = "security"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationship4 =
@@ -1312,7 +1337,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = product.copy(role = "api"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationships =
@@ -1380,7 +1407,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
       val relationship2 =
         PartyManagementDependency.Relationship(
@@ -1389,7 +1418,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.DELEGATE,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationship3 =
@@ -1399,7 +1430,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = product.copy(role = "security"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationship4 =
@@ -1409,7 +1442,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = product.copy(role = "api"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationships =
@@ -1472,7 +1507,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
       val relationship2 =
         PartyManagementDependency.Relationship(
@@ -1481,7 +1518,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.DELEGATE,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationship3 =
@@ -1491,7 +1530,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = product.copy(id = "PDND", role = "security"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationship4 =
@@ -1501,7 +1542,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = product.copy(role = "api"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationships =
@@ -1557,7 +1600,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
       val relationship2 =
         PartyManagementDependency.Relationship(
@@ -1566,7 +1611,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.DELEGATE,
           product = product,
-          state = PartyManagementDependency.RelationshipState.PENDING
+          state = PartyManagementDependency.RelationshipState.PENDING,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationships =
@@ -1622,7 +1669,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
       val relationship2 =
         PartyManagementDependency.Relationship(
@@ -1631,7 +1680,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.DELEGATE,
           product = product,
-          state = PartyManagementDependency.RelationshipState.PENDING
+          state = PartyManagementDependency.RelationshipState.PENDING,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationships =
@@ -1691,7 +1742,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
       val relationship2 =
         PartyManagementDependency.Relationship(
@@ -1700,7 +1753,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.DELEGATE,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationship3 =
@@ -1710,7 +1765,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = product.copy(id = "PDND", role = "security"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationship4 =
@@ -1720,7 +1777,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = product.copy(id = "PDND", role = "api"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationships =
@@ -1790,7 +1849,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
       val relationship2 =
         PartyManagementDependency.Relationship(
@@ -1799,7 +1860,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.DELEGATE,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationship3 =
@@ -1809,7 +1872,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = product.copy(role = "security"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationship4 =
@@ -1819,7 +1884,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = product.copy(role = "api"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationships =
@@ -1875,8 +1942,10 @@ class PartyProcessSpec
           contentType = None,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = PartyManagementDependency
-            .RelationshipProduct(id = product, role = productRole, timestamp = productTimestamp),
-          state = PartyManagementDependency.RelationshipState.SUSPENDED
+            .RelationshipProduct(id = product, role = productRole, createdAt = productTimestamp),
+          state = PartyManagementDependency.RelationshipState.SUSPENDED,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       (mockPartyManagementService
@@ -1921,8 +1990,10 @@ class PartyProcessSpec
           contentType = None,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = PartyManagementDependency
-            .RelationshipProduct(id = product, role = productRole, timestamp = productTimestamp),
-          state = PartyManagementDependency.RelationshipState.PENDING
+            .RelationshipProduct(id = product, role = productRole, createdAt = productTimestamp),
+          state = PartyManagementDependency.RelationshipState.PENDING,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       (mockPartyManagementService
@@ -1965,8 +2036,10 @@ class PartyProcessSpec
           contentType = None,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = PartyManagementDependency
-            .RelationshipProduct(id = product, role = productRole, timestamp = productTimestamp),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+            .RelationshipProduct(id = product, role = productRole, createdAt = productTimestamp),
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       (mockPartyManagementService
@@ -2011,8 +2084,10 @@ class PartyProcessSpec
           contentType = None,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = PartyManagementDependency
-            .RelationshipProduct(id = product, role = productRole, timestamp = productTimestamp),
-          state = PartyManagementDependency.RelationshipState.PENDING
+            .RelationshipProduct(id = product, role = productRole, createdAt = productTimestamp),
+          state = PartyManagementDependency.RelationshipState.PENDING,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       (mockPartyManagementService
@@ -2132,7 +2207,9 @@ class PartyProcessSpec
           contentType = None,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       (mockPartyManagementService
@@ -2279,8 +2356,10 @@ class PartyProcessSpec
           contentType = None,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product =
-            PartyManagementDependency.RelationshipProduct(id = "product", role = "admin", timestamp = productTimestamp),
-          state = PartyManagementDependency.RelationshipState.PENDING
+            PartyManagementDependency.RelationshipProduct(id = "product", role = "admin", createdAt = productTimestamp),
+          state = PartyManagementDependency.RelationshipState.PENDING,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       (mockPartyManagementService
@@ -2330,7 +2409,9 @@ class PartyProcessSpec
           contentType = None,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       (mockPartyManagementService
@@ -2388,7 +2469,9 @@ class PartyProcessSpec
           contentType = None,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.PENDING
+          state = PartyManagementDependency.RelationshipState.PENDING,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       (mockPartyManagementService
