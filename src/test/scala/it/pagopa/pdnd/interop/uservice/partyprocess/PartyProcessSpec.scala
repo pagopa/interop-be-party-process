@@ -1257,28 +1257,36 @@ class PartyProcessSpec
         from = userId,
         role = PartyProcess.PartyRole.MANAGER,
         product = productInfo,
-        state = PartyProcess.RelationshipState.ACTIVE
+        state = PartyProcess.RelationshipState.ACTIVE,
+        createdAt = relationshipTimestamp,
+        updatedAt = None
       ),
       RelationshipInfo(
         id = relationshipId2,
         from = adminIdentifier,
         role = PartyProcess.PartyRole.DELEGATE,
         product = productInfo,
-        state = PartyProcess.RelationshipState.ACTIVE
+        state = PartyProcess.RelationshipState.ACTIVE,
+        createdAt = relationshipTimestamp,
+        updatedAt = None
       ),
       RelationshipInfo(
         id = relationshipId3,
         from = userId3,
         role = PartyProcess.PartyRole.OPERATOR,
         product = productInfo.copy(role = "security"),
-        state = PartyProcess.RelationshipState.ACTIVE
+        state = PartyProcess.RelationshipState.ACTIVE,
+        createdAt = relationshipTimestamp,
+        updatedAt = None
       ),
       RelationshipInfo(
         id = relationshipId4,
         from = userId4,
         role = PartyProcess.PartyRole.OPERATOR,
         product = productInfo.copy(role = "api"),
-        state = PartyProcess.RelationshipState.ACTIVE
+        state = PartyProcess.RelationshipState.ACTIVE,
+        createdAt = relationshipTimestamp,
+        updatedAt = None
       ))
 
     }
@@ -1376,14 +1384,18 @@ class PartyProcessSpec
         from = userId3,
         role = PartyProcess.PartyRole.OPERATOR,
         product = productInfo.copy(role = "security"),
-        state = PartyProcess.RelationshipState.ACTIVE
+        state = PartyProcess.RelationshipState.ACTIVE,
+        createdAt = relationshipTimestamp,
+        updatedAt = None
       ),
       RelationshipInfo(
         id = relationshipId4,
         from = userId4,
         role = PartyProcess.PartyRole.OPERATOR,
         product = productInfo.copy(role = "api"),
-        state = PartyProcess.RelationshipState.ACTIVE
+        state = PartyProcess.RelationshipState.ACTIVE,
+        createdAt = relationshipTimestamp,
+        updatedAt = None
       ))
 
     }
@@ -1484,7 +1496,9 @@ class PartyProcessSpec
           from = userId3,
           role = PartyProcess.PartyRole.OPERATOR,
           product = productInfo.copy(role = "security"),
-          state = PartyProcess.RelationshipState.ACTIVE
+          state = PartyProcess.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
     }
 
@@ -1581,7 +1595,9 @@ class PartyProcessSpec
         from = userId3,
         role = PartyRole.OPERATOR,
         product = productInfo.copy(id = "PDND", role = "security"),
-        state = RelationshipState.ACTIVE
+        state = RelationshipState.ACTIVE,
+        createdAt = relationshipTimestamp,
+        updatedAt = None
       )
     }
 
@@ -1650,7 +1666,9 @@ class PartyProcessSpec
         from = userId1,
         role = PartyRole.MANAGER,
         product = productInfo,
-        state = RelationshipState.ACTIVE
+        state = RelationshipState.ACTIVE,
+        createdAt = relationshipTimestamp,
+        updatedAt = None
       )
     }
 
@@ -1719,7 +1737,9 @@ class PartyProcessSpec
         from = userId2,
         role = PartyRole.DELEGATE,
         product = productInfo,
-        state = RelationshipState.PENDING
+        state = RelationshipState.PENDING,
+        createdAt = relationshipTimestamp,
+        updatedAt = None
       )
     }
 
@@ -1818,14 +1838,18 @@ class PartyProcessSpec
           from = userId3,
           role = PartyRole.OPERATOR,
           product = productInfo.copy(id = "PDND", role = "security"),
-          state = RelationshipState.ACTIVE
+          state = RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         ),
         RelationshipInfo(
           id = relationshipId4,
           from = userId4,
           role = PartyRole.OPERATOR,
           product = productInfo.copy(id = "PDND", role = "api"),
-          state = RelationshipState.ACTIVE
+          state = RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
       )
     }
