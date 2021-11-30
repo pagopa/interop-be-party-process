@@ -25,9 +25,14 @@ trait PartyManagementService {
     productRole: String
   )(bearerToken: String): Future[Unit]
 
-  def retrieveRelationships(from: Option[UUID], to: Option[UUID], product: Option[String], productRole: Option[String])(
-    bearerToken: String
-  ): Future[Relationships]
+  def retrieveRelationships(
+    from: Option[UUID],
+    to: Option[UUID],
+    role: Option[PartyRole],
+    state: Option[RelationshipState],
+    product: Option[String],
+    productRole: Option[String]
+  )(bearerToken: String): Future[Relationships]
 
   def getInstitutionRelationships(id: UUID)(bearerToken: String): Future[Relationships]
 
