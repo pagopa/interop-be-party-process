@@ -679,7 +679,9 @@ class ProcessApiServiceImpl(
       from = relationship.from,
       role = roleToApi(relationship.role),
       product = relationshipProductToApi(relationship.product),
-      state = relationshipStateToApi(relationship.state)
+      state = relationshipStateToApi(relationship.state),
+      createdAt = relationship.createdAt,
+      updatedAt = relationship.updatedAt
     )
   }
 

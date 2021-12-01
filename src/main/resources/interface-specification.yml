@@ -542,6 +542,12 @@ components:
           $ref: '#/components/schemas/ProductInfo'
         state:
           $ref: '#/components/schemas/RelationshipState'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
       additionalProperties: false
       required:
         - id
@@ -549,6 +555,7 @@ components:
         - role
         - product
         - state
+        - createdAt
     RelationshipsResponse:
       type: array
       items:

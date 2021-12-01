@@ -17,7 +17,7 @@ package object impl extends DefaultJsonProtocol {
   implicit val productInfoDataFormat: RootJsonFormat[ProductInfo]           = jsonFormat3(ProductInfo)
   implicit val onboardingDataFormat: RootJsonFormat[OnboardingData]         = jsonFormat8(OnboardingData)
   implicit val onboardingInfoFormat: RootJsonFormat[OnboardingInfo]         = jsonFormat2(OnboardingInfo)
-  implicit val relationshipInfoFormat: RootJsonFormat[RelationshipInfo]     = jsonFormat5(RelationshipInfo)
+  implicit val relationshipInfoFormat: RootJsonFormat[RelationshipInfo]     = jsonFormat7(RelationshipInfo)
   implicit val productsFormat: RootJsonFormat[Products]                     = jsonFormat1(Products)
 
   implicit class RelationshipOps(val relationship: Relationship) extends AnyVal {
