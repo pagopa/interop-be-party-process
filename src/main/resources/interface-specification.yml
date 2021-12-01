@@ -180,26 +180,42 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: products
-          description: comma separated sequence of products to filter the response with
-          in: query
-          schema:
-            type: string
-        - name: productRoles
-          description: comma separated sequence of product roles to filter the response with
-          in: query
-          schema:
-            type: string
-        - name: roles
+        - in: query
+          name: roles
           description: comma separated sequence of role to filter the response with
-          in: query
           schema:
-            type: string
-        - name: states
-          description: comma separated sequence of state to filter the response with
-          in: query
+            type: array
+            items:
+              $ref: '#/components/schemas/PartyRole'
+            default: [ ]
+          explode: false
+        - in: query
+          name: states
+          description: comma separated sequence of states to filter the response with
           schema:
-            type: string
+            type: array
+            items:
+              $ref: '#/components/schemas/RelationshipState'
+            default: [ ]
+          explode: false
+        - in: query
+          name: products
+          description: comma separated sequence of products to filter the response with
+          schema:
+            type: array
+            items:
+              type: string
+            default: [ ]
+          explode: false
+        - in: query
+          name: productRoles
+          description: comma separated sequence of product roles to filter the response with
+          schema:
+            type: array
+            items:
+              type: string
+            default: [ ]
+          explode: false
       responses:
         '200':
           description: successful operation

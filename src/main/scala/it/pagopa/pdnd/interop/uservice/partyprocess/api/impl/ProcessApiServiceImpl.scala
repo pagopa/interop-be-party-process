@@ -10,7 +10,7 @@ import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.getFutureBearer
 import it.pagopa.pdnd.interop.commons.utils.Digester
-import it.pagopa.pdnd.interop.commons.utils.TypeConversions.{OptionOps, StringOps}
+import it.pagopa.pdnd.interop.commons.utils.TypeConversions._
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   Organization,
@@ -96,10 +96,10 @@ class ProcessApiServiceImpl(
       relationships <- partyManagementService.retrieveRelationships(
         from = Some(subjectUUID),
         to = institutionUUID,
-        role = None,
-        state = Some(PartyManagementDependency.RelationshipState.ACTIVE),
-        product = None,
-        productRole = None
+        roles = Seq.empty,
+        states = Seq(PartyManagementDependency.RelationshipState.ACTIVE),
+        products = Seq.empty,
+        productRoles = Seq.empty
       )(bearer)
       onboardingData <- Future.traverse(relationships.items)(getOnboardingData(bearer))
     } yield OnboardingInfo(personInfo, onboardingData)
@@ -200,10 +200,10 @@ class ProcessApiServiceImpl(
       organizationRelationships <- partyManagementService.retrieveRelationships(
         from = None,
         to = Some(organization.id),
-        role = None,
-        state = None,
-        product = None,
-        productRole = None
+        roles = Seq.empty,
+        states = Seq.empty,
+        products = Seq.empty,
+        productRoles = Seq.empty
       )(bearer)
       _                <- existsAnOnboardedManager(organizationRelationships)
       validUsers       <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
@@ -249,10 +249,10 @@ class ProcessApiServiceImpl(
       relationships <- partyManagementService.retrieveRelationships(
         from = None,
         to = Some(organization.id),
-        role = None,
-        state = None,
-        product = None,
-        productRole = None
+        roles = Seq.empty,
+        states = Seq.empty,
+        products = Seq.empty,
+        productRoles = Seq.empty
       )(bearer)
       _          <- existsAnOnboardedManager(relationships)
       validUsers <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.SUB_DELEGATE))
@@ -285,10 +285,10 @@ class ProcessApiServiceImpl(
       relationships <- partyManagementService.retrieveRelationships(
         from = None,
         to = Some(organization.id),
-        role = None,
-        state = None,
-        product = None,
-        productRole = None
+        roles = Seq.empty,
+        states = Seq.empty,
+        products = Seq.empty,
+        productRoles = Seq.empty
       )(bearer)
       _          <- existsAnOnboardedManager(relationships)
       validUsers <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.OPERATOR))
@@ -475,78 +475,60 @@ class ProcessApiServiceImpl(
 
   private def filterFoundRelationshipsByCurrentUser(
     currentUserId: UUID,
-    userRelationships: Relationships,
     institutionIdRelationships: Relationships
-  )(
-    productRolesFilter: Option[String],
-    productsFilter: Option[String],
-    roles: Option[String],
-    states: Option[String]
   ): Relationships = {
-    val productRolesFilterList: List[String] = productRolesFilter.getOrElse("").parseCommaSeparated
-    val productsFilterList: List[String]     = productsFilter.getOrElse("").parseCommaSeparated
-    val rolesFilterList: List[String]        = roles.getOrElse("").parseCommaSeparated
-    val statesFilterList: List[String]       = states.getOrElse("").parseCommaSeparated
-
+    val userRelationships: Seq[Relationship] = institutionIdRelationships.items.filter(_.from == currentUserId)
     val isAdmin: Boolean =
-      userRelationships.items
+      userRelationships
         .map(rl => roleToApi(rl.role))
-        .exists(rl => adminPartyRoles.contains(rl))
+        .exists(adminPartyRoles.contains)
 
     val filteredRelationships: Seq[Relationship] =
       if (isAdmin) institutionIdRelationships.items
-      else
-        institutionIdRelationships.items.filter(r => r.from == currentUserId)
+      else userRelationships
 
-    val filteredItems: Seq[Relationship] = filteredRelationships
-      .filter(r => r.verifyProducts(productsFilterList))
-      .filter(r => r.verifyProductRoles(productRolesFilterList))
-      .filter(r => r.verifyRole(rolesFilterList))
-      .filter(r => r.verifyState(statesFilterList))
-
-    Relationships(filteredItems)
+    Relationships(filteredRelationships)
   }
+
+  private def parseArrayParameter(param: String): Seq[String] =
+    if (param == "[]") List.empty
+    else param.parseCommaSeparated
 
   /** Code: 200, Message: successful operation, DataType: Seq[RelationshipInfo]
     * Code: 400, Message: Invalid institution id supplied, DataType: Problem
     */
   override def getUserInstitutionRelationships(
     institutionId: String,
-    products: Option[String],
-    productRoles: Option[String],
-    roles: Option[String],
-    states: Option[String]
+    roles: String,
+    states: String,
+    products: String,
+    productRoles: String
   )(implicit
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerRelationshipInfoarray: ToEntityMarshaller[Seq[RelationshipInfo]],
     contexts: Seq[(String, String)]
   ): Route = {
     logger.info(s"Getting relationship for institution $institutionId and current user")
+    val productsArray     = parseArrayParameter(products)
+    val productRolesArray = parseArrayParameter(productRoles)
+    val rolesArray        = parseArrayParameter(roles)
+    val statesArray       = parseArrayParameter(states)
+
     val result: Future[Seq[RelationshipInfo]] = for {
       bearer          <- getFutureBearer(contexts)
       subjectUUID     <- getCallerSubjectIdentifier(bearer)
       institutionUUID <- institutionId.toFutureUUID
+      rolesEnumArray  <- rolesArray.traverse(PartyManagementDependency.PartyRole.fromValue).toFuture
+      statesEnumArray <- statesArray.traverse(PartyManagementDependency.RelationshipState.fromValue).toFuture
       institutionIdRelationships <- partyManagementService.retrieveRelationships(
         from = None,
         to = Some(institutionUUID),
-        role = None,
-        state = None,
-        product = None,
-        productRole = None
+        roles = rolesEnumArray,
+        states = statesEnumArray,
+        products = productsArray,
+        productRoles = productRolesArray
       )(bearer)
-      userRelationships <- partyManagementService.retrieveRelationships(
-        from = Some(subjectUUID),
-        to = Some(institutionUUID),
-        role = None,
-        state = None,
-        product = None,
-        productRole = None
-      )(bearer)
-      filteredRelationships = filterFoundRelationshipsByCurrentUser(
-        subjectUUID,
-        userRelationships,
-        institutionIdRelationships
-      )(productRoles, products, roles, states)
+      filteredRelationships = filterFoundRelationshipsByCurrentUser(subjectUUID, institutionIdRelationships)
       relationships <- relationshipsToRelationshipsResponse(filteredRelationships)(bearer)
     } yield relationships
 
@@ -790,10 +772,10 @@ class ProcessApiServiceImpl(
       organizationRelationships <- partyManagementService.retrieveRelationships(
         from = None,
         to = Some(organization.id),
-        role = None,
-        state = None,
-        product = None,
-        productRole = None
+        roles = Seq.empty,
+        states = Seq.empty,
+        products = Seq.empty,
+        productRoles = Seq.empty
       )(bearer)
     } yield Products(products = extractActiveProducts(organizationRelationships).map(relationshipProductToApi))
 

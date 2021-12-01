@@ -19,63 +19,40 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
   override def retrieveRelationships(
     from: Option[UUID],
     to: Option[UUID],
-    role: Option[PartyRole],
-    state: Option[RelationshipState],
-    product: Option[String],
-    productRole: Option[String]
+    roles: Seq[PartyRole],
+    states: Seq[RelationshipState],
+    products: Seq[String],
+    productRoles: Seq[String]
   )(bearerToken: String): Future[Relationships] = {
     val request: ApiRequest[Relationships] =
       api.getRelationships(
         from = from,
         to = to,
-        role = role,
-        state = state,
-        product = product,
-        productRole = productRole
+        roles = roles,
+        states = states,
+        products = products,
+        productRoles = productRoles
       )(BearerToken(bearerToken))
-    invoker
-      .execute[Relationships](request)
-      .map { x =>
-        logger.info(s"Retrieving relationships ${x.code}")
-        logger.info(s"Retrieving relationships ${x.content}")
-        x.content
-      }
-      .recoverWith { case ex =>
-        logger.error(s"Retrieving relationships ${ex.getMessage}")
-        Future.failed[Relationships](ex)
-      }
+    invoke(request, "Relationships retrieval")
   }
 
   def getInstitutionRelationships(id: UUID)(bearerToken: String): Future[Relationships] = {
-    val request: ApiRequest[Relationships] = api.getRelationships(to = Some(id))(BearerToken(bearerToken))
-    invoker
-      .execute[Relationships](request)
-      .map { x =>
-        logger.info(s"Retrieving relationships for institution $id: ${x.code}")
-        logger.info(s"Retrieving relationships for institution $id: ${x.content}")
-        x.content
-      }
-      .recoverWith { case ex =>
-        logger.error(s"ERROR while retrieving relationships for institution $id: ${ex.getMessage}")
-        Future.failed[Relationships](ex)
-      }
+    val request: ApiRequest[Relationships] = api.getRelationships(
+      to = Some(id),
+      from = None,
+      roles = Seq.empty,
+      states = Seq.empty,
+      products = Seq.empty,
+      productRoles = Seq.empty
+    )(BearerToken(bearerToken))
+    invoke(request, "Relationships retrieval by institution id")
   }
 
   override def retrieveOrganization(organizationId: UUID)(bearerToken: String): Future[Organization] = {
     val request: ApiRequest[Organization] = api.getOrganizationById(organizationId)(BearerToken(bearerToken))
     logger.info(s"Retrieving organization $organizationId")
     logger.info(s"Retrieving organization ${request.toString}")
-    invoker
-      .execute[Organization](request)
-      .map { x =>
-        logger.info(s"Retrieving organization ${x.code}")
-        logger.info(s"Retrieving organization ${x.content}")
-        x.content
-      }
-      .recoverWith { case ex =>
-        logger.error(s"Retrieving organization ${ex.getMessage}")
-        Future.failed[Organization](ex)
-      }
+    invoke(request, "Organization retrieval")
   }
 
   override def retrieveOrganizationByExternalId(
@@ -85,47 +62,17 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       api.getOrganizationByExternalId(externalOrganizationId)(BearerToken(bearerToken))
     logger.info(s"Retrieving organization by external id $externalOrganizationId")
     logger.info(s"Retrieving organization by external id ${request.toString}")
-    invoker
-      .execute[Organization](request)
-      .map { x =>
-        logger.info(s"Retrieving organization by external id - ERROR: ${x.code}")
-        logger.info(s"Retrieving organization by external id - ERROR: ${x.content}")
-        x.content
-      }
-      .recoverWith { case ex =>
-        logger.error(s"Retrieving organization by external id ${ex.getMessage}")
-        Future.failed[Organization](ex)
-      }
+    invoke(request, "Organization retrieval by external id")
   }
 
   override def createPerson(person: PersonSeed)(bearerToken: String): Future[Person] = {
     val request: ApiRequest[Person] = api.createPerson(person)(BearerToken(bearerToken))
-    invoker
-      .execute(request)
-      .map { x =>
-        logger.info(s"Create person ${x.code}")
-        logger.info(s"Create person ${x.content}")
-        x.content
-      }
-      .recoverWith { case ex =>
-        logger.error(s"Create person ${ex.getMessage}")
-        Future.failed[Person](ex)
-      }
+    invoke(request, "Person creation")
   }
 
   override def createOrganization(organization: OrganizationSeed)(bearerToken: String): Future[Organization] = {
     val request: ApiRequest[Organization] = api.createOrganization(organization)(BearerToken(bearerToken))
-    invoker
-      .execute(request)
-      .map { x =>
-        logger.info(s"Create organization ${x.code}")
-        logger.info(s"Create organization ${x.content}")
-        x.content
-      }
-      .recoverWith { case ex =>
-        logger.error(s"Create organization ${ex.getMessage}")
-        Future.failed[Organization](ex)
-      }
+    invoke(request, "Organization creation")
   }
 
   override def createRelationship(
@@ -159,23 +106,7 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       )
 
     val request: ApiRequest[Relationship] = api.createRelationship(partyRelationship)(BearerToken(bearerToken))
-    invoker
-      .execute(request)
-      .map { x =>
-        logger.info(s"Create relationship ${x.code}")
-        logger.info(s"Create relationship ${x.content}")
-        x.content
-      }
-      .recoverWith {
-        case ApiError(code, message, _, _, _) =>
-          logger.error(s"Create relationship $code")
-          logger.error(s"Create relationship $message")
-
-          Future.failed[Relationship](new RuntimeException(message))
-        case ex =>
-          logger.error(s"Create relationship ! ${ex.getMessage}")
-          Future.failed[Relationship](ex)
-      }
+    invoke(request, "Relationship creation")
   }
 
   override def createToken(relationshipsSeed: RelationshipsSeed, documentHash: String)(
@@ -185,159 +116,64 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
     val tokenSeed: TokenSeed = TokenSeed(seed = UUID.randomUUID().toString, relationshipsSeed, documentHash)
 
     val request = api.createToken(tokenSeed)(BearerToken(bearerToken))
-    invoker
-      .execute(request)
-      .map { x =>
-        logger.info(s"Create token ${x.code}")
-        logger.info(s"Create token ${x.content}")
-        x.content
-      }
-      .recoverWith {
-        case ApiError(code, message, _, _, _) =>
-          logger.error(s"Create token $code")
-          logger.error(s"Create token $message")
-
-          Future.failed[TokenText](new RuntimeException(message))
-        case ex =>
-          logger.error(s"Create token ! ${ex.getMessage}")
-          Future.failed[TokenText](ex)
-      }
-
+    invoke(request, "Token creation")
   }
 
   override def consumeToken(token: String, fileParts: (FileInfo, File))(bearerToken: String): Future[Unit] = {
     logger.info(s"Consuming token $token")
 
     val request = api.consumeToken(token, fileParts._2)(BearerToken(bearerToken))
-    invoker
-      .execute(request)
-      .map { x =>
-        logger.info(s"Token consumed ${x.code}")
-        logger.info(s"Token consumed ${x.content}")
-        x.content
-      }
-      .recoverWith {
-        case ApiError(code, message, _, _, _) =>
-          logger.error(s"Token consumed $code")
-          logger.error(s"Token consumed $message")
-
-          Future.failed[Unit](new RuntimeException(message))
-        case ex =>
-          logger.error(s"Token consumed ! ${ex.getMessage}")
-          Future.failed[Unit](ex)
-      }
-
+    invoke(request, "Token consume")
   }
 
   override def invalidateToken(token: String)(bearerToken: String): Future[Unit] = {
     logger.info(s"Invalidating token $token")
 
     val request = api.invalidateToken(token)(BearerToken(bearerToken))
-    invoker
-      .execute(request)
-      .map { x =>
-        logger.info(s"Token invalidated ${x.code}")
-        logger.info(s"Token invalidated ${x.content}")
-        x.content
-      }
-      .recoverWith {
-        case ApiError(code, message, _, _, _) =>
-          logger.error(s"Token invalidated $code")
-          logger.error(s"Token invalidated $message")
-
-          Future.failed[Unit](new RuntimeException(message))
-        case ex =>
-          logger.error(s"Token invalidated ! ${ex.getMessage}")
-          Future.failed[Unit](ex)
-      }
+    invoke(request, "Token invalidation")
   }
 
   override def activateRelationship(relationshipId: UUID)(bearerToken: String): Future[Unit] = {
     logger.info(s"Activating relationship $relationshipId")
 
     val request = api.activatePartyRelationshipById(relationshipId)(BearerToken(bearerToken))
-    invoker
-      .execute(request)
-      .map { x =>
-        logger.info(s"Relationship activated ${x.code}")
-        x.content
-      }
-      .recoverWith {
-        case ApiError(code, message, _, _, _) =>
-          logger.error(s"Relationship activation $code")
-          logger.error(s"Relationship activation $message")
-
-          Future.failed[Unit](new RuntimeException(message))
-        case ex =>
-          logger.error(s"Relationship activation ${ex.getMessage}")
-          Future.failed[Unit](ex)
-      }
+    invoke(request, "Relationship activation")
   }
 
   override def suspendRelationship(relationshipId: UUID)(bearerToken: String): Future[Unit] = {
     logger.info(s"Suspending relationship $relationshipId")
 
     val request = api.suspendPartyRelationshipById(relationshipId)(BearerToken(bearerToken))
-    invoker
-      .execute(request)
-      .map { x =>
-        logger.info(s"Relationship suspended ${x.code}")
-        x.content
-      }
-      .recoverWith {
-        case ApiError(code, message, _, _, _) =>
-          logger.error(s"Relationship suspension $code")
-          logger.error(s"Relationship suspension $message")
-
-          Future.failed[Unit](new RuntimeException(message))
-        case ex =>
-          logger.error(s"Relationship suspension ${ex.getMessage}")
-          Future.failed[Unit](ex)
-      }
+    invoke(request, "Relationship suspension")
   }
 
   override def getRelationshipById(relationshipId: UUID)(bearerToken: String): Future[Relationship] = {
     logger.info(s"Getting relationship $relationshipId")
 
     val request = api.getRelationshipById(relationshipId)(BearerToken(bearerToken))
-    invoker
-      .execute(request)
-      .map { x =>
-        logger.info(s"Relationship retrieved ${x.code}")
-        x.content
-      }
-      .recoverWith {
-        case ApiError(code, message, _, _, _) =>
-          logger.error(s"Relationship retrieval error $code")
-          logger.error(s"Relationship retrieval error message: $message")
-
-          Future.failed[Relationship](new RuntimeException(message))
-        case ex =>
-          logger.error(s"Relationship suspension ${ex.getMessage}")
-          Future.failed[Relationship](ex)
-      }
+    invoke(request, "Relationship retrieval")
   }
 
   override def deleteRelationshipById(relationshipId: UUID)(bearerToken: String): Future[Unit] = {
     logger.info(s"Deleting relationship $relationshipId")
 
     val request = api.deleteRelationshipById(relationshipId)(BearerToken(bearerToken))
+    invoke(request, "Relationship deletion")
+  }
+
+  private def invoke[T](request: ApiRequest[T], logMessage: String)(implicit m: Manifest[T]): Future[T] =
     invoker
-      .execute(request)
-      .map { x =>
-        logger.info(s"Relationship deleted ${x.code}")
-        x.content
+      .execute[T](request)
+      .map { response =>
+        logger.info(s"$logMessage. Status code: ${response.code.toString}")
+        response.content
       }
       .recoverWith {
         case ApiError(code, message, _, _, _) =>
-          logger.error(s"Relationship deletion ERROR code > $code")
-          logger.error(s"Relationship deletion ERROR message > $message")
-
-          Future.failed[Unit](new RuntimeException(message))
+          logger.error(s"$logMessage. code > $code - message > $message")
+          Future.failed[T](new RuntimeException(message))
         case ex =>
-          logger.error(s"Relationship deletion ERROR message > ${ex.getMessage}")
-          Future.failed[Unit](ex)
+          logger.error(s"$logMessage. Error: ${ex.getMessage}")
+          Future.failed[T](ex)
       }
-  }
-
 }
