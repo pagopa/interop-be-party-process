@@ -536,6 +536,12 @@ components:
         from:
           type: string
           format: uuid
+        name:
+          type: string
+        surname:
+          type: string
+        email:
+          type: string
         role:
           $ref: '#/components/schemas/PartyRole'
         product:
@@ -552,6 +558,8 @@ components:
       required:
         - id
         - from
+        - name
+        - surname
         - role
         - product
         - state

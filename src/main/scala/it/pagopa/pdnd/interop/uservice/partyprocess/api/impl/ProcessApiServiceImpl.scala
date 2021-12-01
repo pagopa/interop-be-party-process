@@ -492,12 +492,12 @@ class ProcessApiServiceImpl(
         .map(rl => roleToApi(rl.role))
         .exists(rl => adminPartyRoles.contains(rl))
 
-    val filteredRelationships: Relationships =
-      if (isAdmin) institutionIdRelationships
+    val filteredRelationships: Seq[Relationship] =
+      if (isAdmin) institutionIdRelationships.items
       else
-        institutionIdRelationships.copy(items = institutionIdRelationships.items.filter(r => r.from == currentUserId))
+        institutionIdRelationships.items.filter(r => r.from == currentUserId)
 
-    val filteredItems: Seq[Relationship] = filteredRelationships.items
+    val filteredItems: Seq[Relationship] = filteredRelationships
       .filter(r => r.verifyProducts(productsFilterList))
       .filter(r => r.verifyProductRoles(productRolesFilterList))
       .filter(r => r.verifyRole(rolesFilterList))
@@ -546,7 +546,8 @@ class ProcessApiServiceImpl(
         userRelationships,
         institutionIdRelationships
       )(productRoles, products, roles, states)
-    } yield relationshipsToRelationshipsResponse(filteredRelationships)
+      relationships <- relationshipsToRelationshipsResponse(filteredRelationships)(bearer)
+    } yield relationships
 
     onComplete(result) {
       case Success(relationships) => getUserInstitutionRelationships200(relationships)
@@ -669,14 +670,33 @@ class ProcessApiServiceImpl(
       case status                                             => Future.failed(RelationshipNotSuspendable(relationship.id.toString, status.toString))
     }
 
-  private def relationshipsToRelationshipsResponse(relationships: Relationships): Seq[RelationshipInfo] = {
-    relationships.items.map(relationshipToRelationshipInfo)
+  private def relationshipsToRelationshipsResponse(
+    relationships: Relationships
+  )(bearerToken: String): Future[Seq[RelationshipInfo]] = {
+    relationships.items.traverse(relationshipToRelationshipsResponse(_)(bearerToken))
+
   }
 
-  private def relationshipToRelationshipInfo(relationship: Relationship): RelationshipInfo = {
+  private def relationshipToRelationshipsResponse(
+    relationship: Relationship
+  )(bearerToken: String): Future[RelationshipInfo] = {
+
+    for {
+      user <- userRegistryManagementService.getUserById(relationship.from)(bearerToken)
+    } yield relationshipToRelationshipInfo(user, relationship)
+
+  }
+
+  private def relationshipToRelationshipInfo(
+    userRegistryUser: UserRegistryUser,
+    relationship: Relationship
+  ): RelationshipInfo = {
     RelationshipInfo(
       id = relationship.id,
       from = relationship.from,
+      name = userRegistryUser.name,
+      surname = userRegistryUser.surname,
+      email = userRegistryUser.extras.email,
       role = roleToApi(relationship.role),
       product = relationshipProductToApi(relationship.product),
       state = relationshipStateToApi(relationship.state),
@@ -710,14 +730,15 @@ class ProcessApiServiceImpl(
     contexts: Seq[(String, String)]
   ): Route = {
     logger.info(s"Getting relationship $relationshipId")
-    val result: Future[Relationship] = for {
+    val result: Future[RelationshipInfo] = for {
       bearer           <- getFutureBearer(contexts)
       relationshipUUID <- relationshipId.toFutureUUID
       relationship     <- partyManagementService.getRelationshipById(relationshipUUID)(bearer)
-    } yield relationship
+      relationshipInfo <- relationshipToRelationshipsResponse(relationship)(bearer)
+    } yield relationshipInfo
 
     onComplete(result) {
-      case Success(relationship) => getRelationship200(relationshipToRelationshipInfo(relationship))
+      case Success(relationshipInfo) => getRelationship200(relationshipInfo)
       case Failure(ex: RelationshipNotFound) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 404, "Not found")
         getRelationship404(errorResponse)
