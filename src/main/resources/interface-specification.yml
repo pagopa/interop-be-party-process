@@ -111,12 +111,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-        '409':
-          description: Document validation failed
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
   /onboarding/subdelegates:
     post:
       security:
