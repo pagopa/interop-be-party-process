@@ -83,12 +83,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-        '409':
-          description: Document validation failed
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
   /onboarding/legals:
     post:
       security:
@@ -113,12 +107,6 @@ paths:
                 $ref: '#/components/schemas/OnboardingResponse'
         '400':
           description: Invalid ID supplied
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
-        '409':
-          description: Document validation failed
           content:
             application/problem+json:
               schema:
@@ -423,6 +411,12 @@ paths:
           description: successful operation
         '400':
           description: Invalid ID supplied
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: Document validation failed
           content:
             application/problem+json:
               schema:

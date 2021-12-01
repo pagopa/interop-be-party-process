@@ -326,6 +326,7 @@ class ProcessApiServiceImpl(
 
     onComplete(result) {
       case Success(_) => confirmOnboarding200
+      // TODO: error 409 will be enabled with signature mechanism introduction / confirmOnboarding409
       case Failure(ex) =>
         val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
         confirmOnboarding400(errorResponse)
