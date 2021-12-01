@@ -93,9 +93,14 @@ class ProcessApiServiceImpl(
       institutionUUID <- institutionId.traverse(_.toFutureUUID)
       user            <- userRegistryManagementService.getUserById(subjectUUID)(bearer)
       personInfo = PersonInfo(user.name, user.surname, user.externalId)
-      relationships <- partyManagementService.retrieveRelationships(Some(subjectUUID), institutionUUID, None, None)(
-        bearer
-      )
+      relationships <- partyManagementService.retrieveRelationships(
+        from = Some(subjectUUID),
+        to = institutionUUID,
+        role = None,
+        state = Some(PartyManagementDependency.RelationshipState.ACTIVE),
+        product = None,
+        productRole = None
+      )(bearer)
       onboardingData <- Future.traverse(relationships.items)(getOnboardingData(bearer))
     } yield OnboardingInfo(personInfo, onboardingData)
 
@@ -193,10 +198,12 @@ class ProcessApiServiceImpl(
       bearer       <- getFutureBearer(contexts)
       organization <- partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
       organizationRelationships <- partyManagementService.retrieveRelationships(
-        None,
-        Some(organization.id),
-        None,
-        None
+        from = None,
+        to = Some(organization.id),
+        role = None,
+        state = None,
+        product = None,
+        productRole = None
       )(bearer)
       _                <- existsAnOnboardedManager(organizationRelationships)
       validUsers       <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
@@ -237,12 +244,19 @@ class ProcessApiServiceImpl(
     contexts: Seq[(String, String)]
   ): Route = {
     val result: Future[Unit] = for {
-      bearer        <- getFutureBearer(contexts)
-      organization  <- partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
-      relationships <- partyManagementService.retrieveRelationships(None, Some(organization.id), None, None)(bearer)
-      _             <- existsAnOnboardedManager(relationships)
-      validUsers    <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.SUB_DELEGATE))
-      operators     <- Future.traverse(validUsers)(addUser(bearer))
+      bearer       <- getFutureBearer(contexts)
+      organization <- partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
+      relationships <- partyManagementService.retrieveRelationships(
+        from = None,
+        to = Some(organization.id),
+        role = None,
+        state = None,
+        product = None,
+        productRole = None
+      )(bearer)
+      _          <- existsAnOnboardedManager(relationships)
+      validUsers <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.SUB_DELEGATE))
+      operators  <- Future.traverse(validUsers)(addUser(bearer))
       _ <- Future.traverse(operators)(pr =>
         partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)(
           bearer
@@ -266,11 +280,17 @@ class ProcessApiServiceImpl(
     onboardingRequest: OnboardingRequest
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
     val result: Future[Unit] = for {
-      bearer        <- getFutureBearer(contexts)
-      organization  <- partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
-      relationships <- partyManagementService.retrieveRelationships(None, Some(organization.id), None, None)(bearer)
-      _             <- existsAnOnboardedManager(relationships)
-
+      bearer       <- getFutureBearer(contexts)
+      organization <- partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
+      relationships <- partyManagementService.retrieveRelationships(
+        from = None,
+        to = Some(organization.id),
+        role = None,
+        state = None,
+        product = None,
+        productRole = None
+      )(bearer)
+      _          <- existsAnOnboardedManager(relationships)
       validUsers <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.OPERATOR))
       operators  <- Future.traverse(validUsers)(addUser(bearer))
       _ <- Future.traverse(operators)(pr =>
@@ -506,16 +526,20 @@ class ProcessApiServiceImpl(
       subjectUUID     <- getCallerSubjectIdentifier(bearer)
       institutionUUID <- institutionId.toFutureUUID
       institutionIdRelationships <- partyManagementService.retrieveRelationships(
-        None,
-        Some(institutionUUID),
-        None,
-        None
+        from = None,
+        to = Some(institutionUUID),
+        role = None,
+        state = None,
+        product = None,
+        productRole = None
       )(bearer)
       userRelationships <- partyManagementService.retrieveRelationships(
-        Some(subjectUUID),
-        Some(institutionUUID),
-        None,
-        None
+        from = Some(subjectUUID),
+        to = Some(institutionUUID),
+        role = None,
+        state = None,
+        product = None,
+        productRole = None
       )(bearer)
       filteredRelationships = filterFoundRelationshipsByCurrentUser(
         subjectUUID,
@@ -740,10 +764,12 @@ class ProcessApiServiceImpl(
       institutionUUID <- institutionId.toFutureUUID
       organization    <- partyManagementService.retrieveOrganization(institutionUUID)(bearer)
       organizationRelationships <- partyManagementService.retrieveRelationships(
-        None,
-        Some(organization.id),
-        None,
-        None
+        from = None,
+        to = Some(organization.id),
+        role = None,
+        state = None,
+        product = None,
+        productRole = None
       )(bearer)
     } yield Products(products = extractActiveProducts(organizationRelationships).map(relationshipProductToApi))
 

@@ -19,11 +19,20 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
   override def retrieveRelationships(
     from: Option[UUID],
     to: Option[UUID],
+    role: Option[PartyRole],
+    state: Option[RelationshipState],
     product: Option[String],
     productRole: Option[String]
   )(bearerToken: String): Future[Relationships] = {
     val request: ApiRequest[Relationships] =
-      api.getRelationships(from, to, product, productRole)(BearerToken(bearerToken))
+      api.getRelationships(
+        from = from,
+        to = to,
+        role = role,
+        state = state,
+        product = product,
+        productRole = productRole
+      )(BearerToken(bearerToken))
     invoker
       .execute[Relationships](request)
       .map { x =>
