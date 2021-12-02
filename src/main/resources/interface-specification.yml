@@ -512,10 +512,23 @@ components:
             $ref: '#/components/schemas/User'
         institutionId:
           type: string
+        contract:
+          $ref: '#/components/schemas/OnboardingContract'
       additionalProperties: false
       required:
         - users
         - institutionId
+        - contract
+    OnboardingContract:
+      properties:
+        version:
+          type: string
+        path:
+          type: string
+      additionalProperties: false
+      required:
+        - version
+        - path
     OnboardingResponse:
       properties:
         token:

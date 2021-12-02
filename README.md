@@ -6,10 +6,38 @@
 
 In order to properly deploy this component, some environment variables need to be configured.
 
+### Dynamic content for onboarding contracts
+
+This component offers a mechanism of data injection in onboarding contract HTML templates.
+Currently, the available variables are the following:
+
+| Variable name | Notes                                                                                                    |
+| ------------- |----------------------------------------------------------------------------------------------------------|
+| **institutionName** | name of the institution this onboarding is for                                                        |
+| **institutionMail** | digital address of the institution                                                  |
+| **manager** | name, surname and tax code of the institution MANAGER                                   |
+| **users** | a set of rows each containing the name, the surname, the tax code and the role of a user |
+
+For example:
+
+| Variable name | Notes                                                                                                                           |
+| ------------- |---------------------------------------------------------------------------------------------------------------------------------|
+| **institutionName** | Comune di Sessa Aurunca                                                                                                         |
+| **institutionMail** | test@pecmail.com                                                                                                                |
+| **manager** | Mario Rossi, Codice fiscale: MRRSSS                                                                                             |
+| **users** | Gianni Brera, Codice fiscale: MRRSSSSSSS, Ruolo: SUB_DELEGATE<BR/>Mario Sconcerti, Codice fiscale: MRRSSSSSSS, Ruolo: DELEGATE |
+
+:warning: Please mind that, so far, both "`, Codice fiscale: `" and "`Ruolo: `" are still hardcoded in our vanilla templating engine.
+
+##### Syntax
+
+The syntax you MUST adopt in your HTML templates is the following: `${VARIABLE_NAME}`, e.g.: `${institutionName}`
+
+---
+
 ### File storage engine
 
 These variables configure the connection to the storage holding the component file artifacts. The storage can be either local or remote.
-
 
 | Variable name | Variable type | Notes |
 | ------------- | ------------- | ----- |
@@ -20,6 +48,8 @@ These variables configure the connection to the storage holding the component fi
 | **STORAGE_APPLICATION_SECRET** | String | Defines the user password to access the remote endpoint |
 
 :warning: - for the usage of **STORAGE_TYPE** `File` all the other File storage property values are necessary, but basically useless. 
+
+---
 
 ### Mail engine
 
@@ -33,6 +63,8 @@ These properties define the connection parameters to the SMTP server sending the
 | **SMTP_SERVER** | String | SMTP server address |
 | **SMTP_PORT** | Integer | SMTP server port |
 
+---
+
 ### Onboarding mail template configuration
 
 These properties define the configuration for building a proper onboarding template mail according to deployment needs.  
@@ -45,6 +77,7 @@ These properties define the configuration for building a proper onboarding templ
 | **MAIL_REJECT_PLACEHOLDER_NAME** | String | **Optional** variable. It defines the name of the placeholder holding the onboarding rejection link. By default, the placeholder name is `rejectTokenURL` |
 | **MAIL_ONBOARDING_REJECTION_LINK** | String | Defines the link to the onboarding rejection (e.g.: `http://pagopa.it/onboarding-reject?token=`)|
 
+---
 
 ### Mail template
 

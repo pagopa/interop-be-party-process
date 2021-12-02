@@ -10,7 +10,7 @@ import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.getFutureBearer
 import it.pagopa.pdnd.interop.commons.utils.Digester
-import it.pagopa.pdnd.interop.commons.utils.TypeConversions.{OptionOps, StringOps}
+import it.pagopa.pdnd.interop.commons.utils.TypeConversions.{OptionOps, StringOps, TryOps}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   Organization,
@@ -164,8 +164,9 @@ class ProcessApiServiceImpl(
       relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, product, productRole) =>
         createRelationship(organization.id, person.id, roleToDependency(role), product, productRole)
       })
-      pdf   <- pdfCreator.create(validUsers, organization)
-      token <- partyManagementService.createToken(relationships, pdf._2)(bearer)
+      contractTemplate <- getFileAsString(onboardingRequest.contract.version)
+      pdf              <- pdfCreator.createContract(contractTemplate, validUsers, organization)
+      token            <- partyManagementService.createToken(relationships, pdf._2)(bearer)
       _ <- sendOnboardingMail(
         ApplicationConfiguration.destinationMails,
         pdf._1,
@@ -216,8 +217,10 @@ class ProcessApiServiceImpl(
       relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, products, productRole) =>
         createRelationship(organization.id, person.id, roleToDependency(role), products, productRole)
       })
-      pdf   <- pdfCreator.create(validUsers, organization)
-      token <- partyManagementService.createToken(relationships, pdf._2)(bearer)
+      contractTemplate <- getFileAsString(onboardingRequest.contract.version)
+      pdf              <- pdfCreator.createContract(contractTemplate, validUsers, organization)
+      token            <- partyManagementService.createToken(relationships, pdf._2)(bearer)
+
       _ <- sendOnboardingMail(
         ApplicationConfiguration.destinationMails,
         pdf._1,
@@ -814,5 +817,10 @@ class ProcessApiServiceImpl(
 
     relationships.items.filter(isAnOnboardedManager).map(_.product)
   }
+
+  private def getFileAsString(filePath: String): Future[String] = for {
+    contractTemplateStream <- fileManager.get(filePath)
+    fileString             <- Try { contractTemplateStream.toString(StandardCharsets.UTF_8) }.toFuture
+  } yield fileString
 
 }

@@ -37,7 +37,7 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import spray.json.DefaultJsonProtocol
 
-import java.io.File
+import java.io.{ByteArrayOutputStream, File}
 import java.nio.file.Paths
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -733,14 +733,19 @@ class PartyProcessSpec
         .expects(*, *, *, *)
         .returning(Future.successful(attr1))
         .once()
-      (mockPdfCreator.create _).expects(*, *).returning(Future.successful((file, "hash"))).once()
+      (mockFileManager.get _).expects(*).returning(Future.successful(new ByteArrayOutputStream())).once()
+      (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful((file, "hash"))).once()
       (mockPartyManagementService
         .createToken(_: PartyManagementDependency.RelationshipsSeed, _: String)(_: String))
         .expects(*, *, *)
         .returning(Future.successful(PartyManagementDependency.TokenText("token")))
         .once()
 
-      val req = OnboardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
+      val req = OnboardingRequest(
+        users = Seq(manager, delegate),
+        institutionId = "institutionId1",
+        contract = OnboardingContract("a", "b")
+      )
 
       val data = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
 
@@ -801,7 +806,11 @@ class PartyProcessSpec
         .expects(*, *, *, *, *, *, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(Seq.empty)))
 
-      val req = OnboardingRequest(users = Seq(operator1, operator2), institutionId = "institutionId1")
+      val req = OnboardingRequest(
+        users = Seq(operator1, operator2),
+        institutionId = "institutionId1",
+        contract = OnboardingContract("a", "b")
+      )
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/operators", HttpMethods.POST)
@@ -952,7 +961,11 @@ class PartyProcessSpec
         .returning(Future.successful(()))
         .repeat(2)
 
-      val req = OnboardingRequest(users = Seq(operator1, operator2), institutionId = institutionId1.toString)
+      val req = OnboardingRequest(
+        users = Seq(operator1, operator2),
+        institutionId = institutionId1.toString,
+        contract = OnboardingContract("a", "b")
+      )
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/operators", HttpMethods.POST)
@@ -1012,7 +1025,11 @@ class PartyProcessSpec
         .expects(*, *, *, *, *, *, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(Seq.empty)))
 
-      val req = OnboardingRequest(users = Seq(subdelegate1, subdelegate2), institutionId = "institutionId1")
+      val req = OnboardingRequest(
+        users = Seq(subdelegate1, subdelegate2),
+        institutionId = "institutionId1",
+        contract = OnboardingContract("a", "b")
+      )
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/subdelegates", HttpMethods.POST)
@@ -1163,7 +1180,11 @@ class PartyProcessSpec
         .returning(Future.successful(()))
         .repeat(2)
 
-      val req = OnboardingRequest(users = Seq(subdelegate1, subdelegate2), institutionId = institutionId1.toString)
+      val req = OnboardingRequest(
+        users = Seq(subdelegate1, subdelegate2),
+        institutionId = institutionId1.toString,
+        contract = OnboardingContract("a", "b")
+      )
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/subdelegates", HttpMethods.POST)
@@ -2723,14 +2744,19 @@ class PartyProcessSpec
         .expects(*, *, *, *, *, *)
         .returning(Future.successful(()))
         .repeat(2)
-      (mockPdfCreator.create _).expects(*, *).returning(Future.successful((file, "hash"))).once()
+      (mockFileManager.get _).expects(*).returning(Future.successful(new ByteArrayOutputStream())).once()
+      (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful((file, "hash"))).once()
       (mockPartyManagementService
         .createToken(_: PartyManagementDependency.RelationshipsSeed, _: String)(_: String))
         .expects(*, *, *)
         .returning(Future.successful(PartyManagementDependency.TokenText("token")))
         .once()
 
-      val req = OnboardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
+      val req = OnboardingRequest(
+        users = Seq(manager, delegate),
+        institutionId = "institutionId1",
+        contract = OnboardingContract("a", "b")
+      )
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/legals", HttpMethods.POST)
@@ -2811,7 +2837,11 @@ class PartyProcessSpec
         .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(relationship))))
         .once()
 
-      val req = OnboardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
+      val req = OnboardingRequest(
+        users = Seq(manager, delegate),
+        institutionId = "institutionId1",
+        contract = OnboardingContract("a", "b")
+      )
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/legals", HttpMethods.POST)

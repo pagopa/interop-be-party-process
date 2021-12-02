@@ -45,12 +45,6 @@ object Dependencies {
 
   }
 
-  private[this] object itextpdf {
-    lazy val namespace = "com.itextpdf"
-    lazy val core      = namespace % "itext7-core" % iText7Version
-
-  }
-
   private[this] object openapi4j {
     lazy val namespace          = "org.openapi4j"
     lazy val operationValidator = namespace % "openapi-operation-validator" % openapi4jVersion
@@ -118,31 +112,30 @@ object Dependencies {
       // For making Java 12 happy
       "javax.annotation" % "javax.annotation-api" % "1.3.2" % "compile",
       //
-      akka.actorTyped                     % Compile,
       akka.actor                          % Compile,
-      akka.persistence                    % Compile,
-      akka.stream                         % Compile,
+      akka.actorTyped                     % Compile,
       akka.http                           % Compile,
       akka.httpJson                       % Compile,
       akka.management                     % Compile,
-      openapi4j.operationValidator        % Compile,
+      akka.persistence                    % Compile,
+      akka.slf4j                          % Compile,
+      akka.stream                         % Compile,
+      awssdk.s3                           % Compile,
+      azure.storageBlob                   % Compile,
+      cats.core                           % Compile,
+      courier.mail                        % Compile,
+      kamon.bundle                        % Compile,
+      kamon.prometheus                    % Compile,
+      logback.classic                     % Compile,
       mustache.compiler                   % Compile,
-      pagopa.partyManagementClient        % Compile,
-      pagopa.partyProxyClient             % Compile,
+      openapi4j.operationValidator        % Compile,
       pagopa.attributeRegistryClient      % Compile,
-      pagopa.userRegistryManagementClient % Compile,
       pagopa.commons                      % Compile,
       pagopa.commonsFile                  % Compile,
       pagopa.commonsMail                  % Compile,
-      courier.mail                        % Compile,
-      itextpdf.core                       % Compile,
-      logback.classic                     % Compile,
-      akka.slf4j                          % Compile,
-      kamon.bundle                        % Compile,
-      kamon.prometheus                    % Compile,
-      azure.storageBlob                   % Compile,
-      awssdk.s3                           % Compile,
-      cats.core                           % Compile,
+      pagopa.partyManagementClient        % Compile,
+      pagopa.partyProxyClient             % Compile,
+      pagopa.userRegistryManagementClient % Compile,
       akka.testkit                        % Test,
       scalatest.core                      % Test,
       scalamock.core                      % Test
