@@ -9,6 +9,7 @@ import cats.implicits.toTraverseOps
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.getFutureBearer
+import it.pagopa.pdnd.interop.commons.utils.OpenapiUtils
 import it.pagopa.pdnd.interop.commons.utils.Digester
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions._
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
@@ -488,10 +489,6 @@ class ProcessApiServiceImpl(
     Relationships(filteredRelationships)
   }
 
-  private def parseArrayParameter(param: String): Seq[String] =
-    if (param == "[]") List.empty
-    else param.parseCommaSeparated
-
   /** Code: 200, Message: successful operation, DataType: Seq[RelationshipInfo]
     * Code: 400, Message: Invalid institution id supplied, DataType: Problem
     */
@@ -507,10 +504,10 @@ class ProcessApiServiceImpl(
     contexts: Seq[(String, String)]
   ): Route = {
     logger.info(s"Getting relationship for institution $institutionId and current user")
-    val productsArray     = parseArrayParameter(products)
-    val productRolesArray = parseArrayParameter(productRoles)
-    val rolesArray        = parseArrayParameter(roles)
-    val statesArray       = parseArrayParameter(states)
+    val productsArray     = OpenapiUtils.parseArrayParameters(products)
+    val productRolesArray = OpenapiUtils.parseArrayParameters(productRoles)
+    val rolesArray        = OpenapiUtils.parseArrayParameters(roles)
+    val statesArray       = OpenapiUtils.parseArrayParameters(states)
 
     val result: Future[Seq[RelationshipInfo]] = for {
       bearer          <- getFutureBearer(contexts)
