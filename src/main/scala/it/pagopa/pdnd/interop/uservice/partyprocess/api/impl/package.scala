@@ -3,7 +3,6 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.api
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 import it.pagopa.pdnd.interop.commons.utils.SprayCommonFormats.{fileFormat, offsetDateTimeFormat, uuidFormat}
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.Relationship
 
 package object impl extends DefaultJsonProtocol {
 
@@ -19,20 +18,5 @@ package object impl extends DefaultJsonProtocol {
   implicit val onboardingInfoFormat: RootJsonFormat[OnboardingInfo]         = jsonFormat2(OnboardingInfo)
   implicit val relationshipInfoFormat: RootJsonFormat[RelationshipInfo]     = jsonFormat10(RelationshipInfo)
   implicit val productsFormat: RootJsonFormat[Products]                     = jsonFormat1(Products)
-
-  implicit class RelationshipOps(val relationship: Relationship) extends AnyVal {
-    def verifyProducts(products: List[String]): Boolean = {
-      products.isEmpty || products.contains(relationship.product.id)
-    }
-    def verifyProductRoles(productRoles: List[String]): Boolean = {
-      productRoles.isEmpty || productRoles.contains(relationship.product.role)
-    }
-    def verifyRole(roles: List[String]): Boolean = {
-      roles.isEmpty || roles.contains(relationship.role.toString)
-    }
-    def verifyState(states: List[String]): Boolean = {
-      states.isEmpty || states.contains(relationship.state.toString)
-    }
-  }
 
 }
