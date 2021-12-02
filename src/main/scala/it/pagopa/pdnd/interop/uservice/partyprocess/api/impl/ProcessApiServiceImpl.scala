@@ -9,7 +9,7 @@ import cats.implicits.toTraverseOps
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.getFutureBearer
-import it.pagopa.pdnd.interop.commons.utils.OpenapiUtils
+import it.pagopa.pdnd.interop.commons.utils.OpenapiUtils._
 import it.pagopa.pdnd.interop.commons.utils.Digester
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions._
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
@@ -504,10 +504,10 @@ class ProcessApiServiceImpl(
     contexts: Seq[(String, String)]
   ): Route = {
     logger.info(s"Getting relationship for institution $institutionId and current user")
-    val productsArray     = OpenapiUtils.parseArrayParameters(products)
-    val productRolesArray = OpenapiUtils.parseArrayParameters(productRoles)
-    val rolesArray        = OpenapiUtils.parseArrayParameters(roles)
-    val statesArray       = OpenapiUtils.parseArrayParameters(states)
+    val productsArray     = parseArrayParameters(products)
+    val productRolesArray = parseArrayParameters(productRoles)
+    val rolesArray        = parseArrayParameters(roles)
+    val statesArray       = parseArrayParameters(states)
 
     val result: Future[Seq[RelationshipInfo]] = for {
       bearer          <- getFutureBearer(contexts)
