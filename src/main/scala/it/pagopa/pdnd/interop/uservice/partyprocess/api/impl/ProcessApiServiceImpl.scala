@@ -475,13 +475,11 @@ class ProcessApiServiceImpl(
 
   private def filterFoundRelationshipsByCurrentUser(
     currentUserId: UUID,
+    userAdminRelationships: Relationships,
     institutionIdRelationships: Relationships
   ): Relationships = {
+    val isAdmin: Boolean                     = userAdminRelationships.items.nonEmpty
     val userRelationships: Seq[Relationship] = institutionIdRelationships.items.filter(_.from == currentUserId)
-    val isAdmin: Boolean =
-      userRelationships
-        .map(rl => roleToApi(rl.role))
-        .exists(adminPartyRoles.contains)
 
     val filteredRelationships: Seq[Relationship] =
       if (isAdmin) institutionIdRelationships.items
@@ -520,6 +518,15 @@ class ProcessApiServiceImpl(
       institutionUUID <- institutionId.toFutureUUID
       rolesEnumArray  <- rolesArray.traverse(PartyManagementDependency.PartyRole.fromValue).toFuture
       statesEnumArray <- statesArray.traverse(PartyManagementDependency.RelationshipState.fromValue).toFuture
+      userAdminRelationships <- partyManagementService.retrieveRelationships(
+        from = Some(subjectUUID),
+        to = Some(institutionUUID),
+        roles = adminPartyRoles.map(roleToDependency).toSeq,
+        states =
+          Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
+        products = Seq.empty,
+        productRoles = Seq.empty
+      )(bearer)
       institutionIdRelationships <- partyManagementService.retrieveRelationships(
         from = None,
         to = Some(institutionUUID),
@@ -528,7 +535,11 @@ class ProcessApiServiceImpl(
         products = productsArray,
         productRoles = productRolesArray
       )(bearer)
-      filteredRelationships = filterFoundRelationshipsByCurrentUser(subjectUUID, institutionIdRelationships)
+      filteredRelationships = filterFoundRelationshipsByCurrentUser(
+        subjectUUID,
+        userAdminRelationships,
+        institutionIdRelationships
+      )
       relationships <- relationshipsToRelationshipsResponse(filteredRelationships)(bearer)
     } yield relationships
 
