@@ -89,7 +89,6 @@ class ProcessApiServiceImpl(
   ): Route = {
     val defaultStates =
       List(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING)
-//      List(PartyManagementDependency.RelationshipState.ACTIVE)
 
     val result: Future[OnboardingInfo] = for {
       bearer          <- getFutureBearer(contexts)
