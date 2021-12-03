@@ -28,10 +28,10 @@ trait PartyManagementService {
   def retrieveRelationships(
     from: Option[UUID],
     to: Option[UUID],
-    role: Option[PartyRole],
-    state: Option[RelationshipState],
-    product: Option[String],
-    productRole: Option[String]
+    roles: Seq[PartyRole],
+    states: Seq[RelationshipState],
+    products: Seq[String],
+    productRoles: Seq[String]
   )(bearerToken: String): Future[Relationships]
 
   def getInstitutionRelationships(id: UUID)(bearerToken: String): Future[Relationships]
@@ -42,9 +42,11 @@ trait PartyManagementService {
 
   def createToken(relationshipsSeed: RelationshipsSeed, documentHash: String)(bearerToken: String): Future[TokenText]
 
-  def consumeToken(token: String, fileParts: (FileInfo, File))(bearerToken: String): Future[Unit]
+  def getToken(tokenId: UUID)(bearerToken: String): Future[TokenInfo]
 
-  def invalidateToken(token: String)(bearerToken: String): Future[Unit]
+  def consumeToken(tokenId: UUID, fileParts: (FileInfo, File))(bearerToken: String): Future[Unit]
+
+  def invalidateToken(tokenId: UUID)(bearerToken: String): Future[Unit]
 
   def getRelationshipById(relationshipId: UUID)(bearerToken: String): Future[Relationship]
 
