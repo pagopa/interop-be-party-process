@@ -402,7 +402,7 @@ paths:
       parameters:
         - name: tokenId
           in: path
-          description: the token containing the onboardind information
+          description: the token id containing the onboardind information
           required: true
           schema:
             type: string
@@ -448,7 +448,7 @@ paths:
       parameters:
         - name: tokenId
           in: path
-          description: The token to invalidate
+          description: The token id to invalidate
           required: true
           schema:
             type: string
