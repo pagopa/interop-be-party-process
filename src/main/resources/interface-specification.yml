@@ -390,7 +390,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  '/onboarding/complete/{token}':
+  '/onboarding/complete/{tokenId}':
     post:
       security:
         - bearerAuth: [ ]
@@ -400,7 +400,7 @@ paths:
       description: Return ok
       operationId: confirmOnboarding
       parameters:
-        - name: token
+        - name: tokenId
           in: path
           description: the token containing the onboardind information
           required: true
@@ -446,7 +446,7 @@ paths:
       description: Return ok
       operationId: invalidateOnboarding
       parameters:
-        - name: token
+        - name: tokenId
           in: path
           description: The token to invalidate
           required: true

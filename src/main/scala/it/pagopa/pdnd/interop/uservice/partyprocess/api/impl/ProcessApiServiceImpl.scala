@@ -9,8 +9,8 @@ import cats.implicits.toTraverseOps
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.getFutureBearer
-import it.pagopa.pdnd.interop.commons.utils.OpenapiUtils._
 import it.pagopa.pdnd.interop.commons.utils.Digester
+import it.pagopa.pdnd.interop.commons.utils.OpenapiUtils._
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions._
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
@@ -46,14 +46,12 @@ import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{
   UserSeed => UserRegistryUserSeed
 }
 import org.slf4j.{Logger, LoggerFactory}
-import spray.json._
 
 import java.io.{File, FileOutputStream}
-import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
-import java.util.{Base64, UUID}
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 class ProcessApiServiceImpl(
   partyManagementService: PartyManagementService,
@@ -313,16 +311,16 @@ class ProcessApiServiceImpl(
   /** Code: 200, Message: successful operation
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
-  override def confirmOnboarding(token: String, contract: (FileInfo, File))(implicit
+  override def confirmOnboarding(tokenId: String, contract: (FileInfo, File))(implicit
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     contexts: Seq[(String, String)]
   ): Route = {
 
     val result: Future[Unit] = for {
-      bearer   <- getFutureBearer(contexts)
-      checksum <- calculateCheckSum(token)
-      verified <- verifyChecksum(contract._2, checksum, token)
-      _        <- partyManagementService.consumeToken(verified, contract)(bearer)
+      bearer <- getFutureBearer(contexts)
+      token  <- partyManagementService.getToken(tokenId)(bearer)
+      _      <- verifyChecksum(contract._2, token.checksum)
+      _      <- partyManagementService.consumeToken(token.id.toString, contract)(bearer)
     } yield ()
 
     onComplete(result) {
@@ -338,11 +336,11 @@ class ProcessApiServiceImpl(
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
   override def invalidateOnboarding(
-    token: String
+    tokenId: String
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
     val result: Future[Unit] = for {
       bearer <- getFutureBearer(contexts)
-      result <- partyManagementService.invalidateToken(token)(bearer)
+      result <- partyManagementService.invalidateToken(tokenId)(bearer)
     } yield result
 
     onComplete(result) {
@@ -454,22 +452,10 @@ class ProcessApiServiceImpl(
       _ = logger.info(s"createOrganization ${organization.institutionId}")
     } yield organization
 
-  private def calculateCheckSum(token: String): Future[String] = {
-    Future.fromTry {
-      Try {
-        val decoded: Array[Byte] = Base64.getDecoder.decode(token)
-
-        val jsonTxt: String    = new String(decoded, StandardCharsets.UTF_8)
-        val chk: TokenChecksum = jsonTxt.parseJson.convertTo[TokenChecksum]
-        chk.checksum
-      }
-    }
-  }
-
-  private def verifyChecksum[A](fileToCheck: File, checksum: String, output: A): Future[A] = {
+  private def verifyChecksum[A](fileToCheck: File, checksum: String): Future[Unit] = {
     Future.fromTry(
       Either
-        .cond(Digester.createMD5Hash(fileToCheck) == checksum, output, new RuntimeException("Invalid checksum"))
+        .cond(Digester.createMD5Hash(fileToCheck) == checksum, (), new RuntimeException("Invalid checksum"))
         .toTry
     )
   }
