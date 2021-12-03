@@ -80,23 +80,29 @@ class ProcessApiServiceImpl(
   /** Code: 200, Message: successful operation, DataType: OnboardingInfo
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
-  override def getOnboardingInfo(institutionId: Option[String])(implicit
+  override def getOnboardingInfo(institutionId: Option[String], states: String)(implicit
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerOnboardingInfo: ToEntityMarshaller[OnboardingInfo],
     contexts: Seq[(String, String)]
   ): Route = {
+    val defaultStates =
+      List(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING)
 
     val result: Future[OnboardingInfo] = for {
       bearer          <- getFutureBearer(contexts)
       subjectUUID     <- getCallerSubjectIdentifier(bearer)
       institutionUUID <- institutionId.traverse(_.toFutureUUID)
-      user            <- userRegistryManagementService.getUserById(subjectUUID)(bearer)
+      statesParamArray <- parseArrayParameters(states)
+        .traverse(PartyManagementDependency.RelationshipState.fromValue)
+        .toFuture
+      statesArray = if (statesParamArray.isEmpty) defaultStates else statesParamArray
+      user <- userRegistryManagementService.getUserById(subjectUUID)(bearer)
       personInfo = PersonInfo(user.name, user.surname, user.externalId)
       relationships <- partyManagementService.retrieveRelationships(
         from = Some(subjectUUID),
         to = institutionUUID,
         roles = Seq.empty,
-        states = Seq(PartyManagementDependency.RelationshipState.ACTIVE),
+        states = statesArray,
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)

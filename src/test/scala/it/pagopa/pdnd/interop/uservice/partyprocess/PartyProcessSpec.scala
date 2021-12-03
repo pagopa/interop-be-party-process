@@ -147,7 +147,7 @@ class PartyProcessSpec
           to = institutionId2,
           role = PartyManagementDependency.PartyRole.DELEGATE,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          state = PartyManagementDependency.RelationshipState.PENDING,
           createdAt = relationshipTimestamp,
           updatedAt = None
         )
@@ -237,7 +237,7 @@ class PartyProcessSpec
           Some(UUID.fromString(mockSubjectUUID)),
           None,
           Seq.empty,
-          Seq(PartyManagementDependency.RelationshipState.ACTIVE),
+          Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
           Seq.empty,
           Seq.empty,
           *
@@ -474,7 +474,7 @@ class PartyProcessSpec
           Some(UUID.fromString(mockSubjectUUID)),
           Some(institutionId1),
           Seq.empty,
-          Seq(PartyManagementDependency.RelationshipState.ACTIVE),
+          Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
           Seq.empty,
           Seq.empty,
           *
@@ -548,6 +548,187 @@ class PartyProcessSpec
           .singleRequest(
             HttpRequest(
               uri = s"$url/onboarding/info?institutionId=$institutionId1",
+              method = HttpMethods.GET,
+              headers = authorization
+            )
+          )
+          .futureValue
+
+      val body = Unmarshal(response.entity).to[OnboardingInfo].futureValue
+
+      response.status mustBe StatusCodes.OK
+      body mustBe expected
+
+    }
+
+    "retrieve an onboarding info with states filter" in {
+      val taxCode1       = "CF1"
+      val institutionId1 = UUID.randomUUID()
+      val personPartyId1 = "af80fac0-2775-4646-8fcf-28e083751800"
+      val orgPartyId1    = "af80fac0-2775-4646-8fcf-28e083751801"
+      val attributeId1   = UUID.randomUUID()
+      val attributeId2   = UUID.randomUUID()
+      val attributeId3   = UUID.randomUUID()
+
+      val person1 = UserRegistryUser(
+        id = UUID.fromString(personPartyId1),
+        externalId = "CF1",
+        name = "Mario",
+        surname = "Rossi",
+        certification = CertificationEnumsNone,
+        extras = UserRegistryUserExtras(email = None, birthDate = None)
+      )
+
+      val relationship1 =
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = person1.id,
+          to = institutionId1,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product,
+          state = PartyManagementDependency.RelationshipState.SUSPENDED,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        )
+
+      val relationships = PartyManagementDependency.Relationships(items = Seq(relationship1))
+
+      val organization1 = PartyManagementDependency.Organization(
+        institutionId = institutionId1.toString,
+        description = "org1",
+        digitalAddress = "digitalAddress1",
+        id = UUID.fromString(orgPartyId1),
+        attributes = Seq(attributeId1.toString, attributeId2.toString, attributeId3.toString),
+        taxCode = "123"
+      )
+
+      val expected = OnboardingInfo(
+        person = PersonInfo(name = person1.name, surname = person1.surname, taxCode = person1.externalId),
+        institutions = Seq(
+          OnboardingData(
+            institutionId = organization1.institutionId,
+            description = organization1.description,
+            taxCode = organization1.taxCode,
+            digitalAddress = organization1.digitalAddress,
+            state = relationshipStateToApi(relationship1.state),
+            role = roleToApi(relationship1.role),
+            productInfo = productInfo,
+            attributes = Seq(
+              Attribute(attributeId1.toString, "name1", "description1"),
+              Attribute(attributeId2.toString, "name2", "description2"),
+              Attribute(attributeId3.toString, "name3", "description3")
+            )
+          )
+        )
+      )
+
+      val mockSubjectUUID = UUID.randomUUID().toString
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(UUID.fromString(mockSubjectUUID), *)
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = UUID.fromString(mockSubjectUUID),
+              externalId = taxCode1,
+              name = "Mario",
+              surname = "Rossi",
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(email = Some("super@mario.it"), birthDate = None)
+            )
+          )
+        )
+        .once()
+
+      (mockPartyManagementService
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          Some(UUID.fromString(mockSubjectUUID)),
+          None,
+          Seq.empty,
+          Seq(PartyManagementDependency.RelationshipState.SUSPENDED),
+          Seq.empty,
+          Seq.empty,
+          *
+        )
+        .returning(Future.successful(relationships))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveOrganization(_: UUID)(_: String))
+        .expects(institutionId1, *)
+        .returning(Future.successful(organization1))
+        .once()
+
+      (mockAttributeRegistryService
+        .getAttribute(_: UUID)(_: String))
+        .expects(attributeId1, *)
+        .returning(
+          Future.successful(
+            ClientAttribute(
+              id = attributeId1.toString,
+              name = "name1",
+              description = "description1",
+              code = None,
+              certified = true,
+              origin = None,
+              creationTime = OffsetDateTime.now()
+            )
+          )
+        )
+        .once()
+
+      (mockAttributeRegistryService
+        .getAttribute(_: UUID)(_: String))
+        .expects(attributeId2, *)
+        .returning(
+          Future.successful(
+            ClientAttribute(
+              id = attributeId2.toString,
+              name = "name2",
+              description = "description2",
+              code = None,
+              certified = true,
+              origin = None,
+              creationTime = OffsetDateTime.now()
+            )
+          )
+        )
+        .once()
+
+      (mockAttributeRegistryService
+        .getAttribute(_: UUID)(_: String))
+        .expects(attributeId3, *)
+        .returning(
+          Future.successful(
+            ClientAttribute(
+              id = attributeId3.toString,
+              name = "name3",
+              description = "description3",
+              code = None,
+              certified = true,
+              origin = None,
+              creationTime = OffsetDateTime.now()
+            )
+          )
+        )
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(mockSubjectUUID)))
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/onboarding/info?states=SUSPENDED",
               method = HttpMethods.GET,
               headers = authorization
             )
