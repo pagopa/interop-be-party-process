@@ -119,24 +119,24 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
     invoke(request, "Token creation")
   }
 
-  def getToken(tokenId: String)(bearerToken: String): Future[TokenInfo] = {
+  def getToken(tokenId: UUID)(bearerToken: String): Future[TokenInfo] = {
     logger.info(s"Retrieving token for $tokenId")
 
     val request = api.getToken(tokenId)(BearerToken(bearerToken))
     invoke(request, "Token retrieve")
   }
 
-  override def consumeToken(token: String, fileParts: (FileInfo, File))(bearerToken: String): Future[Unit] = {
-    logger.info(s"Consuming token $token")
+  override def consumeToken(tokenId: UUID, fileParts: (FileInfo, File))(bearerToken: String): Future[Unit] = {
+    logger.info(s"Consuming token $tokenId")
 
-    val request = api.consumeToken(token, fileParts._2)(BearerToken(bearerToken))
+    val request = api.consumeToken(tokenId, fileParts._2)(BearerToken(bearerToken))
     invoke(request, "Token consume")
   }
 
-  override def invalidateToken(token: String)(bearerToken: String): Future[Unit] = {
-    logger.info(s"Invalidating token $token")
+  override def invalidateToken(tokenId: UUID)(bearerToken: String): Future[Unit] = {
+    logger.info(s"Invalidating token $tokenId")
 
-    val request = api.invalidateToken(token)(BearerToken(bearerToken))
+    val request = api.invalidateToken(tokenId)(BearerToken(bearerToken))
     invoke(request, "Token invalidation")
   }
 

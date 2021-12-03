@@ -317,10 +317,11 @@ class ProcessApiServiceImpl(
   ): Route = {
 
     val result: Future[Unit] = for {
-      bearer <- getFutureBearer(contexts)
-      token  <- partyManagementService.getToken(tokenId)(bearer)
-      _      <- verifyChecksum(contract._2, token.checksum)
-      _      <- partyManagementService.consumeToken(token.id.toString, contract)(bearer)
+      bearer      <- getFutureBearer(contexts)
+      tokenIdUUID <- tokenId.toFutureUUID
+      token       <- partyManagementService.getToken(tokenIdUUID)(bearer)
+      _           <- verifyChecksum(contract._2, token.checksum)
+      _           <- partyManagementService.consumeToken(token.id, contract)(bearer)
     } yield ()
 
     onComplete(result) {
@@ -339,8 +340,9 @@ class ProcessApiServiceImpl(
     tokenId: String
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
     val result: Future[Unit] = for {
-      bearer <- getFutureBearer(contexts)
-      result <- partyManagementService.invalidateToken(tokenId)(bearer)
+      bearer      <- getFutureBearer(contexts)
+      tokenIdUUID <- tokenId.toFutureUUID
+      result      <- partyManagementService.invalidateToken(tokenIdUUID)(bearer)
     } yield result
 
     onComplete(result) {

@@ -42,11 +42,11 @@ trait PartyManagementService {
 
   def createToken(relationshipsSeed: RelationshipsSeed, documentHash: String)(bearerToken: String): Future[TokenText]
 
-  def getToken(tokenId: String)(bearerToken: String): Future[TokenInfo]
+  def getToken(tokenId: UUID)(bearerToken: String): Future[TokenInfo]
 
-  def consumeToken(tokenId: String, fileParts: (FileInfo, File))(bearerToken: String): Future[Unit]
+  def consumeToken(tokenId: UUID, fileParts: (FileInfo, File))(bearerToken: String): Future[Unit]
 
-  def invalidateToken(tokenId: String)(bearerToken: String): Future[Unit]
+  def invalidateToken(tokenId: UUID)(bearerToken: String): Future[Unit]
 
   def getRelationshipById(relationshipId: UUID)(bearerToken: String): Future[Relationship]
 
