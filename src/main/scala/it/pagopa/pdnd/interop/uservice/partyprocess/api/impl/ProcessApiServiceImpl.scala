@@ -49,10 +49,11 @@ import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.{File, FileOutputStream}
+import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 class ProcessApiServiceImpl(
   partyManagementService: PartyManagementService,
@@ -172,7 +173,12 @@ class ProcessApiServiceImpl(
       })
       contractTemplate <- getFileAsString(onboardingRequest.contract.version)
       pdf              <- pdfCreator.createContract(contractTemplate, validUsers, organization)
-      token            <- partyManagementService.createToken(relationships, pdf._2)(bearer)
+      token <- partyManagementService.createToken(
+        relationships,
+        pdf._2,
+        onboardingRequest.contract.version,
+        onboardingRequest.contract.path
+      )(bearer)
       _ <- sendOnboardingMail(
         ApplicationConfiguration.destinationMails,
         pdf._1,
@@ -225,7 +231,12 @@ class ProcessApiServiceImpl(
       })
       contractTemplate <- getFileAsString(onboardingRequest.contract.version)
       pdf              <- pdfCreator.createContract(contractTemplate, validUsers, organization)
-      token            <- partyManagementService.createToken(relationships, pdf._2)(bearer)
+      token <- partyManagementService.createToken(
+        relationships,
+        pdf._2,
+        onboardingRequest.contract.version,
+        onboardingRequest.contract.path
+      )(bearer)
 
       _ <- sendOnboardingMail(
         ApplicationConfiguration.destinationMails,
