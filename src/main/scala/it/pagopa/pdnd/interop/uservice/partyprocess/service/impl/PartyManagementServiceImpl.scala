@@ -113,23 +113,30 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
     bearerToken: String
   ): Future[TokenText] = {
     logger.info(s"Creating token for [${relationshipsSeed.items.map(_.toString).mkString(",")}]")
-    val tokenSeed: TokenSeed = TokenSeed(seed = UUID.randomUUID().toString, relationshipsSeed, documentHash)
+    val tokenSeed: TokenSeed = TokenSeed(id = UUID.randomUUID().toString, relationshipsSeed, documentHash)
 
     val request = api.createToken(tokenSeed)(BearerToken(bearerToken))
     invoke(request, "Token creation")
   }
 
-  override def consumeToken(token: String, fileParts: (FileInfo, File))(bearerToken: String): Future[Unit] = {
-    logger.info(s"Consuming token $token")
+  def getToken(tokenId: UUID)(bearerToken: String): Future[TokenInfo] = {
+    logger.info(s"Retrieving token for $tokenId")
 
-    val request = api.consumeToken(token, fileParts._2)(BearerToken(bearerToken))
+    val request = api.getToken(tokenId)(BearerToken(bearerToken))
+    invoke(request, "Token retrieve")
+  }
+
+  override def consumeToken(tokenId: UUID, fileParts: (FileInfo, File))(bearerToken: String): Future[Unit] = {
+    logger.info(s"Consuming token $tokenId")
+
+    val request = api.consumeToken(tokenId, fileParts._2)(BearerToken(bearerToken))
     invoke(request, "Token consume")
   }
 
-  override def invalidateToken(token: String)(bearerToken: String): Future[Unit] = {
-    logger.info(s"Invalidating token $token")
+  override def invalidateToken(tokenId: UUID)(bearerToken: String): Future[Unit] = {
+    logger.info(s"Invalidating token $tokenId")
 
-    val request = api.invalidateToken(token)(BearerToken(bearerToken))
+    val request = api.invalidateToken(tokenId)(BearerToken(bearerToken))
     invoke(request, "Token invalidation")
   }
 

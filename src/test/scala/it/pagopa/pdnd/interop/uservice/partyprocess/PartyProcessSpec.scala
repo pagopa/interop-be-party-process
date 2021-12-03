@@ -12,7 +12,7 @@ import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.
   AttributesResponse,
   Attribute => ClientAttribute
 }
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{OrganizationSeed, RelationshipProduct}
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{OrganizationSeed, RelationshipProduct, TokenInfo}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{relationshipStateToApi, roleToApi}
@@ -1174,14 +1174,19 @@ class PartyProcessSpec
 
     "confirm token" in {
 
-      val token: String =
-        "eyJjaGVja3N1bSI6IjZkZGVlODIwZDA2MzgzMTI3ZWYwMjlmNTcxMjg1MzM5IiwiaWQiOiI0YjJmY2Y3My1iMmI0LTQ4N2QtYjk2MC1jM2MwNGQ5NDc3YzItM2RiZDk0ZDUtMzY0MS00MWI0LWJlMGItZjJmZjZjODU4Zjg5LU1hbmFnZXIiLCJsZWdhbHMiOlt7ImZyb20iOiI0NjAwNzg4Mi0wMDNlLTRlM2EtODMzMC1iNGYyYjA0NGJmNGUiLCJyb2xlIjoiRGVsZWdhdGUiLCJ0byI6IjNkYmQ5NGQ1LTM2NDEtNDFiNC1iZTBiLWYyZmY2Yzg1OGY4OSJ9LHsiZnJvbSI6IjRiMmZjZjczLWIyYjQtNDg3ZC1iOTYwLWMzYzA0ZDk0NzdjMiIsInJvbGUiOiJNYW5hZ2VyIiwidG8iOiIzZGJkOTRkNS0zNjQxLTQxYjQtYmUwYi1mMmZmNmM4NThmODkifV0sInNlZWQiOiJkMmE2ZWYyNy1hZTYwLTRiM2QtOGE5ZS1iMDIwMzViZDUyYzkiLCJ2YWxpZGl0eSI6IjIwMjEtMDctMTNUMTU6MTY6NDguNTU1NDM1KzAyOjAwIn0="
+      val tokenId: UUID = UUID.randomUUID()
 
-      val path = Paths.get("src/test/resources/contract-test-01.pdf")
+      val token: TokenInfo = TokenInfo(id = tokenId, checksum = "6ddee820d06383127ef029f571285339")
+      val path             = Paths.get("src/test/resources/contract-test-01.pdf")
 
       (mockPartyManagementService
-        .consumeToken(_: String, _: (FileInfo, File))(_: String))
-        .expects(token, *, *)
+        .getToken(_: UUID)(_: String))
+        .expects(tokenId, *)
+        .returning(Future.successful(token))
+
+      (mockPartyManagementService
+        .consumeToken(_: UUID, _: (FileInfo, File))(_: String))
+        .expects(tokenId, *, *)
         .returning(Future.successful(()))
 
       val formData =
@@ -1191,7 +1196,7 @@ class PartyProcessSpec
         Http()
           .singleRequest(
             HttpRequest(
-              uri = s"$url/onboarding/complete/$token",
+              uri = s"$url/onboarding/complete/${tokenId.toString}",
               method = HttpMethods.POST,
               entity = formData.toEntity,
               headers = authorization
@@ -1205,18 +1210,21 @@ class PartyProcessSpec
 
     "delete token" in {
 
-      val token: String =
-        "eyJjaGVja3N1bSI6IjZkZGVlODIwZDA2MzgzMTI3ZWYwMjlmNTcxMjg1MzM5IiwiaWQiOiI0YjJmY2Y3My1iMmI0LTQ4N2QtYjk2MC1jM2MwNGQ5NDc3YzItM2RiZDk0ZDUtMzY0MS00MWI0LWJlMGItZjJmZjZjODU4Zjg5LU1hbmFnZXIiLCJsZWdhbHMiOlt7ImZyb20iOiI0NjAwNzg4Mi0wMDNlLTRlM2EtODMzMC1iNGYyYjA0NGJmNGUiLCJyb2xlIjoiRGVsZWdhdGUiLCJ0byI6IjNkYmQ5NGQ1LTM2NDEtNDFiNC1iZTBiLWYyZmY2Yzg1OGY4OSJ9LHsiZnJvbSI6IjRiMmZjZjczLWIyYjQtNDg3ZC1iOTYwLWMzYzA0ZDk0NzdjMiIsInJvbGUiOiJNYW5hZ2VyIiwidG8iOiIzZGJkOTRkNS0zNjQxLTQxYjQtYmUwYi1mMmZmNmM4NThmODkifV0sInNlZWQiOiJkMmE2ZWYyNy1hZTYwLTRiM2QtOGE5ZS1iMDIwMzViZDUyYzkiLCJ2YWxpZGl0eSI6IjIwMjEtMDctMTNUMTU6MTY6NDguNTU1NDM1KzAyOjAwIn0="
+      val tokenId: UUID = UUID.randomUUID()
 
       (mockPartyManagementService
-        .invalidateToken(_: String)(_: String))
-        .expects(token, *)
+        .invalidateToken(_: UUID)(_: String))
+        .expects(tokenId, *)
         .returning(Future.successful(()))
 
       val response =
         Http()
           .singleRequest(
-            HttpRequest(uri = s"$url/onboarding/complete/$token", method = HttpMethods.DELETE, headers = authorization)
+            HttpRequest(
+              uri = s"$url/onboarding/complete/${tokenId.toString}",
+              method = HttpMethods.DELETE,
+              headers = authorization
+            )
           )
           .futureValue
 
