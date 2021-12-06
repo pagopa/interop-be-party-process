@@ -42,12 +42,12 @@ object Dependencies {
   private[this] object europa {
     lazy val namespace = "eu.europa.ec.joinup.sd-dss"
 
-    lazy val dssPades              = namespace % "dss-pades"                % "5.9"
-    lazy val dssPadesOpenpdf       = namespace % "dss-pades-openpdf"        % "5.9"
-    lazy val dssCades              = namespace % "dss-cades"                % "5.9"
-    lazy val dssUtilsApacheCommons = namespace % "dss-utils-apache-commons" % "5.9"
-    lazy val dssService            = namespace % "dss-service"              % "5.9"
-    lazy val dssTlsValidation      = namespace % "dss-tsl-validation"       % "5.9"
+    lazy val dssPades              = namespace % "dss-pades"                % dssVersion
+    lazy val dssPadesPdfbox        = namespace % "dss-pades-pdfbox"         % dssVersion
+    lazy val dssCades              = namespace % "dss-cades"                % dssVersion
+    lazy val dssUtilsApacheCommons = namespace % "dss-utils-apache-commons" % dssVersion
+    lazy val dssService            = namespace % "dss-service"              % dssVersion
+    lazy val dssTlsValidation      = namespace % "dss-tsl-validation"       % dssVersion
 
   }
 
@@ -138,7 +138,7 @@ object Dependencies {
       courier.mail                        % Compile,
       europa.dssCades                     % Compile,
       europa.dssPades                     % Compile,
-      europa.dssPadesOpenpdf              % Compile,
+      europa.dssPadesPdfbox               % Compile,
       europa.dssUtilsApacheCommons        % Compile,
       europa.dssService                   % Compile,
       europa.dssTlsValidation             % Compile,

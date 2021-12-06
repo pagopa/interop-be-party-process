@@ -24,19 +24,25 @@ import eu.europa.esig.dss.tsl.function.OfficialJournalSchemeInformationURI
 import eu.europa.esig.dss.tsl.job.TLValidationJob
 import eu.europa.esig.dss.tsl.source.LOTLSource
 import eu.europa.esig.dss.tsl.sync.AcceptAllStrategy
-import eu.europa.esig.dss.validation.CommonCertificateVerifier
+import eu.europa.esig.dss.validation.reports.Reports
+import eu.europa.esig.dss.validation.{CommonCertificateVerifier, SignedDocumentValidator}
+import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration
 
 import java.io.File
 import java.util
 import scala.concurrent.Future
 
-trait SignatureValidator {
-  def validate(file: File): Future[String]
+trait SignatureService {
+  def createDigest(file: File): Future[String]
+  def createDocumentValidator(bytes: Array[Byte]): Future[SignedDocumentValidator]
+  def verifyDigest(documentValidator: SignedDocumentValidator, digest: String): Future[Unit]
+  def verifySignature(documentValidator: SignedDocumentValidator): Future[Reports]
+  def extractTaxCode(reports: Reports): Future[String]
 }
 
-object SignatureValidator {
-  private final val LOTL_URL = "https://ec.europa.eu/tools/lotl/eu-lotl.xml"
-  private final val OJ_URL   = "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv:OJ.C_.2019.276.01.0001.01.ENG"
+object SignatureService {
+  private final val LOTL_URL = ApplicationConfiguration.lotlUrl
+  private final val OJ_URL   = ApplicationConfiguration.ojUrl
 
   final val certificateVerifier: CommonCertificateVerifier = new CommonCertificateVerifier
 

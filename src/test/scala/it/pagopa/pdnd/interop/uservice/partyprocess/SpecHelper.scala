@@ -1,5 +1,7 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess
 
+import eu.europa.esig.dss.validation.SignedDocumentValidator
+import eu.europa.esig.dss.validation.reports.Reports
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.ProcessApiMarshallerImpl
@@ -27,6 +29,9 @@ trait SpecHelper { self: MockFactory =>
   val mockMailer: MailEngine                                 = MockMailEngine
   val mockPdfCreator: PDFCreator                             = mock[PDFCreator]
   val mockFileManager: FileManager                           = mock[FileManager]
+  val mockSignatureService: SignatureService                 = mock[SignatureService]
+  val mockReports: Reports                                   = mock[Reports]
+  val mockSignedDocumentValidator: SignedDocumentValidator   = mock[SignedDocumentValidator]
   val mockMailTemplate: PersistedTemplate                    = PersistedTemplate("mock", "mock")
 
   def loadEnvVars() = {

@@ -7,6 +7,8 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, FileInfo, SecurityDirectives}
 import akka.http.scaladsl.unmarshalling.Unmarshal
+import eu.europa.esig.dss.validation.SignedDocumentValidator
+import eu.europa.esig.dss.validation.reports.Reports
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.Authenticator
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{
   AttributesResponse,
@@ -79,6 +81,7 @@ class PartyProcessSpec
         mockUserRegistryService,
         mockPdfCreator,
         mockFileManager,
+        mockSignatureService,
         mockMailer,
         mockMailTemplate
       ),
@@ -826,6 +829,12 @@ class PartyProcessSpec
           productRole = "admin"
         )
 
+      (mockSignatureService
+        .createDigest(_: File))
+        .expects(*)
+        .returning(Future.successful("hash"))
+        .once()
+
       (mockPartyRegistryService
         .getInstitution(_: String)(_: String))
         .expects(*, *)
@@ -915,7 +924,7 @@ class PartyProcessSpec
         .returning(Future.successful(attr1))
         .once()
       (mockFileManager.get _).expects(*).returning(Future.successful(new ByteArrayOutputStream())).once()
-      (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful((file, "hash"))).once()
+      (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful(file)).once()
       (mockPartyManagementService
         .createToken(_: PartyManagementDependency.RelationshipsSeed, _: String, _: String, _: String)(_: String))
         .expects(*, *, *, *, *)
@@ -1378,8 +1387,32 @@ class PartyProcessSpec
 
       val tokenId: UUID = UUID.randomUUID()
 
-      val token: TokenInfo = TokenInfo(id = tokenId, checksum = "6ddee820d06383127ef029f571285339")
+      val token: TokenInfo = TokenInfo(id = tokenId, checksum = "6ddee820d06383127ef029f571285339", legals = Seq.empty)
       val path             = Paths.get("src/test/resources/contract-test-01.pdf")
+
+      (mockSignatureService
+        .createDocumentValidator(_: Array[Byte]))
+        .expects(*)
+        .returning(Future.successful(mockSignedDocumentValidator))
+        .once()
+
+      (mockSignatureService
+        .verifyDigest(_: SignedDocumentValidator, _: String))
+        .expects(*, *)
+        .returning(Future.successful(()))
+        .once()
+
+      (mockSignatureService
+        .verifySignature(_: SignedDocumentValidator))
+        .expects(*)
+        .returning(Future.successful(mockReports))
+        .once()
+
+      (mockSignatureService
+        .extractTaxCode(_: Reports))
+        .expects(*)
+        .returning(Future.successful("TINIT-TAXCODE"))
+        .once()
 
       (mockPartyManagementService
         .getToken(_: UUID)(_: String))
@@ -2971,7 +3004,7 @@ class PartyProcessSpec
         .returning(Future.successful(()))
         .repeat(2)
       (mockFileManager.get _).expects(*).returning(Future.successful(new ByteArrayOutputStream())).once()
-      (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful((file, "hash"))).once()
+      (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful(file)).once()
       (mockPartyManagementService
         .createToken(_: PartyManagementDependency.RelationshipsSeed, _: String, _: String, _: String)(_: String))
         .expects(*, *, *, *, *)
