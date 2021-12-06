@@ -7,7 +7,10 @@ object Versions {
   lazy val azureStorageBlobVersion = "12.14.1"
   lazy val catsVersion             = "2.6.1"
   lazy val courierVersion          = "3.0.1"
+<<<<<<< HEAD
   lazy val dssVersion              = "5.9"
+=======
+>>>>>>> upgradeClients
   lazy val jacksonVersion          = "2.11.4"
   lazy val json4sVersion           = "4.0.3"
   lazy val kamonVersion            = "2.2.3"

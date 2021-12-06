@@ -59,7 +59,7 @@ trait AttributeRegistryDependency {
 }
 
 trait UserRegistryManagementDependency {
-  implicit val apiKeyValue: ApiKeyValue = ApiKeyValue(ApplicationConfiguration.userRegistryApiKey)
+  implicit val apiKey: ApiKeyValue = ApiKeyValue(ApplicationConfiguration.userRegistryApiKey)
   final val userRegistryManagementService: UserRegistryManagementService =
     UserRegistryManagementServiceImpl(
       UserRegistryManagementInvoker(),

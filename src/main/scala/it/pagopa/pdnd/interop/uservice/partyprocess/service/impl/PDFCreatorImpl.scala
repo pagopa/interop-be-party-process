@@ -1,6 +1,8 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
 import it.pagopa.pdnd.interop.commons.files.service.PDFManager
+import it.pagopa.pdnd.interop.commons.utils.Digester
+import it.pagopa.pdnd.interop.commons.utils.TypeConversions.OptionOps
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.Organization
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.{PartyRole, User}
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.PDFCreator
@@ -14,13 +16,14 @@ import scala.util.Try
 
 object PDFCreatorImpl extends PDFCreator with PDFManager {
 
-  def createContract(contractTemplate: String, users: Seq[User], organization: Organization): Future[File] =
+  def createContract(contractTemplate: String, users: Seq[User], organization: Organization): Future[(File, String)] =
     Future.fromTry {
       for {
         file <- createTempFile
         data <- setupData(users, organization)
         pdf  <- getPDFAsFile(file.toPath, contractTemplate, data)
-      } yield pdf
+        hash = Digester.createMD5Hash(file)
+      } yield (pdf, hash)
 
     }
 
@@ -31,9 +34,10 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
     }
   }
 
-  private def setupData(users: Seq[User], organization: Organization): Try[Map[String, String]] = Try {
-    val manager = users.find(u => u.role == PartyRole.MANAGER).get
-    Map(
+  private def setupData(users: Seq[User], organization: Organization): Try[Map[String, String]] = {
+    for {
+      manager <- users.find(u => u.role == PartyRole.MANAGER).toTry("Manager not found")
+    } yield Map(
       "institutionName" -> organization.description,
       "institutionMail" -> organization.digitalAddress,
       "manager"         -> managerToText(manager),

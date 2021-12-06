@@ -924,7 +924,7 @@ class PartyProcessSpec
         .returning(Future.successful(attr1))
         .once()
       (mockFileManager.get _).expects(*).returning(Future.successful(new ByteArrayOutputStream())).once()
-      (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful(file)).once()
+      (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful((file, "hash"))).once()
       (mockPartyManagementService
         .createToken(_: PartyManagementDependency.RelationshipsSeed, _: String, _: String, _: String)(_: String))
         .expects(*, *, *, *, *)
@@ -3004,7 +3004,7 @@ class PartyProcessSpec
         .returning(Future.successful(()))
         .repeat(2)
       (mockFileManager.get _).expects(*).returning(Future.successful(new ByteArrayOutputStream())).once()
-      (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful(file)).once()
+      (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful((file, "hash"))).once()
       (mockPartyManagementService
         .createToken(_: PartyManagementDependency.RelationshipsSeed, _: String, _: String, _: String)(_: String))
         .expects(*, *, *, *, *)
