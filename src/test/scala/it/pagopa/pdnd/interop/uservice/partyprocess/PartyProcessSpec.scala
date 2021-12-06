@@ -14,7 +14,12 @@ import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.
   AttributesResponse,
   Attribute => ClientAttribute
 }
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{OrganizationSeed, RelationshipProduct, TokenInfo}
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
+  OrganizationSeed,
+  RelationshipBinding,
+  RelationshipProduct,
+  TokenInfo
+}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{relationshipStateToApi, roleToApi}
@@ -1385,10 +1390,24 @@ class PartyProcessSpec
 
     "confirm token" in {
 
-      val tokenId: UUID = UUID.randomUUID()
+      val tokenId: UUID                = UUID.randomUUID()
+      val partyIdManager: UUID         = UUID.randomUUID()
+      val relationshipIdManager: UUID  = UUID.randomUUID()
+      val managerTaxCode: String       = "TINIT-MANAGER"
+      val partyIdDelegate: UUID        = UUID.randomUUID()
+      val relationshipIdDelegate: UUID = UUID.randomUUID()
+      val delegateTaxCode: String      = "TINIT-DELEGATE"
 
-      val token: TokenInfo = TokenInfo(id = tokenId, checksum = "6ddee820d06383127ef029f571285339", legals = Seq.empty)
-      val path             = Paths.get("src/test/resources/contract-test-01.pdf")
+      val token: TokenInfo =
+        TokenInfo(
+          id = tokenId,
+          checksum = "6ddee820d06383127ef029f571285339",
+          legals = Seq(
+            RelationshipBinding(partyId = partyIdManager, relationshipId = relationshipIdManager),
+            RelationshipBinding(partyId = partyIdDelegate, relationshipId = relationshipIdDelegate)
+          )
+        )
+      val path = Paths.get("src/test/resources/contract-test-01.pdf")
 
       (mockSignatureService
         .createDocumentValidator(_: Array[Byte]))
@@ -1411,13 +1430,45 @@ class PartyProcessSpec
       (mockSignatureService
         .extractTaxCode(_: Reports))
         .expects(*)
-        .returning(Future.successful("TINIT-TAXCODE"))
+        .returning(Future.successful(managerTaxCode))
         .once()
 
       (mockPartyManagementService
         .getToken(_: UUID)(_: String))
         .expects(tokenId, *)
         .returning(Future.successful(token))
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(partyIdManager, *)
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = partyIdManager,
+              externalId = managerTaxCode,
+              name = "",
+              surname = "",
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(None, None)
+            )
+          )
+        )
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(partyIdDelegate, *)
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = partyIdDelegate,
+              externalId = delegateTaxCode,
+              name = "",
+              surname = "",
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(None, None)
+            )
+          )
+        )
 
       (mockPartyManagementService
         .consumeToken(_: UUID, _: (FileInfo, File))(_: String))
@@ -2915,6 +2966,12 @@ class PartyProcessSpec
           updatedAt = None
         )
 
+      (mockSignatureService
+        .createDigest(_: File))
+        .expects(*)
+        .returning(Future.successful("hash"))
+        .once()
+
       (mockPartyManagementService
         .retrieveOrganizationByExternalId(_: String)(_: String))
         .expects(*, *)
@@ -3076,12 +3133,6 @@ class PartyProcessSpec
           createdAt = relationshipTimestamp,
           updatedAt = None
         )
-
-      (mockSignatureService
-        .createDigest(_: File))
-        .expects(*)
-        .returning(Future.successful("hash"))
-        .once()
 
       (mockPartyManagementService
         .retrieveOrganizationByExternalId(_: String)(_: String))
