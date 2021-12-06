@@ -1378,7 +1378,7 @@ class PartyProcessSpec
 
       val tokenId: UUID = UUID.randomUUID()
 
-      val token: TokenInfo = TokenInfo(id = tokenId, checksum = "6ddee820d06383127ef029f571285339")
+      val token: TokenInfo = TokenInfo(id = tokenId, checksum = "6ddee820d06383127ef029f571285339", legals = Seq.empty)
       val path             = Paths.get("src/test/resources/contract-test-01.pdf")
 
       (mockPartyManagementService
