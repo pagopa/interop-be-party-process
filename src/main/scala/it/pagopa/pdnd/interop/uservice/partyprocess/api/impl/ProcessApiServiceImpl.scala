@@ -10,6 +10,7 @@ import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.getFutureBearer
 import it.pagopa.pdnd.interop.commons.utils.Digester
+import it.pagopa.pdnd.interop.commons.utils.TypeConversions.{OptionOps, StringOps, TryOps}
 import it.pagopa.pdnd.interop.commons.utils.OpenapiUtils._
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions._
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
@@ -48,10 +49,11 @@ import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.{File, FileOutputStream}
+import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 class ProcessApiServiceImpl(
   partyManagementService: PartyManagementService,
@@ -169,8 +171,14 @@ class ProcessApiServiceImpl(
       relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, product, productRole) =>
         createRelationship(organization.id, person.id, roleToDependency(role), product, productRole)
       })
-      pdf   <- pdfCreator.create(validUsers, organization)
-      token <- partyManagementService.createToken(relationships, pdf._2)(bearer)
+      contractTemplate <- getFileAsString(onboardingRequest.contract.version)
+      pdf              <- pdfCreator.createContract(contractTemplate, validUsers, organization)
+      token <- partyManagementService.createToken(
+        relationships,
+        pdf._2,
+        onboardingRequest.contract.version,
+        onboardingRequest.contract.path
+      )(bearer)
       _ <- sendOnboardingMail(
         ApplicationConfiguration.destinationMails,
         pdf._1,
@@ -221,8 +229,15 @@ class ProcessApiServiceImpl(
       relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, products, productRole) =>
         createRelationship(organization.id, person.id, roleToDependency(role), products, productRole)
       })
-      pdf   <- pdfCreator.create(validUsers, organization)
-      token <- partyManagementService.createToken(relationships, pdf._2)(bearer)
+      contractTemplate <- getFileAsString(onboardingRequest.contract.version)
+      pdf              <- pdfCreator.createContract(contractTemplate, validUsers, organization)
+      token <- partyManagementService.createToken(
+        relationships,
+        pdf._2,
+        onboardingRequest.contract.version,
+        onboardingRequest.contract.path
+      )(bearer)
+
       _ <- sendOnboardingMail(
         ApplicationConfiguration.destinationMails,
         pdf._1,
@@ -799,5 +814,10 @@ class ProcessApiServiceImpl(
 
     relationships.items.filter(isAnOnboardedManager).map(_.product)
   }
+
+  private def getFileAsString(filePath: String): Future[String] = for {
+    contractTemplateStream <- fileManager.get(filePath)
+    fileString             <- Try { contractTemplateStream.toString(StandardCharsets.UTF_8) }.toFuture
+  } yield fileString
 
 }

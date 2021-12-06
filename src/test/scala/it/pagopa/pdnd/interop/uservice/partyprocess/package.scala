@@ -11,6 +11,7 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl._
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.{
+  OnboardingContract,
   OnboardingInfo,
   OnboardingRequest,
   Products,
@@ -35,8 +36,9 @@ package object partyprocess extends SprayJsonSupport {
   implicit val fromEntityUnmarshallerRelationshipsResponse: FromEntityUnmarshaller[Seq[RelationshipInfo]] =
     sprayJsonUnmarshaller[Seq[RelationshipInfo]]
 
-  implicit val userFormat: RootJsonFormat[User]                           = jsonFormat7(User)
-  implicit val onboardingRequestFormat: RootJsonFormat[OnboardingRequest] = jsonFormat2(OnboardingRequest)
+  implicit val userFormat: RootJsonFormat[User]                             = jsonFormat7(User)
+  implicit val onboardingContractFormat: RootJsonFormat[OnboardingContract] = jsonFormat2(OnboardingContract)
+  implicit val onboardingRequestFormat: RootJsonFormat[OnboardingRequest]   = jsonFormat3(OnboardingRequest)
 
   implicit def fromEntityUnmarshallerOnboardingRequest: ToEntityMarshaller[OnboardingRequest] =
     sprayJsonMarshaller[OnboardingRequest]

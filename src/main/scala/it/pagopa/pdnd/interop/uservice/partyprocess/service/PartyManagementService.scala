@@ -40,7 +40,12 @@ trait PartyManagementService {
 
   def suspendRelationship(relationshipId: UUID)(bearerToken: String): Future[Unit]
 
-  def createToken(relationshipsSeed: RelationshipsSeed, documentHash: String)(bearerToken: String): Future[TokenText]
+  def createToken(
+    relationshipsSeed: RelationshipsSeed,
+    documentHash: String,
+    contractVersion: String,
+    contractPath: String
+  )(bearerToken: String): Future[TokenText]
 
   def getToken(tokenId: UUID)(bearerToken: String): Future[TokenInfo]
 
