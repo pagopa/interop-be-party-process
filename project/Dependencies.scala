@@ -39,6 +39,18 @@ object Dependencies {
 
   }
 
+  private[this] object europa {
+    lazy val namespace = "eu.europa.ec.joinup.sd-dss"
+
+    lazy val dssPades              = namespace % "dss-pades"                % "5.9"
+    lazy val dssPadesOpenpdf       = namespace % "dss-pades-openpdf"        % "5.9"
+    lazy val dssCades              = namespace % "dss-cades"                % "5.9"
+    lazy val dssUtilsApacheCommons = namespace % "dss-utils-apache-commons" % "5.9"
+    lazy val dssService            = namespace % "dss-service"              % "5.9"
+    lazy val dssTlsValidation      = namespace % "dss-tsl-validation"       % "5.9"
+
+  }
+
   private[this] object courier {
     lazy val namespace = "com.github.daddykotex"
     lazy val mail      = namespace %% "courier" % courierVersion
@@ -124,6 +136,12 @@ object Dependencies {
       azure.storageBlob                   % Compile,
       cats.core                           % Compile,
       courier.mail                        % Compile,
+      europa.dssCades                     % Compile,
+      europa.dssPades                     % Compile,
+      europa.dssPadesOpenpdf              % Compile,
+      europa.dssUtilsApacheCommons        % Compile,
+      europa.dssService                   % Compile,
+      europa.dssTlsValidation             % Compile,
       kamon.bundle                        % Compile,
       kamon.prometheus                    % Compile,
       logback.classic                     % Compile,
