@@ -1,31 +1,27 @@
 package {{invokerPackage}}
 
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.server.Route
 {{#apiInfo}}{{#apis}}{{#operations}}import {{package}}.{{classname}}
 {{/operations}}{{/apis}}{{/apiInfo}}
-import akka.http.scaladsl.server.Directives._
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpMethods, HttpRequest}
-import akka.stream.scaladsl.Sink
+import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.Route
+import com.github.mustachejava.DefaultMustacheFactory
 import org.openapi4j.core.validation.ValidationException
 import org.openapi4j.operation.validator.model.Request.Method
 import org.openapi4j.operation.validator.model.impl.{Body, DefaultRequest}
 import org.openapi4j.operation.validator.validation.RequestValidator
 import org.openapi4j.parser.OpenApi3Parser
-import com.github.mustachejava.DefaultMustacheFactory
 
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
+import java.io.{BufferedWriter, File, FileWriter, StringWriter}
+import java.nio.file.{Files, Paths}
+import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
-import java.io.{BufferedWriter, File, FileOutputStream, FileWriter, StringWriter}
-import com.typesafe.config.{Config, ConfigFactory}
-import scala.collection.mutable
 
 class Controller({{#apiInfo}}{{#apis}}{{#operations}}{{classVarName}}: {{classname}}{{^-last}}, {{/-last}}{{/operations}}{{/apis}}{{/apiInfo}}, validationExceptionToRoute: Option[ValidationException => Route] = None)(implicit system: ActorSystem) {
-val interfaceVersion = buildinfo.BuildInfo.interfaceVersion
+val interfaceVersion: String = buildinfo.BuildInfo.interfaceVersion
 private val mf = new DefaultMustacheFactory
 
   def compileFile(rootDir: File, fileName: String, parentRelativePath: Option[String]): File = {
