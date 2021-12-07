@@ -35,4 +35,5 @@ object ApplicationConfiguration {
     )
   }
 
+  def storageContainer: String = config.getString("pdnd-interop-commons.storage.container")
 }
