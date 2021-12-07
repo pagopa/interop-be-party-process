@@ -1,8 +1,9 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.api
 
+import akka.http.scaladsl.model.StatusCode
+import it.pagopa.pdnd.interop.commons.utils.SprayCommonFormats.{fileFormat, offsetDateTimeFormat, uuidFormat}
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import it.pagopa.pdnd.interop.commons.utils.SprayCommonFormats.{fileFormat, offsetDateTimeFormat, uuidFormat}
 
 package object impl extends DefaultJsonProtocol {
 
@@ -21,4 +22,17 @@ package object impl extends DefaultJsonProtocol {
   implicit val relationshipInfoFormat: RootJsonFormat[RelationshipInfo]     = jsonFormat10(RelationshipInfo)
   implicit val productsFormat: RootJsonFormat[Products]                     = jsonFormat1(Products)
 
+  def problemOf(
+    httpError: StatusCode,
+    errorCode: String,
+    exception: Throwable = new RuntimeException(),
+    defaultMessage: String = "Unknown error"
+  ): Problem =
+    Problem(
+      `type` = "about:blank",
+      status = httpError.intValue,
+      title = httpError.defaultMessage,
+      errors =
+        Seq(ProblemError(code = s"002-$errorCode", detail = Option(exception.getMessage).getOrElse(defaultMessage)))
+    )
 }
