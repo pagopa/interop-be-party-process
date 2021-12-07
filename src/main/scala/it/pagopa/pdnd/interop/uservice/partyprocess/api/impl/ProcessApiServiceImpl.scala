@@ -114,7 +114,12 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(res) => getOnboardingInfo200(res)
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.BadRequest.intValue,
+          title = StatusCodes.BadRequest.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0001", detail = Option(ex.getMessage).getOrElse("Unknown error")))
+        )
         getOnboardingInfo400(errorResponse)
 
     }
@@ -191,9 +196,13 @@ class ProcessApiServiceImpl(
       case Success(response) =>
         onboardingOrganization201(response)
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.BadRequest.intValue,
+          title = StatusCodes.BadRequest.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0002", detail = Option(ex.getMessage).getOrElse("Unknown error")))
+        )
         onboardingOrganization400(errorResponse)
-
     }
 
   }
@@ -250,7 +259,12 @@ class ProcessApiServiceImpl(
       case Success(response) =>
         onboardingLegalsOnOrganization200(response)
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.BadRequest.intValue,
+          title = StatusCodes.BadRequest.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0003", detail = Option(ex.getMessage).getOrElse("Unknown error")))
+        )
         onboardingLegalsOnOrganization400(errorResponse)
     }
   }
@@ -288,7 +302,12 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_) => onboardingOperators201
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.BadRequest.intValue,
+          title = StatusCodes.BadRequest.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0004", detail = Option(ex.getMessage).getOrElse("Unknown error")))
+        )
         onboardingOperators400(errorResponse)
     }
   }
@@ -324,7 +343,12 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_) => onboardingOperators201
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.BadRequest.intValue,
+          title = StatusCodes.BadRequest.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0005", detail = Option(ex.getMessage).getOrElse("Unknown error")))
+        )
         onboardingOperators400(errorResponse)
     }
   }
@@ -349,7 +373,12 @@ class ProcessApiServiceImpl(
       case Success(_) => confirmOnboarding200
       // TODO: error 409 will be enabled with signature mechanism introduction / confirmOnboarding409
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.BadRequest.intValue,
+          title = StatusCodes.BadRequest.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0006", detail = Option(ex.getMessage).getOrElse("Unknown error")))
+        )
         confirmOnboarding400(errorResponse)
     }
   }
@@ -369,7 +398,12 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_) => invalidateOnboarding200
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.BadRequest.intValue,
+          title = StatusCodes.BadRequest.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0007", detail = Option(ex.getMessage).getOrElse("Unknown error")))
+        )
         invalidateOnboarding400(errorResponse)
 
     }
@@ -552,7 +586,12 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(relationships) => getUserInstitutionRelationships200(relationships)
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.BadRequest.intValue,
+          title = StatusCodes.BadRequest.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0008", detail = Option(ex.getMessage).getOrElse("Unknown error")))
+        )
         getUserInstitutionRelationships400(errorResponse)
     }
   }
@@ -576,10 +615,20 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_) => activateRelationship204
       case Failure(ex: RelationshipNotFound) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 404, "Not found")
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.NotFound.intValue,
+          title = StatusCodes.NotFound.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0009", detail = Option(ex.getMessage).getOrElse("Not found")))
+        )
         activateRelationship404(errorResponse)
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.BadRequest.intValue,
+          title = StatusCodes.BadRequest.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0010", detail = Option(ex.getMessage).getOrElse("Unknown error")))
+        )
         activateRelationship400(errorResponse)
     }
   }
@@ -602,10 +651,20 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_) => suspendRelationship204
       case Failure(ex: RelationshipNotFound) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 404, "Not found")
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.NotFound.intValue,
+          title = StatusCodes.NotFound.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0011", detail = Option(ex.getMessage).getOrElse("Not found")))
+        )
         suspendRelationship404(errorResponse)
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.BadRequest.intValue,
+          title = StatusCodes.BadRequest.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0012", detail = Option(ex.getMessage).getOrElse("Unknown error")))
+        )
         suspendRelationship400(errorResponse)
     }
   }
@@ -634,18 +693,34 @@ class ProcessApiServiceImpl(
         val output: MessageEntity = convertToMessageEntity(document)
         complete(output)
       case Failure(ex: ApiError[_]) if ex.code == 400 =>
-        getOnboardingDocument400(
-          Problem(Option(ex.getMessage), 400, s"Error retrieving document for relationship $relationshipId")
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.BadRequest.intValue,
+          title = StatusCodes.BadRequest.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0013", detail = ex.message))
         )
+        getOnboardingDocument400(errorResponse)
       case Failure(ex: ApiError[_]) if ex.code == 404 =>
-        getOnboardingDocument404(
-          Problem(Option(ex.getMessage), 404, s"Error retrieving document for relationship $relationshipId")
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.NotFound.intValue,
+          title = StatusCodes.NotFound.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0014", detail = ex.message))
         )
+        getOnboardingDocument404(errorResponse)
       case Failure(ex) =>
-        complete(
-          500,
-          Problem(Option(ex.getMessage), 500, s"Error retrieving document for relationship $relationshipId")
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.InternalServerError.intValue,
+          title = StatusCodes.InternalServerError.defaultMessage,
+          errors = Seq(
+            ProblemError(
+              code = "002-0015",
+              detail = Option(ex.getMessage).getOrElse(s"Error retrieving document for relationship $relationshipId")
+            )
+          )
         )
+        complete(errorResponse.status, errorResponse)
     }
   }
 
@@ -740,10 +815,20 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(relationshipInfo) => getRelationship200(relationshipInfo)
       case Failure(ex: RelationshipNotFound) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 404, "Not found")
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.NotFound.intValue,
+          title = StatusCodes.NotFound.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0016", detail = Option(ex.getMessage).getOrElse("Not found")))
+        )
         getRelationship404(errorResponse)
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.BadRequest.intValue,
+          title = StatusCodes.BadRequest.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0017", detail = Option(ex.getMessage).getOrElse("Unknown error")))
+        )
         getRelationship400(errorResponse)
     }
   }
@@ -765,10 +850,20 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_) => deleteRelationshipById204
       case Failure(ex: SubjectValidationError) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 401, "Unauthorized")
-        complete((401, errorResponse))
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.Unauthorized.intValue,
+          title = StatusCodes.Unauthorized.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0018", detail = Option(ex.getMessage).getOrElse("Unauthorized")))
+        )
+        complete(errorResponse.status, errorResponse)
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.BadRequest.intValue,
+          title = StatusCodes.BadRequest.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0019", detail = Option(ex.getMessage).getOrElse("Unknown error")))
+        )
         deleteRelationshipById404(errorResponse)
     }
   }
@@ -798,15 +893,30 @@ class ProcessApiServiceImpl(
 
     onComplete(result) {
       case Success(institution) if institution.products.isEmpty =>
-        val errorResponse: Problem = Problem(None, 404, s"Products not found for institution $institutionId")
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.NotFound.intValue,
+          title = StatusCodes.NotFound.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0020", detail = s"Products not found for institution $institutionId"))
+        )
         retrieveInstitutionProducts404(errorResponse)
       case Success(institution) => retrieveInstitutionProducts200(institution)
       case Failure(ex: SubjectValidationError) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 401, "Unauthorized")
-        complete((401, errorResponse))
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.Unauthorized.intValue,
+          title = StatusCodes.Unauthorized.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0020", detail = Option(ex.getMessage).getOrElse("Unauthorized")))
+        )
+        complete(errorResponse.status, errorResponse)
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 500, "Something went wrong")
-        complete(StatusCodes.InternalServerError, errorResponse)
+        val errorResponse: Problem = Problem(
+          `type` = "about:blank",
+          status = StatusCodes.InternalServerError.intValue,
+          title = StatusCodes.InternalServerError.defaultMessage,
+          errors = Seq(ProblemError(code = "002-0021", detail = Option(ex.getMessage).getOrElse("Unknown error")))
+        )
+        complete(errorResponse.status, errorResponse)
     }
   }
 

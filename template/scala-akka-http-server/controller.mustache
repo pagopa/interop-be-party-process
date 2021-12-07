@@ -27,15 +27,55 @@ import scala.collection.mutable
 class Controller({{#apiInfo}}{{#apis}}{{#operations}}{{classVarName}}: {{classname}}{{^-last}}, {{/-last}}{{/operations}}{{/apis}}{{/apiInfo}}, validationExceptionToRoute: Option[ValidationException => Route] = None)(implicit system: ActorSystem) {
 val interfaceVersion = buildinfo.BuildInfo.interfaceVersion
 private val mf = new DefaultMustacheFactory
-val writer =
-mf.compile("interface-specification.yml").execute(new StringWriter(), mutable.HashMap("version" -> interfaceVersion).asJava).asInstanceOf[StringWriter]
-writer.flush()
-writer.close()
-private val tmpFile = File.createTempFile("tmp", "interface-specification.yml")
-tmpFile.deleteOnExit()
-val w = new BufferedWriter(new FileWriter(tmpFile))
-w.write(writer.toString)
-w.close()
+
+  def compileFile(rootDir: File, fileName: String, parentRelativePath: Option[String]): File = {
+    val writer =
+      mf.compile(s"${parentRelativePath.map(d => s"$d/").getOrElse("")}$fileName")
+        .execute(new StringWriter(), mutable.HashMap("version" -> interfaceVersion).asJava)
+        .asInstanceOf[StringWriter]
+    writer.flush()
+    writer.close()
+
+    val tmpFile = parentRelativePath match {
+      case Some(dir) =>
+        val specDirPath = Paths.get(s"${rootDir.getAbsolutePath}/$dir")
+        val specDir =
+          if (!Files.exists(specDirPath)) Files.createDirectory(specDirPath).toFile
+          else specDirPath.toFile
+        new File(specDir, fileName)
+      case None => new File(rootDir, fileName)
+    }
+
+    tmpFile.deleteOnExit()
+
+    val w = new BufferedWriter(new FileWriter(tmpFile))
+    w.write(writer.toString)
+    w.close()
+
+    tmpFile
+  }
+
+  def compileDir(outputDir: File, elem: File, parentRelativePath: Option[String]): Unit = {
+    if (elem.exists) {
+      if (elem.isDirectory) {
+        elem.listFiles.toList.map { file =>
+          compileDir(outputDir, file, Some(s"${parentRelativePath.map(_ + "/").getOrElse("")}${elem.getName}"))
+        }
+      } else if (elem.isFile) {
+        compileFile(outputDir, elem.getName, parentRelativePath)
+      }
+    }
+  }
+
+  val tempDir: File = Files.createTempDirectory("apiInterface").toFile
+  tempDir.deleteOnExit()
+  val specsDirName          = "specs"
+  val sourceDirPath: String = getClass.getResource(s"/$specsDirName").getPath
+  val specsDir              = new File(sourceDirPath)
+  compileDir(tempDir, specsDir, None)
+
+  val tmpFile: File = compileFile(tempDir, "interface-specification.yml", None)
+
 private val api = new OpenApi3Parser().parse(tmpFile, true)
 private val validator = new RequestValidator(api)
 private val strictnessTimeout = FiniteDuration({{entityStrictnessTimeout}}, SECONDS)

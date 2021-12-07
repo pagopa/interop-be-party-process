@@ -7,7 +7,8 @@ import it.pagopa.pdnd.interop.commons.utils.SprayCommonFormats.{fileFormat, offs
 package object impl extends DefaultJsonProtocol {
 
   implicit val tokenChecksumFormat: RootJsonFormat[TokenChecksum]           = jsonFormat1(TokenChecksum)
-  implicit val problemFormat: RootJsonFormat[Problem]                       = jsonFormat3(Problem)
+  implicit val problemErrorFormat: RootJsonFormat[ProblemError]             = jsonFormat2(ProblemError)
+  implicit val problemFormat: RootJsonFormat[Problem]                       = jsonFormat5(Problem)
   implicit val userFormat: RootJsonFormat[User]                             = jsonFormat7(User)
   implicit val onboardingContractFormat: RootJsonFormat[OnboardingContract] = jsonFormat2(OnboardingContract)
   implicit val onboardingRequestFormat: RootJsonFormat[OnboardingRequest]   = jsonFormat3(OnboardingRequest)

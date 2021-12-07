@@ -1,3 +1,4 @@
+import PDNDVersions.apiSpecificationVersion
 import ProjectSettings.ProjectFrom
 
 ThisBuild / scalaVersion := "2.13.6"
@@ -20,6 +21,7 @@ resolvers in ThisBuild += "Pagopa Nexus Releases" at s"https://gateway.interop.p
 credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
 
 lazy val generateCode = taskKey[Unit]("A task for generating the code starting from the swagger definition")
+lazy val cloneApiSpecs = taskKey[Unit]("A task for cloning OpenApi common definitions from a repository")
 
 val packagePrefix = settingKey[String]("The package prefix derived from the uservice name")
 
@@ -28,6 +30,19 @@ packagePrefix := name.value
   .replaceFirst("interop-", "interop.")
   .replaceFirst("uservice-", "uservice.")
   .replaceAll("-", "")
+
+cloneApiSpecs := {
+  import sys.process._
+
+  Process(s"""rm -rf ${getClass.getResource("").getPath}/specs && \\
+             | mkdir ${getClass.getResource("").getPath}/specs
+             | """.stripMargin).!!
+
+  Process(s"""git clone https://github.com/pagopa/pdnd-interop-api-specs.git
+             | --branch $apiSpecificationVersion
+             | ${getClass.getResource("").getPath}/specs
+             | """.stripMargin).!!
+}
 
 generateCode := {
   import sys.process._
