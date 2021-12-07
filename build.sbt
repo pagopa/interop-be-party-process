@@ -34,13 +34,13 @@ packagePrefix := name.value
 cloneApiSpecs := {
   import sys.process._
 
-  Process(s"""rm -rf ${getClass.getResource("").getPath}/specs && \\
-             | mkdir ${getClass.getResource("").getPath}/specs
+  Process(s"""rm -rf src/main/resources/specs && \\
+             | mkdir src/main/resources/specs
              | """.stripMargin).!!
 
   Process(s"""git clone https://github.com/pagopa/pdnd-interop-api-specs.git
              | --branch $apiSpecificationVersion
-             | ${getClass.getResource("").getPath}/specs
+             | src/main/resources/specs
              | """.stripMargin).!!
 }
 
@@ -70,6 +70,7 @@ generateCode := {
 
 }
 
+(Compile / compile) := ((Compile / compile) dependsOn cloneApiSpecs).value
 (Compile / compile) := ((Compile / compile) dependsOn generateCode).value
 
 cleanFiles += baseDirectory.value / "generated" / "src"
