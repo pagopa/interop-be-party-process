@@ -255,14 +255,12 @@ class ProcessApiServiceImpl(
     }
   }
 
-  /** Code: 200, Message: successful operation, DataType: OnboardingResponse
+  /** Code: 201, Message: successful operation
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
-  override def onboardingSubDelegatesOnOrganization(onboardingRequest: OnboardingRequest)(implicit
-    toEntityMarshallerOnboardingResponse: ToEntityMarshaller[OnboardingResponse],
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
-    contexts: Seq[(String, String)]
-  ): Route = {
+  override def onboardingSubDelegatesOnOrganization(
+    onboardingRequest: OnboardingRequest
+  )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
     val result: Future[Unit] = for {
       bearer       <- getFutureBearer(contexts)
       organization <- partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
