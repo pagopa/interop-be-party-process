@@ -36,7 +36,7 @@ private val mf = new DefaultMustacheFactory
       case Some(dir) =>
         val specDirPath = Paths.get(s"${rootDir.getAbsolutePath}/$dir")
         val specDir =
-          if (!Files.exists(specDirPath)) Files.createDirectory(specDirPath).toFile
+          if (!Files.exists(specDirPath)) Files.createDirectories(specDirPath).toFile
           else specDirPath.toFile
         new File(specDir, fileName)
       case None => new File(rootDir, fileName)

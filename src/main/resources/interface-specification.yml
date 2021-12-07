@@ -758,7 +758,7 @@ components:
         - DELETED
         - REJECTED
     Problem:
-      $ref: './specs/problem.yml#/components/schemas/Problem'
+      $ref: 'specs/openapi/model/problem.yml#/components/schemas/Problem'
   securitySchemes:
     bearerAuth:
       type: http
