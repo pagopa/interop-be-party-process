@@ -626,7 +626,7 @@ class ProcessApiServiceImpl(
         contentType <- ContentType
           .parse(contentTypeStr)
           .fold(ex => Future.failed(ContentTypeParsingError(contentTypeStr, ex)), Future.successful)
-        response <- fileManager.get(filePath)
+        response <- fileManager.get(ApplicationConfiguration.storageContainer)(filePath)
       } yield DocumentDetails(fileName, contentType, response)
 
     onComplete(result) {
@@ -816,7 +816,7 @@ class ProcessApiServiceImpl(
   }
 
   private def getFileAsString(filePath: String): Future[String] = for {
-    contractTemplateStream <- fileManager.get(filePath)
+    contractTemplateStream <- fileManager.get(ApplicationConfiguration.storageContainer)(filePath)
     fileString             <- Try { contractTemplateStream.toString(StandardCharsets.UTF_8) }.toFuture
   } yield fileString
 
