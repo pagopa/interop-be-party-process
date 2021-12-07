@@ -20,7 +20,6 @@ object Versions {
 }
 
 object PDNDVersions {
-  lazy val apiSpecificationVersion       = "0.1.x"
   lazy val attributeRegistryVersion      = "0.1.1-SNAPSHOT"
   lazy val commonsVersion                = "0.1.1-SNAPSHOT"
   lazy val partyManagementVersion        = "0.1.1-SNAPSHOT"
