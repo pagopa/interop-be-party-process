@@ -18,7 +18,7 @@ kubectl create secret generic vault --from-literal=VAULT_ADDR=$VAULT_ADDR --from
 
 kubectl create secret generic smtp --from-literal=SMTP_USR=$SMTP_USR --from-literal=SMTP_PSW=$SMTP_PSW -n $NAMESPACE
 
-kubectl create secret generic userRegistryApiKey --from-literal=USER_REGISTRY_API_KEY=$USER_REGISTRY_API_KEY -n $NAMESPACE
+kubectl create secret generic user-registry-api-key --from-literal=USER_REGISTRY_API_KEY=$USER_REGISTRY_API_KEY -n $NAMESPACE
 
 kubectl create secret generic storage --from-literal=STORAGE_USR=$STORAGE_USR --from-literal=STORAGE_PSW=$STORAGE_PSW -n $NAMESPACE
 
