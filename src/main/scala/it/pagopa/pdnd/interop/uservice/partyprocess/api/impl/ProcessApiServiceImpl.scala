@@ -207,21 +207,41 @@ class ProcessApiServiceImpl(
     }
   }
 
+  def f(personId: UUID, organizationId: UUID, role: PartyRole, product: String, productRole: String)(bearer: String) = {
+    val result: Future[Unit] =
+      partyManagementService.createRelationship(personId, organizationId, roleToDependency(role), product, productRole)(
+        bearer
+      )
+
+    result.recover { case _ =>
+      ()
+//      partyManagementService.retrieveRelationships(
+//        from = Some(personId),
+//        to = Some(organizationId),
+//        roles = Seq(roleToDependency(role)),
+//        states = Seq(PartyManagementDependency.RelationshipState.PENDING),
+//        products = Seq(product),
+//        productRoles = Seq(productRole)
+//      )
+    }
+  }
+
   private def performOnboarding(onboardingRequest: OnboardingRequest, organization: Organization)(
     bearer: String
   ): Future[OnboardingResponse] = {
     for {
       validUsers       <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
       personsWithRoles <- Future.traverse(validUsers)(addUser(bearer))
-      _ <- Future.traverse(personsWithRoles)(pr =>
-        partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)(
-          bearer
-        )
-      )
+//      _ <- Future.traverse(personsWithRoles)(pr =>
+//        partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)(
+//          bearer
+//        )
+//      )
+      _ <- Future.traverse(personsWithRoles)(pr => f(pr._1.id, organization.id, pr._2, pr._3, pr._4)(bearer))
       relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, product, productRole) =>
         createRelationship(organization.id, person.id, roleToDependency(role), product, productRole)
       })
-      contractTemplate <- getFileAsString(onboardingRequest.contract.version)
+      contractTemplate <- getFileAsString(onboardingRequest.contract.path)
       pdf              <- pdfCreator.createContract(contractTemplate, validUsers, organization)
       digest           <- signatureService.createDigest(pdf)
       token <- partyManagementService.createToken(
@@ -230,6 +250,7 @@ class ProcessApiServiceImpl(
         onboardingRequest.contract.version,
         onboardingRequest.contract.path
       )(bearer)
+      _ = logger.info(s"Digest $digest")
       _ <- sendOnboardingMail(
         ApplicationConfiguration.destinationMails,
         pdf,
@@ -458,7 +479,7 @@ class ProcessApiServiceImpl(
         .find(cat => institution.category == cat.code)
         .map(Future.successful)
         .getOrElse(Future.failed(new RuntimeException(s"Invalid category ${institution.category}")))
-      attributes <- attributeRegistryService.createAttribute("IPA", category.name, category.code)(bearer)
+      attributes <- attributeRegistryService.createAttribute("IPA", category.code, category.name, category.kind)(bearer)
       _ = logger.info(s"getInstitution ${institution.id}")
       seed = OrganizationSeed(
         institutionId = institution.id,

@@ -88,8 +88,8 @@ object Main
   private def launchApp(fileManager: FileManager, mailTemplate: PersistedTemplate): Future[Http.ServerBinding] = {
     Kamon.init()
 
-    val signatureValidator: SignatureService = SignatureServiceImpl
-    val mailer: MailEngine                   = new PartyProcessMailer with DefaultPDNDMailer with CourierMailer
+    val signatureService: SignatureService = SignatureServiceImpl
+    val mailer: MailEngine                 = new PartyProcessMailer with DefaultPDNDMailer with CourierMailer
 
     val processApi: ProcessApi = new ProcessApi(
       new ProcessApiServiceImpl(
@@ -99,7 +99,7 @@ object Main
         userRegistryManagementService,
         PDFCreatorImpl,
         fileManager,
-        signatureValidator,
+        signatureService,
         mailer,
         mailTemplate
       ),

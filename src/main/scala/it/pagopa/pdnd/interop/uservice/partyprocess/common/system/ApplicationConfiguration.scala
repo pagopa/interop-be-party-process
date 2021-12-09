@@ -23,7 +23,7 @@ object ApplicationConfiguration {
   }
 
   def lotlUrl: String = config.getString("uservice-party-process.lotl_url")
-  def ojUrl: String   = config.getString("uservice-party-process.oj_orl")
+  def ojUrl: String   = config.getString("uservice-party-process.oj_url")
 
   def mailTemplatePath: String = config.getString("uservice-party-process.mail-template.path")
 

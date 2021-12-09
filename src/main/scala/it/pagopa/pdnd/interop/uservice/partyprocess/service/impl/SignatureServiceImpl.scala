@@ -8,11 +8,13 @@ import eu.europa.esig.dss.tsl.source.LOTLSource
 import eu.europa.esig.dss.validation.reports.Reports
 import eu.europa.esig.dss.validation.{AdvancedSignature, SignedDocumentValidator}
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions.EitherOps
+import it.pagopa.pdnd.interop.commons.utils.TypeConversions.OptionOps
 import it.pagopa.pdnd.interop.uservice.partyprocess.error.InvalidDocumentSignature
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.SignatureService
 
 import java.io.File
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters.IterableHasAsScala
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
@@ -70,7 +72,10 @@ case object SignatureServiceImpl extends SignatureService {
 
   override def extractTaxCode(reports: Reports): Future[String] = Future.fromTry {
     for {
-      prefixedTaxCode <- Try(reports.getDiagnosticData.getUsedCertificates.get(0).getSubjectSerialNumber)
+      prefixedTaxCode <- reports.getDiagnosticData.getUsedCertificates.asScala
+        .flatMap(c => Option(c.getSubjectSerialNumber))
+        .headOption
+        .toTry("Certificate not found")
       taxCode <- prefixedTaxCode match {
         case signatureRegex(_, taxCode) => Success(taxCode)
         case _                          => Failure(new RuntimeException("Invalid signature format"))
