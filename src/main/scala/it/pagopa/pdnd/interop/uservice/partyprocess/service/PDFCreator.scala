@@ -7,5 +7,5 @@ import java.io.File
 import scala.concurrent.Future
 
 trait PDFCreator {
-  def create(users: Seq[User], organization: Organization): Future[(File, String)]
+  def createContract(contractTemplate: String, users: Seq[User], organization: Organization): Future[(File, String)]
 }

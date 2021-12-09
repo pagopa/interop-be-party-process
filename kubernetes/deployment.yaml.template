@@ -66,6 +66,11 @@ spec:
                 secretKeyRef:
                   name: smtp
                   key: SMTP_PSW
+            - name: USER_REGISTRY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: userRegistryApiKey
+                  key: USER_REGISTRY_API_KEY
             - name: STORAGE_TYPE
               value: {{storageType}}
             - name: STORAGE_CONTAINER

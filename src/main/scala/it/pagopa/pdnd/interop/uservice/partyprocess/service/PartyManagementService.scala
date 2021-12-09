@@ -25,9 +25,14 @@ trait PartyManagementService {
     productRole: String
   )(bearerToken: String): Future[Unit]
 
-  def retrieveRelationships(from: Option[UUID], to: Option[UUID], product: Option[String], productRole: Option[String])(
-    bearerToken: String
-  ): Future[Relationships]
+  def retrieveRelationships(
+    from: Option[UUID],
+    to: Option[UUID],
+    roles: Seq[PartyRole],
+    states: Seq[RelationshipState],
+    products: Seq[String],
+    productRoles: Seq[String]
+  )(bearerToken: String): Future[Relationships]
 
   def getInstitutionRelationships(id: UUID)(bearerToken: String): Future[Relationships]
 
@@ -35,11 +40,18 @@ trait PartyManagementService {
 
   def suspendRelationship(relationshipId: UUID)(bearerToken: String): Future[Unit]
 
-  def createToken(relationshipsSeed: RelationshipsSeed, documentHash: String)(bearerToken: String): Future[TokenText]
+  def createToken(
+    relationshipsSeed: RelationshipsSeed,
+    documentHash: String,
+    contractVersion: String,
+    contractPath: String
+  )(bearerToken: String): Future[TokenText]
 
-  def consumeToken(token: String, fileParts: (FileInfo, File))(bearerToken: String): Future[Unit]
+  def getToken(tokenId: UUID)(bearerToken: String): Future[TokenInfo]
 
-  def invalidateToken(token: String)(bearerToken: String): Future[Unit]
+  def consumeToken(tokenId: UUID, fileParts: (FileInfo, File))(bearerToken: String): Future[Unit]
+
+  def invalidateToken(tokenId: UUID)(bearerToken: String): Future[Unit]
 
   def getRelationshipById(relationshipId: UUID)(bearerToken: String): Future[Relationship]
 

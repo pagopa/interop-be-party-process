@@ -1,0 +1,52 @@
+<html>
+<head>
+<title>PDND Onboarding</title>
+<style>
+* {
+  font-family: 'cjk', 'deja-sans', sans-serif;
+  font-size: 0.9em;
+}
+h3 {
+  color: #31a1b0;
+  text-transform: uppercase;
+  border-bottom: 2px dotted #31a1b0;
+}
+
+div {
+  text-align:justify;
+}
+</style>
+</head>
+<body>
+<h2>Accreditamento di ${institutionName} a PDND Interoperabilità</h2>
+
+<h3>Accreditamento</h3>
+<div>
+Le seguenti persone:<br/>
+${users}
+<br/>
+si accreditano presso la piattaforma di Interoperabilità in qualità di Rappresentanti Legali dell'Ente:<br/>
+Nome: <strong>${institutionName}</strong><br/>
+Rappresentante Legale: <strong>${manager}</strong><br/>
+Domicilio Digitale: <strong>${institutionMail}</strong><br/>
+</div>
+
+<h3>Contratto</h3>
+<div>
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et
+dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
+ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore
+eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia
+deserunt mollit anim id est laborum.
+</div>
+
+<h3>Note legali</h3>
+<div>
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et
+dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
+ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore
+eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia
+deserunt mollit anim id est laborum.
+</div>
+</body>
+</html>

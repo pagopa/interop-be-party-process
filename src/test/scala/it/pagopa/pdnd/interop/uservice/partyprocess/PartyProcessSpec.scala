@@ -12,7 +12,7 @@ import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.
   AttributesResponse,
   Attribute => ClientAttribute
 }
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{OrganizationSeed, RelationshipProduct}
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{OrganizationSeed, RelationshipProduct, TokenInfo}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{relationshipStateToApi, roleToApi}
@@ -37,7 +37,7 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import spray.json.DefaultJsonProtocol
 
-import java.io.File
+import java.io.{ByteArrayOutputStream, File}
 import java.nio.file.Paths
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -60,10 +60,11 @@ class PartyProcessSpec
   val wrappingDirective: AuthenticationDirective[Seq[(String, String)]] =
     SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
 
-  final val productTimestamp: OffsetDateTime = OffsetDateTime.now()
+  final val productTimestamp: OffsetDateTime      = OffsetDateTime.now()
+  final val relationshipTimestamp: OffsetDateTime = OffsetDateTime.now()
 
   final val product: RelationshipProduct =
-    PartyManagementDependency.RelationshipProduct(id = "product", role = "admin", timestamp = productTimestamp)
+    PartyManagementDependency.RelationshipProduct(id = "product", role = "admin", createdAt = productTimestamp)
 
   final val productInfo: ProductInfo =
     ProductInfo(id = "product", role = "admin", createdAt = productTimestamp)
@@ -135,7 +136,9 @@ class PartyProcessSpec
           to = institutionId1,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
       val relationship2 =
         PartyManagementDependency.Relationship(
@@ -144,7 +147,9 @@ class PartyProcessSpec
           to = institutionId2,
           role = PartyManagementDependency.PartyRole.DELEGATE,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.PENDING,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2))
@@ -220,15 +225,32 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(Some(UUID.fromString(mockSubjectUUID)), None, None, None, *)
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          Some(UUID.fromString(mockSubjectUUID)),
+          None,
+          Seq.empty,
+          Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
+          Seq.empty,
+          Seq.empty,
+          *
+        )
         .returning(Future.successful(relationships))
         .once()
+
       (mockPartyManagementService
         .retrieveOrganization(_: UUID)(_: String))
         .expects(institutionId1, *)
         .returning(Future.successful(organization1))
         .once()
+
       (mockPartyManagementService
         .retrieveOrganization(_: UUID)(_: String))
         .expects(institutionId2, *)
@@ -384,7 +406,9 @@ class PartyProcessSpec
           to = institutionId1,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship1))
@@ -438,8 +462,23 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(Some(UUID.fromString(mockSubjectUUID)), Some(institutionId1), None, None, *)
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          Some(UUID.fromString(mockSubjectUUID)),
+          Some(institutionId1),
+          Seq.empty,
+          Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
+          Seq.empty,
+          Seq.empty,
+          *
+        )
         .returning(Future.successful(relationships))
         .once()
       (mockPartyManagementService
@@ -509,6 +548,187 @@ class PartyProcessSpec
           .singleRequest(
             HttpRequest(
               uri = s"$url/onboarding/info?institutionId=$institutionId1",
+              method = HttpMethods.GET,
+              headers = authorization
+            )
+          )
+          .futureValue
+
+      val body = Unmarshal(response.entity).to[OnboardingInfo].futureValue
+
+      response.status mustBe StatusCodes.OK
+      body mustBe expected
+
+    }
+
+    "retrieve an onboarding info with states filter" in {
+      val taxCode1       = "CF1"
+      val institutionId1 = UUID.randomUUID()
+      val personPartyId1 = "af80fac0-2775-4646-8fcf-28e083751800"
+      val orgPartyId1    = "af80fac0-2775-4646-8fcf-28e083751801"
+      val attributeId1   = UUID.randomUUID()
+      val attributeId2   = UUID.randomUUID()
+      val attributeId3   = UUID.randomUUID()
+
+      val person1 = UserRegistryUser(
+        id = UUID.fromString(personPartyId1),
+        externalId = "CF1",
+        name = "Mario",
+        surname = "Rossi",
+        certification = CertificationEnumsNone,
+        extras = UserRegistryUserExtras(email = None, birthDate = None)
+      )
+
+      val relationship1 =
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = person1.id,
+          to = institutionId1,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product,
+          state = PartyManagementDependency.RelationshipState.SUSPENDED,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        )
+
+      val relationships = PartyManagementDependency.Relationships(items = Seq(relationship1))
+
+      val organization1 = PartyManagementDependency.Organization(
+        institutionId = institutionId1.toString,
+        description = "org1",
+        digitalAddress = "digitalAddress1",
+        id = UUID.fromString(orgPartyId1),
+        attributes = Seq(attributeId1.toString, attributeId2.toString, attributeId3.toString),
+        taxCode = "123"
+      )
+
+      val expected = OnboardingInfo(
+        person = PersonInfo(name = person1.name, surname = person1.surname, taxCode = person1.externalId),
+        institutions = Seq(
+          OnboardingData(
+            institutionId = organization1.institutionId,
+            description = organization1.description,
+            taxCode = organization1.taxCode,
+            digitalAddress = organization1.digitalAddress,
+            state = relationshipStateToApi(relationship1.state),
+            role = roleToApi(relationship1.role),
+            productInfo = productInfo,
+            attributes = Seq(
+              Attribute(attributeId1.toString, "name1", "description1"),
+              Attribute(attributeId2.toString, "name2", "description2"),
+              Attribute(attributeId3.toString, "name3", "description3")
+            )
+          )
+        )
+      )
+
+      val mockSubjectUUID = UUID.randomUUID().toString
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(UUID.fromString(mockSubjectUUID), *)
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = UUID.fromString(mockSubjectUUID),
+              externalId = taxCode1,
+              name = "Mario",
+              surname = "Rossi",
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(email = Some("super@mario.it"), birthDate = None)
+            )
+          )
+        )
+        .once()
+
+      (mockPartyManagementService
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          Some(UUID.fromString(mockSubjectUUID)),
+          None,
+          Seq.empty,
+          Seq(PartyManagementDependency.RelationshipState.SUSPENDED),
+          Seq.empty,
+          Seq.empty,
+          *
+        )
+        .returning(Future.successful(relationships))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveOrganization(_: UUID)(_: String))
+        .expects(institutionId1, *)
+        .returning(Future.successful(organization1))
+        .once()
+
+      (mockAttributeRegistryService
+        .getAttribute(_: UUID)(_: String))
+        .expects(attributeId1, *)
+        .returning(
+          Future.successful(
+            ClientAttribute(
+              id = attributeId1.toString,
+              name = "name1",
+              description = "description1",
+              code = None,
+              certified = true,
+              origin = None,
+              creationTime = OffsetDateTime.now()
+            )
+          )
+        )
+        .once()
+
+      (mockAttributeRegistryService
+        .getAttribute(_: UUID)(_: String))
+        .expects(attributeId2, *)
+        .returning(
+          Future.successful(
+            ClientAttribute(
+              id = attributeId2.toString,
+              name = "name2",
+              description = "description2",
+              code = None,
+              certified = true,
+              origin = None,
+              creationTime = OffsetDateTime.now()
+            )
+          )
+        )
+        .once()
+
+      (mockAttributeRegistryService
+        .getAttribute(_: UUID)(_: String))
+        .expects(attributeId3, *)
+        .returning(
+          Future.successful(
+            ClientAttribute(
+              id = attributeId3.toString,
+              name = "name3",
+              description = "description3",
+              code = None,
+              certified = true,
+              origin = None,
+              creationTime = OffsetDateTime.now()
+            )
+          )
+        )
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(mockSubjectUUID)))
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/onboarding/info?states=SUSPENDED",
               method = HttpMethods.GET,
               headers = authorization
             )
@@ -694,14 +914,19 @@ class PartyProcessSpec
         .expects(*, *, *, *)
         .returning(Future.successful(attr1))
         .once()
-      (mockPdfCreator.create _).expects(*, *).returning(Future.successful((file, "hash"))).once()
+      (mockFileManager.get _).expects(*).returning(Future.successful(new ByteArrayOutputStream())).once()
+      (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful((file, "hash"))).once()
       (mockPartyManagementService
-        .createToken(_: PartyManagementDependency.RelationshipsSeed, _: String)(_: String))
-        .expects(*, *, *)
+        .createToken(_: PartyManagementDependency.RelationshipsSeed, _: String, _: String, _: String)(_: String))
+        .expects(*, *, *, *, *)
         .returning(Future.successful(PartyManagementDependency.TokenText("token")))
         .once()
 
-      val req = OnboardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
+      val req = OnboardingRequest(
+        users = Seq(manager, delegate),
+        institutionId = "institutionId1",
+        contract = OnboardingContract("a", "b")
+      )
 
       val data = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
 
@@ -751,11 +976,22 @@ class PartyProcessSpec
           )
         )
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(*, *, *, *, *)
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(*, *, *, *, *, *, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(Seq.empty)))
 
-      val req = OnboardingRequest(users = Seq(operator1, operator2), institutionId = "institutionId1")
+      val req = OnboardingRequest(
+        users = Seq(operator1, operator2),
+        institutionId = "institutionId1",
+        contract = OnboardingContract("a", "b")
+      )
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/operators", HttpMethods.POST)
@@ -790,7 +1026,9 @@ class PartyProcessSpec
               to = institutionId1,
               role = PartyManagementDependency.PartyRole.MANAGER,
               product = product,
-              state = PartyManagementDependency.RelationshipState.ACTIVE
+              state = PartyManagementDependency.RelationshipState.ACTIVE,
+              createdAt = relationshipTimestamp,
+              updatedAt = None
             )
           )
         )
@@ -823,8 +1061,15 @@ class PartyProcessSpec
         .returning(Future.successful(organization1))
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(None, Some(UUID.fromString(orgPartyId1)), None, None, *)
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(None, Some(UUID.fromString(orgPartyId1)), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
         .returning(Future.successful(relationships))
 
       (mockUserRegistryService
@@ -897,7 +1142,11 @@ class PartyProcessSpec
         .returning(Future.successful(()))
         .repeat(2)
 
-      val req = OnboardingRequest(users = Seq(operator1, operator2), institutionId = institutionId1.toString)
+      val req = OnboardingRequest(
+        users = Seq(operator1, operator2),
+        institutionId = institutionId1.toString,
+        contract = OnboardingContract("a", "b")
+      )
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/operators", HttpMethods.POST)
@@ -946,11 +1195,22 @@ class PartyProcessSpec
           )
         )
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(*, *, *, *, *)
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(*, *, *, *, *, *, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(Seq.empty)))
 
-      val req = OnboardingRequest(users = Seq(subdelegate1, subdelegate2), institutionId = "institutionId1")
+      val req = OnboardingRequest(
+        users = Seq(subdelegate1, subdelegate2),
+        institutionId = "institutionId1",
+        contract = OnboardingContract("a", "b")
+      )
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/subdelegates", HttpMethods.POST)
@@ -985,7 +1245,9 @@ class PartyProcessSpec
               to = institutionId1,
               role = PartyManagementDependency.PartyRole.MANAGER,
               product = product,
-              state = PartyManagementDependency.RelationshipState.ACTIVE
+              state = PartyManagementDependency.RelationshipState.ACTIVE,
+              createdAt = relationshipTimestamp,
+              updatedAt = None
             )
           )
         )
@@ -1018,8 +1280,15 @@ class PartyProcessSpec
         .returning(Future.successful(organization1))
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(None, Some(UUID.fromString(orgPartyId1)), None, None, *)
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(None, Some(UUID.fromString(orgPartyId1)), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
         .returning(Future.successful(relationships))
 
       (mockUserRegistryService
@@ -1092,7 +1361,11 @@ class PartyProcessSpec
         .returning(Future.successful(()))
         .repeat(2)
 
-      val req = OnboardingRequest(users = Seq(subdelegate1, subdelegate2), institutionId = institutionId1.toString)
+      val req = OnboardingRequest(
+        users = Seq(subdelegate1, subdelegate2),
+        institutionId = institutionId1.toString,
+        contract = OnboardingContract("a", "b")
+      )
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/subdelegates", HttpMethods.POST)
@@ -1103,14 +1376,19 @@ class PartyProcessSpec
 
     "confirm token" in {
 
-      val token: String =
-        "eyJjaGVja3N1bSI6IjZkZGVlODIwZDA2MzgzMTI3ZWYwMjlmNTcxMjg1MzM5IiwiaWQiOiI0YjJmY2Y3My1iMmI0LTQ4N2QtYjk2MC1jM2MwNGQ5NDc3YzItM2RiZDk0ZDUtMzY0MS00MWI0LWJlMGItZjJmZjZjODU4Zjg5LU1hbmFnZXIiLCJsZWdhbHMiOlt7ImZyb20iOiI0NjAwNzg4Mi0wMDNlLTRlM2EtODMzMC1iNGYyYjA0NGJmNGUiLCJyb2xlIjoiRGVsZWdhdGUiLCJ0byI6IjNkYmQ5NGQ1LTM2NDEtNDFiNC1iZTBiLWYyZmY2Yzg1OGY4OSJ9LHsiZnJvbSI6IjRiMmZjZjczLWIyYjQtNDg3ZC1iOTYwLWMzYzA0ZDk0NzdjMiIsInJvbGUiOiJNYW5hZ2VyIiwidG8iOiIzZGJkOTRkNS0zNjQxLTQxYjQtYmUwYi1mMmZmNmM4NThmODkifV0sInNlZWQiOiJkMmE2ZWYyNy1hZTYwLTRiM2QtOGE5ZS1iMDIwMzViZDUyYzkiLCJ2YWxpZGl0eSI6IjIwMjEtMDctMTNUMTU6MTY6NDguNTU1NDM1KzAyOjAwIn0="
+      val tokenId: UUID = UUID.randomUUID()
 
-      val path = Paths.get("src/test/resources/contract-test-01.pdf")
+      val token: TokenInfo = TokenInfo(id = tokenId, checksum = "6ddee820d06383127ef029f571285339", legals = Seq.empty)
+      val path             = Paths.get("src/test/resources/contract-test-01.pdf")
 
       (mockPartyManagementService
-        .consumeToken(_: String, _: (FileInfo, File))(_: String))
-        .expects(token, *, *)
+        .getToken(_: UUID)(_: String))
+        .expects(tokenId, *)
+        .returning(Future.successful(token))
+
+      (mockPartyManagementService
+        .consumeToken(_: UUID, _: (FileInfo, File))(_: String))
+        .expects(tokenId, *, *)
         .returning(Future.successful(()))
 
       val formData =
@@ -1120,7 +1398,7 @@ class PartyProcessSpec
         Http()
           .singleRequest(
             HttpRequest(
-              uri = s"$url/onboarding/complete/$token",
+              uri = s"$url/onboarding/complete/${tokenId.toString}",
               method = HttpMethods.POST,
               entity = formData.toEntity,
               headers = authorization
@@ -1134,18 +1412,21 @@ class PartyProcessSpec
 
     "delete token" in {
 
-      val token: String =
-        "eyJjaGVja3N1bSI6IjZkZGVlODIwZDA2MzgzMTI3ZWYwMjlmNTcxMjg1MzM5IiwiaWQiOiI0YjJmY2Y3My1iMmI0LTQ4N2QtYjk2MC1jM2MwNGQ5NDc3YzItM2RiZDk0ZDUtMzY0MS00MWI0LWJlMGItZjJmZjZjODU4Zjg5LU1hbmFnZXIiLCJsZWdhbHMiOlt7ImZyb20iOiI0NjAwNzg4Mi0wMDNlLTRlM2EtODMzMC1iNGYyYjA0NGJmNGUiLCJyb2xlIjoiRGVsZWdhdGUiLCJ0byI6IjNkYmQ5NGQ1LTM2NDEtNDFiNC1iZTBiLWYyZmY2Yzg1OGY4OSJ9LHsiZnJvbSI6IjRiMmZjZjczLWIyYjQtNDg3ZC1iOTYwLWMzYzA0ZDk0NzdjMiIsInJvbGUiOiJNYW5hZ2VyIiwidG8iOiIzZGJkOTRkNS0zNjQxLTQxYjQtYmUwYi1mMmZmNmM4NThmODkifV0sInNlZWQiOiJkMmE2ZWYyNy1hZTYwLTRiM2QtOGE5ZS1iMDIwMzViZDUyYzkiLCJ2YWxpZGl0eSI6IjIwMjEtMDctMTNUMTU6MTY6NDguNTU1NDM1KzAyOjAwIn0="
+      val tokenId: UUID = UUID.randomUUID()
 
       (mockPartyManagementService
-        .invalidateToken(_: String)(_: String))
-        .expects(token, *)
+        .invalidateToken(_: UUID)(_: String))
+        .expects(tokenId, *)
         .returning(Future.successful(()))
 
       val response =
         Http()
           .singleRequest(
-            HttpRequest(uri = s"$url/onboarding/complete/$token", method = HttpMethods.DELETE, headers = authorization)
+            HttpRequest(
+              uri = s"$url/onboarding/complete/${tokenId.toString}",
+              method = HttpMethods.DELETE,
+              headers = authorization
+            )
           )
           .futureValue
 
@@ -1153,35 +1434,51 @@ class PartyProcessSpec
 
     }
 
-    "retrieve all the relationships of a specific institution" in {
-      val userId          = UUID.randomUUID()
+    "retrieve all the relationships of a specific institution when requested by the admin" in {
       val adminIdentifier = UUID.randomUUID()
+      val userId1         = UUID.randomUUID()
+      val userId2         = UUID.randomUUID()
       val userId3         = UUID.randomUUID()
-      val userId4         = UUID.randomUUID()
       val institutionId   = UUID.randomUUID()
 
-      val relationshipId1 = UUID.randomUUID()
-      val relationshipId2 = UUID.randomUUID()
-      val relationshipId3 = UUID.randomUUID()
-      val relationshipId4 = UUID.randomUUID()
+      val adminRelationshipId = UUID.randomUUID()
+      val relationshipId1     = UUID.randomUUID()
+      val relationshipId2     = UUID.randomUUID()
+      val relationshipId3     = UUID.randomUUID()
 
-      val relationship1 =
+      val adminRelationship =
         PartyManagementDependency.Relationship(
-          id = relationshipId1,
-          from = userId,
-          to = institutionId,
-          role = PartyManagementDependency.PartyRole.MANAGER,
-          product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
-        )
-      val relationship2 =
-        PartyManagementDependency.Relationship(
-          id = relationshipId2,
+          id = adminRelationshipId,
           from = adminIdentifier,
           to = institutionId,
           role = PartyManagementDependency.PartyRole.DELEGATE,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        )
+      val relationship1 =
+        PartyManagementDependency.Relationship(
+          id = relationshipId1,
+          from = userId1,
+          to = institutionId,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product,
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        )
+
+      val relationship2 =
+        PartyManagementDependency.Relationship(
+          id = relationshipId2,
+          from = userId2,
+          to = institutionId,
+          role = PartyManagementDependency.PartyRole.OPERATOR,
+          product = product.copy(role = "security"),
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationship3 =
@@ -1190,33 +1487,115 @@ class PartyProcessSpec
           from = userId3,
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
-          product = product.copy(role = "security"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          product = product.copy(role = "api"),
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
-      val relationship4 =
-        PartyManagementDependency.Relationship(
-          id = relationshipId4,
-          from = userId4,
-          to = institutionId,
-          role = PartyManagementDependency.PartyRole.OPERATOR,
-          product = product.copy(role = "api"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
-        )
+      val adminRelationships = PartyManagementDependency.Relationships(items = Seq(adminRelationship))
 
       val relationships =
-        PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
+        PartyManagementDependency.Relationships(items =
+          Seq(adminRelationship, relationship1, relationship2, relationship3)
+        )
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(Some(adminIdentifier), Some(institutionId), None, None, *)
-        .returning(Future.successful(relationships))
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          Some(adminIdentifier),
+          Some(institutionId),
+          Seq(
+            PartyManagementDependency.PartyRole.MANAGER,
+            PartyManagementDependency.PartyRole.DELEGATE,
+            PartyManagementDependency.PartyRole.SUB_DELEGATE
+          ),
+          Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
+          Seq.empty,
+          Seq.empty,
+          *
+        )
+        .returning(Future.successful(adminRelationships))
         .once()
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(None, Some(institutionId), None, None, *)
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(None, Some(institutionId), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
         .returning(Future.successful(relationships))
+        .once()
+
+      val userRegistryUser = UserRegistryUser(
+        id = adminIdentifier,
+        externalId = "taxCode",
+        name = "name",
+        surname = "surname",
+        certification = CertificationEnumsNone,
+        extras = UserRegistryUserExtras(email = Some("email@mail.com"), birthDate = None)
+      )
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(adminIdentifier, adminIdentifier.toString)
+        .returning(Future.successful(userRegistryUser))
+        .once()
+
+      val userRegistryUser1 = UserRegistryUser(
+        id = userId1,
+        externalId = "taxCode",
+        name = "name1",
+        surname = "surname1",
+        certification = CertificationEnumsNone,
+        extras = UserRegistryUserExtras(email = Some("email1@mail.com"), birthDate = None)
+      )
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(userId1, adminIdentifier.toString)
+        .returning(Future.successful(userRegistryUser1))
+        .once()
+
+      val userRegistryUser2 = UserRegistryUser(
+        id = userId2,
+        externalId = "taxCode",
+        name = "name2",
+        surname = "surname2",
+        certification = CertificationEnumsNone,
+        extras = UserRegistryUserExtras(email = Some("email2@mail.com"), birthDate = None)
+      )
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(userId2, adminIdentifier.toString)
+        .returning(Future.successful(userRegistryUser2))
+        .once()
+
+      val userRegistryUser3 = UserRegistryUser(
+        id = userId3,
+        externalId = "taxCode",
+        name = "name3",
+        surname = "surname3",
+        certification = CertificationEnumsNone,
+        extras = UserRegistryUserExtras(email = Some("email3@mail.com"), birthDate = None)
+      )
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(userId3, adminIdentifier.toString)
+        .returning(Future.successful(userRegistryUser3))
         .once()
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(adminIdentifier.toString)))
@@ -1234,100 +1613,182 @@ class PartyProcessSpec
       val body = Unmarshal(response.entity).to[Seq[RelationshipInfo]].futureValue
       response.status mustBe StatusCodes.OK
       body must contain only (RelationshipInfo(
+        id = adminRelationshipId,
+        from = adminIdentifier,
+        name = "name",
+        surname = "surname",
+        email = Some("email@mail.com"),
+        role = PartyProcess.PartyRole.DELEGATE,
+        product = productInfo,
+        state = PartyProcess.RelationshipState.ACTIVE,
+        createdAt = relationshipTimestamp,
+        updatedAt = None
+      ),
+      RelationshipInfo(
         id = relationshipId1,
-        from = userId,
+        from = userId1,
+        name = "name1",
+        surname = "surname1",
+        email = Some("email1@mail.com"),
         role = PartyProcess.PartyRole.MANAGER,
         product = productInfo,
-        state = PartyProcess.RelationshipState.ACTIVE
+        state = PartyProcess.RelationshipState.ACTIVE,
+        createdAt = relationshipTimestamp,
+        updatedAt = None
       ),
       RelationshipInfo(
         id = relationshipId2,
-        from = adminIdentifier,
-        role = PartyProcess.PartyRole.DELEGATE,
-        product = productInfo,
-        state = PartyProcess.RelationshipState.ACTIVE
+        from = userId2,
+        name = "name2",
+        surname = "surname2",
+        email = Some("email2@mail.com"),
+        role = PartyProcess.PartyRole.OPERATOR,
+        product = productInfo.copy(role = "security"),
+        state = PartyProcess.RelationshipState.ACTIVE,
+        createdAt = relationshipTimestamp,
+        updatedAt = None
       ),
       RelationshipInfo(
         id = relationshipId3,
         from = userId3,
-        role = PartyProcess.PartyRole.OPERATOR,
-        product = productInfo.copy(role = "security"),
-        state = PartyProcess.RelationshipState.ACTIVE
-      ),
-      RelationshipInfo(
-        id = relationshipId4,
-        from = userId4,
+        name = "name3",
+        surname = "surname3",
+        email = Some("email3@mail.com"),
         role = PartyProcess.PartyRole.OPERATOR,
         product = productInfo.copy(role = "api"),
-        state = PartyProcess.RelationshipState.ACTIVE
+        state = PartyProcess.RelationshipState.ACTIVE,
+        createdAt = relationshipTimestamp,
+        updatedAt = None
       ))
 
     }
 
-    "retrieve all the relationships of a specific institution with filter by productRole" in {
-      val userId          = UUID.randomUUID()
+    "retrieve all the relationships of a specific institution with filter by productRole when requested by the admin" in {
       val adminIdentifier = UUID.randomUUID()
-      val userId3         = UUID.randomUUID()
-      val userId4         = UUID.randomUUID()
+      val userId1         = UUID.randomUUID()
+      val userId2         = UUID.randomUUID()
       val institutionId   = UUID.randomUUID()
 
-      val relationshipId1 = UUID.randomUUID()
-      val relationshipId2 = UUID.randomUUID()
-      val relationshipId3 = UUID.randomUUID()
-      val relationshipId4 = UUID.randomUUID()
+      val adminRelationshipId = UUID.randomUUID()
+      val relationshipId1     = UUID.randomUUID()
+      val relationshipId2     = UUID.randomUUID()
 
-      val relationship1 =
+      val adminRelationship =
         PartyManagementDependency.Relationship(
-          id = relationshipId1,
-          from = userId,
-          to = institutionId,
-          role = PartyManagementDependency.PartyRole.MANAGER,
-          product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
-        )
-      val relationship2 =
-        PartyManagementDependency.Relationship(
-          id = relationshipId2,
+          id = adminRelationshipId,
           from = adminIdentifier,
           to = institutionId,
           role = PartyManagementDependency.PartyRole.DELEGATE,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
-      val relationship3 =
+      val relationship1 =
         PartyManagementDependency.Relationship(
-          id = relationshipId3,
-          from = userId3,
+          id = relationshipId1,
+          from = userId1,
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = product.copy(role = "security"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
-      val relationship4 =
+      val relationship2 =
         PartyManagementDependency.Relationship(
-          id = relationshipId4,
-          from = userId4,
+          id = relationshipId2,
+          from = userId2,
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = product.copy(role = "api"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
+      val adminRelationships =
+        PartyManagementDependency.Relationships(items = Seq(adminRelationship))
+
       val relationships =
-        PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
+        PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2))
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(Some(adminIdentifier), Some(institutionId), None, None, *)
-        .returning(Future.successful(relationships))
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          Some(adminIdentifier),
+          Some(institutionId),
+          Seq(
+            PartyManagementDependency.PartyRole.MANAGER,
+            PartyManagementDependency.PartyRole.DELEGATE,
+            PartyManagementDependency.PartyRole.SUB_DELEGATE
+          ),
+          Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
+          Seq.empty,
+          Seq.empty,
+          *
+        )
+        .returning(Future.successful(adminRelationships))
         .once()
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(None, Some(institutionId), None, None, adminIdentifier.toString)
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          None,
+          Some(institutionId),
+          Seq.empty,
+          Seq.empty,
+          Seq.empty,
+          Seq("security", "api"),
+          adminIdentifier.toString
+        )
         .returning(Future.successful(relationships))
+        .once()
+
+      val userRegistryUser2 = UserRegistryUser(
+        id = userId1,
+        externalId = "taxCode",
+        name = "name2",
+        surname = "surname2",
+        certification = CertificationEnumsNone,
+        extras = UserRegistryUserExtras(email = Some("email2@mail.com"), birthDate = None)
+      )
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(userId1, adminIdentifier.toString)
+        .returning(Future.successful(userRegistryUser2))
+        .once()
+
+      val userRegistryUser3 = UserRegistryUser(
+        id = userId2,
+        externalId = "taxCode",
+        name = "name3",
+        surname = "surname3",
+        certification = CertificationEnumsNone,
+        extras = UserRegistryUserExtras(email = Some("email3@mail.com"), birthDate = None)
+      )
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(userId2, adminIdentifier.toString)
+        .returning(Future.successful(userRegistryUser3))
         .once()
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(adminIdentifier.toString)))
@@ -1345,51 +1806,77 @@ class PartyProcessSpec
       val body = Unmarshal(response.entity).to[Seq[RelationshipInfo]].futureValue
       response.status mustBe StatusCodes.OK
       body must contain only (RelationshipInfo(
-        id = relationshipId3,
-        from = userId3,
+        id = relationshipId1,
+        from = userId1,
+        name = "name2",
+        surname = "surname2",
+        email = Some("email2@mail.com"),
         role = PartyProcess.PartyRole.OPERATOR,
         product = productInfo.copy(role = "security"),
-        state = PartyProcess.RelationshipState.ACTIVE
+        state = PartyProcess.RelationshipState.ACTIVE,
+        createdAt = relationshipTimestamp,
+        updatedAt = None
       ),
       RelationshipInfo(
-        id = relationshipId4,
-        from = userId4,
+        id = relationshipId2,
+        from = userId2,
+        name = "name3",
+        surname = "surname3",
+        email = Some("email3@mail.com"),
         role = PartyProcess.PartyRole.OPERATOR,
         product = productInfo.copy(role = "api"),
-        state = PartyProcess.RelationshipState.ACTIVE
+        state = PartyProcess.RelationshipState.ACTIVE,
+        createdAt = relationshipTimestamp,
+        updatedAt = None
       ))
 
     }
 
     "retrieve only the relationships of a specific role when the current user is not an admin" in {
-      val userId          = UUID.randomUUID()
       val adminIdentifier = UUID.randomUUID()
+      val userId1         = UUID.randomUUID()
+      val userId2         = UUID.randomUUID()
       val userId3         = UUID.randomUUID()
-      val userId4         = UUID.randomUUID()
       val institutionId   = UUID.randomUUID()
 
-      val relationshipId1 = UUID.randomUUID()
-      val relationshipId2 = UUID.randomUUID()
-      val relationshipId3 = UUID.randomUUID()
-      val relationshipId4 = UUID.randomUUID()
+      val adminRelationshipId = UUID.randomUUID()
+      val relationshipId1     = UUID.randomUUID()
+      val relationshipId2     = UUID.randomUUID()
+      val relationshipId3     = UUID.randomUUID()
 
-      val relationship1 =
+      val adminRelationship =
         PartyManagementDependency.Relationship(
-          id = relationshipId1,
-          from = userId,
-          to = institutionId,
-          role = PartyManagementDependency.PartyRole.MANAGER,
-          product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
-        )
-      val relationship2 =
-        PartyManagementDependency.Relationship(
-          id = relationshipId2,
+          id = adminRelationshipId,
           from = adminIdentifier,
           to = institutionId,
           role = PartyManagementDependency.PartyRole.DELEGATE,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        )
+      val relationship1 =
+        PartyManagementDependency.Relationship(
+          id = relationshipId1,
+          from = userId1,
+          to = institutionId,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product,
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        )
+
+      val relationship2 =
+        PartyManagementDependency.Relationship(
+          id = relationshipId2,
+          from = userId2,
+          to = institutionId,
+          role = PartyManagementDependency.PartyRole.OPERATOR,
+          product = product.copy(role = "security"),
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationship3 =
@@ -1398,37 +1885,71 @@ class PartyProcessSpec
           from = userId3,
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
-          product = product.copy(role = "security"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
-        )
-
-      val relationship4 =
-        PartyManagementDependency.Relationship(
-          id = relationshipId4,
-          from = userId4,
-          to = institutionId,
-          role = PartyManagementDependency.PartyRole.OPERATOR,
           product = product.copy(role = "api"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationships =
-        PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
-      val selectedRelationships = PartyManagementDependency.Relationships(items = Seq(relationship3))
+        PartyManagementDependency.Relationships(items =
+          Seq(adminRelationship, relationship1, relationship2, relationship3)
+        )
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(Some(userId3), Some(institutionId), None, None, *)
-        .returning(Future.successful(selectedRelationships))
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          Some(userId2),
+          Some(institutionId),
+          Seq(
+            PartyManagementDependency.PartyRole.MANAGER,
+            PartyManagementDependency.PartyRole.DELEGATE,
+            PartyManagementDependency.PartyRole.SUB_DELEGATE
+          ),
+          Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
+          Seq.empty,
+          Seq.empty,
+          *
+        )
+        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq.empty)))
         .once()
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(None, Some(institutionId), None, None, *)
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(None, Some(institutionId), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
         .returning(Future.successful(relationships))
         .once()
 
-      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(userId3.toString)))
+      val userRegistryUser2 = UserRegistryUser(
+        id = userId2,
+        externalId = "taxCode",
+        name = "name2",
+        surname = "surname2",
+        certification = CertificationEnumsNone,
+        extras = UserRegistryUserExtras(email = Some("email2@mail.com"), birthDate = None)
+      )
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(userId2, userId2.toString)
+        .returning(Future.successful(userRegistryUser2))
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(userId2.toString)))
 
       val response =
         Http()
@@ -1445,78 +1966,107 @@ class PartyProcessSpec
       response.status mustBe StatusCodes.OK
       body must contain only
         RelationshipInfo(
-          id = relationshipId3,
-          from = userId3,
+          id = relationshipId2,
+          from = userId2,
+          name = "name2",
+          surname = "surname2",
+          email = Some("email2@mail.com"),
           role = PartyProcess.PartyRole.OPERATOR,
           product = productInfo.copy(role = "security"),
-          state = PartyProcess.RelationshipState.ACTIVE
+          state = PartyProcess.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
     }
 
     "retrieve all the relationships of a specific institution with filter by productRole and products" in {
-      val userId          = UUID.randomUUID()
       val adminIdentifier = UUID.randomUUID()
-      val userId3         = UUID.randomUUID()
-      val userId4         = UUID.randomUUID()
+      val userId1         = UUID.randomUUID()
       val institutionId   = UUID.randomUUID()
 
-      val relationshipId1 = UUID.randomUUID()
-      val relationshipId2 = UUID.randomUUID()
-      val relationshipId3 = UUID.randomUUID()
-      val relationshipId4 = UUID.randomUUID()
+      val adminRelationshipId = UUID.randomUUID()
+      val relationshipId1     = UUID.randomUUID()
 
-      val relationship1 =
+      val adminRelationship =
         PartyManagementDependency.Relationship(
-          id = relationshipId1,
-          from = userId,
-          to = institutionId,
-          role = PartyManagementDependency.PartyRole.MANAGER,
-          product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
-        )
-      val relationship2 =
-        PartyManagementDependency.Relationship(
-          id = relationshipId2,
+          id = adminRelationshipId,
           from = adminIdentifier,
           to = institutionId,
           role = PartyManagementDependency.PartyRole.DELEGATE,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
-      val relationship3 =
+      val relationship1 =
         PartyManagementDependency.Relationship(
-          id = relationshipId3,
-          from = userId3,
+          id = relationshipId1,
+          from = userId1,
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = product.copy(id = "PDND", role = "security"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
-        )
-
-      val relationship4 =
-        PartyManagementDependency.Relationship(
-          id = relationshipId4,
-          from = userId4,
-          to = institutionId,
-          role = PartyManagementDependency.PartyRole.OPERATOR,
-          product = product.copy(role = "api"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationships =
-        PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
+        PartyManagementDependency.Relationships(items = Seq(relationship1))
+
+      val adminRelationships = PartyManagementDependency.Relationships(items = Seq(adminRelationship))
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(Some(adminIdentifier), Some(institutionId), None, None, *)
-        .returning(Future.successful(relationships))
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          Some(adminIdentifier),
+          Some(institutionId),
+          Seq(
+            PartyManagementDependency.PartyRole.MANAGER,
+            PartyManagementDependency.PartyRole.DELEGATE,
+            PartyManagementDependency.PartyRole.SUB_DELEGATE
+          ),
+          Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
+          Seq.empty,
+          Seq.empty,
+          *
+        )
+        .returning(Future.successful(adminRelationships))
         .once()
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(None, Some(institutionId), None, None, *)
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(None, Some(institutionId), Seq.empty, Seq.empty, Seq("PDND"), Seq("security", "api"), *)
         .returning(Future.successful(relationships))
+        .once()
+
+      val userRegistryUser2 = UserRegistryUser(
+        id = userId1,
+        externalId = "taxCode",
+        name = "name2",
+        surname = "surname2",
+        certification = CertificationEnumsNone,
+        extras = UserRegistryUserExtras(email = Some("email2@mail.com"), birthDate = None)
+      )
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(userId1, adminIdentifier.toString)
+        .returning(Future.successful(userRegistryUser2))
         .once()
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(adminIdentifier.toString)))
@@ -1534,57 +2084,104 @@ class PartyProcessSpec
       val body = Unmarshal(response.entity).to[Seq[RelationshipInfo]].futureValue
       response.status mustBe StatusCodes.OK
       body must contain only RelationshipInfo(
-        id = relationshipId3,
-        from = userId3,
+        id = relationshipId1,
+        from = userId1,
+        name = "name2",
+        surname = "surname2",
+        email = Some("email2@mail.com"),
         role = PartyRole.OPERATOR,
         product = productInfo.copy(id = "PDND", role = "security"),
-        state = RelationshipState.ACTIVE
+        state = RelationshipState.ACTIVE,
+        createdAt = relationshipTimestamp,
+        updatedAt = None
       )
     }
 
-    "retrieve all the relationships of a specific institution with filter by states" in {
-      val userId1       = UUID.randomUUID()
-      val userId2       = UUID.randomUUID()
-      val institutionId = UUID.randomUUID()
+    "retrieve all the relationships of a specific institution with filter by states requested by admin" in {
+      val adminIdentifier = UUID.randomUUID()
+      val institutionId   = UUID.randomUUID()
 
       val relationshipId1 = UUID.randomUUID()
-      val relationshipId2 = UUID.randomUUID()
 
-      val relationship1 =
+      val adminRelationship =
         PartyManagementDependency.Relationship(
           id = relationshipId1,
-          from = userId1,
+          from = adminIdentifier,
           to = institutionId,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
-        )
-      val relationship2 =
-        PartyManagementDependency.Relationship(
-          id = relationshipId2,
-          from = userId2,
-          to = institutionId,
-          role = PartyManagementDependency.PartyRole.DELEGATE,
-          product = product,
-          state = PartyManagementDependency.RelationshipState.PENDING
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
+      val adminRelationships =
+        PartyManagementDependency.Relationships(items = Seq(adminRelationship))
       val relationships =
-        PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2))
+        PartyManagementDependency.Relationships(items = Seq(adminRelationship))
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(Some(userId1), Some(institutionId), None, None, *)
-        .returning(Future.successful(relationships))
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          Some(adminIdentifier),
+          Some(institutionId),
+          Seq(
+            PartyManagementDependency.PartyRole.MANAGER,
+            PartyManagementDependency.PartyRole.DELEGATE,
+            PartyManagementDependency.PartyRole.SUB_DELEGATE
+          ),
+          Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
+          Seq.empty,
+          Seq.empty,
+          *
+        )
+        .returning(Future.successful(adminRelationships))
         .once()
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(None, Some(institutionId), None, None, *)
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          None,
+          Some(institutionId),
+          Seq.empty,
+          Seq(PartyManagementDependency.RelationshipState.ACTIVE),
+          Seq.empty,
+          Seq.empty,
+          *
+        )
         .returning(Future.successful(relationships))
         .once()
 
-      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(userId1.toString)))
+      val userRegistryUser = UserRegistryUser(
+        id = adminIdentifier,
+        externalId = "taxCode",
+        name = "name1",
+        surname = "surname1",
+        certification = CertificationEnumsNone,
+        extras = UserRegistryUserExtras(email = Some("email1@mail.com"), birthDate = None)
+      )
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(adminIdentifier, *)
+        .returning(Future.successful(userRegistryUser))
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(adminIdentifier.toString)))
       val response =
         Http()
           .singleRequest(
@@ -1600,29 +2197,36 @@ class PartyProcessSpec
       response.status mustBe StatusCodes.OK
       body must contain only RelationshipInfo(
         id = relationshipId1,
-        from = userId1,
+        from = adminIdentifier,
+        name = "name1",
+        surname = "surname1",
+        email = Some("email1@mail.com"),
         role = PartyRole.MANAGER,
         product = productInfo,
-        state = RelationshipState.ACTIVE
+        state = RelationshipState.ACTIVE,
+        createdAt = relationshipTimestamp,
+        updatedAt = None
       )
     }
 
-    "retrieve all the relationships of a specific institution with filter by roles" in {
-      val userId1       = UUID.randomUUID()
-      val userId2       = UUID.randomUUID()
-      val institutionId = UUID.randomUUID()
+    "retrieve all the relationships of a specific institution with filter by roles when requested by admin" in {
+      val adminIdentifier = UUID.randomUUID()
+      val userId2         = UUID.randomUUID()
+      val institutionId   = UUID.randomUUID()
 
-      val relationshipId1 = UUID.randomUUID()
-      val relationshipId2 = UUID.randomUUID()
+      val adminRelationshipId = UUID.randomUUID()
+      val relationshipId2     = UUID.randomUUID()
 
-      val relationship1 =
+      val adminRelationship =
         PartyManagementDependency.Relationship(
-          id = relationshipId1,
-          from = userId1,
+          id = adminRelationshipId,
+          from = adminIdentifier,
           to = institutionId,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
       val relationship2 =
         PartyManagementDependency.Relationship(
@@ -1631,25 +2235,78 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.DELEGATE,
           product = product,
-          state = PartyManagementDependency.RelationshipState.PENDING
+          state = PartyManagementDependency.RelationshipState.PENDING,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
+      val adminRelationships =
+        PartyManagementDependency.Relationships(items = Seq(adminRelationship))
       val relationships =
-        PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2))
+        PartyManagementDependency.Relationships(items = Seq(relationship2))
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(Some(userId1), Some(institutionId), None, None, *)
-        .returning(Future.successful(relationships))
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          Some(adminIdentifier),
+          Some(institutionId),
+          Seq(
+            PartyManagementDependency.PartyRole.MANAGER,
+            PartyManagementDependency.PartyRole.DELEGATE,
+            PartyManagementDependency.PartyRole.SUB_DELEGATE
+          ),
+          Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
+          Seq.empty,
+          Seq.empty,
+          *
+        )
+        .returning(Future.successful(adminRelationships))
         .once()
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(None, Some(institutionId), None, None, *)
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          None,
+          Some(institutionId),
+          Seq(PartyManagementDependency.PartyRole.DELEGATE),
+          Seq.empty,
+          Seq.empty,
+          Seq.empty,
+          *
+        )
         .returning(Future.successful(relationships))
         .once()
 
-      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(userId1.toString)))
+      val userRegistryUser2 = UserRegistryUser(
+        id = userId2,
+        externalId = "taxCode",
+        name = "name2",
+        surname = "surname2",
+        certification = CertificationEnumsNone,
+        extras = UserRegistryUserExtras(email = Some("email2@mail.com"), birthDate = None)
+      )
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(userId2, adminIdentifier.toString)
+        .returning(Future.successful(userRegistryUser2))
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(adminIdentifier.toString)))
       val response =
         Http()
           .singleRequest(
@@ -1666,41 +2323,37 @@ class PartyProcessSpec
       body must contain only RelationshipInfo(
         id = relationshipId2,
         from = userId2,
+        name = "name2",
+        surname = "surname2",
+        email = Some("email2@mail.com"),
         role = PartyRole.DELEGATE,
         product = productInfo,
-        state = RelationshipState.PENDING
+        state = RelationshipState.PENDING,
+        createdAt = relationshipTimestamp,
+        updatedAt = None
       )
     }
 
     "retrieve all the relationships of a specific institution using all filters" in {
-      val userId1       = UUID.randomUUID()
-      val userId2       = UUID.randomUUID()
-      val userId3       = UUID.randomUUID()
-      val userId4       = UUID.randomUUID()
-      val institutionId = UUID.randomUUID()
+      val adminIdentifier = UUID.randomUUID()
+      val userId3         = UUID.randomUUID()
+      val userId4         = UUID.randomUUID()
+      val institutionId   = UUID.randomUUID()
 
-      val relationshipId1 = UUID.randomUUID()
-      val relationshipId2 = UUID.randomUUID()
-      val relationshipId3 = UUID.randomUUID()
-      val relationshipId4 = UUID.randomUUID()
+      val adminRelationshipId = UUID.randomUUID()
+      val relationshipId3     = UUID.randomUUID()
+      val relationshipId4     = UUID.randomUUID()
 
-      val relationship1 =
+      val adminRelationship =
         PartyManagementDependency.Relationship(
-          id = relationshipId1,
-          from = userId1,
+          id = adminRelationshipId,
+          from = adminIdentifier,
           to = institutionId,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
-        )
-      val relationship2 =
-        PartyManagementDependency.Relationship(
-          id = relationshipId2,
-          from = userId2,
-          to = institutionId,
-          role = PartyManagementDependency.PartyRole.DELEGATE,
-          product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationship3 =
@@ -1710,7 +2363,9 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = product.copy(id = "PDND", role = "security"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       val relationship4 =
@@ -1720,25 +2375,94 @@ class PartyProcessSpec
           to = institutionId,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = product.copy(id = "PDND", role = "api"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
+      val adminRelationships =
+        PartyManagementDependency.Relationships(items = Seq(adminRelationship))
+
       val relationships =
-        PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
+        PartyManagementDependency.Relationships(items = Seq(relationship3, relationship4))
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(Some(userId1), Some(institutionId), None, None, *)
-        .returning(Future.successful(relationships))
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          Some(adminIdentifier),
+          Some(institutionId),
+          Seq(
+            PartyManagementDependency.PartyRole.MANAGER,
+            PartyManagementDependency.PartyRole.DELEGATE,
+            PartyManagementDependency.PartyRole.SUB_DELEGATE
+          ),
+          Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
+          Seq.empty,
+          Seq.empty,
+          *
+        )
+        .returning(Future.successful(adminRelationships))
         .once()
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(None, Some(institutionId), None, None, *)
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          None,
+          Some(institutionId),
+          Seq(PartyManagementDependency.PartyRole.OPERATOR),
+          Seq(PartyManagementDependency.RelationshipState.ACTIVE),
+          Seq("PDND"),
+          Seq("security", "api"),
+          *
+        )
         .returning(Future.successful(relationships))
         .once()
 
-      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(userId1.toString)))
+      val userRegistryUser3 = UserRegistryUser(
+        id = userId3,
+        externalId = "taxCode",
+        name = "name3",
+        surname = "surname3",
+        certification = CertificationEnumsNone,
+        extras = UserRegistryUserExtras(email = Some("email3@mail.com"), birthDate = None)
+      )
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(userId3, adminIdentifier.toString)
+        .returning(Future.successful(userRegistryUser3))
+        .once()
+
+      val userRegistryUser4 = UserRegistryUser(
+        id = userId4,
+        externalId = "taxCode",
+        name = "name4",
+        surname = "surname4",
+        certification = CertificationEnumsNone,
+        extras = UserRegistryUserExtras(email = Some("email4@mail.com"), birthDate = None)
+      )
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(userId4, adminIdentifier.toString)
+        .returning(Future.successful(userRegistryUser4))
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(adminIdentifier.toString)))
       val response =
         Http()
           .singleRequest(
@@ -1757,83 +2481,96 @@ class PartyProcessSpec
         RelationshipInfo(
           id = relationshipId3,
           from = userId3,
+          name = "name3",
+          surname = "surname3",
+          email = Some("email3@mail.com"),
           role = PartyRole.OPERATOR,
           product = productInfo.copy(id = "PDND", role = "security"),
-          state = RelationshipState.ACTIVE
+          state = RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         ),
         RelationshipInfo(
           id = relationshipId4,
           from = userId4,
+          name = "name4",
+          surname = "surname4",
+          email = Some("email4@mail.com"),
           role = PartyRole.OPERATOR,
           product = productInfo.copy(id = "PDND", role = "api"),
-          state = RelationshipState.ACTIVE
+          state = RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
       )
     }
 
-    "retrieve all the relationships of a specific institution with all filter  when no intersection occurs" in {
-      val userId          = UUID.randomUUID()
+    "retrieve all the relationships of a specific institution with all filter when no intersection occurs" in {
       val adminIdentifier = UUID.randomUUID()
-      val userId3         = UUID.randomUUID()
-      val userId4         = UUID.randomUUID()
       val institutionId   = UUID.randomUUID()
 
-      val relationshipId1 = UUID.randomUUID()
-      val relationshipId2 = UUID.randomUUID()
-      val relationshipId3 = UUID.randomUUID()
-      val relationshipId4 = UUID.randomUUID()
+      val adminRelationshipId = UUID.randomUUID()
 
-      val relationship1 =
+      val adminRelationship =
         PartyManagementDependency.Relationship(
-          id = relationshipId1,
-          from = userId,
-          to = institutionId,
-          role = PartyManagementDependency.PartyRole.MANAGER,
-          product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
-        )
-      val relationship2 =
-        PartyManagementDependency.Relationship(
-          id = relationshipId2,
+          id = adminRelationshipId,
           from = adminIdentifier,
           to = institutionId,
           role = PartyManagementDependency.PartyRole.DELEGATE,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
-      val relationship3 =
-        PartyManagementDependency.Relationship(
-          id = relationshipId3,
-          from = userId3,
-          to = institutionId,
-          role = PartyManagementDependency.PartyRole.OPERATOR,
-          product = product.copy(role = "security"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
-        )
-
-      val relationship4 =
-        PartyManagementDependency.Relationship(
-          id = relationshipId4,
-          from = userId4,
-          to = institutionId,
-          role = PartyManagementDependency.PartyRole.OPERATOR,
-          product = product.copy(role = "api"),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
-        )
-
+      val adminRelationships =
+        PartyManagementDependency.Relationships(items = Seq(adminRelationship))
       val relationships =
-        PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2, relationship3, relationship4))
+        PartyManagementDependency.Relationships(items = Seq())
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(Some(adminIdentifier), Some(institutionId), None, None, *)
-        .returning(Future.successful(relationships))
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          Some(adminIdentifier),
+          Some(institutionId),
+          Seq(
+            PartyManagementDependency.PartyRole.MANAGER,
+            PartyManagementDependency.PartyRole.DELEGATE,
+            PartyManagementDependency.PartyRole.SUB_DELEGATE
+          ),
+          Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
+          Seq.empty,
+          Seq.empty,
+          *
+        )
+        .returning(Future.successful(adminRelationships))
         .once()
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(None, Some(institutionId), None, None, *)
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          None,
+          Some(institutionId),
+          Seq(PartyManagementDependency.PartyRole.OPERATOR),
+          Seq(PartyManagementDependency.RelationshipState.PENDING),
+          Seq("Interop", "PDND"),
+          Seq("security", "api"),
+          *
+        )
         .returning(Future.successful(relationships))
         .once()
 
@@ -1843,7 +2580,7 @@ class PartyProcessSpec
           .singleRequest(
             HttpRequest(
               uri =
-                s"$url/institutions/$institutionId/relationships?productRoles=security,api&products=Interop,PDND&roles=OPERATOR&state=PENDING",
+                s"$url/institutions/$institutionId/relationships?productRoles=security,api&products=Interop,PDND&roles=OPERATOR&states=PENDING",
               method = HttpMethods.GET,
               headers = authorization
             )
@@ -1875,8 +2612,10 @@ class PartyProcessSpec
           contentType = None,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = PartyManagementDependency
-            .RelationshipProduct(id = product, role = productRole, timestamp = productTimestamp),
-          state = PartyManagementDependency.RelationshipState.SUSPENDED
+            .RelationshipProduct(id = product, role = productRole, createdAt = productTimestamp),
+          state = PartyManagementDependency.RelationshipState.SUSPENDED,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       (mockPartyManagementService
@@ -1921,8 +2660,10 @@ class PartyProcessSpec
           contentType = None,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = PartyManagementDependency
-            .RelationshipProduct(id = product, role = productRole, timestamp = productTimestamp),
-          state = PartyManagementDependency.RelationshipState.PENDING
+            .RelationshipProduct(id = product, role = productRole, createdAt = productTimestamp),
+          state = PartyManagementDependency.RelationshipState.PENDING,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       (mockPartyManagementService
@@ -1965,8 +2706,10 @@ class PartyProcessSpec
           contentType = None,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = PartyManagementDependency
-            .RelationshipProduct(id = product, role = productRole, timestamp = productTimestamp),
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+            .RelationshipProduct(id = product, role = productRole, createdAt = productTimestamp),
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       (mockPartyManagementService
@@ -2011,8 +2754,10 @@ class PartyProcessSpec
           contentType = None,
           role = PartyManagementDependency.PartyRole.OPERATOR,
           product = PartyManagementDependency
-            .RelationshipProduct(id = product, role = productRole, timestamp = productTimestamp),
-          state = PartyManagementDependency.RelationshipState.PENDING
+            .RelationshipProduct(id = product, role = productRole, createdAt = productTimestamp),
+          state = PartyManagementDependency.RelationshipState.PENDING,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       (mockPartyManagementService
@@ -2132,7 +2877,9 @@ class PartyProcessSpec
           contentType = None,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       (mockPartyManagementService
@@ -2142,8 +2889,15 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(None, Some(organization1.id), None, None, *)
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(None, Some(organization1.id), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(relationship))))
         .once()
 
@@ -2216,14 +2970,19 @@ class PartyProcessSpec
         .expects(*, *, *, *, *, *)
         .returning(Future.successful(()))
         .repeat(2)
-      (mockPdfCreator.create _).expects(*, *).returning(Future.successful((file, "hash"))).once()
+      (mockFileManager.get _).expects(*).returning(Future.successful(new ByteArrayOutputStream())).once()
+      (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful((file, "hash"))).once()
       (mockPartyManagementService
-        .createToken(_: PartyManagementDependency.RelationshipsSeed, _: String)(_: String))
-        .expects(*, *, *)
+        .createToken(_: PartyManagementDependency.RelationshipsSeed, _: String, _: String, _: String)(_: String))
+        .expects(*, *, *, *, *)
         .returning(Future.successful(PartyManagementDependency.TokenText("token")))
         .once()
 
-      val req = OnboardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
+      val req = OnboardingRequest(
+        users = Seq(manager, delegate),
+        institutionId = "institutionId1",
+        contract = OnboardingContract("a", "b")
+      )
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/legals", HttpMethods.POST)
@@ -2279,8 +3038,10 @@ class PartyProcessSpec
           contentType = None,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product =
-            PartyManagementDependency.RelationshipProduct(id = "product", role = "admin", timestamp = productTimestamp),
-          state = PartyManagementDependency.RelationshipState.PENDING
+            PartyManagementDependency.RelationshipProduct(id = "product", role = "admin", createdAt = productTimestamp),
+          state = PartyManagementDependency.RelationshipState.PENDING,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       (mockPartyManagementService
@@ -2290,12 +3051,23 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(None, Some(organization1.id), None, None, *)
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(None, Some(organization1.id), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(relationship))))
         .once()
 
-      val req = OnboardingRequest(users = Seq(manager, delegate), institutionId = "institutionId1")
+      val req = OnboardingRequest(
+        users = Seq(manager, delegate),
+        institutionId = "institutionId1",
+        contract = OnboardingContract("a", "b")
+      )
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/legals", HttpMethods.POST)
@@ -2330,7 +3102,9 @@ class PartyProcessSpec
           contentType = None,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.ACTIVE
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       (mockPartyManagementService
@@ -2340,8 +3114,15 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(None, Some(organization1.id), None, None, *)
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(None, Some(organization1.id), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(relationship))))
         .once()
 
@@ -2388,7 +3169,9 @@ class PartyProcessSpec
           contentType = None,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
-          state = PartyManagementDependency.RelationshipState.PENDING
+          state = PartyManagementDependency.RelationshipState.PENDING,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
 
       (mockPartyManagementService
@@ -2398,8 +3181,15 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService
-        .retrieveRelationships(_: Option[UUID], _: Option[UUID], _: Option[String], _: Option[String])(_: String))
-        .expects(None, Some(organization1.id), None, None, *)
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(None, Some(organization1.id), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(relationship))))
         .once()
 

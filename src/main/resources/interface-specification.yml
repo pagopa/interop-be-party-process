@@ -42,6 +42,15 @@ paths:
           in: query
           schema:
             type: string
+        - name: states
+          in: query
+          description: comma separated sequence of states to filter the response with
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/RelationshipState'
+            default: [ ]
+          explode: false
       responses:
         '200':
           description: successful operation
@@ -83,12 +92,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-        '409':
-          description: Document validation failed
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
   /onboarding/legals:
     post:
       security:
@@ -113,12 +116,6 @@ paths:
                 $ref: '#/components/schemas/OnboardingResponse'
         '400':
           description: Invalid ID supplied
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
-        '409':
-          description: Document validation failed
           content:
             application/problem+json:
               schema:
@@ -192,26 +189,42 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: products
-          description: comma separated sequence of products to filter the response with
-          in: query
-          schema:
-            type: string
-        - name: productRoles
-          description: comma separated sequence of product roles to filter the response with
-          in: query
-          schema:
-            type: string
-        - name: roles
+        - in: query
+          name: roles
           description: comma separated sequence of role to filter the response with
-          in: query
           schema:
-            type: string
-        - name: states
-          description: comma separated sequence of state to filter the response with
-          in: query
+            type: array
+            items:
+              $ref: '#/components/schemas/PartyRole'
+            default: [ ]
+          explode: false
+        - in: query
+          name: states
+          description: comma separated sequence of states to filter the response with
           schema:
-            type: string
+            type: array
+            items:
+              $ref: '#/components/schemas/RelationshipState'
+            default: [ ]
+          explode: false
+        - in: query
+          name: products
+          description: comma separated sequence of products to filter the response with
+          schema:
+            type: array
+            items:
+              type: string
+            default: [ ]
+          explode: false
+        - in: query
+          name: productRoles
+          description: comma separated sequence of product roles to filter the response with
+          schema:
+            type: array
+            items:
+              type: string
+            default: [ ]
+          explode: false
       responses:
         '200':
           description: successful operation
@@ -386,7 +399,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  '/onboarding/complete/{token}':
+  '/onboarding/complete/{tokenId}':
     post:
       security:
         - bearerAuth: [ ]
@@ -396,9 +409,9 @@ paths:
       description: Return ok
       operationId: confirmOnboarding
       parameters:
-        - name: token
+        - name: tokenId
           in: path
-          description: the token containing the onboardind information
+          description: the token id containing the onboardind information
           required: true
           schema:
             type: string
@@ -427,6 +440,12 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        '409':
+          description: Document validation failed
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
     delete:
       security:
         - bearerAuth: [ ]
@@ -436,9 +455,9 @@ paths:
       description: Return ok
       operationId: invalidateOnboarding
       parameters:
-        - name: token
+        - name: tokenId
           in: path
-          description: The token to invalidate
+          description: The token id to invalidate
           required: true
           schema:
             type: string
@@ -512,10 +531,23 @@ components:
             $ref: '#/components/schemas/User'
         institutionId:
           type: string
+        contract:
+          $ref: '#/components/schemas/OnboardingContract'
       additionalProperties: false
       required:
         - users
         - institutionId
+        - contract
+    OnboardingContract:
+      properties:
+        version:
+          type: string
+        path:
+          type: string
+      additionalProperties: false
+      required:
+        - version
+        - path
     OnboardingResponse:
       properties:
         token:
@@ -536,19 +568,34 @@ components:
         from:
           type: string
           format: uuid
+        name:
+          type: string
+        surname:
+          type: string
+        email:
+          type: string
         role:
           $ref: '#/components/schemas/PartyRole'
         product:
           $ref: '#/components/schemas/ProductInfo'
         state:
           $ref: '#/components/schemas/RelationshipState'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
       additionalProperties: false
       required:
         - id
         - from
+        - name
+        - surname
         - role
         - product
         - state
+        - createdAt
     RelationshipsResponse:
       type: array
       items:

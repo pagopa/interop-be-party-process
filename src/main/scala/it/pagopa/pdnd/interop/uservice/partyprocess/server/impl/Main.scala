@@ -31,6 +31,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.service._
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.impl._
 import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.api.InstitutionApi
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.api.UserApi
+import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.invoker.ApiKeyValue
 import kamon.Kamon
 
 import scala.concurrent.Future
@@ -58,6 +59,7 @@ trait AttributeRegistryDependency {
 }
 
 trait UserRegistryManagementDependency {
+  implicit val apiKey: ApiKeyValue = ApiKeyValue(ApplicationConfiguration.userRegistryApiKey)
   final val userRegistryManagementService: UserRegistryManagementService =
     UserRegistryManagementServiceImpl(
       UserRegistryManagementInvoker(),
@@ -86,8 +88,7 @@ object Main
   private def launchApp(fileManager: FileManager, mailTemplate: PersistedTemplate): Future[Http.ServerBinding] = {
     Kamon.init()
 
-    val mailer: MailEngine     = new PartyProcessMailer with DefaultPDNDMailer with CourierMailer
-    val pdfCreator: PDFCreator = new PDFCreatorImpl
+    val mailer: MailEngine = new PartyProcessMailer with DefaultPDNDMailer with CourierMailer
 
     val processApi: ProcessApi = new ProcessApi(
       new ProcessApiServiceImpl(
@@ -95,7 +96,7 @@ object Main
         partyProcessService,
         attributeRegistryService,
         userRegistryManagementService,
-        pdfCreator,
+        PDFCreatorImpl,
         fileManager,
         mailer,
         mailTemplate

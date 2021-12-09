@@ -1,85 +1,55 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
-import com.itextpdf.kernel.pdf.{PdfDocument, PdfWriter}
-import com.itextpdf.layout.Document
-import com.itextpdf.layout.element.Paragraph
+import it.pagopa.pdnd.interop.commons.files.service.PDFManager
 import it.pagopa.pdnd.interop.commons.utils.Digester
+import it.pagopa.pdnd.interop.commons.utils.TypeConversions.OptionOps
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.Organization
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.{PartyRole, User}
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.PDFCreator
 
-import java.io.{File, FileOutputStream}
+import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import scala.concurrent.Future
 import scala.util.Try
 
-class PDFCreatorImpl extends PDFCreator {
+object PDFCreatorImpl extends PDFCreator with PDFManager {
 
-  def create(users: Seq[User], organization: Organization): Future[(File, String)] = Future.fromTry {
+  def createContract(contractTemplate: String, users: Seq[User], organization: Organization): Future[(File, String)] =
+    Future.fromTry {
+      for {
+        file <- createTempFile
+        data <- setupData(users, organization)
+        pdf  <- getPDFAsFile(file.toPath, contractTemplate, data)
+        hash = Digester.createMD5Hash(file)
+      } yield (pdf, hash)
+
+    }
+
+  private def createTempFile: Try[File] = {
     Try {
       val fileTimestamp: String = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-      val file: File =
-        File.createTempFile(s"${fileTimestamp}_${UUID.randomUUID().toString}_contratto_interoperabilità.", ".pdf")
-      val stream: FileOutputStream = new FileOutputStream(file)
-      val writer: PdfWriter        = new PdfWriter(stream)
-      val pdf: PdfDocument         = new PdfDocument(writer)
-      val document: Document       = new Document(pdf)
-      val manager                  = users.find(u => u.role == PartyRole.MANAGER).get
-
-      val _ = document
-        .add(new Paragraph(s"Le persone\n${users.map(userToText).mkString("\n")}"))
-        .add(
-          new Paragraph(
-            s"si accreditano presso la piattaforma di Interoperabilità in qualità di Rappresentanti Legali dell'Ente\n${orgToText(manager, organization)}"
-          )
-        )
-        .add(
-          new Paragraph(
-            """
-              |Contratto:
-              |Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et
-              |dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
-              |ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore
-              |eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia
-              |deserunt mollit anim id est laborum.
-              |""".stripMargin
-          )
-        )
-        .add(
-          new Paragraph(
-            """
-              |Note lagali:
-              |Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et
-              |dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
-              |ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore
-              |eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia
-              |deserunt mollit anim id est laborum.
-              |""".stripMargin
-          )
-        )
-      document.close()
-      val hash = Digester.createMD5Hash(file)
-      (file, hash)
+      File.createTempFile(s"${fileTimestamp}_${UUID.randomUUID().toString}_contratto_interoperabilita.", ".pdf")
     }
   }
 
+  private def setupData(users: Seq[User], organization: Organization): Try[Map[String, String]] = {
+    for {
+      manager <- users.find(u => u.role == PartyRole.MANAGER).toTry("Manager not found")
+    } yield Map(
+      "institutionName" -> organization.description,
+      "institutionMail" -> organization.digitalAddress,
+      "manager"         -> managerToText(manager),
+      "users"           -> users.map(userToText).mkString
+    )
+  }
+
   private def userToText(user: User): String = {
-    s"""
-       |Nome: ${user.name} 
-       |Cognome: ${user.surname}
-       |Codice fiscale: ${user.taxCode}
-       |Ruolo: ${user.role}
-       |""".stripMargin
+    s"${user.name} ${user.surname}, Codice fiscale: ${user.taxCode}, Ruolo: <strong>${user.role}</strong><br/>"
   }
 
-  private def orgToText(manager: User, organization: Organization): String = {
-    s"""
-       |Nome: ${organization.description}
-       |Rappresentante Legale: ${manager.name} ${manager.surname}
-       |Domicilio Digitale: ${organization.digitalAddress}
-       |""".stripMargin
+  private def managerToText(user: User): String = {
+    s"${user.name} ${user.surname}, Codice fiscale: ${user.taxCode}"
   }
-
 }
