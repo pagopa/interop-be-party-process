@@ -16,12 +16,6 @@ object ApplicationConfiguration {
   def userRegistryApiKey: String = Option(System.getenv("USER_REGISTRY_API_KEY"))
     .getOrElse(throw new RuntimeException("No user registry api key set"))
 
-  def destinationMails: Seq[String] = {
-    Option(System.getenv("DESTINATION_MAILS"))
-      .map(_.split(",").toSeq)
-      .getOrElse(throw new RuntimeException("No destination email set"))
-  }
-
   def mailTemplatePath: String = config.getString("uservice-party-process.mail-template.path")
 
   def onboardingMailPlaceholdersReplacement: Map[String, String] = {

@@ -59,9 +59,8 @@ pipeline {
         STORAGE_USR="${AWS_USR}"
         STORAGE_PSW="${AWS_PSW}"
         SMTP = credentials('smtp')
-        DESTINATION_MAILS = credentials('destination-mails')
         USER_REGISTRY_API_KEY = credentials('user-registry-api-key')
-        //REPLICAS_NR = 1
+        REPLICAS_NR = 1
       }
       steps {
         container('sbt-container') {

@@ -179,11 +179,7 @@ class ProcessApiServiceImpl(
         onboardingRequest.contract.version,
         onboardingRequest.contract.path
       )(bearer)
-      _ <- sendOnboardingMail(
-        ApplicationConfiguration.destinationMails,
-        pdf._1,
-        token.token
-      ) //TODO address must be the digital address
+      _ <- sendOnboardingMail(Seq(organization.digitalAddress), pdf._1, token.token)
       _ = logger.info(s"$token")
     } yield OnboardingResponse(token.token, pdf._1)
 
@@ -237,11 +233,7 @@ class ProcessApiServiceImpl(
         onboardingRequest.contract.path
       )(bearer)
 
-      _ <- sendOnboardingMail(
-        ApplicationConfiguration.destinationMails,
-        pdf._1,
-        token.token
-      ) //TODO address must be the digital address
+      _ <- sendOnboardingMail(Seq(organization.digitalAddress), pdf._1, token.token)
       _ = logger.info(s"$token")
     } yield OnboardingResponse(token.token, pdf._1)
 
