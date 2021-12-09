@@ -8,5 +8,5 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.model.Problem
 class HealthApiMarshallerImpl extends HealthApiMarshaller with SprayJsonSupport {
 
   override implicit def toEntityMarshallerProblem: ToEntityMarshaller[Problem] =
-    sprayJsonMarshaller[Problem](jsonFormat3(Problem))
+    sprayJsonMarshaller[Problem](jsonFormat5(Problem))
 }
