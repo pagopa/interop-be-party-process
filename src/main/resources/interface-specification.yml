@@ -444,17 +444,17 @@ paths:
 
             * 002-100: document validation fails
 
-            * 002-101: original document digest differs from incoming document one
+            * 002-101: original document digest differs from incoming document digest
 
-            * 002-102: the signature is invalid
+            * 002-102: signature is invalid
 
             * 002-103: signature form is not CAdES
 
-            * 002-104: signature tax code is not equal to document one
+            * 002-104: signature tax code is not equal to tax code in document
 
             * 002-105: signature tax code has an invalid format
 
-            * 002-106: signature tax code is not present
+            * 002-106: missing signature tax code
 
           content:
             application/problem+json:
