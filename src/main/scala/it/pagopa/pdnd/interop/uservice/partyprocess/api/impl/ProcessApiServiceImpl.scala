@@ -207,37 +207,17 @@ class ProcessApiServiceImpl(
     }
   }
 
-  def f(personId: UUID, organizationId: UUID, role: PartyRole, product: String, productRole: String)(bearer: String) = {
-    val result: Future[Unit] =
-      partyManagementService.createRelationship(personId, organizationId, roleToDependency(role), product, productRole)(
-        bearer
-      )
-
-    result.recover { case _ =>
-      ()
-//      partyManagementService.retrieveRelationships(
-//        from = Some(personId),
-//        to = Some(organizationId),
-//        roles = Seq(roleToDependency(role)),
-//        states = Seq(PartyManagementDependency.RelationshipState.PENDING),
-//        products = Seq(product),
-//        productRoles = Seq(productRole)
-//      )
-    }
-  }
-
   private def performOnboarding(onboardingRequest: OnboardingRequest, organization: Organization)(
     bearer: String
   ): Future[OnboardingResponse] = {
     for {
       validUsers       <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
       personsWithRoles <- Future.traverse(validUsers)(addUser(bearer))
-//      _ <- Future.traverse(personsWithRoles)(pr =>
-//        partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)(
-//          bearer
-//        )
-//      )
-      _ <- Future.traverse(personsWithRoles)(pr => f(pr._1.id, organization.id, pr._2, pr._3, pr._4)(bearer))
+      _ <- Future.traverse(personsWithRoles)(pr =>
+        partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)(
+          bearer
+        )
+      )
       relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, product, productRole) =>
         createRelationship(organization.id, person.id, roleToDependency(role), product, productRole)
       })
