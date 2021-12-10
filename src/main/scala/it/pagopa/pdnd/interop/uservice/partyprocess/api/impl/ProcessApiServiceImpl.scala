@@ -315,6 +315,19 @@ class ProcessApiServiceImpl(
 
   /** Code: 200, Message: successful operation
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
+    * Code: 409, Message: Document validation failed
+    *
+    * These are the error code used in the document validation process:
+    *
+    *  * 002-100: document validation fails
+    *  * 002-101: original document digest differs from incoming document one
+    *  * 002-102: the signature is invalid
+    *  * 002-103: signature form is not CAdES
+    *  * 002-104: signature tax code is not equal to document one
+    *  * 002-105: signature tax code has an invalid format
+    *  * 002-106: signature tax code is not present
+    *
+    *  DataType: Problem
     */
   override def confirmOnboarding(tokenId: String, contract: (FileInfo, File))(implicit
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
@@ -341,12 +354,15 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_) => confirmOnboarding200
       case Failure(InvalidSignature(validationErrors)) =>
-        val errorResponse = Problem(
+        val errorResponse: Problem = Problem(
           `type` = defaultProblemType,
           status = StatusCodes.Conflict.intValue,
           title = StatusCodes.Conflict.defaultMessage,
           errors = validationErrors.map(validationError =>
-            ProblemError(code = s"002-${validationError.getErrorCode}", detail = validationError.getMessage)
+            ProblemError(
+              code = s"$serviceErrorCodePrefix-${validationError.getErrorCode}",
+              detail = validationError.getMessage
+            )
           )
         )
         confirmOnboarding409(errorResponse)

@@ -437,7 +437,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
         '409':
-          description: Document validation failed
+          description: |
+            Document validation failed
+
+            These are the error code used in the document validation process:
+
+            * 002-100: document validation fails
+
+            * 002-101: original document digest differs from incoming document one
+
+            * 002-102: the signature is invalid
+
+            * 002-103: signature form is not CAdES
+
+            * 002-104: signature tax code is not equal to document one
+
+            * 002-105: signature tax code has an invalid format
+
+            * 002-106: signature tax code is not present
+
           content:
             application/problem+json:
               schema:
