@@ -7,6 +7,7 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
+import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
 import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.getFutureBearer
 import it.pagopa.pdnd.interop.commons.utils.Digester
@@ -63,7 +64,8 @@ class ProcessApiServiceImpl(
   pdfCreator: PDFCreator,
   fileManager: FileManager,
   mailer: MailEngine,
-  mailTemplate: PersistedTemplate
+  mailTemplate: PersistedTemplate,
+  jwtReader: JWTReader
 )(implicit ec: ExecutionContext)
     extends ProcessApiService {
 
@@ -697,11 +699,8 @@ class ProcessApiServiceImpl(
 
   private def getCallerSubjectIdentifier(bearer: String): Future[UUID] = {
     val subject = for {
-//TODO      validJWT <- add jws validation
-//      subjectUUID <- Try {
-//        UUID.fromString(validJWT.sub)
-//      }.toFuture
-      subjectUUID <- bearer.toFutureUUID
+      claims      <- jwtReader.getClaims(bearer).toFuture
+      subjectUUID <- claims.getSubject.toFutureUUID
     } yield subjectUUID
 
     subject transform {

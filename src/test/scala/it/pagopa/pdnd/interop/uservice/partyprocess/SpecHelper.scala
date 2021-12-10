@@ -1,6 +1,8 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess
 
+import com.nimbusds.jwt.JWTClaimsSet
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
+import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
 import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.ProcessApiMarshallerImpl
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.{HealthApi, ProcessApiMarshaller}
@@ -9,6 +11,7 @@ import org.scalamock.scalatest.MockFactory
 
 import java.io.File
 import scala.concurrent.Future
+import scala.util.Success
 
 object MockMailEngine extends MailEngine {
   override def sendMail(
@@ -28,6 +31,9 @@ trait SpecHelper { self: MockFactory =>
   val mockPdfCreator: PDFCreator                             = mock[PDFCreator]
   val mockFileManager: FileManager                           = mock[FileManager]
   val mockMailTemplate: PersistedTemplate                    = PersistedTemplate("mock", "mock")
+  val mockJWTReader: JWTReader                               = mock[JWTReader]
+
+  def mockSubject(uuid: String) = Success(new JWTClaimsSet.Builder().subject(uuid).build())
 
   def loadEnvVars() = {
     System.setProperty("DELEGATE_PRODUCT_ROLES", "admin")
@@ -52,6 +58,7 @@ trait SpecHelper { self: MockFactory =>
     System.setProperty("MAIL_ONBOARDING_CONFIRMATION_LINK", "confirm-value")
     System.setProperty("MAIL_REJECT_PLACEHOLDER_NAME", "testRejectName")
     System.setProperty("MAIL_ONBOARDING_REJECTION_LINK", "reject-value")
+    System.setProperty("WELL_KNOWN_URL", "http://localhost/.well-known/jwks.json")
   }
 
 }

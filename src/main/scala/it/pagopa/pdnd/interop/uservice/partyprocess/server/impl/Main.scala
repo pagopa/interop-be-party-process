@@ -6,6 +6,9 @@ import akka.http.scaladsl.server.directives.SecurityDirectives
 import akka.management.scaladsl.AkkaManagement
 import it.pagopa.pdnd.interop.commons.files.StorageConfiguration
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
+import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
+import it.pagopa.pdnd.interop.commons.jwt.{JWTConfiguration, PublicKeysHolder}
+import it.pagopa.pdnd.interop.commons.jwt.service.impl.DefaultJWTReader
 import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.pdnd.interop.commons.mail.service.impl.CourierMailerConfiguration.CourierMailer
 import it.pagopa.pdnd.interop.commons.mail.service.impl.DefaultPDNDMailer
@@ -75,17 +78,29 @@ object Main
     with AttributeRegistryDependency
     with UserRegistryManagementDependency {
 
-  val dependenciesLoaded: Future[(FileManager, PersistedTemplate)] = for {
+  val dependenciesLoaded: Future[(FileManager, PersistedTemplate, JWTReader)] = for {
     fileManager  <- FileManager.getConcreteImplementation(StorageConfiguration.runtimeFileManager).toFuture
     mailTemplate <- MailTemplate.get(ApplicationConfiguration.mailTemplatePath, fileManager)
-  } yield (fileManager, mailTemplate)
+    keyset       <- JWTConfiguration.jwtReader.loadKeyset().toFuture
+    jwtValidator = new DefaultJWTReader with PublicKeysHolder {
+      var publicKeyset = keyset
+    }
+  } yield (fileManager, mailTemplate, jwtValidator)
 
   dependenciesLoaded.transformWith {
-    case Success((fileManager, mailTemplate)) => launchApp(fileManager, mailTemplate)
-    case Failure(_)                           => CoordinatedShutdown(classicActorSystem).run(StartupErrorShutdown)
+    case Success((fileManager, mailTemplate, jwtValidator)) => launchApp(fileManager, mailTemplate, jwtValidator)
+    case Failure(ex) => {
+      classicActorSystem.log.error(s"Startup error: ${ex.getMessage}")
+      classicActorSystem.log.error(s"${ex.getStackTrace.mkString("\n")}")
+      CoordinatedShutdown(classicActorSystem).run(StartupErrorShutdown)
+    }
   }
 
-  private def launchApp(fileManager: FileManager, mailTemplate: PersistedTemplate): Future[Http.ServerBinding] = {
+  private def launchApp(
+    fileManager: FileManager,
+    mailTemplate: PersistedTemplate,
+    jwtReader: JWTReader
+  ): Future[Http.ServerBinding] = {
     Kamon.init()
 
     val mailer: MailEngine = new PartyProcessMailer with DefaultPDNDMailer with CourierMailer
@@ -99,7 +114,8 @@ object Main
         PDFCreatorImpl,
         fileManager,
         mailer,
-        mailTemplate
+        mailTemplate,
+        jwtReader
       ),
       new ProcessApiMarshallerImpl(),
       SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
