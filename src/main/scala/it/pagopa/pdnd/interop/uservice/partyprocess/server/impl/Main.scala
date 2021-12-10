@@ -100,6 +100,7 @@ object Main
         PDFCreatorImpl,
         fileManager,
         signatureService,
+        SignatureValidationService,
         mailer,
         mailTemplate
       ),

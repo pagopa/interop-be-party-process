@@ -7,8 +7,8 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, FileInfo, SecurityDirectives}
 import akka.http.scaladsl.unmarshalling.Unmarshal
+import cats.implicits.catsSyntaxValidatedId
 import eu.europa.esig.dss.validation.SignedDocumentValidator
-import eu.europa.esig.dss.validation.reports.Reports
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.Authenticator
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{
   AttributesResponse,
@@ -25,6 +25,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{relationshipStateToApi, roleToApi}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.ProcessApiServiceImpl
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{classicActorSystem, executionContext}
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.validation.ValidationError
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.{Products => ModelProducts, _}
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.partyprocess.{model => PartyProcess}
@@ -87,6 +88,7 @@ class PartyProcessSpec
         mockPdfCreator,
         mockFileManager,
         mockSignatureService,
+        mockSignatureValidationService,
         mockMailer,
         mockMailTemplate
       ),
@@ -924,8 +926,8 @@ class PartyProcessSpec
         .returning(Future.successful(()))
         .repeat(2)
       (mockAttributeRegistryService
-        .createAttribute(_: String, _: String, _: String)(_: String))
-        .expects(*, *, *, *)
+        .createAttribute(_: String, _: String, _: String, _: String)(_: String))
+        .expects(*, *, *, *, *)
         .returning(Future.successful(attr1))
         .once()
       (mockFileManager
@@ -1419,22 +1421,28 @@ class PartyProcessSpec
         .returning(Future.successful(mockSignedDocumentValidator))
         .once()
 
-      (mockSignatureService
-        .verifyDigest(_: SignedDocumentValidator, _: String))
-        .expects(*, *)
-        .returning(Future.successful(()))
-        .once()
-
-      (mockSignatureService
+      (mockSignatureValidationService
         .verifySignature(_: SignedDocumentValidator))
         .expects(*)
-        .returning(Future.successful(mockReports))
+        .returning(().validNel[ValidationError])
         .once()
 
-      (mockSignatureService
-        .extractTaxCode(_: Reports))
+      (mockSignatureValidationService
+        .verifySignatureForm(_: SignedDocumentValidator))
         .expects(*)
-        .returning(Future.successful(managerTaxCode))
+        .returning(().validNel[ValidationError])
+        .once()
+
+      (mockSignatureValidationService
+        .verifyDigest(_: SignedDocumentValidator, _: String))
+        .expects(*, *)
+        .returning(().validNel[ValidationError])
+        .once()
+
+      (mockSignatureValidationService
+        .verifyManagerTaxCode(_: SignedDocumentValidator, _: Seq[UserRegistryUser]))
+        .expects(*, *)
+        .returning(().validNel[ValidationError])
         .once()
 
       (mockPartyManagementService

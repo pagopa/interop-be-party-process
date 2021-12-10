@@ -1,17 +1,14 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.service
 
-import cats.data.Validated.{Invalid, Valid}
-import cats.data.{NonEmptyList, Validated, ValidatedNel}
+import cats.data.ValidatedNel
 import cats.implicits._
 import eu.europa.esig.dss.enumerations.{DigestAlgorithm, Indication, SignatureForm}
 import eu.europa.esig.dss.model.DSSDocument
 import eu.europa.esig.dss.validation.reports.Reports
 import eu.europa.esig.dss.validation.{AdvancedSignature, SignedDocumentValidator}
-import it.pagopa.pdnd.interop.uservice.partyprocess.error.InvalidSignature
 import it.pagopa.pdnd.interop.uservice.partyprocess.error.validation._
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{User => UserRegistryUser}
 
-import scala.concurrent.Future
 import scala.jdk.CollectionConverters.IterableHasAsScala
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
@@ -19,15 +16,6 @@ import scala.util.{Failure, Success, Try}
 trait SignatureValidationService {
 
   private final val signatureRegex: Regex = "(TINIT-)(.*)".r
-
-  def validateSignature(validations: ValidatedNel[ValidationError, Unit]*): Future[Unit] = {
-    val result: Validated[NonEmptyList[ValidationError], Unit] = validations.reduce((v1, v2) => v1.combine(v2))
-
-    result match {
-      case Valid(unit) => Future.successful(unit)
-      case Invalid(e)  => Future.failed(InvalidSignature(e.toList))
-    }
-  }
 
   def verifySignatureForm(documentValidator: SignedDocumentValidator): ValidatedNel[ValidationError, Unit] = {
     val signatures: List[AdvancedSignature] = documentValidator.getSignatures.asScala.toList
@@ -129,3 +117,5 @@ trait SignatureValidationService {
   }
 
 }
+
+object SignatureValidationService extends SignatureValidationService

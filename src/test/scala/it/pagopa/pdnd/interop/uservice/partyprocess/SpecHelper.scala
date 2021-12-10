@@ -20,19 +20,20 @@ object MockMailEngine extends MailEngine {
 
 trait SpecHelper { self: MockFactory =>
 
-  val processApiMarshaller: ProcessApiMarshaller             = new ProcessApiMarshallerImpl
-  val mockHealthApi: HealthApi                               = mock[HealthApi]
-  val mockPartyManagementService: PartyManagementService     = mock[PartyManagementService]
-  val mockPartyRegistryService: PartyRegistryService         = mock[PartyRegistryService]
-  val mockUserRegistryService: UserRegistryManagementService = mock[UserRegistryManagementService]
-  val mockAttributeRegistryService: AttributeRegistryService = mock[AttributeRegistryService]
-  val mockMailer: MailEngine                                 = MockMailEngine
-  val mockPdfCreator: PDFCreator                             = mock[PDFCreator]
-  val mockFileManager: FileManager                           = mock[FileManager]
-  val mockSignatureService: SignatureService                 = mock[SignatureService]
-  val mockReports: Reports                                   = mock[Reports]
-  val mockSignedDocumentValidator: SignedDocumentValidator   = mock[SignedDocumentValidator]
-  val mockMailTemplate: PersistedTemplate                    = PersistedTemplate("mock", "mock")
+  val processApiMarshaller: ProcessApiMarshaller                 = new ProcessApiMarshallerImpl
+  val mockHealthApi: HealthApi                                   = mock[HealthApi]
+  val mockPartyManagementService: PartyManagementService         = mock[PartyManagementService]
+  val mockPartyRegistryService: PartyRegistryService             = mock[PartyRegistryService]
+  val mockUserRegistryService: UserRegistryManagementService     = mock[UserRegistryManagementService]
+  val mockAttributeRegistryService: AttributeRegistryService     = mock[AttributeRegistryService]
+  val mockMailer: MailEngine                                     = MockMailEngine
+  val mockPdfCreator: PDFCreator                                 = mock[PDFCreator]
+  val mockFileManager: FileManager                               = mock[FileManager]
+  val mockSignatureService: SignatureService                     = mock[SignatureService]
+  val mockSignatureValidationService: SignatureValidationService = mock[SignatureValidationService]
+  val mockReports: Reports                                       = mock[Reports]
+  val mockSignedDocumentValidator: SignedDocumentValidator       = mock[SignedDocumentValidator]
+  val mockMailTemplate: PersistedTemplate                        = PersistedTemplate("mock", "mock")
 
   def loadEnvVars() = {
     System.setProperty("DELEGATE_PRODUCT_ROLES", "admin")
