@@ -12,39 +12,16 @@ import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.getFutureBearer
 import it.pagopa.pdnd.interop.commons.utils.OpenapiUtils._
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions._
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
-  Organization,
-  OrganizationSeed,
-  PersonSeed,
-  Relationship,
-  RelationshipProduct,
-  RelationshipProductSeed,
-  RelationshipSeed,
-  Relationships,
-  RelationshipsSeed,
-  Problem => _
-}
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{Organization, OrganizationSeed, PersonSeed, Relationship, RelationshipProduct, RelationshipProductSeed, RelationshipSeed, Relationships, RelationshipsSeed, Problem => _}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApiService
-import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{
-  relationshipProductToApi,
-  relationshipStateToApi,
-  roleToApi,
-  roleToDependency
-}
+import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{relationshipProductToApi, relationshipStateToApi, roleToApi, roleToDependency}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration
-import it.pagopa.pdnd.interop.uservice.partyprocess.error._
-import it.pagopa.pdnd.interop.uservice.partyprocess.error.validation.InvalidSignature
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.{InvalidSignature, _}
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.{SignatureValidationService, _}
-import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.Certification.{
-  NONE => CertificationEnumsNone
-}
-import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{
-  User => UserRegistryUser,
-  UserExtras => UserRegistryUserExtras,
-  UserSeed => UserRegistryUserSeed
-}
+import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.Certification.{NONE => CertificationEnumsNone}
+import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{User => UserRegistryUser, UserExtras => UserRegistryUserExtras, UserSeed => UserRegistryUserSeed}
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.{File, FileOutputStream}

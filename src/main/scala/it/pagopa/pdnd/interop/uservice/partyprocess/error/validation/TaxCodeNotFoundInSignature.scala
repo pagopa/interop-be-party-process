@@ -4,6 +4,6 @@ case object TaxCodeNotFoundInSignature extends ValidationError {
 
   override def getMessage: String = "No tax code has been found in digital signature"
 
-  override def getErrorCode: String = "0005"
+  override def getErrorCode: String = "0106"
 
 }

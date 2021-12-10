@@ -4,6 +4,6 @@ case object InvalidSignatureTaxCodeFormat extends ValidationError {
 
   override def getMessage: String = "Invalid tax code format found in digital signature"
 
-  override def getErrorCode: String = "0004"
+  override def getErrorCode: String = "0105"
 
 }
