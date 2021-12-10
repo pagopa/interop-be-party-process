@@ -90,7 +90,8 @@ class PartyProcessSpec
         mockSignatureService,
         mockSignatureValidationService,
         mockMailer,
-        mockMailTemplate
+        mockMailTemplate,
+        mockJWTReader
       ),
       processApiMarshaller,
       wrappingDirective
@@ -216,6 +217,12 @@ class PartyProcessSpec
       )
 
       val mockSubjectUUID = "af80fac0-2775-4646-8fcf-28e083751988"
+
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(mockSubject(mockSubjectUUID))
+        .once()
 
       (mockUserRegistryService
         .getUserById(_: UUID)(_: String))
@@ -454,6 +461,12 @@ class PartyProcessSpec
 
       val mockSubjectUUID = UUID.randomUUID().toString
 
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(mockSubject(mockSubjectUUID))
+        .once()
+
       (mockUserRegistryService
         .getUserById(_: UUID)(_: String))
         .expects(UUID.fromString(mockSubjectUUID), *)
@@ -633,6 +646,12 @@ class PartyProcessSpec
       )
 
       val mockSubjectUUID = UUID.randomUUID().toString
+
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(mockSubject(mockSubjectUUID))
+        .once()
 
       (mockUserRegistryService
         .getUserById(_: UUID)(_: String))
@@ -1596,6 +1615,12 @@ class PartyProcessSpec
           Seq(adminRelationship, relationship1, relationship2, relationship3)
         )
 
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(mockSubject(adminIdentifier.toString))
+        .once()
+
       (mockPartyManagementService
         .retrieveRelationships(
           _: Option[UUID],
@@ -1811,6 +1836,12 @@ class PartyProcessSpec
       val relationships =
         PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2))
 
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(mockSubject(adminIdentifier.toString))
+        .once()
+
       (mockPartyManagementService
         .retrieveRelationships(
           _: Option[UUID],
@@ -1992,6 +2023,12 @@ class PartyProcessSpec
           Seq(adminRelationship, relationship1, relationship2, relationship3)
         )
 
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(mockSubject(userId2.toString))
+        .once()
+
       (mockPartyManagementService
         .retrieveRelationships(
           _: Option[UUID],
@@ -2112,6 +2149,12 @@ class PartyProcessSpec
 
       val adminRelationships = PartyManagementDependency.Relationships(items = Seq(adminRelationship))
 
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(mockSubject(adminIdentifier.toString))
+        .once()
+
       (mockPartyManagementService
         .retrieveRelationships(
           _: Option[UUID],
@@ -2215,6 +2258,12 @@ class PartyProcessSpec
         PartyManagementDependency.Relationships(items = Seq(adminRelationship))
       val relationships =
         PartyManagementDependency.Relationships(items = Seq(adminRelationship))
+
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(mockSubject(adminIdentifier.toString))
+        .once()
 
       (mockPartyManagementService
         .retrieveRelationships(
@@ -2340,6 +2389,12 @@ class PartyProcessSpec
         PartyManagementDependency.Relationships(items = Seq(adminRelationship))
       val relationships =
         PartyManagementDependency.Relationships(items = Seq(relationship2))
+
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(mockSubject(adminIdentifier.toString))
+        .once()
 
       (mockPartyManagementService
         .retrieveRelationships(
@@ -2482,6 +2537,12 @@ class PartyProcessSpec
       val relationships =
         PartyManagementDependency.Relationships(items = Seq(relationship3, relationship4))
 
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(mockSubject(adminIdentifier.toString))
+        .once()
+
       (mockPartyManagementService
         .retrieveRelationships(
           _: Option[UUID],
@@ -2623,6 +2684,12 @@ class PartyProcessSpec
         PartyManagementDependency.Relationships(items = Seq(adminRelationship))
       val relationships =
         PartyManagementDependency.Relationships(items = Seq())
+
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(mockSubject(adminIdentifier.toString))
+        .once()
 
       (mockPartyManagementService
         .retrieveRelationships(
@@ -2882,6 +2949,12 @@ class PartyProcessSpec
     "succeed when the relationship id is bound to the selected institution" in {
       val relationshipId = UUID.randomUUID()
 
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(mockSubject(relationshipId.toString))
+        .once()
+
       (mockPartyManagementService
         .deleteRelationshipById(_: UUID)(_: String))
         .expects(relationshipId, *)
@@ -2902,6 +2975,12 @@ class PartyProcessSpec
 
     "fail if party management deletion returns a failed future" in {
       val relationshipId = UUID.randomUUID()
+
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(mockSubject(relationshipId.toString))
+        .once()
 
       (mockPartyManagementService
         .deleteRelationshipById(_: UUID)(_: String))
@@ -3213,6 +3292,12 @@ class PartyProcessSpec
           updatedAt = None
         )
 
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(mockSubject(orgPartyId1))
+        .once()
+
       (mockPartyManagementService
         .retrieveOrganization(_: UUID)(_: String))
         .expects(*, *)
@@ -3279,6 +3364,12 @@ class PartyProcessSpec
           createdAt = relationshipTimestamp,
           updatedAt = None
         )
+
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(mockSubject(orgPartyId1))
+        .once()
 
       (mockPartyManagementService
         .retrieveOrganization(_: UUID)(_: String))

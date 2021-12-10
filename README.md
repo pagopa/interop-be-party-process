@@ -148,6 +148,16 @@ at runtime the email will contain the following link:
 
 `http://pagopa.it/onboarding-confirmation?token=y4d4y4d4`
 
+---
+
+### Well-Known url set up
+To verify JWT a well-known url must be set.
+
+| Variable name | Variable type | Notes |
+| ------------- | ------------- | ----- |
+| **WELL_KNOWN_URL** | String | Define the Well-Known endpoint url used to verify incoming JWTs|
+
+
 
 
 

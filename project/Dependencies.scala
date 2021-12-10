@@ -36,6 +36,7 @@ object Dependencies {
     lazy val commons     = namespace %% "pdnd-interop-commons-utils"        % commonsVersion
     lazy val commonsMail = namespace %% "pdnd-interop-commons-mail-manager" % commonsVersion
     lazy val commonsFile = namespace %% "pdnd-interop-commons-file-manager" % commonsVersion
+    lazy val commonsJWT  = namespace %% "pdnd-interop-commons-jwt"          % commonsVersion
 
   }
 
@@ -150,6 +151,7 @@ object Dependencies {
       pagopa.attributeRegistryClient      % Compile,
       pagopa.commons                      % Compile,
       pagopa.commonsFile                  % Compile,
+      pagopa.commonsJWT                   % Compile,
       pagopa.commonsMail                  % Compile,
       pagopa.partyManagementClient        % Compile,
       pagopa.partyProxyClient             % Compile,
