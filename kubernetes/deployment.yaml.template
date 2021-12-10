@@ -107,6 +107,8 @@ spec:
               value: "{{smtpAddress}}"
             - name: SMTP_PORT
               value: "{{smtpPort}}"
+            - name: WELL_KNOWN_URL
+              value: "{{wellKnownURL}}"
 
 ---
 apiVersion: v1
