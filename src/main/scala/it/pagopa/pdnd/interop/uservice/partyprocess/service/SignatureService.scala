@@ -6,18 +6,8 @@ import eu.europa.esig.dss.service.ocsp.OnlineOCSPSource
 import eu.europa.esig.dss.spi.client.http.{DSSFileLoader, IgnoreDataLoader}
 import eu.europa.esig.dss.spi.x509.CommonCertificateSource
 import eu.europa.esig.dss.spi.x509.aia.DefaultAIASource
-import eu.europa.esig.dss.tsl.alerts.detections.{
-  LOTLLocationChangeDetection,
-  OJUrlChangeDetection,
-  TLExpirationDetection,
-  TLSignatureErrorDetection
-}
-import eu.europa.esig.dss.tsl.alerts.handlers.log.{
-  LogLOTLLocationChangeAlertHandler,
-  LogOJUrlChangeAlertHandler,
-  LogTLExpirationAlertHandler,
-  LogTLSignatureErrorAlertHandler
-}
+import eu.europa.esig.dss.tsl.alerts.detections.{LOTLLocationChangeDetection, OJUrlChangeDetection, TLExpirationDetection, TLSignatureErrorDetection}
+import eu.europa.esig.dss.tsl.alerts.handlers.log.{LogLOTLLocationChangeAlertHandler, LogOJUrlChangeAlertHandler, LogTLExpirationAlertHandler, LogTLSignatureErrorAlertHandler}
 import eu.europa.esig.dss.tsl.alerts.{LOTLAlert, TLAlert}
 import eu.europa.esig.dss.tsl.cache.CacheCleaner
 import eu.europa.esig.dss.tsl.function.OfficialJournalSchemeInformationURI
@@ -26,6 +16,7 @@ import eu.europa.esig.dss.tsl.source.LOTLSource
 import eu.europa.esig.dss.tsl.sync.AcceptAllStrategy
 import eu.europa.esig.dss.validation.{CommonCertificateVerifier, SignedDocumentValidator}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration
+import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.File
 import java.util
@@ -37,6 +28,8 @@ trait SignatureService {
 }
 
 object SignatureService {
+
+  val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
   final val certificateVerifier: CommonCertificateVerifier = new CommonCertificateVerifier
 
@@ -87,7 +80,7 @@ object SignatureService {
     val rootFolder = new File(System.getProperty("java.io.tmpdir"))
     val tslCache   = new File(rootFolder, "dss-tsl-loader")
     if (tslCache.mkdirs()) {
-      println(s"TL Cache folder : ${tslCache.getAbsolutePath}")
+      logger.debug(s"TL Cache folder : ${tslCache.getAbsolutePath}")
     }
     tslCache
   }
