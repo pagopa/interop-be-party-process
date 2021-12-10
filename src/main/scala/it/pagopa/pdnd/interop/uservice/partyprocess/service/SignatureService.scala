@@ -38,9 +38,6 @@ trait SignatureService {
 
 object SignatureService {
 
-  private final val LOTL_URL = ApplicationConfiguration.lotlUrl
-  private final val OJ_URL   = ApplicationConfiguration.ojUrl
-
   final val certificateVerifier: CommonCertificateVerifier = new CommonCertificateVerifier
 
   certificateVerifier.setAIASource(new DefaultAIASource())
@@ -49,9 +46,11 @@ object SignatureService {
 
   def getEuropeanLOTL: LOTLSource = {
     val lotlSource: LOTLSource = new LOTLSource()
-    lotlSource.setUrl(LOTL_URL)
+    lotlSource.setUrl(ApplicationConfiguration.euListOfTrustedListsURL)
     lotlSource.setCertificateSource(new CommonCertificateSource())
-    lotlSource.setSigningCertificatesAnnouncementPredicate(new OfficialJournalSchemeInformationURI(OJ_URL))
+    lotlSource.setSigningCertificatesAnnouncementPredicate(
+      new OfficialJournalSchemeInformationURI(ApplicationConfiguration.euOfficialJournalUrl)
+    )
     lotlSource.setPivotSupport(true)
     lotlSource
   }

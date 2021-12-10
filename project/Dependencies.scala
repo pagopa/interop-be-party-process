@@ -52,12 +52,6 @@ object Dependencies {
 
   }
 
-  private[this] object courier {
-    lazy val namespace = "com.github.daddykotex"
-    lazy val mail      = namespace %% "courier" % courierVersion
-
-  }
-
   private[this] object openapi4j {
     lazy val namespace          = "org.openapi4j"
     lazy val operationValidator = namespace % "openapi-operation-validator" % openapi4jVersion
@@ -136,7 +130,6 @@ object Dependencies {
       awssdk.s3                           % Compile,
       azure.storageBlob                   % Compile,
       cats.core                           % Compile,
-      courier.mail                        % Compile,
       europa.dssCades                     % Compile,
       europa.dssPades                     % Compile,
       europa.dssPadesPdfbox               % Compile,

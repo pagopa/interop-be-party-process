@@ -5,8 +5,6 @@ import akka.http.scaladsl.model.{ContentType, HttpEntity, MessageEntity, StatusC
 import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
-import cats.data.{NonEmptyList, Validated, ValidatedNel}
-import cats.data.Validated.{Invalid, Valid}
 import cats.implicits.toTraverseOps
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
@@ -36,10 +34,9 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{
   roleToDependency
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration
-import it.pagopa.pdnd.interop.uservice.partyprocess.error.validation.ValidationError
-import it.pagopa.pdnd.interop.uservice.partyprocess.error.{InvalidSignature, _}
+import it.pagopa.pdnd.interop.uservice.partyprocess.error._
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
-import it.pagopa.pdnd.interop.uservice.partyprocess.service.{SignatureValidationService, _}
+import it.pagopa.pdnd.interop.uservice.partyprocess.service._
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.Certification.{
   NONE => CertificationEnumsNone
 }
@@ -342,7 +339,7 @@ class ProcessApiServiceImpl(
         userRegistryManagementService.getUserById(legal.partyId)(bearer)
       )
       validator <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
-      _ <- validateSignature(
+      _ <- SignatureValidationService.validateSignature(
         signatureValidationService.verifySignature(validator),
         signatureValidationService.verifySignatureForm(validator),
         signatureValidationService.verifyDigest(validator, token.checksum),
@@ -370,15 +367,6 @@ class ProcessApiServiceImpl(
         ex.printStackTrace()
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0006", ex)
         confirmOnboarding400(errorResponse)
-    }
-  }
-
-  private def validateSignature(validations: ValidatedNel[ValidationError, Unit]*): Future[Unit] = {
-    val result: Validated[NonEmptyList[ValidationError], Unit] = validations.reduce((v1, v2) => v1.combine(v2))
-
-    result match {
-      case Valid(unit) => Future.successful(unit)
-      case Invalid(e)  => Future.failed(InvalidSignature(e.toList))
     }
   }
 

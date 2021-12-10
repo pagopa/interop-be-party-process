@@ -109,6 +109,10 @@ spec:
               value: "{{smtpPort}}"
             - name: WELL_KNOWN_URL
               value: "{{wellKnownURL}}"
+            - name : EU_LIST_OF_TRUSTED_LISTS_URL
+              value : "{{euListOfTrustedListsURL}}"
+            - name : EU_OFFICIAL_JOURNAL_URL
+              value : "{{euOfficialJournalUrl}}"
 
 ---
 apiVersion: v1

@@ -16,8 +16,8 @@ object ApplicationConfiguration {
   def userRegistryApiKey: String = Option(System.getenv("USER_REGISTRY_API_KEY"))
     .getOrElse(throw new RuntimeException("No user registry api key set"))
 
-  def lotlUrl: String = config.getString("uservice-party-process.lotl_url")
-  def ojUrl: String   = config.getString("uservice-party-process.oj_url")
+  def euListOfTrustedListsURL: String = config.getString("uservice-party-process.eu_list_of_trusted_lists_url")
+  def euOfficialJournalUrl: String    = config.getString("uservice-party-process.eu_official_journal_url")
 
   def mailTemplatePath: String = config.getString("uservice-party-process.mail-template.path")
 
