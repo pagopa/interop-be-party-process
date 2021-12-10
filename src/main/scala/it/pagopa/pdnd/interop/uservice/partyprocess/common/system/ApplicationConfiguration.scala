@@ -16,12 +16,6 @@ object ApplicationConfiguration {
   def userRegistryApiKey: String = Option(System.getenv("USER_REGISTRY_API_KEY"))
     .getOrElse(throw new RuntimeException("No user registry api key set"))
 
-  def destinationMails: Seq[String] = {
-    Option(System.getenv("DESTINATION_MAILS"))
-      .map(_.split(",").toSeq)
-      .getOrElse(throw new RuntimeException("No destination email set"))
-  }
-
   def lotlUrl: String = config.getString("uservice-party-process.lotl_url")
   def ojUrl: String   = config.getString("uservice-party-process.oj_url")
 

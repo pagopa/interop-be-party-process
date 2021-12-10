@@ -6,7 +6,7 @@ metadata:
   name: {{name}}
   namespace: {{name}}
 spec:
-  replicas: 1
+  replicas: {{replicas}}
   selector:
     matchLabels:
       app: {{name}}
@@ -66,15 +66,10 @@ spec:
                 secretKeyRef:
                   name: smtp
                   key: SMTP_PSW
-            - name: DESTINATION_MAILS
-              valueFrom:
-                secretKeyRef:
-                  name: mail
-                  key: DESTINATION_MAILS
             - name: USER_REGISTRY_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: userRegistryApiKey
+                  name: user-registry-api-key
                   key: USER_REGISTRY_API_KEY
             - name: STORAGE_TYPE
               value: {{storageType}}

@@ -34,8 +34,9 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration
 import it.pagopa.pdnd.interop.uservice.partyprocess.error._
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.validation.InvalidSignature
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
-import it.pagopa.pdnd.interop.uservice.partyprocess.service._
+import it.pagopa.pdnd.interop.uservice.partyprocess.service.{SignatureValidationService, _}
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.Certification.{
   NONE => CertificationEnumsNone
 }
@@ -64,7 +65,8 @@ class ProcessApiServiceImpl(
   mailer: MailEngine,
   mailTemplate: PersistedTemplate
 )(implicit ec: ExecutionContext)
-    extends ProcessApiService {
+    extends ProcessApiService
+    with SignatureValidationService {
 
   private val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
@@ -113,7 +115,7 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(res) => getOnboardingInfo200(res)
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0001", ex)
         getOnboardingInfo400(errorResponse)
 
     }
@@ -167,9 +169,8 @@ class ProcessApiServiceImpl(
       case Success(response) =>
         onboardingOrganization201(response)
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0002", ex)
         onboardingOrganization400(errorResponse)
-
     }
 
   }
@@ -202,7 +203,7 @@ class ProcessApiServiceImpl(
       case Success(response) =>
         onboardingLegalsOnOrganization200(response)
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0003", ex)
         onboardingLegalsOnOrganization400(errorResponse)
     }
   }
@@ -231,11 +232,7 @@ class ProcessApiServiceImpl(
         onboardingRequest.contract.path
       )(bearer)
       _ = logger.info(s"Digest $digest")
-      _ <- sendOnboardingMail(
-        ApplicationConfiguration.destinationMails,
-        pdf,
-        token.token
-      ) //TODO address must be the digital address
+      _ <- sendOnboardingMail(Seq(organization.digitalAddress), pdf, token.token)
       _ = logger.info(s"$token")
     } yield OnboardingResponse(token.token, pdf)
   }
@@ -271,7 +268,7 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_) => onboardingOperators201
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0004", ex)
         onboardingOperators400(errorResponse)
     }
   }
@@ -307,7 +304,7 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_) => onboardingOperators201
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0005", ex)
         onboardingOperators400(errorResponse)
     }
   }
@@ -327,30 +324,33 @@ class ProcessApiServiceImpl(
       legalUsers <- Future.traverse(token.legals)(legal =>
         userRegistryManagementService.getUserById(legal.partyId)(bearer)
       )
-      validator                <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
-      _                        <- signatureService.verifyDigest(validator, token.checksum)
-      reports                  <- signatureService.verifySignature(validator)
-      documentSignatureTaxcode <- signatureService.extractTaxCode(reports)
-      _                        <- verifyManagerTaxCode(documentSignatureTaxcode, legalUsers)
-      _                        <- partyManagementService.consumeToken(token.id, contract)(bearer)
+      validator <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
+      _ <- validateSignature(
+        verifySignature(validator),
+        verifySignatureForm(validator),
+        verifyDigest(validator, token.checksum),
+        verifyManagerTaxCode(validator, legalUsers)
+      )
+      _ <- partyManagementService.consumeToken(token.id, contract)(bearer)
     } yield ()
 
     onComplete(result) {
       case Success(_) => confirmOnboarding200
-      // TODO: error 409 will be enabled with signature mechanism introduction / confirmOnboarding409
+      case Failure(InvalidSignature(validationErrors)) =>
+        val errorResponse = Problem(
+          `type` = defaultProblemType,
+          status = StatusCodes.Conflict.intValue,
+          title = StatusCodes.Conflict.defaultMessage,
+          errors = validationErrors.map(validationError =>
+            ProblemError(code = s"002-${validationError.getErrorCode}", detail = validationError.getMessage)
+          )
+        )
+        confirmOnboarding409(errorResponse)
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0006", ex)
         confirmOnboarding400(errorResponse)
     }
   }
-
-  private def verifyManagerTaxCode(taxCode: String, legals: Seq[UserRegistryUser]): Future[Unit] = {
-    Either.cond(
-      legals.exists(legal => legal.externalId == taxCode),
-      (),
-      new RuntimeException(s"Invalid taxCode $taxCode")
-    )
-  }.toFuture
 
   /** Code: 200, Message: successful operation
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
@@ -367,7 +367,7 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_) => invalidateOnboarding200
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0007", ex)
         invalidateOnboarding400(errorResponse)
 
     }
@@ -542,7 +542,7 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(relationships) => getUserInstitutionRelationships200(relationships)
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0008", ex)
         getUserInstitutionRelationships400(errorResponse)
     }
   }
@@ -566,10 +566,10 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_) => activateRelationship204
       case Failure(ex: RelationshipNotFound) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 404, "Not found")
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, "0009", ex)
         activateRelationship404(errorResponse)
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0010", ex)
         activateRelationship400(errorResponse)
     }
   }
@@ -592,10 +592,10 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_) => suspendRelationship204
       case Failure(ex: RelationshipNotFound) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 404, "Not found")
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, "0011", ex)
         suspendRelationship404(errorResponse)
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0012", ex)
         suspendRelationship400(errorResponse)
     }
   }
@@ -624,18 +624,19 @@ class ProcessApiServiceImpl(
         val output: MessageEntity = convertToMessageEntity(document)
         complete(output)
       case Failure(ex: ApiError[_]) if ex.code == 400 =>
-        getOnboardingDocument400(
-          Problem(Option(ex.getMessage), 400, s"Error retrieving document for relationship $relationshipId")
-        )
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0013", ex)
+        getOnboardingDocument400(errorResponse)
       case Failure(ex: ApiError[_]) if ex.code == 404 =>
-        getOnboardingDocument404(
-          Problem(Option(ex.getMessage), 404, s"Error retrieving document for relationship $relationshipId")
-        )
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, "0014", ex)
+        getOnboardingDocument404(errorResponse)
       case Failure(ex) =>
-        complete(
-          500,
-          Problem(Option(ex.getMessage), 500, s"Error retrieving document for relationship $relationshipId")
+        val errorResponse: Problem = problemOf(
+          StatusCodes.InternalServerError,
+          "0015",
+          ex,
+          s"Error retrieving document for relationship $relationshipId"
         )
+        complete(errorResponse.status, errorResponse)
     }
   }
 
@@ -730,10 +731,10 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(relationshipInfo) => getRelationship200(relationshipInfo)
       case Failure(ex: RelationshipNotFound) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 404, "Not found")
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, "0016", ex)
         getRelationship404(errorResponse)
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0017", ex)
         getRelationship400(errorResponse)
     }
   }
@@ -755,10 +756,10 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_) => deleteRelationshipById204
       case Failure(ex: SubjectValidationError) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 401, "Unauthorized")
-        complete((401, errorResponse))
+        val errorResponse: Problem = problemOf(StatusCodes.Unauthorized, "0018", ex, "Unauthorized")
+        complete(errorResponse.status, errorResponse)
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 400, "some error")
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0019", ex)
         deleteRelationshipById404(errorResponse)
     }
   }
@@ -788,15 +789,16 @@ class ProcessApiServiceImpl(
 
     onComplete(result) {
       case Success(institution) if institution.products.isEmpty =>
-        val errorResponse: Problem = Problem(None, 404, s"Products not found for institution $institutionId")
+        val errorResponse: Problem =
+          problemOf(StatusCodes.NotFound, "0020", defaultMessage = s"Products not found for institution $institutionId")
         retrieveInstitutionProducts404(errorResponse)
       case Success(institution) => retrieveInstitutionProducts200(institution)
       case Failure(ex: SubjectValidationError) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 401, "Unauthorized")
-        complete((401, errorResponse))
+        val errorResponse: Problem = problemOf(StatusCodes.Unauthorized, "0020", ex, "Unauthorized")
+        complete(errorResponse.status, errorResponse)
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(Option(ex.getMessage), 500, "Something went wrong")
-        complete(StatusCodes.InternalServerError, errorResponse)
+        val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, "0021", ex)
+        complete(errorResponse.status, errorResponse)
     }
   }
 

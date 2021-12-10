@@ -12,19 +12,18 @@ import eu.europa.esig.dss.tsl.alerts.detections.{
   TLExpirationDetection,
   TLSignatureErrorDetection
 }
-import eu.europa.esig.dss.tsl.alerts.{LOTLAlert, TLAlert}
 import eu.europa.esig.dss.tsl.alerts.handlers.log.{
   LogLOTLLocationChangeAlertHandler,
   LogOJUrlChangeAlertHandler,
   LogTLExpirationAlertHandler,
   LogTLSignatureErrorAlertHandler
 }
+import eu.europa.esig.dss.tsl.alerts.{LOTLAlert, TLAlert}
 import eu.europa.esig.dss.tsl.cache.CacheCleaner
 import eu.europa.esig.dss.tsl.function.OfficialJournalSchemeInformationURI
 import eu.europa.esig.dss.tsl.job.TLValidationJob
 import eu.europa.esig.dss.tsl.source.LOTLSource
 import eu.europa.esig.dss.tsl.sync.AcceptAllStrategy
-import eu.europa.esig.dss.validation.reports.Reports
 import eu.europa.esig.dss.validation.{CommonCertificateVerifier, SignedDocumentValidator}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration
 
@@ -35,12 +34,10 @@ import scala.concurrent.Future
 trait SignatureService {
   def createDigest(file: File): Future[String]
   def createDocumentValidator(bytes: Array[Byte]): Future[SignedDocumentValidator]
-  def verifyDigest(documentValidator: SignedDocumentValidator, digest: String): Future[Unit]
-  def verifySignature(documentValidator: SignedDocumentValidator): Future[Reports]
-  def extractTaxCode(reports: Reports): Future[String]
 }
 
 object SignatureService {
+
   private final val LOTL_URL = ApplicationConfiguration.lotlUrl
   private final val OJ_URL   = ApplicationConfiguration.ojUrl
 
