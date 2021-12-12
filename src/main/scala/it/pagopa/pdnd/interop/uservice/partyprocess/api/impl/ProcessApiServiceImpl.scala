@@ -512,9 +512,8 @@ class ProcessApiServiceImpl(
           )
         )(bearer)
         .recoverWith {
-          // Use can already exists on user registry
-          // TODO Once errors are defined, we should check that error is "person already exists"
-          case _ => userRegistryManagementService.getUserByExternalId(user.taxCode)(bearer)
+          case ResourceConflictError => userRegistryManagementService.getUserByExternalId(user.taxCode)(bearer)
+          case ex                    => Future.failed(ex)
         }
       _ <- partyManagementService.createPerson(PersonSeed(user.id))(bearer)
     } yield user
