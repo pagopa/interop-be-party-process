@@ -18,6 +18,8 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   OrganizationSeed,
   RelationshipBinding,
   RelationshipProduct,
+  RelationshipProductSeed,
+  RelationshipSeed,
   TokenInfo
 }
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
@@ -74,8 +76,18 @@ class PartyProcessSpec
   final val product: RelationshipProduct =
     PartyManagementDependency.RelationshipProduct(id = "product", role = "admin", createdAt = productTimestamp)
 
+  final val productSeed: RelationshipProductSeed =
+    PartyManagementDependency.RelationshipProductSeed(id = "product", role = "admin")
+
   final val productInfo: ProductInfo =
     ProductInfo(id = "product", role = "admin", createdAt = productTimestamp)
+
+  final val relationshipSeed: RelationshipSeed = RelationshipSeed(
+    from = UUID.randomUUID(),
+    to = UUID.randomUUID(),
+    role = PartyManagementDependency.PartyRole.MANAGER,
+    product = productSeed
+  )
 
   override def beforeAll(): Unit = {
     loadEnvVars()
@@ -875,6 +887,20 @@ class PartyProcessSpec
         .expects(*, *)
         .returning(Future.successful(organization1))
         .once()
+
+      (mockPartyManagementService
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(None, Some(organization1.id), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
+        .returning(Future.successful(PartyManagementDependency.Relationships(Seq.empty)))
+        .once()
+
       (mockUserRegistryService
         .createUser(_: UserRegistryUserSeed)(_: String))
         .expects(
@@ -940,9 +966,9 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService
-        .createRelationship(_: UUID, _: UUID, _: PartyManagementDependency.PartyRole, _: String, _: String)(_: String))
-        .expects(*, *, *, *, *, *)
-        .returning(Future.successful(()))
+        .createRelationship(_: RelationshipSeed)(_: String))
+        .expects(*, *)
+        .returning(Future.successful(relationshipSeed))
         .repeat(2)
       (mockAttributeRegistryService
         .createAttribute(_: String, _: String, _: String, _: String)(_: String))
@@ -1176,9 +1202,9 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService
-        .createRelationship(_: UUID, _: UUID, _: PartyManagementDependency.PartyRole, _: String, _: String)(_: String))
-        .expects(*, *, *, *, *, *)
-        .returning(Future.successful(()))
+        .createRelationship(_: RelationshipSeed)(_: String))
+        .expects(*, *)
+        .returning(Future.successful(relationshipSeed))
         .repeat(2)
 
       val req = OnboardingRequest(
@@ -1395,9 +1421,9 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService
-        .createRelationship(_: UUID, _: UUID, _: PartyManagementDependency.PartyRole, _: String, _: String)(_: String))
-        .expects(*, *, *, *, *, *)
-        .returning(Future.successful(()))
+        .createRelationship(_: RelationshipSeed)(_: String))
+        .expects(*, *)
+        .returning(Future.successful(relationshipSeed))
         .repeat(2)
 
       val req = OnboardingRequest(
@@ -3147,9 +3173,9 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService
-        .createRelationship(_: UUID, _: UUID, _: PartyManagementDependency.PartyRole, _: String, _: String)(_: String))
-        .expects(*, *, *, *, *, *)
-        .returning(Future.successful(()))
+        .createRelationship(_: RelationshipSeed)(_: String))
+        .expects(*, *)
+        .returning(Future.successful(relationshipSeed))
         .repeat(2)
       (mockFileManager
         .get(_: String)(_: String))

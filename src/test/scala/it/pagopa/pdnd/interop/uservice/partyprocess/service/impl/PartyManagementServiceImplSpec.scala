@@ -71,7 +71,7 @@ class PartyManagementServiceImplSpec
       val productRole      = "api"
 
       //given mocked integration API behavior
-      val partyRelationship: RelationshipSeed =
+      val relationshipSeed: RelationshipSeed =
         RelationshipSeed(
           from = userId,
           to = partyIdTo,
@@ -80,27 +80,20 @@ class PartyManagementServiceImplSpec
         )
       val mockApiRequest =
         ApiRequest[Relationship](ApiMethods.POST, "http://localhost", "/relationships", "application/json")
-          .withBody(partyRelationship)
+          .withBody(relationshipSeed)
           .withSuccessResponse[Relationship](201)
           .withErrorResponse[Problem](400)
       (mockPartyAPI
         .createRelationship(_: RelationshipSeed)(_: BearerToken))
-        .expects(partyRelationship, *)
+        .expects(relationshipSeed, *)
         .returning(mockApiRequest)
         .once()
 
       //when
-      val operation =
-        partyManagementService.createRelationship(
-          userId,
-          partyIdTo,
-          relationshipRole,
-          product = "product",
-          productRole = productRole
-        )("token")
+      val operation = partyManagementService.createRelationship(relationshipSeed)("token")
 
       //then
-      operation.futureValue shouldBe ()
+      operation.futureValue shouldBe relationshipSeed
     }
 
   }

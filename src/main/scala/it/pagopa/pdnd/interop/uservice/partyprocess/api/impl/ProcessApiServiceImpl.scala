@@ -34,7 +34,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{
   roleToDependency
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration
-import it.pagopa.pdnd.interop.uservice.partyprocess.error._
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.{ResourceConflictError, _}
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.service._
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.Certification.{
@@ -124,7 +124,7 @@ class ProcessApiServiceImpl(
 
   private def getOnboardingData(bearer: String)(relationship: Relationship): Future[OnboardingData] = {
     for {
-      organization <- getOrganization(relationship.to)(bearer)
+      organization <- partyManagementService.retrieveOrganization(relationship.to)(bearer)
       attributes <- Future.traverse(organization.attributes)(id =>
         for {
           uuid      <- id.toFutureUUID
@@ -155,15 +155,20 @@ class ProcessApiServiceImpl(
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     contexts: Seq[(String, String)]
   ): Route = {
-    def getOrganization(bearer: String): Future[Organization] =
-      createOrganization(onboardingRequest.institutionId)(bearer).recoverWith { case _ =>
-        partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
-      }
 
     val result: Future[OnboardingResponse] = for {
       bearer       <- getFutureBearer(contexts)
-      organization <- getOrganization(bearer)
-      response     <- performOnboarding(onboardingRequest, organization)(bearer)
+      organization <- createOrGetOrganization(onboardingRequest)(bearer)
+      relationships <- partyManagementService.retrieveRelationships(
+        from = None,
+        to = Some(organization.id),
+        roles = Seq.empty,
+        states = Seq.empty,
+        products = Seq.empty,
+        productRoles = Seq.empty
+      )(bearer)
+      _        <- notExistsAnOnboardedManager(relationships)
+      response <- performOnboardingWithSignature(onboardingRequest, organization)(bearer)
     } yield response
 
     onComplete(result) {
@@ -175,6 +180,13 @@ class ProcessApiServiceImpl(
     }
 
   }
+
+  private def createOrGetOrganization(onboardingRequest: OnboardingRequest)(bearer: String): Future[Organization] =
+    createOrganization(onboardingRequest.institutionId)(bearer).recoverWith {
+      case ResourceConflictError =>
+        partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
+      case ex => Future.failed(ex)
+    }
 
   /** Code: 200, Message: successful operation, DataType: OnboardingResponse
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
@@ -197,7 +209,7 @@ class ProcessApiServiceImpl(
         productRoles = Seq.empty
       )(bearer)
       _        <- existsAnOnboardedManager(organizationRelationships)
-      response <- performOnboarding(onboardingRequest, organization)(bearer)
+      response <- performOnboardingWithSignature(onboardingRequest, organization)(bearer)
     } yield response
 
     onComplete(result) {
@@ -209,25 +221,20 @@ class ProcessApiServiceImpl(
     }
   }
 
-  private def performOnboarding(onboardingRequest: OnboardingRequest, organization: Organization)(
+  private def performOnboardingWithSignature(onboardingRequest: OnboardingRequest, organization: Organization)(
     bearer: String
   ): Future[OnboardingResponse] = {
     for {
       validUsers       <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
       personsWithRoles <- Future.traverse(validUsers)(addUser(bearer))
-      _ <- Future.traverse(personsWithRoles)(pr =>
-        partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)(
-          bearer
-        )
-      )
-      relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, product, productRole) =>
-        createRelationship(organization.id, person.id, roleToDependency(role), product, productRole)
-      })
+      relationshipSeeds <- Future.traverse(personsWithRoles) { case (person, role, product, productRole) =>
+        createOrGetRelationship(person.id, organization.id, roleToDependency(role), product, productRole)(bearer)
+      }
       contractTemplate <- getFileAsString(onboardingRequest.contract.path)
       pdf              <- pdfCreator.createContract(contractTemplate, validUsers, organization)
       digest           <- signatureService.createDigest(pdf)
       token <- partyManagementService.createToken(
-        relationships,
+        RelationshipsSeed(relationshipSeeds),
         digest,
         onboardingRequest.contract.version,
         onboardingRequest.contract.path
@@ -236,6 +243,41 @@ class ProcessApiServiceImpl(
       _ <- sendOnboardingMail(Seq(organization.digitalAddress), pdf, token.token)
       _ = logger.info(s"$token")
     } yield OnboardingResponse(token.token, pdf)
+  }
+
+  private def createOrGetRelationship(
+    personId: UUID,
+    organizationId: UUID,
+    role: PartyManagementDependency.PartyRole,
+    product: String,
+    productRole: String
+  )(bearer: String): Future[RelationshipSeed] = {
+    val relationshipSeed: RelationshipSeed =
+      RelationshipSeed(
+        from = personId,
+        to = organizationId,
+        role = role,
+        product = RelationshipProductSeed(product, productRole)
+      )
+
+    partyManagementService
+      .createRelationship(relationshipSeed)(bearer)
+      .recoverWith {
+        case ResourceConflictError =>
+          for {
+            relationships <- partyManagementService.retrieveRelationships(
+              from = Some(personId),
+              to = Some(organizationId),
+              roles = Seq(role),
+              states = Seq.empty,
+              products = Seq(product),
+              productRoles = Seq(productRole)
+            )(bearer)
+            _ <- relationships.items.headOption.toFuture(RelationshipNotFound(organizationId, personId, role.toString))
+          } yield relationshipSeed
+        case ex => Future.failed(ex)
+      }
+
   }
 
   /** Code: 201, Message: successful operation
@@ -255,16 +297,9 @@ class ProcessApiServiceImpl(
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
-      _          <- existsAnOnboardedManager(relationships)
-      validUsers <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.SUB_DELEGATE))
-      operators  <- Future.traverse(validUsers)(addUser(bearer))
-      _ <- Future.traverse(operators)(pr =>
-        partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)(
-          bearer
-        )
-      )
-      _ = logger.info(s"Operators created ${operators.map(_.toString).mkString(",")}")
-    } yield ()
+      _      <- existsAnOnboardedManager(relationships)
+      result <- performOnboardingWithOutSignature(onboardingRequest, Set(PartyRole.SUB_DELEGATE), organization)(bearer)
+    } yield result
 
     onComplete(result) {
       case Success(_) => onboardingOperators201
@@ -291,16 +326,9 @@ class ProcessApiServiceImpl(
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
-      _          <- existsAnOnboardedManager(relationships)
-      validUsers <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.OPERATOR))
-      operators  <- Future.traverse(validUsers)(addUser(bearer))
-      _ <- Future.traverse(operators)(pr =>
-        partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)(
-          bearer
-        )
-      )
-      _ = logger.info(s"Operators created ${operators.map(_.toString).mkString(",")}")
-    } yield ()
+      _      <- existsAnOnboardedManager(relationships)
+      result <- performOnboardingWithOutSignature(onboardingRequest, Set(PartyRole.OPERATOR), organization)(bearer)
+    } yield result
 
     onComplete(result) {
       case Success(_) => onboardingOperators201
@@ -308,6 +336,28 @@ class ProcessApiServiceImpl(
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0005", ex)
         onboardingOperators400(errorResponse)
     }
+  }
+
+  private def performOnboardingWithOutSignature(
+    onboardingRequest: OnboardingRequest,
+    rolesToCheck: Set[PartyRole],
+    organization: Organization
+  )(bearer: String): Future[Unit] = {
+    for {
+      validUsers <- verifyUsersByRoles(onboardingRequest.users, rolesToCheck)
+      users      <- Future.traverse(validUsers)(addUser(bearer))
+      _ <- Future.traverse(users) { case (user, role, product, productRole) =>
+        val relationshipSeed: RelationshipSeed =
+          RelationshipSeed(
+            from = user.id,
+            to = organization.id,
+            role = roleToDependency(role),
+            product = RelationshipProductSeed(product, productRole)
+          )
+        partyManagementService.createRelationship(relationshipSeed)(bearer)
+      }
+      _ = logger.info(s"Users created ${users.map(_.toString).mkString(",")}")
+    } yield ()
   }
 
   /** Code: 200, Message: successful operation
@@ -427,24 +477,27 @@ class ProcessApiServiceImpl(
 
   }
 
+  private def notExistsAnOnboardedManager(relationships: Relationships): Future[Unit] = Future.fromTry {
+    Either
+      .cond(
+        relationships.items.forall(isNotAnOnboardedManager),
+        (),
+        new RuntimeException("Onboarded managers found for this institution.")
+      )
+      .toTry
+  }
+
+  private def isNotAnOnboardedManager(relationship: Relationship): Boolean = !isAnOnboardedManager(relationship)
+
   private def addUser(bearer: String)(user: User): Future[(UserRegistryUser, PartyRole, String, String)] = {
     logger.info(s"Adding user ${user.toString}")
     createPerson(user)(bearer)
       .recoverWith {
-        // TODO Once errors are defined, we should check that error is "person already exists"
-        case _ => userRegistryManagementService.getUserByExternalId(user.taxCode)(bearer)
+        case ResourceConflictError => userRegistryManagementService.getUserByExternalId(user.taxCode)(bearer)
+        case ex                    => Future.failed(ex)
       }
       .map((_, user.role, user.product, user.productRole))
   }
-
-  private def createRelationship(
-    organizationId: UUID,
-    personId: UUID,
-    role: PartyManagementDependency.PartyRole,
-    product: String,
-    productRole: String
-  ): RelationshipSeed =
-    RelationshipSeed(personId, organizationId, role, RelationshipProductSeed(product, productRole))
 
   private def createPerson(user: User)(bearer: String): Future[UserRegistryUser] =
     for {
@@ -465,9 +518,6 @@ class ProcessApiServiceImpl(
         }
       _ <- partyManagementService.createPerson(PersonSeed(user.id))(bearer)
     } yield user
-
-  private def getOrganization(institutionId: UUID)(bearer: String): Future[Organization] =
-    partyManagementService.retrieveOrganization(institutionId)(bearer)
 
   private def createOrganization(institutionId: String)(bearer: String): Future[Organization] =
     for {

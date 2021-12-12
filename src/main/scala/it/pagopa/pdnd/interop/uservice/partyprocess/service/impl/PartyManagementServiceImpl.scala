@@ -4,6 +4,7 @@ import akka.http.scaladsl.server.directives.FileInfo
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.{ApiError, ApiRequest, BearerToken}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model._
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.ResourceConflictError
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.{PartyManagementInvoker, PartyManagementService}
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -75,37 +76,21 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
     invoke(request, "Organization creation")
   }
 
-  override def createRelationship(
-    personId: UUID,
-    organizationId: UUID,
-    role: PartyRole,
-    product: String,
-    productRole: String
-  )(bearerToken: String): Future[Unit] = {
+  override def createRelationship(relationshipSeed: RelationshipSeed)(bearerToken: String): Future[RelationshipSeed] = {
     for {
-      _ <- invokeCreateRelationship(personId, organizationId, role, product, productRole)(bearerToken)
-    } yield ()
+      _ <- invokeCreateRelationship(relationshipSeed)(bearerToken)
+    } yield relationshipSeed
   }
 
   private def invokeCreateRelationship(
-    personId: UUID,
-    organizationId: UUID,
-    role: PartyRole,
-    product: String,
-    productRole: String
+    relationshipSeed: RelationshipSeed
   )(bearerToken: String): Future[Relationship] = {
     logger.info(
-      s"Creating relationship $personId/$organizationId/$role/ with product = $product and productRole = $productRole"
+      s"Creating relationship ${relationshipSeed.from}/${relationshipSeed.to}/${relationshipSeed.role.toString}/ " +
+        s"with product = ${relationshipSeed.product.id} and productRole = ${relationshipSeed.product.role}"
     )
-    val partyRelationship: RelationshipSeed =
-      RelationshipSeed(
-        from = personId,
-        to = organizationId,
-        role = role,
-        product = RelationshipProductSeed(product, productRole)
-      )
 
-    val request: ApiRequest[Relationship] = api.createRelationship(partyRelationship)(BearerToken(bearerToken))
+    val request: ApiRequest[Relationship] = api.createRelationship(relationshipSeed)(BearerToken(bearerToken))
     invoke(request, "Relationship creation")
   }
 
@@ -184,6 +169,9 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
         response.content
       }
       .recoverWith {
+        case ApiError(code, message, _, _, _) if code == 409 =>
+          logger.error(s"$logMessage. code > $code - message > $message")
+          Future.failed[T](ResourceConflictError)
         case ApiError(code, message, _, _, _) =>
           logger.error(s"$logMessage. code > $code - message > $message")
           Future.failed[T](new RuntimeException(message))

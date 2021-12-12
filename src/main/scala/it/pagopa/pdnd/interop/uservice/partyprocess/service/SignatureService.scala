@@ -6,8 +6,18 @@ import eu.europa.esig.dss.service.ocsp.OnlineOCSPSource
 import eu.europa.esig.dss.spi.client.http.{DSSFileLoader, IgnoreDataLoader}
 import eu.europa.esig.dss.spi.x509.CommonCertificateSource
 import eu.europa.esig.dss.spi.x509.aia.DefaultAIASource
-import eu.europa.esig.dss.tsl.alerts.detections.{LOTLLocationChangeDetection, OJUrlChangeDetection, TLExpirationDetection, TLSignatureErrorDetection}
-import eu.europa.esig.dss.tsl.alerts.handlers.log.{LogLOTLLocationChangeAlertHandler, LogOJUrlChangeAlertHandler, LogTLExpirationAlertHandler, LogTLSignatureErrorAlertHandler}
+import eu.europa.esig.dss.tsl.alerts.detections.{
+  LOTLLocationChangeDetection,
+  OJUrlChangeDetection,
+  TLExpirationDetection,
+  TLSignatureErrorDetection
+}
+import eu.europa.esig.dss.tsl.alerts.handlers.log.{
+  LogLOTLLocationChangeAlertHandler,
+  LogOJUrlChangeAlertHandler,
+  LogTLExpirationAlertHandler,
+  LogTLSignatureErrorAlertHandler
+}
 import eu.europa.esig.dss.tsl.alerts.{LOTLAlert, TLAlert}
 import eu.europa.esig.dss.tsl.cache.CacheCleaner
 import eu.europa.esig.dss.tsl.function.OfficialJournalSchemeInformationURI
