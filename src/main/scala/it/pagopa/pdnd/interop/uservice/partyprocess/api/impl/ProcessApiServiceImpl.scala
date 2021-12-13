@@ -22,7 +22,6 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   RelationshipProductSeed,
   RelationshipSeed,
   Relationships,
-  RelationshipsSeed,
   Problem => _
 }
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
@@ -34,7 +33,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{
   roleToDependency
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration
-import it.pagopa.pdnd.interop.uservice.partyprocess.error.{ResourceConflictError, _}
+import it.pagopa.pdnd.interop.uservice.partyprocess.error._
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.service._
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.Certification.{
@@ -227,14 +226,14 @@ class ProcessApiServiceImpl(
     for {
       validUsers       <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
       personsWithRoles <- Future.traverse(validUsers)(addUser(bearer))
-      relationshipSeeds <- Future.traverse(personsWithRoles) { case (person, role, product, productRole) =>
+      relationships <- Future.traverse(personsWithRoles) { case (person, role, product, productRole) =>
         createOrGetRelationship(person.id, organization.id, roleToDependency(role), product, productRole)(bearer)
       }
       contractTemplate <- getFileAsString(onboardingRequest.contract.path)
       pdf              <- pdfCreator.createContract(contractTemplate, validUsers, organization)
       digest           <- signatureService.createDigest(pdf)
       token <- partyManagementService.createToken(
-        RelationshipsSeed(relationshipSeeds),
+        Relationships(relationships),
         digest,
         onboardingRequest.contract.version,
         onboardingRequest.contract.path
@@ -251,7 +250,7 @@ class ProcessApiServiceImpl(
     role: PartyManagementDependency.PartyRole,
     product: String,
     productRole: String
-  )(bearer: String): Future[RelationshipSeed] = {
+  )(bearer: String): Future[Relationship] = {
     val relationshipSeed: RelationshipSeed =
       RelationshipSeed(
         from = personId,
@@ -273,8 +272,10 @@ class ProcessApiServiceImpl(
               products = Seq(product),
               productRoles = Seq(productRole)
             )(bearer)
-            _ <- relationships.items.headOption.toFuture(RelationshipNotFound(organizationId, personId, role.toString))
-          } yield relationshipSeed
+            relationship <- relationships.items.headOption.toFuture(
+              RelationshipNotFound(organizationId, personId, role.toString)
+            )
+          } yield relationship
         case ex => Future.failed(ex)
       }
 
@@ -298,14 +299,14 @@ class ProcessApiServiceImpl(
         productRoles = Seq.empty
       )(bearer)
       _      <- existsAnOnboardedManager(relationships)
-      result <- performOnboardingWithOutSignature(onboardingRequest, Set(PartyRole.SUB_DELEGATE), organization)(bearer)
+      result <- performOnboardingWithoutSignature(onboardingRequest, Set(PartyRole.SUB_DELEGATE), organization)(bearer)
     } yield result
 
     onComplete(result) {
-      case Success(_) => onboardingOperators201
+      case Success(_) => onboardingSubDelegatesOnOrganization201
       case Failure(ex) =>
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0004", ex)
-        onboardingOperators400(errorResponse)
+        onboardingSubDelegatesOnOrganization400(errorResponse)
     }
   }
 
@@ -327,7 +328,7 @@ class ProcessApiServiceImpl(
         productRoles = Seq.empty
       )(bearer)
       _      <- existsAnOnboardedManager(relationships)
-      result <- performOnboardingWithOutSignature(onboardingRequest, Set(PartyRole.OPERATOR), organization)(bearer)
+      result <- performOnboardingWithoutSignature(onboardingRequest, Set(PartyRole.OPERATOR), organization)(bearer)
     } yield result
 
     onComplete(result) {

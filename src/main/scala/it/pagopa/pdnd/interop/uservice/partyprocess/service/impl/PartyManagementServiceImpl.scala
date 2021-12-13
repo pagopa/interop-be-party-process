@@ -76,10 +76,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
     invoke(request, "Organization creation")
   }
 
-  override def createRelationship(relationshipSeed: RelationshipSeed)(bearerToken: String): Future[RelationshipSeed] = {
+  override def createRelationship(relationshipSeed: RelationshipSeed)(bearerToken: String): Future[Relationship] = {
     for {
-      _ <- invokeCreateRelationship(relationshipSeed)(bearerToken)
-    } yield relationshipSeed
+      relationship <- invokeCreateRelationship(relationshipSeed)(bearerToken)
+    } yield relationship
   }
 
   private def invokeCreateRelationship(
@@ -95,15 +95,15 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
   }
 
   override def createToken(
-    relationshipsSeed: RelationshipsSeed,
+    relationships: Relationships,
     documentHash: String,
     contractVersion: String,
     contractPath: String
   )(bearerToken: String): Future[TokenText] = {
-    logger.info(s"Creating token for [${relationshipsSeed.items.map(_.toString).mkString(",")}]")
+    logger.info(s"Creating token for [${relationships.items.map(_.toString).mkString(",")}]")
     val tokenSeed: TokenSeed = TokenSeed(
       id = UUID.randomUUID().toString,
-      relationshipsSeed,
+      relationships,
       documentHash,
       OnboardingContractInfo(contractVersion, contractPath)
     )

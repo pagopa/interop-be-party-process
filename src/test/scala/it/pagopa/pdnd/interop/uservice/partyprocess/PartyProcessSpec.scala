@@ -78,6 +78,16 @@ class PartyProcessSpec
   final val productInfo: ProductInfo =
     ProductInfo(id = "product", role = "admin", createdAt = productTimestamp)
 
+  final val relationship: Relationship = PartyManagementDependency.Relationship(
+    id = UUID.randomUUID(),
+    from = UUID.randomUUID(),
+    to = UUID.randomUUID(),
+    role = PartyManagementDependency.PartyRole.MANAGER,
+    product = product,
+    state = PartyManagementDependency.RelationshipState.PENDING,
+    createdAt = OffsetDateTime.now()
+  )
+
   override def beforeAll(): Unit = {
     loadEnvVars()
     val processApi = new ProcessApi(
@@ -114,16 +124,6 @@ class PartyProcessSpec
   override def afterAll(): Unit = {
     bindServer.foreach(_.foreach(_.unbind()))
   }
-
-  final val productSeed: RelationshipProductSeed =
-    PartyManagementDependency.RelationshipProductSeed(id = "product", role = "admin")
-
-  final val relationshipSeed: RelationshipSeed = RelationshipSeed(
-    from = UUID.randomUUID(),
-    to = UUID.randomUUID(),
-    role = PartyManagementDependency.PartyRole.MANAGER,
-    product = productSeed
-  )
 
   def performOnboardingRequestByRoleForFailure(state: PartyManagementDependency.RelationshipState): HttpResponse = {
     val taxCode1       = "managerTaxCode"
@@ -440,7 +440,7 @@ class PartyProcessSpec
     (mockPartyManagementService
       .createRelationship(_: RelationshipSeed)(_: String))
       .expects(*, *)
-      .returning(Future.successful(relationshipSeed))
+      .returning(Future.successful(relationship))
       .repeat(2)
 
     (mockFileManager
@@ -450,7 +450,7 @@ class PartyProcessSpec
       .once()
     (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful(file)).once()
     (mockPartyManagementService
-      .createToken(_: PartyManagementDependency.RelationshipsSeed, _: String, _: String, _: String)(_: String))
+      .createToken(_: PartyManagementDependency.Relationships, _: String, _: String, _: String)(_: String))
       .expects(*, *, *, *, *)
       .returning(Future.successful(PartyManagementDependency.TokenText("token")))
       .once()
@@ -1404,7 +1404,7 @@ class PartyProcessSpec
       (mockPartyManagementService
         .createRelationship(_: RelationshipSeed)(_: String))
         .expects(*, *)
-        .returning(Future.successful(relationshipSeed))
+        .returning(Future.successful(relationship))
         .repeat(2)
 
       val req = OnboardingRequest(
@@ -1623,7 +1623,7 @@ class PartyProcessSpec
       (mockPartyManagementService
         .createRelationship(_: RelationshipSeed)(_: String))
         .expects(*, *)
-        .returning(Future.successful(relationshipSeed))
+        .returning(Future.successful(relationship))
         .repeat(2)
 
       val req = OnboardingRequest(
@@ -3375,7 +3375,7 @@ class PartyProcessSpec
       (mockPartyManagementService
         .createRelationship(_: RelationshipSeed)(_: String))
         .expects(*, *)
-        .returning(Future.successful(relationshipSeed))
+        .returning(Future.successful(relationship))
         .repeat(2)
       (mockFileManager
         .get(_: String)(_: String))
@@ -3384,7 +3384,7 @@ class PartyProcessSpec
         .once()
       (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful(file)).once()
       (mockPartyManagementService
-        .createToken(_: PartyManagementDependency.RelationshipsSeed, _: String, _: String, _: String)(_: String))
+        .createToken(_: PartyManagementDependency.Relationships, _: String, _: String, _: String)(_: String))
         .expects(*, *, *, *, *)
         .returning(Future.successful(PartyManagementDependency.TokenText("token")))
         .once()

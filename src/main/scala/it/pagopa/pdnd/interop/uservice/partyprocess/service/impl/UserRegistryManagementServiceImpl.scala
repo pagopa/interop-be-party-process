@@ -50,9 +50,9 @@ final case class UserRegistryManagementServiceImpl(invoker: UserRegistryManageme
         case ApiError(code, message, _, _, _) if code == 409 =>
           logger.error(s"$logMessage. code > $code - message > $message")
           Future.failed[T](ResourceConflictError)
-        case ApiError(code, message, _, _, _) =>
-          logger.error(s"$logMessage. code > $code - message > $message")
-          Future.failed[T](new RuntimeException(message))
+        case ex: ApiError[_] =>
+          logger.error(s"$logMessage. code > ${ex.code} - message > ${ex.message}")
+          Future.failed(ex)
         case ex =>
           logger.error(s"$logMessage. Error: ${ex.getMessage}")
           Future.failed[T](ex)
