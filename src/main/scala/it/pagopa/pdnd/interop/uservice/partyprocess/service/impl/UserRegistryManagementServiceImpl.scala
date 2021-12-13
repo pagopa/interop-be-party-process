@@ -1,11 +1,12 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.ResourceConflictError
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.{
   UserRegistryManagementInvoker,
   UserRegistryManagementService
 }
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.api.UserApi
-import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.invoker.{ApiKeyValue, ApiRequest}
+import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.invoker.{ApiError, ApiKeyValue, ApiRequest}
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{EmbeddedExternalId, User, UserSeed}
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -45,8 +46,15 @@ final case class UserRegistryManagementServiceImpl(invoker: UserRegistryManageme
         logger.debug(s"$logMessage. Status code: ${response.code.toString}. Content: ${response.content.toString}")
         response.content
       }
-      .recoverWith { case ex =>
-        logger.error(s"$logMessage. Error: ${ex.getMessage}")
-        Future.failed[T](ex)
+      .recoverWith {
+        case ApiError(code, message, _, _, _) if code == 409 =>
+          logger.error(s"$logMessage. code > $code - message > $message")
+          Future.failed[T](ResourceConflictError)
+        case ex: ApiError[_] =>
+          logger.error(s"$logMessage. code > ${ex.code} - message > ${ex.message}")
+          Future.failed(ex)
+        case ex =>
+          logger.error(s"$logMessage. Error: ${ex.getMessage}")
+          Future.failed[T](ex)
       }
 }

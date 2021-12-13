@@ -17,13 +17,7 @@ trait PartyManagementService {
 
   def createOrganization(organization: OrganizationSeed)(bearerToken: String): Future[Organization]
 
-  def createRelationship(
-    id: UUID,
-    organizationId: UUID,
-    operationRole: PartyRole,
-    product: String,
-    productRole: String
-  )(bearerToken: String): Future[Unit]
+  def createRelationship(relationshipSeed: RelationshipSeed)(bearerToken: String): Future[Relationship]
 
   def retrieveRelationships(
     from: Option[UUID],
@@ -40,12 +34,9 @@ trait PartyManagementService {
 
   def suspendRelationship(relationshipId: UUID)(bearerToken: String): Future[Unit]
 
-  def createToken(
-    relationshipsSeed: RelationshipsSeed,
-    documentHash: String,
-    contractVersion: String,
-    contractPath: String
-  )(bearerToken: String): Future[TokenText]
+  def createToken(relationships: Relationships, documentHash: String, contractVersion: String, contractPath: String)(
+    bearerToken: String
+  ): Future[TokenText]
 
   def getToken(tokenId: UUID)(bearerToken: String): Future[TokenInfo]
 

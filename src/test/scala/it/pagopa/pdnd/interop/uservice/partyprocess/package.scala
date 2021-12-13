@@ -44,6 +44,7 @@ package object partyprocess extends SprayJsonSupport {
     sprayJsonMarshaller[OnboardingRequest]
 
   final val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
+
   def request(data: Source[ByteString, Any], path: String, verb: HttpMethod)(implicit
     system: ClassicActorSystemProvider
   ): HttpResponse = {
