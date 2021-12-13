@@ -238,8 +238,9 @@ class ProcessApiServiceImpl(
         onboardingRequest.contract.version,
         onboardingRequest.contract.path
       )(bearer)
-      _ = logger.info(s"Digest $digest")
-      _ <- sendOnboardingMail(Seq(organization.digitalAddress), pdf, token.token)
+      _                = logger.info(s"Digest $digest")
+      destinationMails = ApplicationConfiguration.destinationMails.getOrElse(Seq(organization.digitalAddress))
+      _ <- sendOnboardingMail(destinationMails, pdf, token.token)
       _ = logger.info(s"$token")
     } yield OnboardingResponse(token.token, pdf)
   }
