@@ -181,7 +181,8 @@ class ProcessApiServiceImpl(
         onboardingRequest.contract.version,
         onboardingRequest.contract.path
       )(bearer)
-      _ <- sendOnboardingMail(Seq(organization.digitalAddress), pdf._1, token.token)
+      destinationMails = ApplicationConfiguration.destinationMails.getOrElse(Seq(organization.digitalAddress))
+      _ <- sendOnboardingMail(destinationMails, pdf._1, token.token)
       _ = logger.info(s"$token")
     } yield OnboardingResponse(token.token, pdf._1)
 
@@ -234,8 +235,8 @@ class ProcessApiServiceImpl(
         onboardingRequest.contract.version,
         onboardingRequest.contract.path
       )(bearer)
-
-      _ <- sendOnboardingMail(Seq(organization.digitalAddress), pdf._1, token.token)
+      destinationMails = ApplicationConfiguration.destinationMails.getOrElse(Seq(organization.digitalAddress))
+      _ <- sendOnboardingMail(destinationMails, pdf._1, token.token)
       _ = logger.info(s"$token")
     } yield OnboardingResponse(token.token, pdf._1)
 

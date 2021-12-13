@@ -148,6 +148,16 @@ at runtime the email will contain the following link:
 
 `http://pagopa.it/onboarding-confirmation?token=y4d4y4d4`
 
+---
+
+### DESTINATION MAILS
+:warning: This env is mandatory in non production environment
+
+This env var must be set to prevent sending emails directly to the institution.
+
+| Variable name | Variable type | Notes |
+| ------------- | ------------- | ----- |
+| **DESTINATION_MAILS** | String | Defines a comma separated list of emails|
 
 
 
