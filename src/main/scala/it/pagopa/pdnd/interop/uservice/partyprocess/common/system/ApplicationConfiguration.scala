@@ -11,8 +11,19 @@ object ApplicationConfiguration {
   def getAttributeRegistryUrl: String = config.getString("services.attribute-registry")
   def getUserRegistryURL: String      = config.getString("services.user-registry-management")
 
+  /*
+     _________  ________  ________  ________
+    |\___   ___\\   __  \|\   ___ \|\   __  \
+    \|___ \  \_\ \  \|\  \ \  \_|\ \ \  \|\  \
+         \ \  \ \ \  \\\  \ \  \ \\ \ \  \\\  \
+          \ \  \ \ \  \\\  \ \  \_\\ \ \  \\\  \
+           \ \__\ \ \_______\ \_______\ \_______\
+            \|__|  \|_______|\|_______|\|_______|
+      TODO THIS IS A TEMPORARY SOLUTION!
+      TODO MOVE TO PARTY REGISTRY MOCK
+  */
   def destinationMails: Option[Seq[String]] =
-    Option(System.getenv("DESTINATION_MAILS")).map(_.split(",").toSeq)
+    Option(config.getString("uservice-party-process.destination-mails")).map(_.split(",").toSeq)
 
   def euListOfTrustedListsURL: String = config.getString("uservice-party-process.eu_list_of_trusted_lists_url")
   def euOfficialJournalUrl: String    = config.getString("uservice-party-process.eu_official_journal_url")
