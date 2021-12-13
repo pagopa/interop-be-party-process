@@ -7,17 +7,25 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, FileInfo, SecurityDirectives}
 import akka.http.scaladsl.unmarshalling.Unmarshal
+import cats.implicits.catsSyntaxValidatedId
+import eu.europa.esig.dss.validation.SignedDocumentValidator
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.Authenticator
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{
   AttributesResponse,
   Attribute => ClientAttribute
 }
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{OrganizationSeed, RelationshipProduct, TokenInfo}
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
+  OrganizationSeed,
+  RelationshipBinding,
+  RelationshipProduct,
+  TokenInfo
+}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{relationshipStateToApi, roleToApi}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.ProcessApiServiceImpl
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{classicActorSystem, executionContext}
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.validation.ValidationError
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.{Products => ModelProducts, _}
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.partyprocess.{model => PartyProcess}
@@ -79,6 +87,8 @@ class PartyProcessSpec
         mockUserRegistryService,
         mockPdfCreator,
         mockFileManager,
+        mockSignatureService,
+        mockSignatureValidationService,
         mockMailer,
         mockMailTemplate,
         mockJWTReader
@@ -845,6 +855,12 @@ class PartyProcessSpec
           productRole = "admin"
         )
 
+      (mockSignatureService
+        .createDigest(_: File))
+        .expects(*)
+        .returning(Future.successful("hash"))
+        .once()
+
       (mockPartyRegistryService
         .getInstitution(_: String)(_: String))
         .expects(*, *)
@@ -929,8 +945,8 @@ class PartyProcessSpec
         .returning(Future.successful(()))
         .repeat(2)
       (mockAttributeRegistryService
-        .createAttribute(_: String, _: String, _: String)(_: String))
-        .expects(*, *, *, *)
+        .createAttribute(_: String, _: String, _: String, _: String)(_: String))
+        .expects(*, *, *, *, *)
         .returning(Future.successful(attr1))
         .once()
       (mockFileManager
@@ -938,7 +954,7 @@ class PartyProcessSpec
         .expects(*, *)
         .returning(Future.successful(new ByteArrayOutputStream()))
         .once()
-      (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful((file, "hash"))).once()
+      (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful(file)).once()
       (mockPartyManagementService
         .createToken(_: PartyManagementDependency.RelationshipsSeed, _: String, _: String, _: String)(_: String))
         .expects(*, *, *, *, *)
@@ -1399,15 +1415,91 @@ class PartyProcessSpec
 
     "confirm token" in {
 
-      val tokenId: UUID = UUID.randomUUID()
+      val tokenId: UUID                = UUID.randomUUID()
+      val partyIdManager: UUID         = UUID.randomUUID()
+      val relationshipIdManager: UUID  = UUID.randomUUID()
+      val managerTaxCode: String       = "TINIT-MANAGER"
+      val partyIdDelegate: UUID        = UUID.randomUUID()
+      val relationshipIdDelegate: UUID = UUID.randomUUID()
+      val delegateTaxCode: String      = "TINIT-DELEGATE"
 
-      val token: TokenInfo = TokenInfo(id = tokenId, checksum = "6ddee820d06383127ef029f571285339", legals = Seq.empty)
-      val path             = Paths.get("src/test/resources/contract-test-01.pdf")
+      val token: TokenInfo =
+        TokenInfo(
+          id = tokenId,
+          checksum = "6ddee820d06383127ef029f571285339",
+          legals = Seq(
+            RelationshipBinding(partyId = partyIdManager, relationshipId = relationshipIdManager),
+            RelationshipBinding(partyId = partyIdDelegate, relationshipId = relationshipIdDelegate)
+          )
+        )
+      val path = Paths.get("src/test/resources/contract-test-01.pdf")
+
+      (mockSignatureService
+        .createDocumentValidator(_: Array[Byte]))
+        .expects(*)
+        .returning(Future.successful(mockSignedDocumentValidator))
+        .once()
+
+      (mockSignatureValidationService
+        .verifySignature(_: SignedDocumentValidator))
+        .expects(*)
+        .returning(().validNel[ValidationError])
+        .once()
+
+      (mockSignatureValidationService
+        .verifySignatureForm(_: SignedDocumentValidator))
+        .expects(*)
+        .returning(().validNel[ValidationError])
+        .once()
+
+      (mockSignatureValidationService
+        .verifyDigest(_: SignedDocumentValidator, _: String))
+        .expects(*, *)
+        .returning(().validNel[ValidationError])
+        .once()
+
+      (mockSignatureValidationService
+        .verifyManagerTaxCode(_: SignedDocumentValidator, _: Seq[UserRegistryUser]))
+        .expects(*, *)
+        .returning(().validNel[ValidationError])
+        .once()
 
       (mockPartyManagementService
         .getToken(_: UUID)(_: String))
         .expects(tokenId, *)
         .returning(Future.successful(token))
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(partyIdManager, *)
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = partyIdManager,
+              externalId = managerTaxCode,
+              name = "",
+              surname = "",
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(None, None)
+            )
+          )
+        )
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(partyIdDelegate, *)
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = partyIdDelegate,
+              externalId = delegateTaxCode,
+              name = "",
+              surname = "",
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(None, None)
+            )
+          )
+        )
 
       (mockPartyManagementService
         .consumeToken(_: UUID, _: (FileInfo, File))(_: String))
@@ -2965,6 +3057,12 @@ class PartyProcessSpec
           updatedAt = None
         )
 
+      (mockSignatureService
+        .createDigest(_: File))
+        .expects(*)
+        .returning(Future.successful("hash"))
+        .once()
+
       (mockPartyManagementService
         .retrieveOrganizationByExternalId(_: String)(_: String))
         .expects(*, *)
@@ -3058,7 +3156,7 @@ class PartyProcessSpec
         .expects(*, *)
         .returning(Future.successful(new ByteArrayOutputStream()))
         .once()
-      (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful((file, "hash"))).once()
+      (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful(file)).once()
       (mockPartyManagementService
         .createToken(_: PartyManagementDependency.RelationshipsSeed, _: String, _: String, _: String)(_: String))
         .expects(*, *, *, *, *)

@@ -22,6 +22,9 @@ package object impl extends DefaultJsonProtocol {
   implicit val relationshipInfoFormat: RootJsonFormat[RelationshipInfo]     = jsonFormat10(RelationshipInfo)
   implicit val productsFormat: RootJsonFormat[Products]                     = jsonFormat1(Products)
 
+  final val serviceErrorCodePrefix: String = "002"
+  final val defaultProblemType: String     = "about:blank"
+
   def problemOf(
     httpError: StatusCode,
     errorCode: String,
@@ -29,10 +32,14 @@ package object impl extends DefaultJsonProtocol {
     defaultMessage: String = "Unknown error"
   ): Problem =
     Problem(
-      `type` = "about:blank",
+      `type` = defaultProblemType,
       status = httpError.intValue,
       title = httpError.defaultMessage,
-      errors =
-        Seq(ProblemError(code = s"002-$errorCode", detail = Option(exception.getMessage).getOrElse(defaultMessage)))
+      errors = Seq(
+        ProblemError(
+          code = s"$serviceErrorCodePrefix-$errorCode",
+          detail = Option(exception.getMessage).getOrElse(defaultMessage)
+        )
+      )
     )
 }

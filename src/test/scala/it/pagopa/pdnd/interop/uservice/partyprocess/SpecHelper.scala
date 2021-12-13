@@ -1,5 +1,7 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess
 
+import eu.europa.esig.dss.validation.SignedDocumentValidator
+import eu.europa.esig.dss.validation.reports.Reports
 import com.nimbusds.jwt.JWTClaimsSet
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
@@ -21,17 +23,21 @@ object MockMailEngine extends MailEngine {
 
 trait SpecHelper { self: MockFactory =>
 
-  val processApiMarshaller: ProcessApiMarshaller             = new ProcessApiMarshallerImpl
-  val mockHealthApi: HealthApi                               = mock[HealthApi]
-  val mockPartyManagementService: PartyManagementService     = mock[PartyManagementService]
-  val mockPartyRegistryService: PartyRegistryService         = mock[PartyRegistryService]
-  val mockUserRegistryService: UserRegistryManagementService = mock[UserRegistryManagementService]
-  val mockAttributeRegistryService: AttributeRegistryService = mock[AttributeRegistryService]
-  val mockMailer: MailEngine                                 = MockMailEngine
-  val mockPdfCreator: PDFCreator                             = mock[PDFCreator]
-  val mockFileManager: FileManager                           = mock[FileManager]
-  val mockMailTemplate: PersistedTemplate                    = PersistedTemplate("mock", "mock")
-  val mockJWTReader: JWTReader                               = mock[JWTReader]
+  val processApiMarshaller: ProcessApiMarshaller                 = new ProcessApiMarshallerImpl
+  val mockHealthApi: HealthApi                                   = mock[HealthApi]
+  val mockPartyManagementService: PartyManagementService         = mock[PartyManagementService]
+  val mockPartyRegistryService: PartyRegistryService             = mock[PartyRegistryService]
+  val mockUserRegistryService: UserRegistryManagementService     = mock[UserRegistryManagementService]
+  val mockAttributeRegistryService: AttributeRegistryService     = mock[AttributeRegistryService]
+  val mockMailer: MailEngine                                     = MockMailEngine
+  val mockPdfCreator: PDFCreator                                 = mock[PDFCreator]
+  val mockFileManager: FileManager                               = mock[FileManager]
+  val mockSignatureService: SignatureService                     = mock[SignatureService]
+  val mockSignatureValidationService: SignatureValidationService = mock[SignatureValidationService]
+  val mockReports: Reports                                       = mock[Reports]
+  val mockSignedDocumentValidator: SignedDocumentValidator       = mock[SignedDocumentValidator]
+  val mockMailTemplate: PersistedTemplate                        = PersistedTemplate("mock", "mock")
+  val mockJWTReader: JWTReader                                   = mock[JWTReader]
 
   def mockSubject(uuid: String) = Success(new JWTClaimsSet.Builder().subject(uuid).build())
 

@@ -19,7 +19,7 @@ final case class AttributeRegistryServiceImpl(attributeRegistryInvoker: Attribut
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  override def createAttribute(origin: String, description: String, attribute: String)(
+  override def createAttribute(origin: String, attribute: String, name: String, description: String)(
     bearerToken: String
   ): Future[AttributesResponse] = {
 
@@ -28,7 +28,7 @@ final case class AttributeRegistryServiceImpl(attributeRegistryInvoker: Attribut
       certified = true,
       description = description,
       origin = Some(origin),
-      name = description
+      name = name
     )
     val seeds: Seq[AttributeSeed] = Seq(seed)
 

@@ -21,7 +21,7 @@ class ApplicationConfigurationSpec
     "return proper names and placeholders" in {
       val config = ApplicationConfiguration.onboardingMailPlaceholdersReplacement
       config should contain only (
-        ("confirmTokenURL" -> "confirm-value"),
+        ("testConfirmName" -> "confirm-value"),
         ("testRejectName"  -> "reject-value"),
       )
     }
