@@ -14,6 +14,12 @@ import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.
   AttributesResponse,
   Attribute => ClientAttribute
 }
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
+  OrganizationSeed,
+  RelationshipBinding,
+  RelationshipProduct,
+  TokenInfo
+}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{PartyRole => _, RelationshipState => _, _}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApi
