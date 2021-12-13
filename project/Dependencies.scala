@@ -40,9 +40,15 @@ object Dependencies {
 
   }
 
-  private[this] object courier {
-    lazy val namespace = "com.github.daddykotex"
-    lazy val mail      = namespace %% "courier" % courierVersion
+  private[this] object europa {
+    lazy val namespace = "eu.europa.ec.joinup.sd-dss"
+
+    lazy val dssPades              = namespace % "dss-pades"                % dssVersion
+    lazy val dssPadesPdfbox        = namespace % "dss-pades-pdfbox"         % dssVersion
+    lazy val dssCades              = namespace % "dss-cades"                % dssVersion
+    lazy val dssUtilsApacheCommons = namespace % "dss-utils-apache-commons" % dssVersion
+    lazy val dssService            = namespace % "dss-service"              % dssVersion
+    lazy val dssTlsValidation      = namespace % "dss-tsl-validation"       % dssVersion
 
   }
 
@@ -124,7 +130,12 @@ object Dependencies {
       awssdk.s3                           % Compile,
       azure.storageBlob                   % Compile,
       cats.core                           % Compile,
-      courier.mail                        % Compile,
+      europa.dssCades                     % Compile,
+      europa.dssPades                     % Compile,
+      europa.dssPadesPdfbox               % Compile,
+      europa.dssUtilsApacheCommons        % Compile,
+      europa.dssService                   % Compile,
+      europa.dssTlsValidation             % Compile,
       kamon.bundle                        % Compile,
       kamon.prometheus                    % Compile,
       logback.classic                     % Compile,

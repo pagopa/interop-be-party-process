@@ -1,8 +1,8 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
 import it.pagopa.pdnd.interop.commons.mail.model.{MailAttachment, MailDataTemplate, PersistedTemplate}
-import it.pagopa.pdnd.interop.commons.utils.model.TextTemplate
 import it.pagopa.pdnd.interop.commons.mail.service.impl.DefaultPDNDMailer
+import it.pagopa.pdnd.interop.commons.utils.model.TextTemplate
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.MailEngine
 
 import java.io.File

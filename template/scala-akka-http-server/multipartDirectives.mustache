@@ -64,7 +64,7 @@ onSuccess(uploadedF)
 
 object MultipartDirectives extends MultipartDirectives with FileUploadDirectives {
 val tempFileFromFileInfo: FileInfo => File = {
-(file: FileInfo) => File.createTempFile(file.fileName, ".tmp")
+(file: FileInfo) => File.createTempFile(file.fileName, ".pdf")
 }
 }
 

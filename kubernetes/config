@@ -35,6 +35,9 @@ partyProxyUrl="http://pdnd-interop-uservice-party-registry-proxy.pdnd-interop-us
 attributeRegistryUrl="http://pdnd-interop-uservice-attribute-registry-management.pdnd-interop-uservice-attribute-registry-management.svc.cluster.local:8088/pdnd-interop-uservice-attribute-registry-management/"$attributeRegistryVersion
 userRegistryManagementUrl="http://pdnd-interop-uservice-user-registry-management.pdnd-interop-uservice-user-registry-management.svc.cluster.local:8088/pdnd-interop-uservice-user-registry-management/"$userRegistryManagementVersion
 
+euListOfTrustedListsURL = $EU_LIST_OF_TRUSTED_LISTS_URL
+euOfficialJournalUrl   = $EU_OFFICIAL_JOURNAL_URL
+
 name=$(cat $SCRIPT_PATH/../build.sbt | grep "name :=" | awk -F:= '{ print $2 }' | sed 's/\"//' | sed 's/\",//' | sed 's/ //' | tr '[:upper:]' '[:lower:]' | grep -v client)
 
 #getting version from sbt

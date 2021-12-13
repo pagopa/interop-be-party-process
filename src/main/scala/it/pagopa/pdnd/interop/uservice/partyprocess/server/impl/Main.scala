@@ -103,7 +103,8 @@ object Main
   ): Future[Http.ServerBinding] = {
     Kamon.init()
 
-    val mailer: MailEngine = new PartyProcessMailer with DefaultPDNDMailer with CourierMailer
+    val signatureService: SignatureService = SignatureServiceImpl
+    val mailer: MailEngine                 = new PartyProcessMailer with DefaultPDNDMailer with CourierMailer
 
     val processApi: ProcessApi = new ProcessApi(
       new ProcessApiServiceImpl(
@@ -113,6 +114,8 @@ object Main
         userRegistryManagementService,
         PDFCreatorImpl,
         fileManager,
+        signatureService,
+        SignatureValidationService,
         mailer,
         mailTemplate,
         jwtReader

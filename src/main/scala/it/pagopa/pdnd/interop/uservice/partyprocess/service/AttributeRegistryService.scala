@@ -6,7 +6,7 @@ import java.util.UUID
 import scala.concurrent.Future
 
 trait AttributeRegistryService {
-  def createAttribute(origin: String, description: String, attribute: String)(
+  def createAttribute(origin: String, attribute: String, name: String, description: String)(
     bearerToken: String
   ): Future[AttributesResponse]
   def getAttribute(id: UUID)(bearerToken: String): Future[Attribute]

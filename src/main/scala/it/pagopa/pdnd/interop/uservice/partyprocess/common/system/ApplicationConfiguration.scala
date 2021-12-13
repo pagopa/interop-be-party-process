@@ -14,6 +14,9 @@ object ApplicationConfiguration {
   def destinationMails: Option[Seq[String]] =
     Option(System.getenv("DESTINATION_MAILS")).map(_.split(",").toSeq)
 
+  def euListOfTrustedListsURL: String = config.getString("uservice-party-process.eu_list_of_trusted_lists_url")
+  def euOfficialJournalUrl: String    = config.getString("uservice-party-process.eu_official_journal_url")
+
   def mailTemplatePath: String   = config.getString("uservice-party-process.mail-template.path")
   def userRegistryApiKey: String = config.getString("uservice-party-process.user-registry-api-key")
 

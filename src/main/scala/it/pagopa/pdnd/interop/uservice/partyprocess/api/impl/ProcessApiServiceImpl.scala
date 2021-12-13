@@ -10,8 +10,6 @@ import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
 import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.getFutureBearer
-import it.pagopa.pdnd.interop.commons.utils.Digester
-import it.pagopa.pdnd.interop.commons.utils.TypeConversions.{OptionOps, StringOps, TryOps}
 import it.pagopa.pdnd.interop.commons.utils.OpenapiUtils._
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions._
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
@@ -63,6 +61,8 @@ class ProcessApiServiceImpl(
   userRegistryManagementService: UserRegistryManagementService,
   pdfCreator: PDFCreator,
   fileManager: FileManager,
+  signatureService: SignatureService,
+  signatureValidationService: SignatureValidationService,
   mailer: MailEngine,
   mailTemplate: PersistedTemplate,
   jwtReader: JWTReader
@@ -161,30 +161,10 @@ class ProcessApiServiceImpl(
       }
 
     val result: Future[OnboardingResponse] = for {
-      bearer           <- getFutureBearer(contexts)
-      organization     <- getOrganization(bearer)
-      validUsers       <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
-      personsWithRoles <- Future.traverse(validUsers)(addUser(bearer))
-      _ <- Future.traverse(personsWithRoles)(pr =>
-        partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)(
-          bearer
-        )
-      )
-      relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, product, productRole) =>
-        createRelationship(organization.id, person.id, roleToDependency(role), product, productRole)
-      })
-      contractTemplate <- getFileAsString(onboardingRequest.contract.version)
-      pdf              <- pdfCreator.createContract(contractTemplate, validUsers, organization)
-      token <- partyManagementService.createToken(
-        relationships,
-        pdf._2,
-        onboardingRequest.contract.version,
-        onboardingRequest.contract.path
-      )(bearer)
-      destinationMails = ApplicationConfiguration.destinationMails.getOrElse(Seq(organization.digitalAddress))
-      _ <- sendOnboardingMail(destinationMails, pdf._1, token.token)
-      _ = logger.info(s"$token")
-    } yield OnboardingResponse(token.token, pdf._1)
+      bearer       <- getFutureBearer(contexts)
+      organization <- getOrganization(bearer)
+      response     <- performOnboarding(onboardingRequest, organization)(bearer)
+    } yield response
 
     onComplete(result) {
       case Success(response) =>
@@ -216,29 +196,9 @@ class ProcessApiServiceImpl(
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
-      _                <- existsAnOnboardedManager(organizationRelationships)
-      validUsers       <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
-      personsWithRoles <- Future.traverse(validUsers)(addUser(bearer))
-      _ <- Future.traverse(personsWithRoles)(pr =>
-        partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)(
-          bearer
-        )
-      )
-      relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, products, productRole) =>
-        createRelationship(organization.id, person.id, roleToDependency(role), products, productRole)
-      })
-      contractTemplate <- getFileAsString(onboardingRequest.contract.version)
-      pdf              <- pdfCreator.createContract(contractTemplate, validUsers, organization)
-      token <- partyManagementService.createToken(
-        relationships,
-        pdf._2,
-        onboardingRequest.contract.version,
-        onboardingRequest.contract.path
-      )(bearer)
-      destinationMails = ApplicationConfiguration.destinationMails.getOrElse(Seq(organization.digitalAddress))
-      _ <- sendOnboardingMail(destinationMails, pdf._1, token.token)
-      _ = logger.info(s"$token")
-    } yield OnboardingResponse(token.token, pdf._1)
+      _        <- existsAnOnboardedManager(organizationRelationships)
+      response <- performOnboarding(onboardingRequest, organization)(bearer)
+    } yield response
 
     onComplete(result) {
       case Success(response) =>
@@ -247,6 +207,36 @@ class ProcessApiServiceImpl(
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0003", ex)
         onboardingLegalsOnOrganization400(errorResponse)
     }
+  }
+
+  private def performOnboarding(onboardingRequest: OnboardingRequest, organization: Organization)(
+    bearer: String
+  ): Future[OnboardingResponse] = {
+    for {
+      validUsers       <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
+      personsWithRoles <- Future.traverse(validUsers)(addUser(bearer))
+      _ <- Future.traverse(personsWithRoles)(pr =>
+        partyManagementService.createRelationship(pr._1.id, organization.id, roleToDependency(pr._2), pr._3, pr._4)(
+          bearer
+        )
+      )
+      relationships = RelationshipsSeed(personsWithRoles.map { case (person, role, product, productRole) =>
+        createRelationship(organization.id, person.id, roleToDependency(role), product, productRole)
+      })
+      contractTemplate <- getFileAsString(onboardingRequest.contract.path)
+      pdf              <- pdfCreator.createContract(contractTemplate, validUsers, organization)
+      digest           <- signatureService.createDigest(pdf)
+      token <- partyManagementService.createToken(
+        relationships,
+        digest,
+        onboardingRequest.contract.version,
+        onboardingRequest.contract.path
+      )(bearer)
+      _                = logger.info(s"Digest $digest")
+      destinationMails = ApplicationConfiguration.destinationMails.getOrElse(Seq(organization.digitalAddress))
+      _ <- sendOnboardingMail(destinationMails, pdf, token.token)
+      _ = logger.info(s"$token")
+    } yield OnboardingResponse(token.token, pdf)
   }
 
   /** Code: 201, Message: successful operation
@@ -323,6 +313,19 @@ class ProcessApiServiceImpl(
 
   /** Code: 200, Message: successful operation
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
+    * Code: 409, Message: Document validation failed
+    *
+    * These are the error code used in the document validation process:
+    *
+    *  * 002-100: document validation fails
+    *  * 002-101: original document digest differs from incoming document one
+    *  * 002-102: the signature is invalid
+    *  * 002-103: signature form is not CAdES
+    *  * 002-104: signature tax code is not equal to document one
+    *  * 002-105: signature tax code has an invalid format
+    *  * 002-106: signature tax code is not present
+    *
+    *  DataType: Problem
     */
   override def confirmOnboarding(tokenId: String, contract: (FileInfo, File))(implicit
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
@@ -333,14 +336,36 @@ class ProcessApiServiceImpl(
       bearer      <- getFutureBearer(contexts)
       tokenIdUUID <- tokenId.toFutureUUID
       token       <- partyManagementService.getToken(tokenIdUUID)(bearer)
-      _           <- verifyChecksum(contract._2, token.checksum)
-      _           <- partyManagementService.consumeToken(token.id, contract)(bearer)
+      legalUsers <- Future.traverse(token.legals)(legal =>
+        userRegistryManagementService.getUserById(legal.partyId)(bearer)
+      )
+      validator <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
+      _ <- SignatureValidationService.validateSignature(
+        signatureValidationService.verifySignature(validator),
+        signatureValidationService.verifySignatureForm(validator),
+        signatureValidationService.verifyDigest(validator, token.checksum),
+        signatureValidationService.verifyManagerTaxCode(validator, legalUsers)
+      )
+      _ <- partyManagementService.consumeToken(token.id, contract)(bearer)
     } yield ()
 
     onComplete(result) {
       case Success(_) => confirmOnboarding200
-      // TODO: error 409 will be enabled with signature mechanism introduction / confirmOnboarding409
+      case Failure(InvalidSignature(validationErrors)) =>
+        val errorResponse: Problem = Problem(
+          `type` = defaultProblemType,
+          status = StatusCodes.Conflict.intValue,
+          title = StatusCodes.Conflict.defaultMessage,
+          errors = validationErrors.map(validationError =>
+            ProblemError(
+              code = s"$serviceErrorCodePrefix-${validationError.getErrorCode}",
+              detail = validationError.getMessage
+            )
+          )
+        )
+        confirmOnboarding409(errorResponse)
       case Failure(ex) =>
+        ex.printStackTrace()
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0006", ex)
         confirmOnboarding400(errorResponse)
     }
@@ -453,7 +478,7 @@ class ProcessApiServiceImpl(
         .find(cat => institution.category == cat.code)
         .map(Future.successful)
         .getOrElse(Future.failed(new RuntimeException(s"Invalid category ${institution.category}")))
-      attributes <- attributeRegistryService.createAttribute("IPA", category.name, category.code)(bearer)
+      attributes <- attributeRegistryService.createAttribute("IPA", category.code, category.name, category.kind)(bearer)
       _ = logger.info(s"getInstitution ${institution.id}")
       seed = OrganizationSeed(
         institutionId = institution.id,
@@ -466,14 +491,6 @@ class ProcessApiServiceImpl(
       organization <- partyManagementService.createOrganization(seed)(bearer)
       _ = logger.info(s"createOrganization ${organization.institutionId}")
     } yield organization
-
-  private def verifyChecksum[A](fileToCheck: File, checksum: String): Future[Unit] = {
-    Future.fromTry(
-      Either
-        .cond(Digester.createMD5Hash(fileToCheck) == checksum, (), new RuntimeException("Invalid checksum"))
-        .toTry
-    )
-  }
 
   private def filterFoundRelationshipsByCurrentUser(
     currentUserId: UUID,

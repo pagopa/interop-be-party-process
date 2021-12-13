@@ -150,7 +150,7 @@ at runtime the email will contain the following link:
 
 ---
 
-### DESTINATION MAILS
+### Destination mails
 :warning: This env is mandatory in non production environment
 
 This env var must be set to prevent sending emails directly to the institution.
@@ -159,7 +159,22 @@ This env var must be set to prevent sending emails directly to the institution.
 | ------------- | ------------- | ----- |
 | **DESTINATION_MAILS** | String | Defines a comma separated list of emails|
 
+---
 
+### Well-Known url set up
+To verify JWT a well-known url must be set.
 
+| Variable name | Variable type | Notes |
+| ------------- | ------------- | ----- |
+| **WELL_KNOWN_URL** | String | Define the Well-Known endpoint url used to verify incoming JWTs|
+
+---
+### Signature configuration
+Signature verification need to set these env vars:
+
+| Variable name | Variable type | Notes |
+| ------------- | ------------- | ----- |
+| **EU_LIST_OF_TRUSTED_LISTS_URL** | String | URL of the european List Of Trusted List [see](https://esignature.ec.europa.eu/efda/tl-browser/#/screen/tl/EU)|
+| **EU_OFFICIAL_JOURNAL_URL** | String | URL of the Official Journal URL where the EU trusted certificates are listed [see](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv:OJ.C_.2019.276.01.0001.01.ENG)|
 
 
