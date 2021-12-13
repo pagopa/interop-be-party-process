@@ -72,12 +72,12 @@ class ProcessApiServiceImpl(
 
   final val adminPartyRoles: Set[PartyRole] = Set(PartyRole.MANAGER, PartyRole.DELEGATE, PartyRole.SUB_DELEGATE)
 
-  private def sendOnboardingMail(addresses: Seq[String], file: File, token: String): Future[Unit] = {
-    val bodyParameters =
-      ApplicationConfiguration.onboardingMailPlaceholdersReplacement.map { case (k, placeholder) =>
-        (k, s"$placeholder$token")
-      }
-    mailer.sendMail(mailTemplate)(addresses, file, bodyParameters)
+  private def sendOnboardingMail(
+    addresses: Seq[String],
+    file: File,
+    onboardingMailParameters: Map[String, String]
+  ): Future[Unit] = {
+    mailer.sendMail(mailTemplate)(addresses, file, onboardingMailParameters)
   }
 
   /** Code: 200, Message: successful operation, DataType: OnboardingInfo
@@ -157,6 +157,8 @@ class ProcessApiServiceImpl(
 
     val result: Future[OnboardingResponse] = for {
       bearer       <- getFutureBearer(contexts)
+      subjectUUID  <- getCallerSubjectIdentifier(bearer)
+      currentUser  <- userRegistryManagementService.getUserById(subjectUUID)(bearer)
       organization <- createOrGetOrganization(onboardingRequest)(bearer)
       relationships <- partyManagementService.retrieveRelationships(
         from = None,
@@ -167,7 +169,7 @@ class ProcessApiServiceImpl(
         productRoles = Seq.empty
       )(bearer)
       _        <- notExistsAnOnboardedManager(relationships)
-      response <- performOnboardingWithSignature(onboardingRequest, organization)(bearer)
+      response <- performOnboardingWithSignature(onboardingRequest, organization, currentUser)(bearer)
     } yield response
 
     onComplete(result) {
@@ -198,6 +200,8 @@ class ProcessApiServiceImpl(
   ): Route = {
     val result: Future[OnboardingResponse] = for {
       bearer       <- getFutureBearer(contexts)
+      subjectUUID  <- getCallerSubjectIdentifier(bearer)
+      currentUser  <- userRegistryManagementService.getUserById(subjectUUID)(bearer)
       organization <- partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
       organizationRelationships <- partyManagementService.retrieveRelationships(
         from = None,
@@ -208,7 +212,7 @@ class ProcessApiServiceImpl(
         productRoles = Seq.empty
       )(bearer)
       _        <- existsAnOnboardedManager(organizationRelationships)
-      response <- performOnboardingWithSignature(onboardingRequest, organization)(bearer)
+      response <- performOnboardingWithSignature(onboardingRequest, organization, currentUser)(bearer)
     } yield response
 
     onComplete(result) {
@@ -220,15 +224,18 @@ class ProcessApiServiceImpl(
     }
   }
 
-  private def performOnboardingWithSignature(onboardingRequest: OnboardingRequest, organization: Organization)(
-    bearer: String
-  ): Future[OnboardingResponse] = {
+  private def performOnboardingWithSignature(
+    onboardingRequest: OnboardingRequest,
+    organization: Organization,
+    currentUser: UserRegistryUser
+  )(bearer: String): Future[OnboardingResponse] = {
     for {
       validUsers       <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
       personsWithRoles <- Future.traverse(validUsers)(addUser(bearer))
       relationships <- Future.traverse(personsWithRoles) { case (person, role, product, productRole) =>
         createOrGetRelationship(person.id, organization.id, roleToDependency(role), product, productRole)(bearer)
       }
+
       contractTemplate <- getFileAsString(onboardingRequest.contract.path)
       pdf              <- pdfCreator.createContract(contractTemplate, validUsers, organization)
       digest           <- signatureService.createDigest(pdf)
@@ -238,11 +245,44 @@ class ProcessApiServiceImpl(
         onboardingRequest.contract.version,
         onboardingRequest.contract.path
       )(bearer)
-      _                = logger.info(s"Digest $digest")
+      _ = logger.info(s"Digest $digest")
+      onboardingMailParameters <- getOnboardingMailParameters(token.token, currentUser, onboardingRequest)
       destinationMails = ApplicationConfiguration.destinationMails.getOrElse(Seq(organization.digitalAddress))
-      _ <- sendOnboardingMail(destinationMails, pdf, token.token)
+      _ <- sendOnboardingMail(destinationMails, pdf, onboardingMailParameters)
       _ = logger.info(s"$token")
     } yield OnboardingResponse(token.token, pdf)
+  }
+
+  private def getOnboardingMailParameters(
+    token: String,
+    currentUser: UserRegistryUser,
+    onboardingRequest: OnboardingRequest
+  ): Future[Map[String, String]] = {
+
+    val tokenParameters: Map[String, String] = {
+      ApplicationConfiguration.onboardingMailPlaceholdersReplacement.map { case (k, placeholder) =>
+        (k, s"$placeholder$token")
+      }
+    }
+
+    val userParameters: Map[String, String] = Map(
+      ApplicationConfiguration.onboardingMailUserNamePlaceholder    -> currentUser.name,
+      ApplicationConfiguration.onboardingMailUserSurnamePlaceholder -> currentUser.surname,
+      ApplicationConfiguration.onboardingMailTaxCodePlaceholder     -> currentUser.externalId
+    )
+
+    val bodyParameters: Map[String, String] = tokenParameters ++ userParameters
+
+    extractProduct(onboardingRequest).map(product =>
+      bodyParameters + (ApplicationConfiguration.onboardingMailProductPlaceholder -> product)
+    )
+
+  }
+
+  private def extractProduct(onboardingRequest: OnboardingRequest): Future[String] = {
+    val products: Seq[String] = onboardingRequest.users.map(_.product).distinct
+    if (products.size == 1) Future.successful(products.head)
+    else Future.failed(MultipleProductsRequestError(products))
   }
 
   private def createOrGetRelationship(

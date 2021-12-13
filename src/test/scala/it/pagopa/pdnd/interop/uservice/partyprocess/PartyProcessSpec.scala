@@ -8,6 +8,7 @@ import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, FileInfo, SecurityDirectives}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import cats.implicits.catsSyntaxValidatedId
+import com.nimbusds.jwt.JWTClaimsSet
 import eu.europa.esig.dss.validation.SignedDocumentValidator
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.Authenticator
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{
@@ -18,9 +19,11 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   OrganizationSeed,
   RelationshipBinding,
   RelationshipProduct,
-  TokenInfo
+  TokenInfo,
+  PartyRole => _,
+  RelationshipState => _,
+  _
 }
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{PartyRole => _, RelationshipState => _, _}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{relationshipStateToApi, roleToApi}
@@ -52,6 +55,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.duration.{Duration, DurationInt}
 import scala.concurrent.{Await, Future}
+import scala.util.Success
 
 class PartyProcessSpec
     extends MockFactory
@@ -87,6 +91,9 @@ class PartyProcessSpec
     state = PartyManagementDependency.RelationshipState.PENDING,
     createdAt = OffsetDateTime.now()
   )
+
+  val claims                     = s"""{"sub" : "${UUID.randomUUID()}" }"""
+  val jwtClaimsSet: JWTClaimsSet = JWTClaimsSet.parse(claims)
 
   override def beforeAll(): Unit = {
     loadEnvVars()
@@ -201,6 +208,28 @@ class PartyProcessSpec
       updatedAt = None
     )
 
+    (mockJWTReader
+      .getClaims(_: String))
+      .expects(*)
+      .returning(Success(jwtClaimsSet))
+      .once()
+
+    (mockUserRegistryService
+      .getUserById(_: UUID)(_: String))
+      .expects(*, *)
+      .returning(
+        Future.successful(
+          UserRegistryUser(
+            id = UUID.randomUUID(),
+            externalId = "",
+            name = "",
+            surname = "",
+            certification = CertificationEnumsNone,
+            extras = UserRegistryUserExtras(email = None, birthDate = None)
+          )
+        )
+      )
+      .once()
     (mockPartyRegistryService
       .getInstitution(_: String)(_: String))
       .expects(*, *)
@@ -333,6 +362,29 @@ class PartyProcessSpec
         )
       case None => Seq.empty
     }
+
+    (mockJWTReader
+      .getClaims(_: String))
+      .expects(*)
+      .returning(Success(jwtClaimsSet))
+      .once()
+
+    (mockUserRegistryService
+      .getUserById(_: UUID)(_: String))
+      .expects(*, *)
+      .returning(
+        Future.successful(
+          UserRegistryUser(
+            id = UUID.randomUUID(),
+            externalId = "",
+            name = "",
+            surname = "",
+            certification = CertificationEnumsNone,
+            extras = UserRegistryUserExtras(email = None, birthDate = None)
+          )
+        )
+      )
+      .once()
 
     (mockSignatureService
       .createDigest(_: File))
@@ -3283,6 +3335,29 @@ class PartyProcessSpec
           updatedAt = None
         )
 
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(Success(jwtClaimsSet))
+        .once()
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(*, *)
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = UUID.randomUUID(),
+              externalId = "",
+              name = "",
+              surname = "",
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(email = None, birthDate = None)
+            )
+          )
+        )
+        .once()
+
       (mockSignatureService
         .createDigest(_: File))
         .expects(*)
@@ -3454,6 +3529,29 @@ class PartyProcessSpec
           createdAt = relationshipTimestamp,
           updatedAt = None
         )
+
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(Success(jwtClaimsSet))
+        .once()
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: String))
+        .expects(*, *)
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = UUID.randomUUID(),
+              externalId = "",
+              name = "",
+              surname = "",
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(email = None, birthDate = None)
+            )
+          )
+        )
+        .once()
 
       (mockPartyManagementService
         .retrieveOrganizationByExternalId(_: String)(_: String))
