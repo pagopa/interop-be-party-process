@@ -338,7 +338,7 @@ class ProcessApiServiceImpl(
     }
   }
 
-  private def performOnboardingWithOutSignature(
+  private def performOnboardingWithoutSignature(
     onboardingRequest: OnboardingRequest,
     rolesToCheck: Set[PartyRole],
     organization: Organization
