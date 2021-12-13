@@ -22,7 +22,7 @@ class ApplicationConfigurationSpec
       val config = ApplicationConfiguration.onboardingMailPlaceholdersReplacement
       config should contain only (
         ("confirmTokenURL" -> "confirm-value"),
-        ("testRejectName"  -> "reject-value"),
+        ("rejectTokenURL"  -> "reject-value"),
       )
     }
   }
