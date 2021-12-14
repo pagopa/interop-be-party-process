@@ -21,7 +21,7 @@ object ApplicationConfiguration {
             \|__|  \|_______|\|_______|\|_______|
       TODO THIS IS A TEMPORARY SOLUTION!
       TODO MOVE TO PARTY REGISTRY MOCK
-  */
+   */
   def destinationMails: Option[Seq[String]] =
     Option(config.getString("uservice-party-process.destination-mails")).map(_.split(",").toSeq)
 
