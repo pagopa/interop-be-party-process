@@ -52,11 +52,6 @@ object Dependencies {
 
   }
 
-  private[this] object openapi4j {
-    lazy val namespace          = "org.openapi4j"
-    lazy val operationValidator = namespace % "openapi-operation-validator" % openapi4jVersion
-  }
-
   private[this] object mustache {
     lazy val namespace = "com.github.spullara.mustache.java"
     lazy val compiler  = namespace % "compiler" % mustacheVersion
@@ -96,11 +91,6 @@ object Dependencies {
     lazy val databind    = namespace % "jackson-databind"    % jacksonVersion
   }
 
-  private[this] object azure {
-    lazy val namespace   = "com.azure"
-    lazy val storageBlob = namespace % "azure-storage-blob" % azureStorageBlobVersion
-  }
-
   private[this] object awssdk {
     lazy val namespace = "software.amazon.awssdk"
     lazy val s3        = namespace % "s3" % awsSdkVersion
@@ -128,7 +118,6 @@ object Dependencies {
       akka.slf4j                          % Compile,
       akka.stream                         % Compile,
       awssdk.s3                           % Compile,
-      azure.storageBlob                   % Compile,
       cats.core                           % Compile,
       europa.dssCades                     % Compile,
       europa.dssPades                     % Compile,
@@ -140,7 +129,6 @@ object Dependencies {
       kamon.prometheus                    % Compile,
       logback.classic                     % Compile,
       mustache.compiler                   % Compile,
-      openapi4j.operationValidator        % Compile,
       pagopa.attributeRegistryClient      % Compile,
       pagopa.commons                      % Compile,
       pagopa.commonsFile                  % Compile,

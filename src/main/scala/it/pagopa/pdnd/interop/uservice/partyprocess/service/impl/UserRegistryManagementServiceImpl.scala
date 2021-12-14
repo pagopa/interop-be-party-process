@@ -19,22 +19,22 @@ final case class UserRegistryManagementServiceImpl(invoker: UserRegistryManageme
 ) extends UserRegistryManagementService {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  override def getUserById(userId: UUID)(bearerToken: String): Future[User] = {
+  override def getUserById(userId: UUID): Future[User] = {
     val request: ApiRequest[User] = api.getUserById(userId)
     invoke(request, "Retrieve User By ID")
   }
 
-  override def getUserByExternalId(externalId: String)(bearerToken: String): Future[User] = {
+  override def getUserByExternalId(externalId: String): Future[User] = {
     val request: ApiRequest[User] = api.getUserByExternalId(EmbeddedExternalId(externalId))
     invoke(request, "Retrieve User By External ID")
   }
 
-  override def createUser(seed: UserSeed)(bearerToken: String): Future[User] = {
+  override def createUser(seed: UserSeed): Future[User] = {
     val request: ApiRequest[User] = api.createUser(seed)
     invoke(request, "Create User")
   }
 
-  override def updateUser(seed: UserSeed)(bearerToken: String): Future[User] = {
+  override def updateUser(seed: UserSeed): Future[User] = {
     val request: ApiRequest[User] = api.updateUser(seed)
     invoke(request, "Update User")
   }

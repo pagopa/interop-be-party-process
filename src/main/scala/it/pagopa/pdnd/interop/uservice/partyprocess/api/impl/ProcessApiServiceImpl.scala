@@ -99,7 +99,7 @@ class ProcessApiServiceImpl(
         .traverse(PartyManagementDependency.RelationshipState.fromValue)
         .toFuture
       statesArray = if (statesParamArray.isEmpty) defaultStates else statesParamArray
-      user <- userRegistryManagementService.getUserById(subjectUUID)(bearer)
+      user <- userRegistryManagementService.getUserById(subjectUUID)
       personInfo = PersonInfo(user.name, user.surname, user.externalId)
       relationships <- partyManagementService.retrieveRelationships(
         from = Some(subjectUUID),
@@ -158,7 +158,7 @@ class ProcessApiServiceImpl(
     val result: Future[OnboardingResponse] = for {
       bearer       <- getFutureBearer(contexts)
       subjectUUID  <- getCallerSubjectIdentifier(bearer)
-      currentUser  <- userRegistryManagementService.getUserById(subjectUUID)(bearer)
+      currentUser  <- userRegistryManagementService.getUserById(subjectUUID)
       organization <- createOrGetOrganization(onboardingRequest)(bearer)
       relationships <- partyManagementService.retrieveRelationships(
         from = None,
@@ -201,7 +201,7 @@ class ProcessApiServiceImpl(
     val result: Future[OnboardingResponse] = for {
       bearer       <- getFutureBearer(contexts)
       subjectUUID  <- getCallerSubjectIdentifier(bearer)
-      currentUser  <- userRegistryManagementService.getUserById(subjectUUID)(bearer)
+      currentUser  <- userRegistryManagementService.getUserById(subjectUUID)
       organization <- partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
       organizationRelationships <- partyManagementService.retrieveRelationships(
         from = None,
@@ -235,7 +235,6 @@ class ProcessApiServiceImpl(
       relationships <- Future.traverse(personsWithRoles) { case (person, role, product, productRole) =>
         createOrGetRelationship(person.id, organization.id, roleToDependency(role), product, productRole)(bearer)
       }
-
       contractTemplate <- getFileAsString(onboardingRequest.contract.path)
       pdf              <- pdfCreator.createContract(contractTemplate, validUsers, organization)
       digest           <- signatureService.createDigest(pdf)
@@ -427,10 +426,8 @@ class ProcessApiServiceImpl(
       bearer      <- getFutureBearer(contexts)
       tokenIdUUID <- tokenId.toFutureUUID
       token       <- partyManagementService.getToken(tokenIdUUID)(bearer)
-      legalUsers <- Future.traverse(token.legals)(legal =>
-        userRegistryManagementService.getUserById(legal.partyId)(bearer)
-      )
-      validator <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
+      legalUsers  <- Future.traverse(token.legals)(legal => userRegistryManagementService.getUserById(legal.partyId))
+      validator   <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
       _ <- SignatureValidationService.validateSignature(
         signatureValidationService.verifySignature(validator),
         signatureValidationService.verifySignatureForm(validator),
@@ -535,7 +532,7 @@ class ProcessApiServiceImpl(
     logger.info(s"Adding user ${user.toString}")
     createPerson(user)(bearer)
       .recoverWith {
-        case ResourceConflictError => userRegistryManagementService.getUserByExternalId(user.taxCode)(bearer)
+        case ResourceConflictError => userRegistryManagementService.getUserByExternalId(user.taxCode)
         case ex                    => Future.failed(ex)
       }
       .map((_, user.role, user.product, user.productRole))
@@ -552,9 +549,9 @@ class ProcessApiServiceImpl(
             certification = CertificationEnumsNone,
             extras = UserRegistryUserExtras(email = user.email, birthDate = None)
           )
-        )(bearer)
+        )
         .recoverWith {
-          case ResourceConflictError => userRegistryManagementService.getUserByExternalId(user.taxCode)(bearer)
+          case ResourceConflictError => userRegistryManagementService.getUserByExternalId(user.taxCode)
           case ex                    => Future.failed(ex)
         }
       _ <- partyManagementService.createPerson(PersonSeed(user.id))(bearer)
@@ -645,7 +642,7 @@ class ProcessApiServiceImpl(
         userAdminRelationships,
         institutionIdRelationships
       )
-      relationships <- relationshipsToRelationshipsResponse(filteredRelationships)(bearer)
+      relationships <- filteredRelationships.items.traverse(relationshipToRelationshipsResponse)
     } yield relationships
 
     onComplete(result) {
@@ -770,19 +767,9 @@ class ProcessApiServiceImpl(
       case status                                             => Future.failed(RelationshipNotSuspendable(relationship.id.toString, status.toString))
     }
 
-  private def relationshipsToRelationshipsResponse(
-    relationships: Relationships
-  )(bearerToken: String): Future[Seq[RelationshipInfo]] = {
-    relationships.items.traverse(relationshipToRelationshipsResponse(_)(bearerToken))
-
-  }
-
-  private def relationshipToRelationshipsResponse(
-    relationship: Relationship
-  )(bearerToken: String): Future[RelationshipInfo] = {
-
+  private def relationshipToRelationshipsResponse(relationship: Relationship): Future[RelationshipInfo] = {
     for {
-      user <- userRegistryManagementService.getUserById(relationship.from)(bearerToken)
+      user <- userRegistryManagementService.getUserById(relationship.from)
     } yield relationshipToRelationshipInfo(user, relationship)
 
   }
@@ -831,7 +818,7 @@ class ProcessApiServiceImpl(
       bearer           <- getFutureBearer(contexts)
       relationshipUUID <- relationshipId.toFutureUUID
       relationship     <- partyManagementService.getRelationshipById(relationshipUUID)(bearer)
-      relationshipInfo <- relationshipToRelationshipsResponse(relationship)(bearer)
+      relationshipInfo <- relationshipToRelationshipsResponse(relationship)
     } yield relationshipInfo
 
     onComplete(result) {
