@@ -105,6 +105,8 @@ spec:
               value: "{{mailSenderAddress}}"
             - name: SMTP_HOST
               value: "{{smtpAddress}}"
+            - name: SMTP_SSL
+              value: "{{smtpSSL}}"
             - name: SMTP_PORT
               value: "{{smtpPort}}"
             - name: WELL_KNOWN_URL

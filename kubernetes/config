@@ -23,6 +23,7 @@ mailOnboardingRejectionLink=$MAIL_ONBOARDING_REJECTION_LINK
 mailSenderAddress=$MAIL_SENDER_ADDRESS
 smtpAddress=$SMTP_HOST
 smtpPort=$SMTP_PORT
+smtpSSL=$SMTP_SSL
 wellKnownURL=$WELL_KNOWN_URL
 
 partyManagementVersion="0.1"
