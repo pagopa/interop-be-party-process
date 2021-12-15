@@ -21,7 +21,7 @@ mailOnboardingConfirmationLink=$MAIL_ONBOARDING_CONFIRMATION_LINK
 mailOnboardingRejectionLink=$MAIL_ONBOARDING_REJECTION_LINK
 
 mailSenderAddress=$MAIL_SENDER_ADDRESS
-smtpAddress=$SMTP_SERVER
+smtpAddress=$SMTP_HOST
 smtpPort=$SMTP_PORT
 wellKnownURL=$WELL_KNOWN_URL
 
@@ -36,7 +36,7 @@ attributeRegistryUrl="http://pdnd-interop-uservice-attribute-registry-management
 userRegistryManagementUrl="http://pdnd-interop-uservice-user-registry-management.pdnd-interop-uservice-user-registry-management.svc.cluster.local:8088/pdnd-interop-uservice-user-registry-management/"$userRegistryManagementVersion
 
 euListOfTrustedListsURL = $EU_LIST_OF_TRUSTED_LISTS_URL
-euOfficialJournalUrl   = $EU_OFFICIAL_JOURNAL_URL
+euOfficialJournalUrl = $EU_OFFICIAL_JOURNAL_URL
 
 name=$(cat $SCRIPT_PATH/../build.sbt | grep "name :=" | awk -F:= '{ print $2 }' | sed 's/\"//' | sed 's/\",//' | sed 's/ //' | tr '[:upper:]' '[:lower:]' | grep -v client)
 
