@@ -103,7 +103,7 @@ spec:
               value: "{{mailOnboardingRejectionLink}}"
             - name: MAIL_SENDER_ADDRESS
               value: "{{mailSenderAddress}}"
-            - name: SMTP_SERVER
+            - name: SMTP_HOST
               value: "{{smtpAddress}}"
             - name: SMTP_PORT
               value: "{{smtpPort}}"
