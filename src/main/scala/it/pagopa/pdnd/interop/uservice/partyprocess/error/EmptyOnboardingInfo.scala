@@ -6,4 +6,4 @@ import java.util.UUID
 
 final case class EmptyOnboardingInfo(uid: UUID, institutionId: Option[String], states: List[RelationshipState])
     extends Throwable(s"No onboarding information found for uid=${uid.toString} institutionId=${institutionId
-      .getOrElse("")},state=[${states.mkString(",")}]")
+      .getOrElse("")},states=[${states.mkString(",")}]")
