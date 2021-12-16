@@ -92,8 +92,8 @@ class ProcessApiServiceImpl(
       List(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING)
 
     val result: Future[OnboardingInfo] = for {
-      bearer  <- getFutureBearer(contexts)
-      uidUUID <- getCallerUserIdentifier(bearer)
+      bearer <- getFutureBearer(contexts)
+      uid    <- getCallerUserIdentifier(bearer)
       organization <- institutionId.traverse(externalId =>
         partyManagementService.retrieveOrganizationByExternalId(externalId)(bearer)
       )
@@ -101,17 +101,17 @@ class ProcessApiServiceImpl(
         .traverse(PartyManagementDependency.RelationshipState.fromValue)
         .toFuture
       statesArray = if (statesParamArray.isEmpty) defaultStates else statesParamArray
-      user <- userRegistryManagementService.getUserById(uidUUID)(bearer)
+      user <- userRegistryManagementService.getUserById(uid)(bearer)
       personInfo = PersonInfo(user.name, user.surname, user.externalId)
       relationships <- partyManagementService.retrieveRelationships(
-        from = Some(uidUUID),
+        from = Some(uid),
         to = organization.map(_.id),
         roles = Seq.empty,
         states = statesArray,
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
-      _              <- areRelationshipsNonEmpty(uidUUID, institutionId, statesArray)(relationships)
+      _              <- areRelationshipsNonEmpty(uid, institutionId, statesArray)(relationships)
       onboardingData <- Future.traverse(relationships.items)(getOnboardingData(bearer))
     } yield OnboardingInfo(personInfo, onboardingData)
 
@@ -597,12 +597,12 @@ class ProcessApiServiceImpl(
 
     val result: Future[Seq[RelationshipInfo]] = for {
       bearer          <- getFutureBearer(contexts)
-      uidUUID         <- getCallerUserIdentifier(bearer)
+      uid             <- getCallerUserIdentifier(bearer)
       organization    <- partyManagementService.retrieveOrganizationByExternalId(institutionId)(bearer)
       rolesEnumArray  <- rolesArray.traverse(PartyManagementDependency.PartyRole.fromValue).toFuture
       statesEnumArray <- statesArray.traverse(PartyManagementDependency.RelationshipState.fromValue).toFuture
       userAdminRelationships <- partyManagementService.retrieveRelationships(
-        from = Some(uidUUID),
+        from = Some(uid),
         to = Some(organization.id),
         roles = adminPartyRoles.map(roleToDependency).toSeq,
         states =
@@ -619,7 +619,7 @@ class ProcessApiServiceImpl(
         productRoles = productRolesArray
       )(bearer)
       filteredRelationships = filterFoundRelationshipsByCurrentUser(
-        uidUUID,
+        uid,
         userAdminRelationships,
         institutionIdRelationships
       )
@@ -785,10 +785,10 @@ class ProcessApiServiceImpl(
 
   private def getCallerUserIdentifier(bearer: String): Future[UUID] = {
     val subject = for {
-      claims  <- jwtReader.getClaims(bearer).toFuture
-      uid     <- Option(claims.getStringClaim(uidClaim)).toFuture(ClaimNotFound(uidClaim))
-      uidUUID <- uid.toFutureUUID
-    } yield uidUUID
+      claims <- jwtReader.getClaims(bearer).toFuture
+      uidTxt <- Option(claims.getStringClaim(uidClaim)).toFuture(ClaimNotFound(uidClaim))
+      uid    <- uidTxt.toFutureUUID
+    } yield uid
 
     subject transform {
       case s @ Success(_) => s
