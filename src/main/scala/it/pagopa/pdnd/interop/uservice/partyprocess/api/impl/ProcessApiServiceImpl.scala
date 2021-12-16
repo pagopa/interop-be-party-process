@@ -409,6 +409,7 @@ class ProcessApiServiceImpl(
       )
       validator <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
       _ <- SignatureValidationService.validateSignature(
+        signatureValidationService.isDocumentSigned(validator),
         signatureValidationService.verifySignature(validator),
         signatureValidationService.verifySignatureForm(validator),
         signatureValidationService.verifyDigest(validator, token.checksum),

@@ -35,7 +35,7 @@ trait SignatureValidationService {
 
   def isDocumentSigned(documentValidator: SignedDocumentValidator): ValidatedNel[ValidationError, Unit] = {
     val validation: Either[ValidationError, Unit] =
-      Either.cond(documentValidator.getSignatures.isEmpty, (), SignatureNotFound)
+      Either.cond(documentValidator.getSignatures.asScala.nonEmpty, (), SignatureNotFound)
 
     validation match {
       case Left(throwable)  => throwable.invalidNel[Unit]
