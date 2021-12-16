@@ -19,11 +19,12 @@ case object SignatureServiceImpl extends SignatureService {
 
   private final val job: TLValidationJob = SignatureService.getJob(europeanLOTL)
   job.setTrustedListCertificateSource(trustedListsCertificateSource)
+  // TODO this must be managed with cronjob
   job.onlineRefresh()
+//  job.offlineRefresh()
 
   def createDocumentValidator(bytes: Array[Byte]): Future[SignedDocumentValidator] = Future.fromTry {
     Try {
-      job.offlineRefresh()
 
       SignatureService.certificateVerifier.setTrustedCertSources(trustedListsCertificateSource)
 
