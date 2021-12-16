@@ -170,8 +170,8 @@ class ProcessApiServiceImpl(
 
     val result: Future[OnboardingResponse] = for {
       bearer       <- getFutureBearer(contexts)
-      subjectUUID  <- getCallerUserIdentifier(bearer)
-      currentUser  <- userRegistryManagementService.getUserById(subjectUUID)
+      uid          <- getCallerUserIdentifier(bearer)
+      currentUser  <- userRegistryManagementService.getUserById(uid)
       organization <- createOrGetOrganization(onboardingRequest)(bearer)
       relationships <- partyManagementService.retrieveRelationships(
         from = None,
@@ -216,8 +216,8 @@ class ProcessApiServiceImpl(
   ): Route = {
     val result: Future[OnboardingResponse] = for {
       bearer       <- getFutureBearer(contexts)
-      subjectUUID  <- getCallerUserIdentifier(bearer)
-      currentUser  <- userRegistryManagementService.getUserById(subjectUUID)
+      uid          <- getCallerUserIdentifier(bearer)
+      currentUser  <- userRegistryManagementService.getUserById(uid)
       organization <- partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
       organizationRelationships <- partyManagementService.retrieveRelationships(
         from = None,
