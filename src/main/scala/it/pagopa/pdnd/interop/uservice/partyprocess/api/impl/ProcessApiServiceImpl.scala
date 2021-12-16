@@ -92,9 +92,12 @@ class ProcessApiServiceImpl(
       List(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING)
 
     val result: Future[OnboardingInfo] = for {
-      bearer          <- getFutureBearer(contexts)
-      subjectUUID     <- getCallerSubjectIdentifier(bearer)
-      institutionUUID <- institutionId.traverse(_.toFutureUUID)
+      bearer      <- getFutureBearer(contexts)
+      subjectUUID <- getCallerUserIdentifier(bearer)
+      organization <- institutionId.traverse(externalId =>
+        partyManagementService.retrieveOrganizationByExternalId(externalId)(bearer)
+      )
+      institutionUUID <- organization.traverse(_.institutionId.toFutureUUID)
       statesParamArray <- parseArrayParameters(states)
         .traverse(PartyManagementDependency.RelationshipState.fromValue)
         .toFuture
@@ -579,7 +582,7 @@ class ProcessApiServiceImpl(
 
     val result: Future[Seq[RelationshipInfo]] = for {
       bearer          <- getFutureBearer(contexts)
-      subjectUUID     <- getCallerSubjectIdentifier(bearer)
+      subjectUUID     <- getCallerUserIdentifier(bearer)
       institutionUUID <- institutionId.toFutureUUID
       rolesEnumArray  <- rolesArray.traverse(PartyManagementDependency.PartyRole.fromValue).toFuture
       statesEnumArray <- statesArray.traverse(PartyManagementDependency.RelationshipState.fromValue).toFuture
@@ -765,15 +768,16 @@ class ProcessApiServiceImpl(
     )
   }
 
-  private def getCallerSubjectIdentifier(bearer: String): Future[UUID] = {
+  private def getCallerUserIdentifier(bearer: String): Future[UUID] = {
     val subject = for {
-      claims      <- jwtReader.getClaims(bearer).toFuture
-      subjectUUID <- claims.getSubject.toFutureUUID
-    } yield subjectUUID
+      claims  <- jwtReader.getClaims(bearer).toFuture
+      uid     <- Option(claims.getStringClaim("uid")).toFuture(ClaimNotFound("uid"))
+      uidUUID <- uid.toFutureUUID
+    } yield uidUUID
 
     subject transform {
       case s @ Success(_) => s
-      case Failure(cause) => Failure(SubjectValidationError(cause.getMessage))
+      case Failure(cause) => Failure(UidValidationError(cause.getMessage))
     }
   }
 
@@ -814,14 +818,14 @@ class ProcessApiServiceImpl(
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
     val result = for {
       bearer           <- getFutureBearer(contexts)
-      _                <- getCallerSubjectIdentifier(bearer)
+      _                <- getCallerUserIdentifier(bearer)
       relationshipUUID <- relationshipId.toFutureUUID
       _                <- partyManagementService.deleteRelationshipById(relationshipUUID)(bearer)
     } yield ()
 
     onComplete(result) {
       case Success(_) => deleteRelationshipById204
-      case Failure(ex: SubjectValidationError) =>
+      case Failure(ex: UidValidationError) =>
         val errorResponse: Problem = problemOf(StatusCodes.Unauthorized, "0018", ex, "Unauthorized")
         complete(errorResponse.status, errorResponse)
       case Failure(ex) =>
@@ -840,7 +844,7 @@ class ProcessApiServiceImpl(
   ): Route = {
     val result = for {
       bearer          <- getFutureBearer(contexts)
-      _               <- getCallerSubjectIdentifier(bearer)
+      _               <- getCallerUserIdentifier(bearer)
       institutionUUID <- institutionId.toFutureUUID
       organization    <- partyManagementService.retrieveOrganization(institutionUUID)(bearer)
       organizationRelationships <- partyManagementService.retrieveRelationships(
@@ -859,7 +863,7 @@ class ProcessApiServiceImpl(
           problemOf(StatusCodes.NotFound, "0020", defaultMessage = s"Products not found for institution $institutionId")
         retrieveInstitutionProducts404(errorResponse)
       case Success(institution) => retrieveInstitutionProducts200(institution)
-      case Failure(ex: SubjectValidationError) =>
+      case Failure(ex: UidValidationError) =>
         val errorResponse: Problem = problemOf(StatusCodes.Unauthorized, "0020", ex, "Unauthorized")
         complete(errorResponse.status, errorResponse)
       case Failure(ex) =>

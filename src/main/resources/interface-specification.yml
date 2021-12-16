@@ -38,7 +38,7 @@ paths:
       operationId: getOnboardingInfo
       parameters:
         - name: institutionId
-          description: UUID of an institution you can filter the retrieval with
+          description: Id of an institution you can filter the retrieval with
           in: query
           schema:
             type: string
