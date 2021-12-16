@@ -6,12 +6,27 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.Directives._
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
+import com.github.mustachejava.DefaultMustacheFactory
 
 import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
+import java.io.{BufferedWriter, File, FileWriter, StringWriter}
+import scala.collection.mutable
 
 class Controller({{#apiInfo}}{{#apis}}{{#operations}}{{classVarName}}: {{classname}}{{^-last}}, {{/-last}}{{/operations}}{{/apis}}{{/apiInfo}})(implicit system: ActorSystem) {
-val interfaceVersion :String= buildinfo.BuildInfo.interfaceVersion
-private val strictnessTimeout:FiniteDuration = FiniteDuration({{entityStrictnessTimeout}}, SECONDS)
+val interfaceVersion = buildinfo.BuildInfo.interfaceVersion
+private val mf = new DefaultMustacheFactory
+val writer =
+mf.compile("interface-specification.yml").execute(new StringWriter(), mutable.HashMap("version" -> interfaceVersion).asJava).asInstanceOf[StringWriter]
+writer.flush()
+writer.close()
+private val tmpFile = File.createTempFile("tmp", "interface-specification.yml")
+tmpFile.deleteOnExit()
+val w = new BufferedWriter(new FileWriter(tmpFile))
+w.write(writer.toString)
+w.close()
+private val strictnessTimeout = FiniteDuration({{entityStrictnessTimeout}}, SECONDS)
+
 
 /**
 * Exposes build information of this project.
@@ -25,11 +40,11 @@ complete(HttpEntity(ContentTypes.`application/json`, buildinfo.BuildInfo.toJson)
 
 lazy val routes: Route = getBuildInfo ~ pathPrefix("{{projectName}}" / interfaceVersion) {
 toStrictEntity(strictnessTimeout) {
-
+extractRequest {
+request =>
 {{#apiInfo}}{{#apis}}{{#operations}}{{classVarName}}.route {{^-last}} ~ {{/-last}}{{/operations}}{{/apis}}{{/apiInfo}}
+} ~ getFromResourceDirectory("swagger-ui") ~ getFromFile(tmpFile)
 }
-} ~ getFromResourceDirectory("swagger-ui")
-
 }
 
-
+}
