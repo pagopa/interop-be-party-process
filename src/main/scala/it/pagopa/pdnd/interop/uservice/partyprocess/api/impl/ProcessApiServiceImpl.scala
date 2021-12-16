@@ -92,8 +92,8 @@ class ProcessApiServiceImpl(
       List(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING)
 
     val result: Future[OnboardingInfo] = for {
-      bearer      <- getFutureBearer(contexts)
-      subjectUUID <- getCallerUserIdentifier(bearer)
+      bearer  <- getFutureBearer(contexts)
+      uidUUID <- getCallerUserIdentifier(bearer)
       organization <- institutionId.traverse(externalId =>
         partyManagementService.retrieveOrganizationByExternalId(externalId)(bearer)
       )
@@ -101,27 +101,38 @@ class ProcessApiServiceImpl(
         .traverse(PartyManagementDependency.RelationshipState.fromValue)
         .toFuture
       statesArray = if (statesParamArray.isEmpty) defaultStates else statesParamArray
-      user <- userRegistryManagementService.getUserById(subjectUUID)(bearer)
+      user <- userRegistryManagementService.getUserById(uidUUID)(bearer)
       personInfo = PersonInfo(user.name, user.surname, user.externalId)
       relationships <- partyManagementService.retrieveRelationships(
-        from = Some(subjectUUID),
+        from = Some(uidUUID),
         to = organization.map(_.id),
         roles = Seq.empty,
         states = statesArray,
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
+      _              <- areRelationshipsNonEmpty(uidUUID, institutionId, statesArray)(relationships)
       onboardingData <- Future.traverse(relationships.items)(getOnboardingData(bearer))
     } yield OnboardingInfo(personInfo, onboardingData)
 
     onComplete(result) {
       case Success(res) => getOnboardingInfo200(res)
+      case Failure(ex: EmptyOnboardingInfo) =>
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, "0023", ex)
+        getOnboardingInfo404(errorResponse)
       case Failure(ex) =>
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0001", ex)
         getOnboardingInfo400(errorResponse)
 
     }
   }
+
+  private def areRelationshipsNonEmpty(
+    uid: UUID,
+    institutionId: Option[String],
+    states: List[PartyManagementDependency.RelationshipState]
+  )(relationships: Relationships) =
+    Either.cond(relationships.items.nonEmpty, (), EmptyOnboardingInfo(uid, institutionId, states)).toFuture
 
   private def getOnboardingData(bearer: String)(relationship: Relationship): Future[OnboardingData] = {
     for {
@@ -175,6 +186,9 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(response) =>
         onboardingOrganization201(response)
+      case Failure(ex: ContractNotFound) =>
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, "0022", ex)
+        onboardingOrganization404(errorResponse)
       case Failure(ex) =>
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0002", ex)
         onboardingOrganization400(errorResponse)
@@ -231,14 +245,15 @@ class ProcessApiServiceImpl(
       relationships <- Future.traverse(personsWithRoles) { case (person, role, product, productRole) =>
         createOrGetRelationship(person.id, organization.id, roleToDependency(role), product, productRole)(bearer)
       }
-      contractTemplate <- getFileAsString(onboardingRequest.contract.path)
+      contract         <- onboardingRequest.contract.toFuture(ContractNotFound(onboardingRequest.institutionId))
+      contractTemplate <- getFileAsString(contract.path)
       pdf              <- pdfCreator.createContract(contractTemplate, validUsers, organization)
       digest           <- signatureService.createDigest(pdf)
       token <- partyManagementService.createToken(
         Relationships(relationships),
         digest,
-        onboardingRequest.contract.version,
-        onboardingRequest.contract.path
+        contract.version,
+        contract.path
       )(bearer)
       _                = logger.info(s"Digest $digest")
       destinationMails = ApplicationConfiguration.destinationMails.getOrElse(Seq(organization.digitalAddress))
@@ -581,13 +596,13 @@ class ProcessApiServiceImpl(
 
     val result: Future[Seq[RelationshipInfo]] = for {
       bearer          <- getFutureBearer(contexts)
-      subjectUUID     <- getCallerUserIdentifier(bearer)
-      institutionUUID <- institutionId.toFutureUUID
+      uidUUID         <- getCallerUserIdentifier(bearer)
+      organization    <- partyManagementService.retrieveOrganizationByExternalId(institutionId)(bearer)
       rolesEnumArray  <- rolesArray.traverse(PartyManagementDependency.PartyRole.fromValue).toFuture
       statesEnumArray <- statesArray.traverse(PartyManagementDependency.RelationshipState.fromValue).toFuture
       userAdminRelationships <- partyManagementService.retrieveRelationships(
-        from = Some(subjectUUID),
-        to = Some(institutionUUID),
+        from = Some(uidUUID),
+        to = Some(organization.id),
         roles = adminPartyRoles.map(roleToDependency).toSeq,
         states =
           Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
@@ -596,14 +611,14 @@ class ProcessApiServiceImpl(
       )(bearer)
       institutionIdRelationships <- partyManagementService.retrieveRelationships(
         from = None,
-        to = Some(institutionUUID),
+        to = Some(organization.id),
         roles = rolesEnumArray,
         states = statesEnumArray,
         products = productsArray,
         productRoles = productRolesArray
       )(bearer)
       filteredRelationships = filterFoundRelationshipsByCurrentUser(
-        subjectUUID,
+        uidUUID,
         userAdminRelationships,
         institutionIdRelationships
       )
@@ -842,10 +857,9 @@ class ProcessApiServiceImpl(
     contexts: Seq[(String, String)]
   ): Route = {
     val result = for {
-      bearer          <- getFutureBearer(contexts)
-      _               <- getCallerUserIdentifier(bearer)
-      institutionUUID <- institutionId.toFutureUUID
-      organization    <- partyManagementService.retrieveOrganization(institutionUUID)(bearer)
+      bearer       <- getFutureBearer(contexts)
+      _            <- getCallerUserIdentifier(bearer)
+      organization <- partyManagementService.retrieveOrganizationByExternalId(institutionId)(bearer)
       organizationRelationships <- partyManagementService.retrieveRelationships(
         from = None,
         to = Some(organization.id),

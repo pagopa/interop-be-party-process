@@ -33,6 +33,16 @@ trait SignatureValidationService {
     }
   }
 
+  def isDocumentSigned(documentValidator: SignedDocumentValidator): ValidatedNel[ValidationError, Unit] = {
+    val validation: Either[ValidationError, Unit] =
+      Either.cond(documentValidator.getSignatures.isEmpty, (), SignatureNotFound)
+
+    validation match {
+      case Left(throwable)  => throwable.invalidNel[Unit]
+      case Right(validated) => validated.validNel[ValidationError]
+    }
+  }
+
   def verifyDigest(
     documentValidator: SignedDocumentValidator,
     originalDigest: String

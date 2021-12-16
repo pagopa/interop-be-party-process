@@ -29,8 +29,6 @@ tags:
 paths:
   '/onboarding/info':
     get:
-      security:
-        - bearerAuth: [ ]
       tags:
         - process
       summary: get on boarding info
@@ -58,6 +56,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OnboardingInfo'
+        '404':
+          description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '400':
           description: Invalid ID supplied
           content:
@@ -66,8 +70,6 @@ paths:
                 $ref: '#/components/schemas/Problem'
   /onboarding/organization:
     post:
-      security:
-        - bearerAuth: [ ]
       tags:
         - process
       summary: Organization onboarding on the platform
@@ -86,6 +88,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OnboardingResponse'
+        '404':
+          description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '400':
           description: Invalid ID supplied
           content:
@@ -94,8 +102,6 @@ paths:
                 $ref: '#/components/schemas/Problem'
   /onboarding/legals:
     post:
-      security:
-        - bearerAuth: [ ]
       tags:
         - process
       summary: legals onboarding
@@ -114,6 +120,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OnboardingResponse'
+        '404':
+          description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '400':
           description: Invalid ID supplied
           content:
@@ -122,8 +134,6 @@ paths:
                 $ref: '#/components/schemas/Problem'
   /onboarding/subdelegates:
     post:
-      security:
-        - bearerAuth: [ ]
       tags:
         - process
       summary: subdelegates onboarding
@@ -146,8 +156,6 @@ paths:
                 $ref: '#/components/schemas/Problem'
   /onboarding/operators:
     post:
-      security:
-        - bearerAuth: [ ]
       tags:
         - process
       summary: operators onboarding
@@ -170,8 +178,6 @@ paths:
                 $ref: '#/components/schemas/Problem'
   /institutions/{institutionId}/relationships:
     get:
-      security:
-        - bearerAuth: [ ]
       tags:
         - process
       summary: returns the relationships related to the institution
@@ -184,7 +190,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
         - in: query
           name: roles
           description: comma separated sequence of role to filter the response with
@@ -236,8 +241,6 @@ paths:
                 $ref: '#/components/schemas/Problem'
   /institutions/{institutionId}/products:
     get:
-      security:
-        - bearerAuth: [ ]
       tags:
         - process
       summary: institution products retrieval
@@ -250,7 +253,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       responses:
         '200':
           description: successful operation
@@ -266,8 +268,6 @@ paths:
                 $ref: '#/components/schemas/Problem'
   /relationships/{relationshipId}:
     get:
-      security:
-        - bearerAuth: [ ]
       tags:
         - process
       summary: Gets the corresponding relationship
@@ -301,8 +301,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
     delete:
-      security:
-        - bearerAuth: [ ]
       tags:
         - process
       summary: Relationship deletion
@@ -333,8 +331,6 @@ paths:
                 $ref: '#/components/schemas/Problem'
   /relationships/{relationshipId}/activate:
     post:
-      security:
-        - bearerAuth: [ ]
       tags:
         - process
       summary: Activate the relationship
@@ -365,8 +361,6 @@ paths:
                 $ref: '#/components/schemas/Problem'
   /relationships/{relationshipId}/suspend:
     post:
-      security:
-        - bearerAuth: [ ]
       tags:
         - process
       summary: Suspend the relationship
@@ -397,8 +391,7 @@ paths:
                 $ref: '#/components/schemas/Problem'
   '/onboarding/complete/{tokenId}':
     post:
-      security:
-        - bearerAuth: [ ]
+      security: []
       tags:
         - process
       summary: create an onboarding entry
@@ -461,8 +454,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
     delete:
-      security:
-        - bearerAuth: [ ]
+      security: []
       tags:
         - process
       summary: invalidate an onboarding request
@@ -486,8 +478,6 @@ paths:
                 $ref: '#/components/schemas/Problem'
   /onboarding/relationship/{relationshipId}/document:
     get:
-      security:
-        - bearerAuth: [ ]
       tags:
         - process
       summary: Get an onboarding document
@@ -551,7 +541,6 @@ components:
       required:
         - users
         - institutionId
-        - contract
     OnboardingContract:
       properties:
         version:
