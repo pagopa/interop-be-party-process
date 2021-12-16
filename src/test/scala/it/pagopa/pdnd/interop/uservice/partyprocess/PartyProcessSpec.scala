@@ -1675,6 +1675,12 @@ class PartyProcessSpec
         .once()
 
       (mockSignatureValidationService
+        .isDocumentSigned(_: SignedDocumentValidator))
+        .expects(*)
+        .returning(().validNel[ValidationError])
+        .once()
+
+      (mockSignatureValidationService
         .verifySignature(_: SignedDocumentValidator))
         .expects(*)
         .returning(().validNel[ValidationError])
