@@ -97,7 +97,6 @@ class ProcessApiServiceImpl(
       organization <- institutionId.traverse(externalId =>
         partyManagementService.retrieveOrganizationByExternalId(externalId)(bearer)
       )
-      institutionUUID <- organization.traverse(_.institutionId.toFutureUUID)
       statesParamArray <- parseArrayParameters(states)
         .traverse(PartyManagementDependency.RelationshipState.fromValue)
         .toFuture
@@ -106,7 +105,7 @@ class ProcessApiServiceImpl(
       personInfo = PersonInfo(user.name, user.surname, user.externalId)
       relationships <- partyManagementService.retrieveRelationships(
         from = Some(subjectUUID),
-        to = institutionUUID,
+        to = organization.map(_.id),
         roles = Seq.empty,
         states = statesArray,
         products = Seq.empty,

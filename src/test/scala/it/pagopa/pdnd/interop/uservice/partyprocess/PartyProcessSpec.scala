@@ -568,21 +568,21 @@ class PartyProcessSpec
         )
       )
 
-      val mockSubjectUUID = "af80fac0-2775-4646-8fcf-28e083751988"
+      val mockUidUUID = "af80fac0-2775-4646-8fcf-28e083751988"
 
       (mockJWTReader
         .getClaims(_: String))
         .expects(*)
-        .returning(mockSubject(mockSubjectUUID))
+        .returning(mockUid(mockUidUUID))
         .once()
 
       (mockUserRegistryService
         .getUserById(_: UUID)(_: String))
-        .expects(UUID.fromString(mockSubjectUUID), *)
+        .expects(UUID.fromString(mockUidUUID), *)
         .returning(
           Future.successful(
             UserRegistryUser(
-              id = UUID.fromString(mockSubjectUUID),
+              id = UUID.fromString(mockUidUUID),
               externalId = taxCode1,
               name = "Mario",
               surname = "Rossi",
@@ -603,7 +603,7 @@ class PartyProcessSpec
           _: Seq[String]
         )(_: String))
         .expects(
-          Some(UUID.fromString(mockSubjectUUID)),
+          Some(UUID.fromString(mockUidUUID)),
           None,
           Seq.empty,
           Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
@@ -734,7 +734,7 @@ class PartyProcessSpec
         )
         .once()
 
-      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(mockSubjectUUID)))
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(mockUidUUID)))
 
       val response = Await.result(
         Http().singleRequest(
@@ -752,9 +752,9 @@ class PartyProcessSpec
 
     "retrieve an onboarding info with institution id filter" in {
       val taxCode1       = "CF1"
-      val institutionId1 = UUID.randomUUID()
+      val institutionId1 = "institutionId1"
+      val orgPartyId1    = UUID.randomUUID() // "af80fac0-2775-4646-8fcf-28e083751801"
       val personPartyId1 = "af80fac0-2775-4646-8fcf-28e083751800"
-      val orgPartyId1    = "af80fac0-2775-4646-8fcf-28e083751801"
       val attributeId1   = UUID.randomUUID()
       val attributeId2   = UUID.randomUUID()
       val attributeId3   = UUID.randomUUID()
@@ -772,7 +772,7 @@ class PartyProcessSpec
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
           from = person1.id,
-          to = institutionId1,
+          to = orgPartyId1,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
           state = PartyManagementDependency.RelationshipState.ACTIVE,
@@ -783,10 +783,10 @@ class PartyProcessSpec
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship1))
 
       val organization1 = PartyManagementDependency.Organization(
-        institutionId = institutionId1.toString,
+        institutionId = institutionId1,
         description = "org1",
         digitalAddress = "digitalAddress1",
-        id = UUID.fromString(orgPartyId1),
+        id = orgPartyId1,
         attributes = Seq(attributeId1.toString, attributeId2.toString, attributeId3.toString),
         taxCode = "123"
       )
@@ -811,21 +811,21 @@ class PartyProcessSpec
         )
       )
 
-      val mockSubjectUUID = UUID.randomUUID().toString
+      val mockUidUUID = UUID.randomUUID().toString
 
       (mockJWTReader
         .getClaims(_: String))
         .expects(*)
-        .returning(mockSubject(mockSubjectUUID))
+        .returning(mockUid(mockUidUUID))
         .once()
 
       (mockUserRegistryService
         .getUserById(_: UUID)(_: String))
-        .expects(UUID.fromString(mockSubjectUUID), *)
+        .expects(UUID.fromString(mockUidUUID), *)
         .returning(
           Future.successful(
             UserRegistryUser(
-              id = UUID.fromString(mockSubjectUUID),
+              id = UUID.fromString(mockUidUUID),
               externalId = taxCode1,
               name = "Mario",
               surname = "Rossi",
@@ -837,6 +837,11 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService
+        .retrieveOrganizationByExternalId(_: String)(_: String))
+        .expects(institutionId1, *)
+        .returning(Future.successful(organization1))
+
+      (mockPartyManagementService
         .retrieveRelationships(
           _: Option[UUID],
           _: Option[UUID],
@@ -846,8 +851,8 @@ class PartyProcessSpec
           _: Seq[String]
         )(_: String))
         .expects(
-          Some(UUID.fromString(mockSubjectUUID)),
-          Some(institutionId1),
+          Some(UUID.fromString(mockUidUUID)),
+          Some(orgPartyId1),
           Seq.empty,
           Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
           Seq.empty,
@@ -856,9 +861,10 @@ class PartyProcessSpec
         )
         .returning(Future.successful(relationships))
         .once()
+
       (mockPartyManagementService
         .retrieveOrganization(_: UUID)(_: String))
-        .expects(institutionId1, *)
+        .expects(orgPartyId1, *)
         .returning(Future.successful(organization1))
         .once()
 
@@ -916,7 +922,7 @@ class PartyProcessSpec
         )
         .once()
 
-      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(mockSubjectUUID)))
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(mockUidUUID)))
 
       val response =
         Http()
@@ -997,21 +1003,21 @@ class PartyProcessSpec
         )
       )
 
-      val mockSubjectUUID = UUID.randomUUID().toString
+      val mockUidUUID = UUID.randomUUID().toString
 
       (mockJWTReader
         .getClaims(_: String))
         .expects(*)
-        .returning(mockSubject(mockSubjectUUID))
+        .returning(mockUid(mockUidUUID))
         .once()
 
       (mockUserRegistryService
         .getUserById(_: UUID)(_: String))
-        .expects(UUID.fromString(mockSubjectUUID), *)
+        .expects(UUID.fromString(mockUidUUID), *)
         .returning(
           Future.successful(
             UserRegistryUser(
-              id = UUID.fromString(mockSubjectUUID),
+              id = UUID.fromString(mockUidUUID),
               externalId = taxCode1,
               name = "Mario",
               surname = "Rossi",
@@ -1032,7 +1038,7 @@ class PartyProcessSpec
           _: Seq[String]
         )(_: String))
         .expects(
-          Some(UUID.fromString(mockSubjectUUID)),
+          Some(UUID.fromString(mockUidUUID)),
           None,
           Seq.empty,
           Seq(PartyManagementDependency.RelationshipState.SUSPENDED),
@@ -1103,7 +1109,7 @@ class PartyProcessSpec
         )
         .once()
 
-      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(mockSubjectUUID)))
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(mockUidUUID)))
 
       val response =
         Http()
@@ -1844,7 +1850,7 @@ class PartyProcessSpec
       (mockJWTReader
         .getClaims(_: String))
         .expects(*)
-        .returning(mockSubject(adminIdentifier.toString))
+        .returning(mockUid(adminIdentifier.toString))
         .once()
 
       (mockPartyManagementService
@@ -2065,7 +2071,7 @@ class PartyProcessSpec
       (mockJWTReader
         .getClaims(_: String))
         .expects(*)
-        .returning(mockSubject(adminIdentifier.toString))
+        .returning(mockUid(adminIdentifier.toString))
         .once()
 
       (mockPartyManagementService
@@ -2252,7 +2258,7 @@ class PartyProcessSpec
       (mockJWTReader
         .getClaims(_: String))
         .expects(*)
-        .returning(mockSubject(userId2.toString))
+        .returning(mockUid(userId2.toString))
         .once()
 
       (mockPartyManagementService
@@ -2378,7 +2384,7 @@ class PartyProcessSpec
       (mockJWTReader
         .getClaims(_: String))
         .expects(*)
-        .returning(mockSubject(adminIdentifier.toString))
+        .returning(mockUid(adminIdentifier.toString))
         .once()
 
       (mockPartyManagementService
@@ -2488,7 +2494,7 @@ class PartyProcessSpec
       (mockJWTReader
         .getClaims(_: String))
         .expects(*)
-        .returning(mockSubject(adminIdentifier.toString))
+        .returning(mockUid(adminIdentifier.toString))
         .once()
 
       (mockPartyManagementService
@@ -2619,7 +2625,7 @@ class PartyProcessSpec
       (mockJWTReader
         .getClaims(_: String))
         .expects(*)
-        .returning(mockSubject(adminIdentifier.toString))
+        .returning(mockUid(adminIdentifier.toString))
         .once()
 
       (mockPartyManagementService
@@ -2766,7 +2772,7 @@ class PartyProcessSpec
       (mockJWTReader
         .getClaims(_: String))
         .expects(*)
-        .returning(mockSubject(adminIdentifier.toString))
+        .returning(mockUid(adminIdentifier.toString))
         .once()
 
       (mockPartyManagementService
@@ -2914,7 +2920,7 @@ class PartyProcessSpec
       (mockJWTReader
         .getClaims(_: String))
         .expects(*)
-        .returning(mockSubject(adminIdentifier.toString))
+        .returning(mockUid(adminIdentifier.toString))
         .once()
 
       (mockPartyManagementService
@@ -3178,7 +3184,7 @@ class PartyProcessSpec
       (mockJWTReader
         .getClaims(_: String))
         .expects(*)
-        .returning(mockSubject(relationshipId.toString))
+        .returning(mockUid(relationshipId.toString))
         .once()
 
       (mockPartyManagementService
@@ -3205,7 +3211,7 @@ class PartyProcessSpec
       (mockJWTReader
         .getClaims(_: String))
         .expects(*)
-        .returning(mockSubject(relationshipId.toString))
+        .returning(mockUid(relationshipId.toString))
         .once()
 
       (mockPartyManagementService
@@ -3521,7 +3527,7 @@ class PartyProcessSpec
       (mockJWTReader
         .getClaims(_: String))
         .expects(*)
-        .returning(mockSubject(orgPartyId1))
+        .returning(mockUid(orgPartyId1))
         .once()
 
       (mockPartyManagementService
@@ -3594,7 +3600,7 @@ class PartyProcessSpec
       (mockJWTReader
         .getClaims(_: String))
         .expects(*)
-        .returning(mockSubject(orgPartyId1))
+        .returning(mockUid(orgPartyId1))
         .once()
 
       (mockPartyManagementService

@@ -6,7 +6,7 @@ import com.nimbusds.jwt.JWTClaimsSet
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
 import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
-import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.ProcessApiMarshallerImpl
+import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{ProcessApiMarshallerImpl, uidClaim}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.{HealthApi, ProcessApiMarshaller}
 import it.pagopa.pdnd.interop.uservice.partyprocess.service._
 import org.scalamock.scalatest.MockFactory
@@ -39,7 +39,7 @@ trait SpecHelper { self: MockFactory =>
   val mockMailTemplate: PersistedTemplate                        = PersistedTemplate("mock", "mock")
   val mockJWTReader: JWTReader                                   = mock[JWTReader]
 
-  def mockSubject(uuid: String) = Success(new JWTClaimsSet.Builder().subject(uuid).build())
+  def mockUid(uuid: String) = Success(new JWTClaimsSet.Builder().claim(uidClaim, uuid).build())
 
   def loadEnvVars() = {
     System.setProperty("DELEGATE_PRODUCT_ROLES", "admin")
