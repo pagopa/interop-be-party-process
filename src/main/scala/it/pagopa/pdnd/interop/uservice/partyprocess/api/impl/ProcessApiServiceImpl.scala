@@ -771,7 +771,7 @@ class ProcessApiServiceImpl(
   private def getCallerUserIdentifier(bearer: String): Future[UUID] = {
     val subject = for {
       claims  <- jwtReader.getClaims(bearer).toFuture
-      uid     <- Option(claims.getStringClaim("uid")).toFuture(ClaimNotFound("uid"))
+      uid     <- Option(claims.getStringClaim(uidClaim)).toFuture(ClaimNotFound(uidClaim))
       uidUUID <- uid.toFutureUUID
     } yield uidUUID
 

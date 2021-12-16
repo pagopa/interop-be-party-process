@@ -24,6 +24,7 @@ package object impl extends DefaultJsonProtocol {
 
   final val serviceErrorCodePrefix: String = "002"
   final val defaultProblemType: String     = "about:blank"
+  final val uidClaim: String               = "uid"
 
   def problemOf(
     httpError: StatusCode,
