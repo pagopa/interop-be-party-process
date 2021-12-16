@@ -84,12 +84,6 @@ object Dependencies {
     lazy val core      = namespace %% "scalamock" % scalaMockVersion
   }
 
-  private[this] object jackson {
-    lazy val namespace   = "com.fasterxml.jackson.core"
-    lazy val core        = namespace % "jackson-core"        % jacksonVersion
-    lazy val annotations = namespace % "jackson-annotations" % jacksonVersion
-    lazy val databind    = namespace % "jackson-databind"    % jacksonVersion
-  }
 
   private[this] object awssdk {
     lazy val namespace = "software.amazon.awssdk"
@@ -102,8 +96,6 @@ object Dependencies {
   }
 
   object Jars {
-    lazy val overrides: Seq[ModuleID] =
-      Seq(jackson.annotations % Compile, jackson.core % Compile, jackson.databind % Compile)
 
     lazy val `server`: Seq[ModuleID] = Seq(
       // For making Java 12 happy
