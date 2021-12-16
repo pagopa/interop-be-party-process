@@ -111,14 +111,13 @@ class ProcessApiServiceImpl(
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
-      _              <- areRelationshipsNonEmpty(uid, institutionId, statesArray)(relationships)
       onboardingData <- Future.traverse(relationships.items)(getOnboardingData(bearer))
     } yield OnboardingInfo(personInfo, onboardingData)
 
     onComplete(result) {
       case Success(res) => getOnboardingInfo200(res)
-      case Failure(ex: EmptyOnboardingInfo) =>
-        val errorResponse: Problem = problemOf(StatusCodes.NotFound, "0023", ex)
+      case Failure(ResourceNotFoundError) =>
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, "0023", ResourceNotFoundError)
         getOnboardingInfo404(errorResponse)
       case Failure(ex) =>
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0001", ex)
@@ -126,13 +125,6 @@ class ProcessApiServiceImpl(
 
     }
   }
-
-  private def areRelationshipsNonEmpty(
-    uid: UUID,
-    institutionId: Option[String],
-    states: List[PartyManagementDependency.RelationshipState]
-  )(relationships: Relationships) =
-    Either.cond(relationships.items.nonEmpty, (), EmptyOnboardingInfo(uid, institutionId, states)).toFuture
 
   private def getOnboardingData(bearer: String)(relationship: Relationship): Future[OnboardingData] = {
     for {
