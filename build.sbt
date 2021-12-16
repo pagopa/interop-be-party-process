@@ -83,6 +83,7 @@ lazy val client = project
         m
     ),
     updateOptions := updateOptions.value.withGigahorse(false),
+    Docker / publish := {},
     publishTo := {
       val nexus = s"https://${System.getenv("MAVEN_REPO")}/nexus/repository/"
 
