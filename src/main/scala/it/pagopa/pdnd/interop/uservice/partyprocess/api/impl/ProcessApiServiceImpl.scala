@@ -10,6 +10,7 @@ import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
 import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.getFutureBearer
+import it.pagopa.pdnd.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.pdnd.interop.commons.utils.OpenapiUtils._
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions._
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
@@ -34,7 +35,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration
 import it.pagopa.pdnd.interop.uservice.partyprocess.error._
-import it.pagopa.pdnd.interop.uservice.partyprocess.model._
+import it.pagopa.pdnd.interop.uservice.partyprocess.model.{User, _}
 import it.pagopa.pdnd.interop.uservice.partyprocess.service._
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.Certification.{
   NONE => CertificationEnumsNone
@@ -44,7 +45,7 @@ import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{
   UserExtras => UserRegistryUserExtras,
   UserSeed => UserRegistryUserSeed
 }
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.LoggerFactory
 
 import java.io.{File, FileOutputStream}
 import java.nio.charset.StandardCharsets
@@ -52,6 +53,7 @@ import java.nio.file.{Files, Path}
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
+import com.typesafe.scalalogging.Logger
 
 class ProcessApiServiceImpl(
   partyManagementService: PartyManagementService,
@@ -68,7 +70,7 @@ class ProcessApiServiceImpl(
 )(implicit ec: ExecutionContext)
     extends ProcessApiService {
 
-  private val logger: Logger = LoggerFactory.getLogger(this.getClass)
+  private val logger = Logger.takingImplicit[ContextFieldsToLog](LoggerFactory.getLogger(this.getClass))
 
   final val adminPartyRoles: Set[PartyRole] = Set(PartyRole.MANAGER, PartyRole.DELEGATE, PartyRole.SUB_DELEGATE)
 
@@ -95,7 +97,7 @@ class ProcessApiServiceImpl(
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     contexts: Seq[(String, String)]
   ): Route = {
-
+    logger.info("Verifying onboarding for institution {} on product {}", institutionId, productId)
     val result: Future[Boolean] = for {
       bearer       <- getFutureBearer(contexts)
       organization <- partyManagementService.retrieveOrganizationByExternalId(institutionId)(bearer)
@@ -131,6 +133,7 @@ class ProcessApiServiceImpl(
     toEntityMarshallerOnboardingInfo: ToEntityMarshaller[OnboardingInfo],
     contexts: Seq[(String, String)]
   ): Route = {
+    logger.info("Getting onboarding info for institution {} and states {}", institutionId.toString, states)
     val defaultStates =
       List(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING)
 
@@ -202,10 +205,10 @@ class ProcessApiServiceImpl(
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     contexts: Seq[(String, String)]
   ): Route = {
-
+    logger.info("Onboarding organization {}", onboardingRequest.institutionId)
     val result: Future[OnboardingResponse] = for {
       bearer       <- getFutureBearer(contexts)
-      organization <- createOrGetOrganization(onboardingRequest)(bearer)
+      organization <- createOrGetOrganization(onboardingRequest)(bearer, contexts)
       relationships <- partyManagementService.retrieveRelationships(
         from = None,
         to = Some(organization.id),
@@ -215,7 +218,7 @@ class ProcessApiServiceImpl(
         productRoles = Seq.empty
       )(bearer)
       _        <- notExistsAnOnboardedManager(relationships)
-      response <- performOnboardingWithSignature(onboardingRequest, organization)(bearer)
+      response <- performOnboardingWithSignature(onboardingRequest, organization)(bearer, contexts)
     } yield response
 
     onComplete(result) {
@@ -231,8 +234,10 @@ class ProcessApiServiceImpl(
 
   }
 
-  private def createOrGetOrganization(onboardingRequest: OnboardingRequest)(bearer: String): Future[Organization] =
-    createOrganization(onboardingRequest.institutionId)(bearer).recoverWith {
+  private def createOrGetOrganization(
+    onboardingRequest: OnboardingRequest
+  )(bearer: String, contexts: Seq[(String, String)]): Future[Organization] =
+    createOrganization(onboardingRequest.institutionId)(bearer, contexts).recoverWith {
       case ResourceConflictError =>
         partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
       case ex => Future.failed(ex)
@@ -247,6 +252,7 @@ class ProcessApiServiceImpl(
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     contexts: Seq[(String, String)]
   ): Route = {
+    logger.info("Onboarding Legals of organization {}", onboardingRequest.institutionId)
     val result: Future[OnboardingResponse] = for {
       bearer       <- getFutureBearer(contexts)
       organization <- partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
@@ -259,7 +265,7 @@ class ProcessApiServiceImpl(
         productRoles = Seq.empty
       )(bearer)
       _        <- existsAnOnboardedManager(organizationRelationships)
-      response <- performOnboardingWithSignature(onboardingRequest, organization)(bearer)
+      response <- performOnboardingWithSignature(onboardingRequest, organization)(bearer, contexts)
     } yield response
 
     onComplete(result) {
@@ -271,12 +277,13 @@ class ProcessApiServiceImpl(
     }
   }
 
-  private def performOnboardingWithSignature(onboardingRequest: OnboardingRequest, organization: Organization)(
-    bearer: String
+  private def performOnboardingWithSignature(onboardingRequest: OnboardingRequest, organization: Organization)(implicit
+    bearer: String,
+    contexts: Seq[(String, String)]
   ): Future[OnboardingResponse] = {
     for {
       validUsers       <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
-      personsWithRoles <- Future.traverse(validUsers)(addUser(bearer))
+      personsWithRoles <- Future.traverse(validUsers)(addUser)
       relationships <- Future.traverse(personsWithRoles) { case (person, role, product, productRole) =>
         createOrGetRelationship(person.id, organization.id, roleToDependency(role), product, productRole)(bearer)
       }
@@ -290,7 +297,7 @@ class ProcessApiServiceImpl(
         contract.version,
         contract.path
       )(bearer)
-      _                = logger.info(s"Digest $digest")
+      _                = logger.info("Digest {}", digest)
       destinationMails = ApplicationConfiguration.destinationMails.getOrElse(Seq(organization.digitalAddress))
       _ <- sendOnboardingMail(destinationMails, pdf, token.token)
       _ = logger.info(s"$token")
@@ -340,6 +347,7 @@ class ProcessApiServiceImpl(
   override def onboardingSubDelegatesOnOrganization(
     onboardingRequest: OnboardingRequest
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
+    logger.info("Onboarding subdelegates on organization {}", onboardingRequest.institutionId)
     val result: Future[Unit] = for {
       bearer       <- getFutureBearer(contexts)
       organization <- partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
@@ -351,8 +359,11 @@ class ProcessApiServiceImpl(
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
-      _      <- existsAnOnboardedManager(relationships)
-      result <- performOnboardingWithoutSignature(onboardingRequest, Set(PartyRole.SUB_DELEGATE), organization)(bearer)
+      _ <- existsAnOnboardedManager(relationships)
+      result <- performOnboardingWithoutSignature(onboardingRequest, Set(PartyRole.SUB_DELEGATE), organization)(
+        bearer,
+        contexts
+      )
     } yield result
 
     onComplete(result) {
@@ -369,6 +380,7 @@ class ProcessApiServiceImpl(
   override def onboardingOperators(
     onboardingRequest: OnboardingRequest
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
+    logger.info("Onboarding operators on organization {}", onboardingRequest.institutionId)
     val result: Future[Unit] = for {
       bearer       <- getFutureBearer(contexts)
       organization <- partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
@@ -380,8 +392,11 @@ class ProcessApiServiceImpl(
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
-      _      <- existsAnOnboardedManager(relationships)
-      result <- performOnboardingWithoutSignature(onboardingRequest, Set(PartyRole.OPERATOR), organization)(bearer)
+      _ <- existsAnOnboardedManager(relationships)
+      result <- performOnboardingWithoutSignature(onboardingRequest, Set(PartyRole.OPERATOR), organization)(
+        bearer,
+        contexts
+      )
     } yield result
 
     onComplete(result) {
@@ -396,10 +411,10 @@ class ProcessApiServiceImpl(
     onboardingRequest: OnboardingRequest,
     rolesToCheck: Set[PartyRole],
     organization: Organization
-  )(bearer: String): Future[Unit] = {
+  )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Unit] = {
     for {
       validUsers <- verifyUsersByRoles(onboardingRequest.users, rolesToCheck)
-      users      <- Future.traverse(validUsers)(addUser(bearer))
+      users      <- Future.traverse(validUsers)(user => addUser(user))
       _ <- Future.traverse(users) { case (user, role, product, productRole) =>
         val relationshipSeed: RelationshipSeed =
           RelationshipSeed(
@@ -434,7 +449,7 @@ class ProcessApiServiceImpl(
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     contexts: Seq[(String, String)]
   ): Route = {
-
+    logger.info("Confirm onboarding of token identified with {}", tokenId)
     val result: Future[Unit] = for {
       bearer      <- getFutureBearer(contexts)
       tokenIdUUID <- tokenId.toFutureUUID
@@ -481,6 +496,7 @@ class ProcessApiServiceImpl(
   override def invalidateOnboarding(
     tokenId: String
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
+    logger.info("Invalidating onboarding for token identified with {}", tokenId)
     val result: Future[Unit] = for {
       bearer      <- getFutureBearer(contexts)
       tokenIdUUID <- tokenId.toFutureUUID
@@ -544,8 +560,10 @@ class ProcessApiServiceImpl(
 
   private def isNotAnOnboardedManager(relationship: Relationship): Boolean = !isAnOnboardedManager(relationship)
 
-  private def addUser(bearer: String)(user: User): Future[(UserRegistryUser, PartyRole, String, String)] = {
-    logger.info(s"Adding user ${user.toString}")
+  private def addUser(
+    user: User
+  )(implicit bearer: String, contexts: Seq[(String, String)]): Future[(UserRegistryUser, PartyRole, String, String)] = {
+    logger.info("Adding user {}", user.toString)
     createPerson(user)(bearer)
       .recoverWith {
         case ResourceConflictError => userRegistryManagementService.getUserByExternalId(user.taxCode)(bearer)
@@ -573,7 +591,9 @@ class ProcessApiServiceImpl(
       _ <- partyManagementService.createPerson(PersonSeed(user.id))(bearer)
     } yield user
 
-  private def createOrganization(institutionId: String)(bearer: String): Future[Organization] =
+  private def createOrganization(
+    institutionId: String
+  )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Organization] =
     for {
       institution <- partyRegistryService.getInstitution(institutionId)(bearer)
       categories  <- partyRegistryService.getCategories(bearer)
@@ -582,7 +602,7 @@ class ProcessApiServiceImpl(
         .map(Future.successful)
         .getOrElse(Future.failed(new RuntimeException(s"Invalid category ${institution.category}")))
       attributes <- attributeRegistryService.createAttribute("IPA", category.code, category.name, category.kind)(bearer)
-      _ = logger.info(s"getInstitution ${institution.id}")
+      _ = logger.info("getInstitution {}", institution.id)
       seed = OrganizationSeed(
         institutionId = institution.id,
         description = institution.description,
@@ -592,7 +612,7 @@ class ProcessApiServiceImpl(
         products = Set.empty
       )
       organization <- partyManagementService.createOrganization(seed)(bearer)
-      _ = logger.info(s"createOrganization ${organization.institutionId}")
+      _ = logger.info("organization created {}", organization.institutionId)
     } yield organization
 
   private def filterFoundRelationshipsByCurrentUser(
@@ -624,7 +644,7 @@ class ProcessApiServiceImpl(
     toEntityMarshallerRelationshipInfoarray: ToEntityMarshaller[Seq[RelationshipInfo]],
     contexts: Seq[(String, String)]
   ): Route = {
-    logger.info(s"Getting relationship for institution $institutionId and current user")
+    logger.info("Getting relationship for institution {} and current user", institutionId)
     val productsArray     = parseArrayParameters(products)
     val productRolesArray = parseArrayParameters(productRoles)
     val rolesArray        = parseArrayParameters(roles)
@@ -676,7 +696,7 @@ class ProcessApiServiceImpl(
   override def activateRelationship(
     relationshipId: String
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
-    logger.info(s"Activating relationship $relationshipId")
+    logger.info("Activating relationship {}", relationshipId)
     val result: Future[Unit] = for {
       bearer           <- getFutureBearer(contexts)
       relationshipUUID <- relationshipId.toFutureUUID
@@ -703,6 +723,7 @@ class ProcessApiServiceImpl(
   override def suspendRelationship(
     relationshipId: String
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
+    logger.info("Suspending relationship {}", relationshipId)
     val result: Future[Unit] = for {
       bearer           <- getFutureBearer(contexts)
       relationshipUUID <- relationshipId.toFutureUUID
@@ -727,6 +748,7 @@ class ProcessApiServiceImpl(
     toEntityMarshallerFile: ToEntityMarshaller[File],
     contexts: Seq[(String, String)]
   ): Route = {
+    logger.info("Getting onboarding document of relationship {}", relationshipId)
     val result: Future[DocumentDetails] =
       for {
         bearer         <- getFutureBearer(contexts)
@@ -840,7 +862,7 @@ class ProcessApiServiceImpl(
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     contexts: Seq[(String, String)]
   ): Route = {
-    logger.info(s"Getting relationship $relationshipId")
+    logger.info("Getting relationship {}", relationshipId)
     val result: Future[RelationshipInfo] = for {
       bearer           <- getFutureBearer(contexts)
       relationshipUUID <- relationshipId.toFutureUUID
@@ -866,6 +888,7 @@ class ProcessApiServiceImpl(
   override def deleteRelationshipById(
     relationshipId: String
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
+    logger.info("Deleting relationship {}", relationshipId)
     val result = for {
       bearer           <- getFutureBearer(contexts)
       _                <- getCallerUserIdentifier(bearer)
@@ -892,6 +915,7 @@ class ProcessApiServiceImpl(
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     contexts: Seq[(String, String)]
   ): Route = {
+    logger.info("Retrieving products for institution {}", institutionId)
     val result = for {
       bearer       <- getFutureBearer(contexts)
       _            <- getCallerUserIdentifier(bearer)
@@ -922,7 +946,6 @@ class ProcessApiServiceImpl(
   }
 
   private def extractActiveProducts(relationships: Relationships): Seq[RelationshipProduct] = {
-
     relationships.items.filter(isAnOnboardedManager).map(_.product)
   }
 
