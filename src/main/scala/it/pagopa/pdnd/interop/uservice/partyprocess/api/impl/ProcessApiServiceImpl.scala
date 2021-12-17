@@ -72,6 +72,13 @@ class ProcessApiServiceImpl(
 
   final val adminPartyRoles: Set[PartyRole] = Set(PartyRole.MANAGER, PartyRole.DELEGATE, PartyRole.SUB_DELEGATE)
 
+  final val validOnboardingStates: Seq[PartyManagementDependency.RelationshipState] =
+    List(
+      PartyManagementDependency.RelationshipState.ACTIVE,
+      PartyManagementDependency.RelationshipState.DELETED,
+      PartyManagementDependency.RelationshipState.SUSPENDED
+    )
+
   private def sendOnboardingMail(addresses: Seq[String], file: File, token: String): Future[Unit] = {
     val bodyParameters =
       ApplicationConfiguration.onboardingMailPlaceholdersReplacement.map { case (k, placeholder) =>
@@ -88,12 +95,6 @@ class ProcessApiServiceImpl(
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     contexts: Seq[(String, String)]
   ): Route = {
-    val validOnboardingStates =
-      List(
-        PartyManagementDependency.RelationshipState.ACTIVE,
-        PartyManagementDependency.RelationshipState.DELETED,
-        PartyManagementDependency.RelationshipState.SUSPENDED
-      )
 
     val result: Future[Boolean] = for {
       bearer       <- getFutureBearer(contexts)

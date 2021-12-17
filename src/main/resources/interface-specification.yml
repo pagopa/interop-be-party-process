@@ -105,7 +105,7 @@ paths:
       tags:
         - process
       summary: verify onboarding info
-      description: Return ok
+      description: Checks if the specified institution has been onboarded on the specified product.
       operationId: verifyOnboarding
       parameters:
         - name: institutionId
