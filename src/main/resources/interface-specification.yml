@@ -100,6 +100,41 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  '/onboarding/organization/{institutionId}/products/{productId}':
+    head:
+      tags:
+        - process
+      summary: verify onboarding info
+      description: Return ok
+      operationId: verifyOnboarding
+      parameters:
+        - name: institutionId
+          in: path
+          description: The identifier of the institution
+          required: true
+          schema:
+            type: string
+        - name: productId
+          in: path
+          description: The identifier of the product
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: successful operation
+        '400':
+          description: Invalid ID supplied
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /onboarding/legals:
     post:
       tags:
@@ -391,7 +426,7 @@ paths:
                 $ref: '#/components/schemas/Problem'
   '/onboarding/complete/{tokenId}':
     post:
-      security: []
+      security: [ ]
       tags:
         - process
       summary: create an onboarding entry
@@ -454,7 +489,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
     delete:
-      security: []
+      security: [ ]
       tags:
         - process
       summary: invalidate an onboarding request
