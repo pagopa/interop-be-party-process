@@ -518,6 +518,143 @@ class PartyProcessSpec
 
   "Processing a request payload" must {
 
+    "verify that an organization is already onboarded for a given product" in {
+      val institutionId = "institutionId"
+      val mockUidUUID   = UUID.randomUUID()
+      val orgPartyId    = UUID.randomUUID()
+      val personPartyId = UUID.randomUUID()
+
+      val organization = PartyManagementDependency.Organization(
+        institutionId = institutionId,
+        description = "",
+        digitalAddress = "",
+        id = orgPartyId,
+        attributes = Seq.empty,
+        taxCode = ""
+      )
+
+      val relationship =
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = personPartyId,
+          to = orgPartyId,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product,
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        )
+
+      (mockPartyManagementService
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          None,
+          Some(orgPartyId),
+          Seq(PartyManagementDependency.PartyRole.MANAGER),
+          Seq(
+            PartyManagementDependency.RelationshipState.ACTIVE,
+            PartyManagementDependency.RelationshipState.DELETED,
+            PartyManagementDependency.RelationshipState.SUSPENDED
+          ),
+          Seq(product.id),
+          Seq.empty,
+          *
+        )
+        .returning(Future.successful(Relationships(Seq(relationship))))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveOrganizationByExternalId(_: String)(_: String))
+        .expects(institutionId, *)
+        .returning(Future.successful(organization))
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(mockUidUUID.toString)))
+
+      val response = Await.result(
+        Http().singleRequest(
+          HttpRequest(
+            uri = s"$url/onboarding/organization/$institutionId/products/${product.id}",
+            method = HttpMethods.HEAD,
+            headers = authorization
+          )
+        ),
+        Duration.Inf
+      )
+
+      response.status mustBe StatusCodes.NoContent
+
+    }
+
+    "verify that an organization is not already onboarded for a given product" in {
+      val institutionId = "institutionId"
+      val mockUidUUID   = UUID.randomUUID()
+      val orgPartyId    = UUID.randomUUID()
+
+      val organization = PartyManagementDependency.Organization(
+        institutionId = institutionId,
+        description = "",
+        digitalAddress = "",
+        id = orgPartyId,
+        attributes = Seq.empty,
+        taxCode = ""
+      )
+
+      (mockPartyManagementService
+        .retrieveOrganizationByExternalId(_: String)(_: String))
+        .expects(institutionId, *)
+        .returning(Future.successful(organization))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          None,
+          Some(orgPartyId),
+          Seq(PartyManagementDependency.PartyRole.MANAGER),
+          Seq(
+            PartyManagementDependency.RelationshipState.ACTIVE,
+            PartyManagementDependency.RelationshipState.DELETED,
+            PartyManagementDependency.RelationshipState.SUSPENDED
+          ),
+          Seq(product.id),
+          Seq.empty,
+          *
+        )
+        .returning(Future.successful(Relationships(Seq.empty)))
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(mockUidUUID.toString)))
+
+      val response = Await.result(
+        Http().singleRequest(
+          HttpRequest(
+            uri = s"$url/onboarding/organization/$institutionId/products/${product.id}",
+            method = HttpMethods.HEAD,
+            headers = authorization
+          )
+        ),
+        Duration.Inf
+      )
+
+      response.status mustBe StatusCodes.NotFound
+
+    }
+
     "retrieve a onboarding info" in {
       val taxCode1       = "CF1"
       val institutionId1 = UUID.randomUUID()

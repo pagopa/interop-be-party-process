@@ -72,12 +72,55 @@ class ProcessApiServiceImpl(
 
   final val adminPartyRoles: Set[PartyRole] = Set(PartyRole.MANAGER, PartyRole.DELEGATE, PartyRole.SUB_DELEGATE)
 
+  final val validOnboardingStates: Seq[PartyManagementDependency.RelationshipState] =
+    List(
+      PartyManagementDependency.RelationshipState.ACTIVE,
+      PartyManagementDependency.RelationshipState.DELETED,
+      PartyManagementDependency.RelationshipState.SUSPENDED
+    )
+
   private def sendOnboardingMail(
     addresses: Seq[String],
     file: File,
     onboardingMailParameters: Map[String, String]
   ): Future[Unit] = {
     mailer.sendMail(mailTemplate)(addresses, file, onboardingMailParameters)
+  }
+
+  /** Code: 204, Message: successful operation
+    * Code: 400, Message: Invalid ID supplied, DataType: Problem
+    * Code: 404, Message: Not found, DataType: Problem
+    */
+  override def verifyOnboarding(institutionId: String, productId: String)(implicit
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    contexts: Seq[(String, String)]
+  ): Route = {
+
+    val result: Future[Boolean] = for {
+      bearer       <- getFutureBearer(contexts)
+      organization <- partyManagementService.retrieveOrganizationByExternalId(institutionId)(bearer)
+      relationships <- partyManagementService.retrieveRelationships(
+        from = None,
+        to = Some(organization.id),
+        roles = Seq(PartyManagementDependency.PartyRole.MANAGER),
+        states = validOnboardingStates,
+        products = Seq(productId),
+        productRoles = Seq.empty
+      )(bearer)
+    } yield relationships.items.nonEmpty
+
+    onComplete(result) {
+      case Success(found) if found => verifyOnboarding204
+      case Success(_) =>
+        val errorResponse: Problem =
+          problemOf(StatusCodes.NotFound, "0024", InstitutionNotOnboarded(institutionId, productId))
+        verifyOnboarding404(errorResponse)
+      case Failure(ex) =>
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, "0025", ex)
+        verifyOnboarding400(errorResponse)
+
+    }
+
   }
 
   /** Code: 200, Message: successful operation, DataType: OnboardingInfo

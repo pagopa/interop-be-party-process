@@ -36,7 +36,7 @@ paths:
       operationId: getOnboardingInfo
       parameters:
         - name: institutionId
-          description: Id of an institution you can filter the retrieval with
+          description: The external Id of an institution you can filter the retrieval with
           in: query
           schema:
             type: string
@@ -96,6 +96,41 @@ paths:
                 $ref: '#/components/schemas/Problem'
         '400':
           description: Invalid ID supplied
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  '/onboarding/organization/{institutionId}/products/{productId}':
+    head:
+      tags:
+        - process
+      summary: verify onboarding info
+      description: Checks if the specified institution has been onboarded on the specified product.
+      operationId: verifyOnboarding
+      parameters:
+        - name: institutionId
+          in: path
+          description: The external identifier of the institution
+          required: true
+          schema:
+            type: string
+        - name: productId
+          in: path
+          description: The identifier of the product
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: successful operation
+        '400':
+          description: Invalid ID supplied
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Not found
           content:
             application/problem+json:
               schema:
@@ -186,7 +221,7 @@ paths:
       parameters:
         - name: institutionId
           in: path
-          description: The identifier of the institution
+          description: The external identifier of the institution
           required: true
           schema:
             type: string
@@ -249,7 +284,7 @@ paths:
       parameters:
         - name: institutionId
           in: path
-          description: The identifier of the institution
+          description: The external identifier of the institution
           required: true
           schema:
             type: string
@@ -391,7 +426,7 @@ paths:
                 $ref: '#/components/schemas/Problem'
   '/onboarding/complete/{tokenId}':
     post:
-      security: []
+      security: [ ]
       tags:
         - process
       summary: create an onboarding entry
@@ -454,7 +489,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
     delete:
-      security: []
+      security: [ ]
       tags:
         - process
       summary: invalidate an onboarding request
