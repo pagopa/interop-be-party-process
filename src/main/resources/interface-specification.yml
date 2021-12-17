@@ -36,7 +36,7 @@ paths:
       operationId: getOnboardingInfo
       parameters:
         - name: institutionId
-          description: Id of an institution you can filter the retrieval with
+          description: The external Id of an institution you can filter the retrieval with
           in: query
           schema:
             type: string
@@ -110,7 +110,7 @@ paths:
       parameters:
         - name: institutionId
           in: path
-          description: The identifier of the institution
+          description: The external identifier of the institution
           required: true
           schema:
             type: string
@@ -221,7 +221,7 @@ paths:
       parameters:
         - name: institutionId
           in: path
-          description: The identifier of the institution
+          description: The external identifier of the institution
           required: true
           schema:
             type: string
@@ -284,7 +284,7 @@ paths:
       parameters:
         - name: institutionId
           in: path
-          description: The identifier of the institution
+          description: The external identifier of the institution
           required: true
           schema:
             type: string
