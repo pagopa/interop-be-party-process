@@ -1,5 +1,6 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
+import com.openhtmltopdf.util.XRLog
 import it.pagopa.pdnd.interop.commons.files.service.PDFManager
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions.OptionOps
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.Organization
@@ -11,9 +12,15 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters.IterableHasAsScala
 import scala.util.Try
 
 object PDFCreatorImpl extends PDFCreator with PDFManager {
+
+  // Suppressing openhtmltopdf log
+  XRLog.listRegisteredLoggers.asScala.foreach((logger: String) =>
+    XRLog.setLevel(logger, java.util.logging.Level.SEVERE)
+  )
 
   def createContract(contractTemplate: String, users: Seq[User], organization: Organization): Future[File] =
     Future.fromTry {
@@ -34,20 +41,41 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
 
   private def setupData(users: Seq[User], organization: Organization): Try[Map[String, String]] = {
     for {
-      manager <- users.find(u => u.role == PartyRole.MANAGER).toTry("Manager not found")
+      manager      <- users.find(u => u.role == PartyRole.MANAGER).toTry("Manager not found")
+      managerEmail <- manager.email.toTry("Manager email not found")
     } yield Map(
-      "institutionName" -> organization.description,
-      "institutionMail" -> organization.digitalAddress,
-      "manager"         -> managerToText(manager),
-      "users"           -> users.map(userToText).mkString
+      "institutionName"    -> organization.description,
+      "institutionTaxCode" -> organization.taxCode,
+      "institutionId"      -> organization.institutionId,
+      "institutionMail"    -> organization.digitalAddress,
+      "managerName"        -> manager.name,
+      "managerSurname"     -> manager.surname,
+      "managerTaxCode"     -> manager.taxCode,
+      "managerEmail"       -> managerEmail,
+      "manager"            -> userToText(manager),
+      "delegates"          -> delegatesToText(users)
     )
+
+  }
+
+  def delegatesToText(users: Seq[User]): String = {
+    val delegates: Seq[User] = users.filter(_.role == PartyRole.DELEGATE)
+
+    delegates
+      .map { delegate =>
+        s"""
+           |<p class="c141"><span class="c6">Nome e Cognome: ${userToText(delegate)}&nbsp;</span></p>
+           |<p class="c158"><span class="c6">Codice Fiscale: ${delegate.taxCode}</span></p>
+           |<p class="c24"><span class="c6">Amm.ne/Ente/Societ&agrave;: </span></p>
+           |<p class="c229"><span class="c6">Qualifica/Posizione: </span></p>
+           |<p class="c255"><span class="c6">e-mail: ${delegate.email}&nbsp;</span></p>
+           |<p class="c74"><span class="c6">PEC: &nbsp;</span></p>
+           |""".stripMargin
+      }
+      .mkString("\n")
   }
 
   private def userToText(user: User): String = {
-    s"${user.name} ${user.surname}, Codice fiscale: ${user.taxCode}, Ruolo: <strong>${user.role}</strong><br/>"
-  }
-
-  private def managerToText(user: User): String = {
-    s"${user.name} ${user.surname}, Codice fiscale: ${user.taxCode}"
+    s"${user.name} ${user.surname}"
   }
 }

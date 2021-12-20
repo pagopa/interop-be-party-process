@@ -8,6 +8,7 @@ import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, FileInfo, SecurityDirectives}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import cats.implicits.catsSyntaxValidatedId
+import com.nimbusds.jwt.JWTClaimsSet
 import eu.europa.esig.dss.validation.SignedDocumentValidator
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.Authenticator
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{
@@ -54,6 +55,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.duration.{Duration, DurationInt}
 import scala.concurrent.{Await, Future}
+import scala.util.Success
 
 class PartyProcessSpec
     extends MockFactory
@@ -89,6 +91,8 @@ class PartyProcessSpec
     state = PartyManagementDependency.RelationshipState.PENDING,
     createdAt = OffsetDateTime.now()
   )
+  val claims: String             = s"""{"uid" : "${UUID.randomUUID().toString}"}"""
+  val jwtClaimsSet: JWTClaimsSet = JWTClaimsSet.parse(claims)
 
   override def beforeAll(): Unit = {
     loadEnvVars()
@@ -202,6 +206,29 @@ class PartyProcessSpec
       createdAt = OffsetDateTime.now(),
       updatedAt = None
     )
+
+    (mockJWTReader
+      .getClaims(_: String))
+      .expects(*)
+      .returning(Success(jwtClaimsSet))
+      .once()
+
+    (mockUserRegistryService
+      .getUserById(_: UUID))
+      .expects(*)
+      .returning(
+        Future.successful(
+          UserRegistryUser(
+            id = UUID.randomUUID(),
+            externalId = "",
+            name = "",
+            surname = "",
+            certification = CertificationEnumsNone,
+            extras = UserRegistryUserExtras(email = None, birthDate = None)
+          )
+        )
+      )
+      .once()
 
     (mockPartyRegistryService
       .getInstitution(_: String)(_: String))
@@ -336,6 +363,29 @@ class PartyProcessSpec
       case None => Seq.empty
     }
 
+    (mockJWTReader
+      .getClaims(_: String))
+      .expects(*)
+      .returning(Success(jwtClaimsSet))
+      .once()
+
+    (mockUserRegistryService
+      .getUserById(_: UUID))
+      .expects(*)
+      .returning(
+        Future.successful(
+          UserRegistryUser(
+            id = UUID.randomUUID(),
+            externalId = "",
+            name = "",
+            surname = "",
+            certification = CertificationEnumsNone,
+            extras = UserRegistryUserExtras(email = None, birthDate = None)
+          )
+        )
+      )
+      .once()
+
     (mockSignatureService
       .createDigest(_: File))
       .expects(*)
@@ -376,7 +426,7 @@ class PartyProcessSpec
       .once()
 
     (mockUserRegistryService
-      .createUser(_: UserRegistryUserSeed)(_: String))
+      .createUser(_: UserRegistryUserSeed))
       .expects(
         UserRegistryUserSeed(
           externalId = manager.taxCode,
@@ -384,8 +434,7 @@ class PartyProcessSpec
           surname = manager.surname,
           certification = CertificationEnumsNone,
           extras = UserRegistryUserExtras(email = manager.email, birthDate = None)
-        ),
-        *
+        )
       )
       .returning(
         Future.successful(
@@ -408,7 +457,7 @@ class PartyProcessSpec
       .once()
 
     (mockUserRegistryService
-      .createUser(_: UserRegistryUserSeed)(_: String))
+      .createUser(_: UserRegistryUserSeed))
       .expects(
         UserRegistryUserSeed(
           externalId = delegate.taxCode,
@@ -416,8 +465,7 @@ class PartyProcessSpec
           surname = delegate.surname,
           certification = CertificationEnumsNone,
           extras = UserRegistryUserExtras(email = delegate.email, birthDate = None)
-        ),
-        *
+        )
       )
       .returning(
         Future.successful(
@@ -716,8 +764,8 @@ class PartyProcessSpec
         .once()
 
       (mockUserRegistryService
-        .getUserById(_: UUID)(_: String))
-        .expects(UUID.fromString(mockUidUUID), *)
+        .getUserById(_: UUID))
+        .expects(UUID.fromString(mockUidUUID))
         .returning(
           Future.successful(
             UserRegistryUser(
@@ -959,8 +1007,8 @@ class PartyProcessSpec
         .once()
 
       (mockUserRegistryService
-        .getUserById(_: UUID)(_: String))
-        .expects(UUID.fromString(mockUidUUID), *)
+        .getUserById(_: UUID))
+        .expects(UUID.fromString(mockUidUUID))
         .returning(
           Future.successful(
             UserRegistryUser(
@@ -1151,8 +1199,8 @@ class PartyProcessSpec
         .once()
 
       (mockUserRegistryService
-        .getUserById(_: UUID)(_: String))
-        .expects(UUID.fromString(mockUidUUID), *)
+        .getUserById(_: UUID))
+        .expects(UUID.fromString(mockUidUUID))
         .returning(
           Future.successful(
             UserRegistryUser(
@@ -1483,7 +1531,7 @@ class PartyProcessSpec
         .returning(Future.successful(relationships))
 
       (mockUserRegistryService
-        .createUser(_: UserRegistryUserSeed)(_: String))
+        .createUser(_: UserRegistryUserSeed))
         .expects(
           UserRegistryUserSeed(
             externalId = operator1.taxCode,
@@ -1491,8 +1539,7 @@ class PartyProcessSpec
             surname = operator1.surname,
             certification = CertificationEnumsNone,
             extras = UserRegistryUserExtras(email = operator1.email, birthDate = None)
-          ),
-          *
+          )
         )
         .returning(
           Future.successful(
@@ -1515,7 +1562,7 @@ class PartyProcessSpec
         .once()
 
       (mockUserRegistryService
-        .createUser(_: UserRegistryUserSeed)(_: String))
+        .createUser(_: UserRegistryUserSeed))
         .expects(
           UserRegistryUserSeed(
             externalId = operator2.taxCode,
@@ -1523,8 +1570,7 @@ class PartyProcessSpec
             surname = operator2.surname,
             certification = CertificationEnumsNone,
             extras = UserRegistryUserExtras(email = operator2.email, birthDate = None)
-          ),
-          *
+          )
         )
         .returning(
           Future.successful(
@@ -1702,7 +1748,7 @@ class PartyProcessSpec
         .returning(Future.successful(relationships))
 
       (mockUserRegistryService
-        .createUser(_: UserRegistryUserSeed)(_: String))
+        .createUser(_: UserRegistryUserSeed))
         .expects(
           UserRegistryUserSeed(
             externalId = subdelegate1.taxCode,
@@ -1710,8 +1756,7 @@ class PartyProcessSpec
             surname = subdelegate1.surname,
             certification = CertificationEnumsNone,
             extras = UserRegistryUserExtras(email = subdelegate1.email, birthDate = None)
-          ),
-          *
+          )
         )
         .returning(
           Future.successful(
@@ -1734,7 +1779,7 @@ class PartyProcessSpec
         .once()
 
       (mockUserRegistryService
-        .createUser(_: UserRegistryUserSeed)(_: String))
+        .createUser(_: UserRegistryUserSeed))
         .expects(
           UserRegistryUserSeed(
             externalId = subdelegate2.taxCode,
@@ -1742,8 +1787,7 @@ class PartyProcessSpec
             surname = subdelegate2.surname,
             certification = CertificationEnumsNone,
             extras = UserRegistryUserExtras(email = subdelegate2.email, birthDate = None)
-          ),
-          *
+          )
         )
         .returning(
           Future.successful(
@@ -1847,8 +1891,8 @@ class PartyProcessSpec
         .returning(Future.successful(token))
 
       (mockUserRegistryService
-        .getUserById(_: UUID)(_: String))
-        .expects(partyIdManager, *)
+        .getUserById(_: UUID))
+        .expects(partyIdManager)
         .returning(
           Future.successful(
             UserRegistryUser(
@@ -1863,8 +1907,8 @@ class PartyProcessSpec
         )
 
       (mockUserRegistryService
-        .getUserById(_: UUID)(_: String))
-        .expects(partyIdDelegate, *)
+        .getUserById(_: UUID))
+        .expects(partyIdDelegate)
         .returning(
           Future.successful(
             UserRegistryUser(
@@ -2062,8 +2106,8 @@ class PartyProcessSpec
       )
 
       (mockUserRegistryService
-        .getUserById(_: UUID)(_: String))
-        .expects(adminIdentifier, adminIdentifier.toString)
+        .getUserById(_: UUID))
+        .expects(adminIdentifier)
         .returning(Future.successful(userRegistryUser))
         .once()
 
@@ -2077,8 +2121,8 @@ class PartyProcessSpec
       )
 
       (mockUserRegistryService
-        .getUserById(_: UUID)(_: String))
-        .expects(userId1, adminIdentifier.toString)
+        .getUserById(_: UUID))
+        .expects(userId1)
         .returning(Future.successful(userRegistryUser1))
         .once()
 
@@ -2092,8 +2136,8 @@ class PartyProcessSpec
       )
 
       (mockUserRegistryService
-        .getUserById(_: UUID)(_: String))
-        .expects(userId2, adminIdentifier.toString)
+        .getUserById(_: UUID))
+        .expects(userId2)
         .returning(Future.successful(userRegistryUser2))
         .once()
 
@@ -2107,8 +2151,8 @@ class PartyProcessSpec
       )
 
       (mockUserRegistryService
-        .getUserById(_: UUID)(_: String))
-        .expects(userId3, adminIdentifier.toString)
+        .getUserById(_: UUID))
+        .expects(userId3)
         .returning(Future.successful(userRegistryUser3))
         .once()
 
@@ -2307,8 +2351,8 @@ class PartyProcessSpec
       )
 
       (mockUserRegistryService
-        .getUserById(_: UUID)(_: String))
-        .expects(userId1, adminIdentifier.toString)
+        .getUserById(_: UUID))
+        .expects(userId1)
         .returning(Future.successful(userRegistryUser2))
         .once()
 
@@ -2322,8 +2366,8 @@ class PartyProcessSpec
       )
 
       (mockUserRegistryService
-        .getUserById(_: UUID)(_: String))
-        .expects(userId2, adminIdentifier.toString)
+        .getUserById(_: UUID))
+        .expects(userId2)
         .returning(Future.successful(userRegistryUser3))
         .once()
 
@@ -2502,8 +2546,8 @@ class PartyProcessSpec
       )
 
       (mockUserRegistryService
-        .getUserById(_: UUID)(_: String))
-        .expects(userId2, userId2.toString)
+        .getUserById(_: UUID))
+        .expects(userId2)
         .returning(Future.successful(userRegistryUser2))
         .once()
 
@@ -2644,8 +2688,8 @@ class PartyProcessSpec
       )
 
       (mockUserRegistryService
-        .getUserById(_: UUID)(_: String))
-        .expects(userId1, adminIdentifier.toString)
+        .getUserById(_: UUID))
+        .expects(userId1)
         .returning(Future.successful(userRegistryUser2))
         .once()
 
@@ -2778,8 +2822,8 @@ class PartyProcessSpec
       )
 
       (mockUserRegistryService
-        .getUserById(_: UUID)(_: String))
-        .expects(adminIdentifier, *)
+        .getUserById(_: UUID))
+        .expects(adminIdentifier)
         .returning(Future.successful(userRegistryUser))
         .once()
 
@@ -2925,8 +2969,8 @@ class PartyProcessSpec
       )
 
       (mockUserRegistryService
-        .getUserById(_: UUID)(_: String))
-        .expects(userId2, adminIdentifier.toString)
+        .getUserById(_: UUID))
+        .expects(userId2)
         .returning(Future.successful(userRegistryUser2))
         .once()
 
@@ -3088,8 +3132,8 @@ class PartyProcessSpec
       )
 
       (mockUserRegistryService
-        .getUserById(_: UUID)(_: String))
-        .expects(userId3, adminIdentifier.toString)
+        .getUserById(_: UUID))
+        .expects(userId3)
         .returning(Future.successful(userRegistryUser3))
         .once()
 
@@ -3103,8 +3147,8 @@ class PartyProcessSpec
       )
 
       (mockUserRegistryService
-        .getUserById(_: UUID)(_: String))
-        .expects(userId4, adminIdentifier.toString)
+        .getUserById(_: UUID))
+        .expects(userId4)
         .returning(Future.successful(userRegistryUser4))
         .once()
 
@@ -3562,6 +3606,29 @@ class PartyProcessSpec
           updatedAt = None
         )
 
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(Success(jwtClaimsSet))
+        .once()
+
+      (mockUserRegistryService
+        .getUserById(_: UUID))
+        .expects(*)
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = UUID.randomUUID(),
+              externalId = "",
+              name = "",
+              surname = "",
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(email = None, birthDate = None)
+            )
+          )
+        )
+        .once()
+
       (mockSignatureService
         .createDigest(_: File))
         .expects(*)
@@ -3588,7 +3655,7 @@ class PartyProcessSpec
         .once()
 
       (mockUserRegistryService
-        .createUser(_: UserRegistryUserSeed)(_: String))
+        .createUser(_: UserRegistryUserSeed))
         .expects(
           UserRegistryUserSeed(
             externalId = manager.taxCode,
@@ -3596,8 +3663,7 @@ class PartyProcessSpec
             surname = manager.surname,
             certification = CertificationEnumsNone,
             extras = UserRegistryUserExtras(email = manager.email, birthDate = None)
-          ),
-          *
+          )
         )
         .returning(
           Future.successful(
@@ -3620,7 +3686,7 @@ class PartyProcessSpec
         .once()
 
       (mockUserRegistryService
-        .createUser(_: UserRegistryUserSeed)(_: String))
+        .createUser(_: UserRegistryUserSeed))
         .expects(
           UserRegistryUserSeed(
             externalId = delegate.taxCode,
@@ -3628,8 +3694,7 @@ class PartyProcessSpec
             surname = delegate.surname,
             certification = CertificationEnumsNone,
             extras = UserRegistryUserExtras(email = delegate.email, birthDate = None)
-          ),
-          *
+          )
         )
         .returning(
           Future.successful(
@@ -3733,6 +3798,29 @@ class PartyProcessSpec
           createdAt = relationshipTimestamp,
           updatedAt = None
         )
+
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(Success(jwtClaimsSet))
+        .once()
+
+      (mockUserRegistryService
+        .getUserById(_: UUID))
+        .expects(*)
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = UUID.randomUUID(),
+              externalId = "",
+              name = "",
+              surname = "",
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(email = None, birthDate = None)
+            )
+          )
+        )
+        .once()
 
       (mockPartyManagementService
         .retrieveOrganizationByExternalId(_: String)(_: String))
