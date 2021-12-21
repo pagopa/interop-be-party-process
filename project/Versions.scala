@@ -10,7 +10,7 @@ object Versions {
   lazy val jacksonVersion         = "2.11.4"
   lazy val json4sVersion          = "4.0.3"
   lazy val kamonVersion           = "2.2.3"
-  lazy val logbackVersion         = "1.2.8"
+  lazy val logbackVersion         = "1.2.9"
   lazy val mockitoVersion         = "3.7.7"
   lazy val mustacheVersion        = "0.9.10"
   lazy val scalaMockVersion       = "5.1.0"
