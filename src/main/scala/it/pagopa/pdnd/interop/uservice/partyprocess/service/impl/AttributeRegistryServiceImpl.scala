@@ -42,7 +42,7 @@ final case class AttributeRegistryServiceImpl(attributeRegistryInvoker: Attribut
         x.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Retrieving attributes ${ex.getMessage}")
+        logger.error("Retrieving attributes FAILED", ex)
         Future.failed[AttributesResponse](ex)
       }
   }
@@ -59,7 +59,7 @@ final case class AttributeRegistryServiceImpl(attributeRegistryInvoker: Attribut
         x.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Retrieving attribute ${ex.getMessage}")
+        logger.error("Retrieving attribute FAILED", ex)
         Future.failed[Attribute](ex)
       }
   }

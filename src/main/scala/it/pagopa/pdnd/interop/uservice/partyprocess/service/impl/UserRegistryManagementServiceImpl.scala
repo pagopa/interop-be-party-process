@@ -47,14 +47,14 @@ final case class UserRegistryManagementServiceImpl(invoker: UserRegistryManageme
         response.content
       }
       .recoverWith {
-        case ApiError(code, message, _, _, _) if code == 409 =>
-          logger.error(s"$logMessage. code > $code - message > $message")
+        case ex @ ApiError(code, message, _, _, _) if code == 409 =>
+          logger.error(s"$logMessage. code > $code - message > $message", ex)
           Future.failed[T](ResourceConflictError)
         case ex: ApiError[_] =>
-          logger.error(s"$logMessage. code > ${ex.code} - message > ${ex.message}")
+          logger.error(s"$logMessage. code > ${ex.code} - message > ${ex.message}", ex)
           Future.failed(ex)
         case ex =>
-          logger.error(s"$logMessage. Error: ${ex.getMessage}")
+          logger.error(s"$logMessage. Error: ${ex.getMessage}", ex)
           Future.failed[T](ex)
       }
 }
