@@ -6,8 +6,8 @@ import java.util.UUID
 import scala.concurrent.Future
 
 trait UserRegistryManagementService {
-  def getUserById(userId: UUID)(bearerToken: String): Future[User]
-  def getUserByExternalId(externalId: String)(bearerToken: String): Future[User]
-  def createUser(seed: UserSeed)(bearerToken: String): Future[User]
-  def updateUser(seed: UserSeed)(bearerToken: String): Future[User]
+  def getUserById(userId: UUID): Future[User]
+  def getUserByExternalId(externalId: String): Future[User]
+  def createUser(seed: UserSeed): Future[User]
+  def updateUser(seed: UserSeed): Future[User]
 }

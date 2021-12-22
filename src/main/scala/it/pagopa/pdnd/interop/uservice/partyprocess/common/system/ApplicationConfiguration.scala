@@ -33,14 +33,20 @@ object ApplicationConfiguration {
 
   def onboardingMailPlaceholdersReplacement: Map[String, String] = {
     Map(
-      config.getString("uservice-party-process.mail-template.confirm-token.name") -> config.getString(
-        "uservice-party-process.mail-template.confirm-token.placeholder"
-      ),
-      config.getString("uservice-party-process.mail-template.reject-token.name") -> config.getString(
-        "uservice-party-process.mail-template.reject-token.placeholder"
-      )
+      config.getString("uservice-party-process.mail-template.onboarding-mail-placeholders.confirm-token.name") -> config
+        .getString("uservice-party-process.mail-template.onboarding-mail-placeholders.confirm-token.placeholder"),
+      config.getString("uservice-party-process.mail-template.onboarding-mail-placeholders.reject-token.name") -> config
+        .getString("uservice-party-process.mail-template.onboarding-mail-placeholders.reject-token.placeholder")
     )
   }
+  def onboardingMailUserNamePlaceholder: String =
+    config.getString("uservice-party-process.mail-template.onboarding-mail-placeholders.userName")
+  def onboardingMailUserSurnamePlaceholder: String =
+    config.getString("uservice-party-process.mail-template.onboarding-mail-placeholders.userSurname")
+  def onboardingMailTaxCodePlaceholder: String =
+    config.getString("uservice-party-process.mail-template.onboarding-mail-placeholders.userTaxCode")
+  def onboardingMailProductPlaceholder: String =
+    config.getString("uservice-party-process.mail-template.onboarding-mail-placeholders.product")
 
   def storageContainer: String = config.getString("pdnd-interop-commons.storage.container")
 }
