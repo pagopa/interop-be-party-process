@@ -25,7 +25,7 @@ final case class PartyRegistryServiceImpl(invoker: PartyProxyInvoker, api: Insti
         x.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Retrieving institution ${ex.getMessage}")
+        logger.error("Retrieving institution FAILED", ex)
         Future.failed[Institution](ex)
       }
   }
@@ -41,7 +41,7 @@ final case class PartyRegistryServiceImpl(invoker: PartyProxyInvoker, api: Insti
         x.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Retrieving categories ${ex.getMessage}")
+        logger.error("Retrieving categories FAILED", ex)
         Future.failed[Categories](ex)
       }
   }

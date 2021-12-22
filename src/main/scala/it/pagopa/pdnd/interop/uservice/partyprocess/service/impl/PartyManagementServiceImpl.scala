@@ -169,17 +169,17 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
         response.content
       }
       .recoverWith {
-        case ApiError(code, message, _, _, _) if code == 409 =>
-          logger.error(s"$logMessage. code > $code - message > $message")
+        case ex @ ApiError(code, message, _, _, _) if code == 409 =>
+          logger.error(s"$logMessage. code > $code - message > $message", ex)
           Future.failed[T](ResourceConflictError)
-        case ApiError(code, message, _, _, _) if code == 404 =>
-          logger.error(s"$logMessage. code > $code - message > $message")
+        case ex @ ApiError(code, message, _, _, _) if code == 404 =>
+          logger.error(s"$logMessage. code > $code - message > $message", ex)
           Future.failed[T](ResourceNotFoundError)
-        case ApiError(code, message, _, _, _) =>
-          logger.error(s"$logMessage. code > $code - message > $message")
+        case ex @ ApiError(code, message, _, _, _) =>
+          logger.error(s"$logMessage. code > $code - message > $message", ex)
           Future.failed[T](new RuntimeException(message))
         case ex =>
-          logger.error(s"$logMessage. Error: ${ex.getMessage}")
+          logger.error(s"$logMessage. Error: ${ex.getMessage}", ex)
           Future.failed[T](ex)
       }
 }
