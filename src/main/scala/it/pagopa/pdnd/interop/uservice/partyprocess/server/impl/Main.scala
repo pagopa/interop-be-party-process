@@ -2,13 +2,16 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.server.impl
 
 import akka.actor.CoordinatedShutdown
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.server.directives.SecurityDirectives
 import akka.management.scaladsl.AkkaManagement
+import com.atlassian.oai.validator.report.ValidationReport
 import it.pagopa.pdnd.interop.commons.files.StorageConfiguration
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
-import it.pagopa.pdnd.interop.commons.jwt.{JWTConfiguration, PublicKeysHolder}
 import it.pagopa.pdnd.interop.commons.jwt.service.impl.DefaultJWTReader
+import it.pagopa.pdnd.interop.commons.jwt.{JWTConfiguration, PublicKeysHolder}
 import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.pdnd.interop.commons.mail.service.impl.CourierMailerConfiguration.CourierMailer
 import it.pagopa.pdnd.interop.commons.mail.service.impl.DefaultPDNDMailer
@@ -21,7 +24,8 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{
   HealthApiMarshallerImpl,
   HealthServiceApiImpl,
   ProcessApiMarshallerImpl,
-  ProcessApiServiceImpl
+  ProcessApiServiceImpl,
+  problemOf
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.{HealthApi, ProcessApi}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{
@@ -36,8 +40,11 @@ import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.api.Institution
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.api.UserApi
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.invoker.ApiKeyValue
 import kamon.Kamon
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
+import scala.jdk.OptionConverters._
 import scala.util.{Failure, Success}
 
 //shuts down the actor system in case of startup errors
@@ -77,6 +84,8 @@ object Main
     with PartyProxyDependency
     with AttributeRegistryDependency
     with UserRegistryManagementDependency {
+
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   val dependenciesLoaded: Future[(FileManager, PersistedTemplate, JWTReader)] = for {
     fileManager  <- FileManager.getConcreteImplementation(StorageConfiguration.runtimeFileManager).toFuture
@@ -126,7 +135,7 @@ object Main
 
     val healthApi: HealthApi = new HealthApi(
       new HealthServiceApiImpl(),
-      new HealthApiMarshallerImpl(),
+      HealthApiMarshallerImpl,
       SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
     )
 
@@ -134,11 +143,34 @@ object Main
       val _ = AkkaManagement.get(classicActorSystem).start()
     }
 
-    val controller: Controller = new Controller(healthApi, processApi)
+    val controller: Controller = new Controller(
+      healthApi,
+      processApi,
+      validationExceptionToRoute = Some(report => {
+        val error =
+          problemOf(StatusCodes.BadRequest, "0000", defaultMessage = errorFromRequestValidationReport(report))
+        complete(error.status, error)(HealthApiMarshallerImpl.toEntityMarshallerProblem)
+      })
+    )
 
     val server: Future[Http.ServerBinding] =
       Http().newServerAt("0.0.0.0", ApplicationConfiguration.serverPort).bind(corsHandler(controller.routes))
 
     server
+  }
+
+  private def errorFromRequestValidationReport(report: ValidationReport): String = {
+    val messageStrings = report.getMessages.asScala.foldLeft[List[String]](List.empty)((tail, m) => {
+      val context = m.getContext.toScala.map(c =>
+        Seq(c.getRequestMethod.toScala, c.getRequestPath.toScala, c.getLocation.toScala).flatten
+      )
+      s"""${m.getAdditionalInfo.asScala.mkString(",")}
+         |${m.getLevel} - ${m.getMessage}
+         |${context.getOrElse(Seq.empty).mkString(" - ")}
+         |""".stripMargin :: tail
+    })
+
+    logger.error("Request failed: {}", messageStrings.mkString)
+    report.getMessages().asScala.map(_.getMessage).mkString(", ")
   }
 }
