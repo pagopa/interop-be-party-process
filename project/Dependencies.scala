@@ -97,11 +97,6 @@ object Dependencies {
     lazy val core      = namespace %% "cats-core" % catsVersion
   }
 
-  private[this] object atlassian {
-    lazy val namespace        = "com.atlassian.oai"
-    lazy val swaggerValidator = namespace % "swagger-request-validator-core" % swaggerValidatorVersion
-  }
-
   object Jars {
 
     lazy val `server`: Seq[ModuleID] = Seq(
@@ -117,7 +112,6 @@ object Dependencies {
       akka.persistence                    % Compile,
       akka.slf4j                          % Compile,
       akka.stream                         % Compile,
-      atlassian.swaggerValidator          % Compile,
       awssdk.s3                           % Compile,
       cats.core                           % Compile,
       europa.dssCades                     % Compile,
