@@ -5,7 +5,7 @@ import akka.http.scaladsl.marshalling.ToEntityMarshaller
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.HealthApiMarshaller
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.Problem
 
-class HealthApiMarshallerImpl extends HealthApiMarshaller with SprayJsonSupport {
+object HealthApiMarshallerImpl extends HealthApiMarshaller with SprayJsonSupport {
 
   override implicit def toEntityMarshallerProblem: ToEntityMarshaller[Problem] =
     sprayJsonMarshaller[Problem](jsonFormat5(Problem))

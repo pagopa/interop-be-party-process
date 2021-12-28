@@ -2,26 +2,29 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.server.impl
 
 import akka.actor.CoordinatedShutdown
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.server.directives.SecurityDirectives
 import akka.management.scaladsl.AkkaManagement
 import it.pagopa.pdnd.interop.commons.files.StorageConfiguration
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
-import it.pagopa.pdnd.interop.commons.jwt.{JWTConfiguration, PublicKeysHolder}
 import it.pagopa.pdnd.interop.commons.jwt.service.impl.DefaultJWTReader
+import it.pagopa.pdnd.interop.commons.jwt.{JWTConfiguration, PublicKeysHolder}
 import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.pdnd.interop.commons.mail.service.impl.CourierMailerConfiguration.CourierMailer
 import it.pagopa.pdnd.interop.commons.mail.service.impl.DefaultPDNDMailer
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.Authenticator
-import it.pagopa.pdnd.interop.commons.utils.CORSSupport
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions.TryOps
+import it.pagopa.pdnd.interop.commons.utils.{CORSSupport, OpenapiUtils}
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.api.AttributeApi
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{
   HealthApiMarshallerImpl,
   HealthServiceApiImpl,
   ProcessApiMarshallerImpl,
-  ProcessApiServiceImpl
+  ProcessApiServiceImpl,
+  problemOf
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.{HealthApi, ProcessApi}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{
@@ -126,7 +129,7 @@ object Main
 
     val healthApi: HealthApi = new HealthApi(
       new HealthServiceApiImpl(),
-      new HealthApiMarshallerImpl(),
+      HealthApiMarshallerImpl,
       SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
     )
 
@@ -134,7 +137,19 @@ object Main
       val _ = AkkaManagement.get(classicActorSystem).start()
     }
 
-    val controller: Controller = new Controller(healthApi, processApi)
+    val controller: Controller = new Controller(
+      healthApi,
+      processApi,
+      validationExceptionToRoute = Some(report => {
+        val error =
+          problemOf(
+            StatusCodes.BadRequest,
+            "0000",
+            defaultMessage = OpenapiUtils.errorFromRequestValidationReport(report)
+          )
+        complete(error.status, error)(HealthApiMarshallerImpl.toEntityMarshallerProblem)
+      })
+    )
 
     val server: Future[Http.ServerBinding] =
       Http().newServerAt("0.0.0.0", ApplicationConfiguration.serverPort).bind(corsHandler(controller.routes))
