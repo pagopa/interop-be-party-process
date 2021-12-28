@@ -77,12 +77,12 @@ spec:
               value: {{storageContainer}}
             - name: STORAGE_ENDPOINT
               value: {{storageEndpoint}}
-            - name: STORAGE_APPLICATION_ID
+            - name: STORAGE_CREDENTIAL_ID
               valueFrom:
                 secretKeyRef:
                   name: storage
                   key: STORAGE_USR
-            - name: STORAGE_APPLICATION_SECRET
+            - name: STORAGE_CREDENTIAL_SECRET
               valueFrom:
                 secretKeyRef:
                   name: storage
