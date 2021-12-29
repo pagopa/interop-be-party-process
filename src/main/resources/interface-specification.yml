@@ -723,16 +723,13 @@ components:
     Attribute:
       type: object
       properties:
-        id:
+        origin:
           type: string
-        name:
-          type: string
-        description:
+        code:
           type: string
       required:
-        - id
-        - name
-        - description
+        - origin
+        - code
     OnboardingInfo:
       properties:
         person:

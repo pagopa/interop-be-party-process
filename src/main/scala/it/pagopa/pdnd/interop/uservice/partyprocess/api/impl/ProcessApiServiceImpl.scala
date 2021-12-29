@@ -58,7 +58,6 @@ import com.typesafe.scalalogging.Logger
 class ProcessApiServiceImpl(
   partyManagementService: PartyManagementService,
   partyRegistryService: PartyRegistryService,
-  attributeRegistryService: AttributeRegistryService,
   userRegistryManagementService: UserRegistryManagementService,
   pdfCreator: PDFCreator,
   fileManager: FileManager,
@@ -175,12 +174,6 @@ class ProcessApiServiceImpl(
   private def getOnboardingData(bearer: String)(relationship: Relationship): Future[OnboardingData] = {
     for {
       organization <- partyManagementService.retrieveOrganization(relationship.to)(bearer)
-      attributes <- Future.traverse(organization.attributes)(id =>
-        for {
-          uuid      <- id.toFutureUUID
-          attribute <- attributeRegistryService.getAttribute(uuid)(bearer)
-        } yield attribute
-      )
     } yield OnboardingData(
       institutionId = organization.institutionId,
       taxCode = organization.taxCode,
@@ -189,9 +182,7 @@ class ProcessApiServiceImpl(
       state = relationshipStateToApi(relationship.state),
       role = roleToApi(relationship.role),
       productInfo = relationshipProductToApi(relationship.product),
-      attributes = attributes.map(attribute =>
-        Attribute(id = attribute.id, name = attribute.name, description = attribute.description)
-      )
+      attributes = organization.attributes.map(attribute => Attribute(attribute.origin, attribute.code))
     )
 
   }
@@ -645,19 +636,13 @@ class ProcessApiServiceImpl(
   )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Organization] =
     for {
       institution <- partyRegistryService.getInstitution(institutionId)(bearer)
-      categories  <- partyRegistryService.getCategories(bearer)
-      category <- categories.items
-        .find(cat => institution.category == cat.code)
-        .map(Future.successful)
-        .getOrElse(Future.failed(new RuntimeException(s"Invalid category ${institution.category}")))
-      attributes <- attributeRegistryService.createAttribute("IPA", category.code, category.name, category.kind)(bearer)
       _ = logger.info("getInstitution {}", institution.id)
       seed = OrganizationSeed(
         institutionId = institution.id,
         description = institution.description,
         digitalAddress = institution.digitalAddress, // TODO Must be non optional
         taxCode = institution.taxCode,
-        attributes = attributes.attributes.filter(attr => attr.code.contains(institution.category)).map(_.id),
+        attributes = Seq.empty,
         products = Set.empty
       )
       organization <- partyManagementService.createOrganization(seed)(bearer)

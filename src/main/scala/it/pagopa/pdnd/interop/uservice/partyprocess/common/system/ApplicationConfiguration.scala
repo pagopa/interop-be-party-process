@@ -5,11 +5,10 @@ import com.typesafe.config.{Config, ConfigFactory}
 object ApplicationConfiguration {
   lazy val config: Config = ConfigFactory.load()
 
-  def serverPort: Int                 = config.getInt("uservice-party-process.port")
-  def getPartyManagementUrl: String   = config.getString("services.party-management")
-  def getPartyProxyUrl: String        = config.getString("services.party-proxy")
-  def getAttributeRegistryUrl: String = config.getString("services.attribute-registry")
-  def getUserRegistryURL: String      = config.getString("services.user-registry-management")
+  def serverPort: Int               = config.getInt("uservice-party-process.port")
+  def getPartyManagementUrl: String = config.getString("services.party-management")
+  def getPartyProxyUrl: String      = config.getString("services.party-proxy")
+  def getUserRegistryURL: String    = config.getString("services.user-registry-management")
 
   /*
      _________  ________  ________  ________

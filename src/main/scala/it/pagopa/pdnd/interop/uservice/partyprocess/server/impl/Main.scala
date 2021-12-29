@@ -17,7 +17,6 @@ import it.pagopa.pdnd.interop.commons.mail.service.impl.DefaultPDNDMailer
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.Authenticator
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions.TryOps
 import it.pagopa.pdnd.interop.commons.utils.{CORSSupport, OpenapiUtils}
-import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.api.AttributeApi
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{
   HealthApiMarshallerImpl,
@@ -56,14 +55,6 @@ trait PartyProxyDependency {
     PartyRegistryServiceImpl(PartyProxyInvoker(), InstitutionApi(ApplicationConfiguration.getPartyProxyUrl))
 }
 
-trait AttributeRegistryDependency {
-  final val attributeRegistryService: AttributeRegistryService =
-    AttributeRegistryServiceImpl(
-      AttributeRegistryInvoker(),
-      AttributeApi(ApplicationConfiguration.getAttributeRegistryUrl)
-    )
-}
-
 trait UserRegistryManagementDependency {
   implicit val apiKey: ApiKeyValue = ApiKeyValue(ApplicationConfiguration.userRegistryApiKey)
   final val userRegistryManagementService: UserRegistryManagementService =
@@ -78,7 +69,6 @@ object Main
     with CORSSupport
     with PartyManagementDependency
     with PartyProxyDependency
-    with AttributeRegistryDependency
     with UserRegistryManagementDependency {
 
   val dependenciesLoaded: Future[(FileManager, PersistedTemplate, JWTReader)] = for {
@@ -113,7 +103,6 @@ object Main
       new ProcessApiServiceImpl(
         partyManagementService,
         partyProcessService,
-        attributeRegistryService,
         userRegistryManagementService,
         PDFCreatorImpl,
         fileManager,

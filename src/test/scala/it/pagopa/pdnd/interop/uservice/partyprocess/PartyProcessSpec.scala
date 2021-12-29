@@ -11,10 +11,6 @@ import cats.implicits.catsSyntaxValidatedId
 import com.nimbusds.jwt.JWTClaimsSet
 import eu.europa.esig.dss.validation.SignedDocumentValidator
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.Authenticator
-import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{
-  AttributesResponse,
-  Attribute => ClientAttribute
-}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   OrganizationSeed,
   RelationshipBinding,
@@ -25,6 +21,7 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   _
 }
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
+import it.pagopa.pdnd.interop.uservice.partyprocess
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{relationshipStateToApi, roleToApi}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.ProcessApiServiceImpl
@@ -33,7 +30,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.error.validation.ValidationE
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.{Products => ModelProducts, _}
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.partyprocess.{model => PartyProcess}
-import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.{Categories, Category, Institution, Manager}
+import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.{Institution, Manager}
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.Certification.{
   NONE => CertificationEnumsNone
 }
@@ -100,7 +97,6 @@ class PartyProcessSpec
       new ProcessApiServiceImpl(
         mockPartyManagementService,
         mockPartyRegistryService,
-        mockAttributeRegistryService,
         mockUserRegistryService,
         mockPdfCreator,
         mockFileManager,
@@ -156,20 +152,6 @@ class PartyProcessSpec
       id = UUID.fromString(orgPartyId1),
       attributes = Seq.empty,
       taxCode = "123"
-    )
-
-    val attr1 = AttributesResponse(
-      Seq(
-        ClientAttribute(
-          id = "1",
-          code = Some("1"),
-          certified = true,
-          description = "attrs",
-          origin = Some("test"),
-          name = "C17",
-          creationTime = OffsetDateTime.now()
-        )
-      )
     )
 
     val manager =
@@ -235,15 +217,7 @@ class PartyProcessSpec
       .expects(*, *)
       .returning(Future.successful(institution1))
       .once()
-    (mockPartyRegistryService.getCategories _)
-      .expects(*)
-      .returning(Future.successful(Categories(Seq(Category("C17", "attrs", "test")))))
-      .once()
-    (mockAttributeRegistryService
-      .createAttribute(_: String, _: String, _: String, _: String)(_: String))
-      .expects(*, *, *, *, *)
-      .returning(Future.successful(attr1))
-      .once()
+
     (mockPartyManagementService
       .createOrganization(_: OrganizationSeed)(_: String))
       .expects(*, *)
@@ -301,20 +275,6 @@ class PartyProcessSpec
       id = UUID.fromString(orgPartyId1),
       attributes = Seq.empty,
       taxCode = "123"
-    )
-
-    val attr1 = AttributesResponse(
-      Seq(
-        ClientAttribute(
-          id = "1",
-          code = Some("1"),
-          certified = true,
-          description = "attrs",
-          origin = Some("test"),
-          name = "C17",
-          creationTime = OffsetDateTime.now()
-        )
-      )
     )
 
     val file = new File("src/test/resources/fake.file")
@@ -397,15 +357,7 @@ class PartyProcessSpec
       .expects(*, *)
       .returning(Future.successful(institution1))
       .once()
-    (mockPartyRegistryService.getCategories _)
-      .expects(*)
-      .returning(Future.successful(Categories(Seq(Category("C17", "attrs", "test")))))
-      .once()
-    (mockAttributeRegistryService
-      .createAttribute(_: String, _: String, _: String, _: String)(_: String))
-      .expects(*, *, *, *, *)
-      .returning(Future.successful(attr1))
-      .once()
+
     (mockPartyManagementService
       .createOrganization(_: OrganizationSeed)(_: String))
       .expects(*, *)
@@ -663,12 +615,12 @@ class PartyProcessSpec
       val orgPartyId1    = "af80fac0-2775-4646-8fcf-28e083751901"
       val orgPartyId2    = "af80fac0-2775-4646-8fcf-28e083751902"
 
-      val attributeId1 = UUID.randomUUID()
-      val attributeId2 = UUID.randomUUID()
-      val attributeId3 = UUID.randomUUID()
-      val attributeId4 = UUID.randomUUID()
-      val attributeId5 = UUID.randomUUID()
-      val attributeId6 = UUID.randomUUID()
+      val attribute1 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1")
+      val attribute2 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2")
+      val attribute3 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3")
+      val attribute4 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name4")
+      val attribute5 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name5")
+      val attribute6 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name6")
 
       val person1 = UserRegistryUser(
         id = UUID.fromString(personPartyId1),
@@ -709,7 +661,11 @@ class PartyProcessSpec
         description = "org1",
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
-        attributes = Seq(attributeId1.toString, attributeId2.toString, attributeId3.toString),
+        attributes = Seq(
+          PartyManagementDependency.Attribute(attribute1.origin, attribute1.code),
+          PartyManagementDependency.Attribute(attribute2.origin, attribute2.code),
+          PartyManagementDependency.Attribute(attribute3.origin, attribute3.code)
+        ),
         taxCode = "123"
       )
       val organization2 = PartyManagementDependency.Organization(
@@ -717,7 +673,11 @@ class PartyProcessSpec
         description = "org2",
         digitalAddress = "digitalAddress2",
         id = UUID.fromString(orgPartyId2),
-        attributes = Seq(attributeId4.toString, attributeId5.toString, attributeId6.toString),
+        attributes = Seq(
+          PartyManagementDependency.Attribute(attribute4.origin, attribute4.code),
+          PartyManagementDependency.Attribute(attribute5.origin, attribute5.code),
+          PartyManagementDependency.Attribute(attribute6.origin, attribute6.code)
+        ),
         taxCode = "123"
       )
 
@@ -732,11 +692,7 @@ class PartyProcessSpec
             state = relationshipStateToApi(relationship1.state),
             role = roleToApi(relationship1.role),
             productInfo = productInfo,
-            attributes = Seq(
-              Attribute(attributeId1.toString, "name1", "description1"),
-              Attribute(attributeId2.toString, "name2", "description2"),
-              Attribute(attributeId3.toString, "name3", "description3")
-            )
+            attributes = Seq(attribute1, attribute2, attribute3)
           ),
           OnboardingData(
             institutionId = organization2.institutionId,
@@ -747,9 +703,9 @@ class PartyProcessSpec
             role = roleToApi(relationship2.role),
             productInfo = productInfo,
             attributes = Seq(
-              Attribute(attributeId4.toString, "name4", "description4"),
-              Attribute(attributeId5.toString, "name5", "description5"),
-              Attribute(attributeId6.toString, "name6", "description6")
+              partyprocess.model.Attribute(attribute4.origin, attribute4.code),
+              partyprocess.model.Attribute(attribute5.origin, attribute5.code),
+              partyprocess.model.Attribute(attribute6.origin, attribute6.code)
             )
           )
         )
@@ -813,114 +769,6 @@ class PartyProcessSpec
         .returning(Future.successful(organization2))
         .once()
 
-      (mockAttributeRegistryService
-        .getAttribute(_: UUID)(_: String))
-        .expects(attributeId1, *)
-        .returning(
-          Future.successful(
-            ClientAttribute(
-              id = attributeId1.toString,
-              name = "name1",
-              description = "description1",
-              code = None,
-              certified = true,
-              origin = None,
-              creationTime = OffsetDateTime.now()
-            )
-          )
-        )
-        .once()
-
-      (mockAttributeRegistryService
-        .getAttribute(_: UUID)(_: String))
-        .expects(attributeId2, *)
-        .returning(
-          Future.successful(
-            ClientAttribute(
-              id = attributeId2.toString,
-              name = "name2",
-              description = "description2",
-              code = None,
-              certified = true,
-              origin = None,
-              creationTime = OffsetDateTime.now()
-            )
-          )
-        )
-        .once()
-
-      (mockAttributeRegistryService
-        .getAttribute(_: UUID)(_: String))
-        .expects(attributeId3, *)
-        .returning(
-          Future.successful(
-            ClientAttribute(
-              id = attributeId3.toString,
-              name = "name3",
-              description = "description3",
-              code = None,
-              certified = true,
-              origin = None,
-              creationTime = OffsetDateTime.now()
-            )
-          )
-        )
-        .once()
-
-      (mockAttributeRegistryService
-        .getAttribute(_: UUID)(_: String))
-        .expects(attributeId4, *)
-        .returning(
-          Future.successful(
-            ClientAttribute(
-              id = attributeId4.toString,
-              name = "name4",
-              description = "description4",
-              code = None,
-              certified = true,
-              origin = None,
-              creationTime = OffsetDateTime.now()
-            )
-          )
-        )
-        .once()
-
-      (mockAttributeRegistryService
-        .getAttribute(_: UUID)(_: String))
-        .expects(attributeId5, *)
-        .returning(
-          Future.successful(
-            ClientAttribute(
-              id = attributeId5.toString,
-              name = "name5",
-              description = "description5",
-              code = None,
-              certified = true,
-              origin = None,
-              creationTime = OffsetDateTime.now()
-            )
-          )
-        )
-        .once()
-
-      (mockAttributeRegistryService
-        .getAttribute(_: UUID)(_: String))
-        .expects(attributeId6, *)
-        .returning(
-          Future.successful(
-            ClientAttribute(
-              id = attributeId6.toString,
-              name = "name6",
-              description = "description6",
-              code = None,
-              certified = true,
-              origin = None,
-              creationTime = OffsetDateTime.now()
-            )
-          )
-        )
-        .once()
-
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(mockUidUUID)))
 
       val response = Await.result(
@@ -942,9 +790,9 @@ class PartyProcessSpec
       val institutionId1 = "institutionId1"
       val orgPartyId1    = UUID.randomUUID() // "af80fac0-2775-4646-8fcf-28e083751801"
       val personPartyId1 = "af80fac0-2775-4646-8fcf-28e083751800"
-      val attributeId1   = UUID.randomUUID()
-      val attributeId2   = UUID.randomUUID()
-      val attributeId3   = UUID.randomUUID()
+      val attribute1     = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1")
+      val attribute2     = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2")
+      val attribute3     = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3")
 
       val person1 = UserRegistryUser(
         id = UUID.fromString(personPartyId1),
@@ -974,7 +822,11 @@ class PartyProcessSpec
         description = "org1",
         digitalAddress = "digitalAddress1",
         id = orgPartyId1,
-        attributes = Seq(attributeId1.toString, attributeId2.toString, attributeId3.toString),
+        attributes = Seq(
+          PartyManagementDependency.Attribute(attribute1.origin, attribute1.code),
+          PartyManagementDependency.Attribute(attribute2.origin, attribute2.code),
+          PartyManagementDependency.Attribute(attribute3.origin, attribute3.code)
+        ),
         taxCode = "123"
       )
 
@@ -989,11 +841,7 @@ class PartyProcessSpec
             state = relationshipStateToApi(relationship1.state),
             role = roleToApi(relationship1.role),
             productInfo = productInfo,
-            attributes = Seq(
-              Attribute(attributeId1.toString, "name1", "description1"),
-              Attribute(attributeId2.toString, "name2", "description2"),
-              Attribute(attributeId3.toString, "name3", "description3")
-            )
+            attributes = Seq(attribute1, attribute2, attribute3)
           )
         )
       )
@@ -1055,60 +903,6 @@ class PartyProcessSpec
         .returning(Future.successful(organization1))
         .once()
 
-      (mockAttributeRegistryService
-        .getAttribute(_: UUID)(_: String))
-        .expects(attributeId1, *)
-        .returning(
-          Future.successful(
-            ClientAttribute(
-              id = attributeId1.toString,
-              name = "name1",
-              description = "description1",
-              code = None,
-              certified = true,
-              origin = None,
-              creationTime = OffsetDateTime.now()
-            )
-          )
-        )
-        .once()
-
-      (mockAttributeRegistryService
-        .getAttribute(_: UUID)(_: String))
-        .expects(attributeId2, *)
-        .returning(
-          Future.successful(
-            ClientAttribute(
-              id = attributeId2.toString,
-              name = "name2",
-              description = "description2",
-              code = None,
-              certified = true,
-              origin = None,
-              creationTime = OffsetDateTime.now()
-            )
-          )
-        )
-        .once()
-
-      (mockAttributeRegistryService
-        .getAttribute(_: UUID)(_: String))
-        .expects(attributeId3, *)
-        .returning(
-          Future.successful(
-            ClientAttribute(
-              id = attributeId3.toString,
-              name = "name3",
-              description = "description3",
-              code = None,
-              certified = true,
-              origin = None,
-              creationTime = OffsetDateTime.now()
-            )
-          )
-        )
-        .once()
-
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(mockUidUUID)))
 
       val response =
@@ -1134,9 +928,9 @@ class PartyProcessSpec
       val institutionId1 = UUID.randomUUID()
       val personPartyId1 = "af80fac0-2775-4646-8fcf-28e083751800"
       val orgPartyId1    = "af80fac0-2775-4646-8fcf-28e083751801"
-      val attributeId1   = UUID.randomUUID()
-      val attributeId2   = UUID.randomUUID()
-      val attributeId3   = UUID.randomUUID()
+      val attribute1     = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name1")
+      val attribute2     = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name2")
+      val attribute3     = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name3")
 
       val person1 = UserRegistryUser(
         id = UUID.fromString(personPartyId1),
@@ -1166,7 +960,7 @@ class PartyProcessSpec
         description = "org1",
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
-        attributes = Seq(attributeId1.toString, attributeId2.toString, attributeId3.toString),
+        attributes = Seq(attribute1, attribute2, attribute3),
         taxCode = "123"
       )
 
@@ -1182,9 +976,9 @@ class PartyProcessSpec
             role = roleToApi(relationship1.role),
             productInfo = productInfo,
             attributes = Seq(
-              Attribute(attributeId1.toString, "name1", "description1"),
-              Attribute(attributeId2.toString, "name2", "description2"),
-              Attribute(attributeId3.toString, "name3", "description3")
+              partyprocess.model.Attribute(attribute1.origin, attribute1.code),
+              partyprocess.model.Attribute(attribute2.origin, attribute2.code),
+              partyprocess.model.Attribute(attribute3.origin, attribute3.code)
             )
           )
         )
@@ -1240,60 +1034,6 @@ class PartyProcessSpec
         .retrieveOrganization(_: UUID)(_: String))
         .expects(institutionId1, *)
         .returning(Future.successful(organization1))
-        .once()
-
-      (mockAttributeRegistryService
-        .getAttribute(_: UUID)(_: String))
-        .expects(attributeId1, *)
-        .returning(
-          Future.successful(
-            ClientAttribute(
-              id = attributeId1.toString,
-              name = "name1",
-              description = "description1",
-              code = None,
-              certified = true,
-              origin = None,
-              creationTime = OffsetDateTime.now()
-            )
-          )
-        )
-        .once()
-
-      (mockAttributeRegistryService
-        .getAttribute(_: UUID)(_: String))
-        .expects(attributeId2, *)
-        .returning(
-          Future.successful(
-            ClientAttribute(
-              id = attributeId2.toString,
-              name = "name2",
-              description = "description2",
-              code = None,
-              certified = true,
-              origin = None,
-              creationTime = OffsetDateTime.now()
-            )
-          )
-        )
-        .once()
-
-      (mockAttributeRegistryService
-        .getAttribute(_: UUID)(_: String))
-        .expects(attributeId3, *)
-        .returning(
-          Future.successful(
-            ClientAttribute(
-              id = attributeId3.toString,
-              name = "name3",
-              description = "description3",
-              code = None,
-              certified = true,
-              origin = None,
-              creationTime = OffsetDateTime.now()
-            )
-          )
-        )
         .once()
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(mockUidUUID)))

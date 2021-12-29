@@ -30,9 +30,6 @@ object Dependencies {
     lazy val partyProxyClient =
       namespace %% "pdnd-interop-uservice-party-registry-proxy-client" % partyProxyVersion
 
-    lazy val attributeRegistryClient =
-      namespace %% "pdnd-interop-uservice-attribute-registry-management-client" % attributeRegistryVersion
-
     lazy val userRegistryManagementClient =
       namespace %% "pdnd-interop-uservice-user-registry-management-client" % userRegistryManagementVersion
 
@@ -124,7 +121,6 @@ object Dependencies {
       kamon.prometheus                    % Compile,
       logback.classic                     % Compile,
       mustache.compiler                   % Compile,
-      pagopa.attributeRegistryClient      % Compile,
       pagopa.commons                      % Compile,
       pagopa.commonsFile                  % Compile,
       pagopa.commonsJWT                   % Compile,
