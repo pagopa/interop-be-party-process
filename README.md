@@ -44,8 +44,8 @@ These variables configure the connection to the storage holding the component fi
 | **STORAGE_TYPE** | String | Admittable values are: `File`, `S3`, `BlobStorage` |
 | **STORAGE_CONTAINER** | String | Defines the container holding the data (e.g.: S3 bucket name) |
 | **STORAGE_ENDPOINT** | String | Defines the remote endpoint to connect to |
-| **STORAGE_APPLICATION_ID** | String | Defines the user credential to access the remote endpoint |
-| **STORAGE_APPLICATION_SECRET** | String | Defines the user password to access the remote endpoint |
+| **STORAGE_CREDENTIAL_ID** | String | Defines the user credential to access the remote endpoint |
+| **STORAGE_CREDENTIAL_SECRET** | String | Defines the user password to access the remote endpoint |
 
 :warning: - for the usage of **STORAGE_TYPE** `File` all the other File storage property values are necessary, but basically useless. 
 
