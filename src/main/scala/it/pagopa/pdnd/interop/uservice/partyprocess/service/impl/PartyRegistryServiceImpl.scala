@@ -12,38 +12,18 @@ final case class PartyRegistryServiceImpl(invoker: PartyProxyInvoker, api: Insti
   ec: ExecutionContext
 ) extends PartyRegistryService {
 
-  val logger: Logger = LoggerFactory.getLogger(this.getClass)
+  implicit val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
   override def getInstitution(institutionId: String)(bearerToken: String): Future[Institution] = {
     val request: ApiRequest[Institution] = api.getInstitutionById(institutionId)
     logger.info(s"getInstitution ${request.toString}")
-    invoker
-      .execute(request)
-      .map { x =>
-        logger.info(s"Retrieving institution ${x.code}")
-        logger.info(s"Retrieving institution ${x.content}")
-        x.content
-      }
-      .recoverWith { case ex =>
-        logger.error("Retrieving institution FAILED", ex)
-        Future.failed[Institution](ex)
-      }
+    invoker.invoke(request, "Retrieving institution")
   }
 
   override def getCategories(bearerToken: String): Future[Categories] = {
     val request: ApiRequest[Categories] = api.getCategories()
     logger.info(s"getCategories ${request.toString}")
-    invoker
-      .execute(request)
-      .map { x =>
-        logger.info(s"Retrieving categories ${x.code}")
-        logger.info(s"Retrieving categories ${x.content}")
-        x.content
-      }
-      .recoverWith { case ex =>
-        logger.error("Retrieving categories FAILED", ex)
-        Future.failed[Categories](ex)
-      }
+    invoker.invoke(request, "Retrieving categories")
   }
 
   override def searchInstitution(text: String, offset: Int, limit: Int)(
