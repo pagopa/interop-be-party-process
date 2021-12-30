@@ -1,7 +1,7 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.api.AttributeApi
-import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.invoker.{ApiRequest, ApiResponse, BearerToken}
+import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.invoker.{ApiRequest, BearerToken}
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{
   Attribute,
   AttributeSeed,
@@ -11,13 +11,12 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.service.{AttributeRegistryIn
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.util.UUID
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
-final case class AttributeRegistryServiceImpl(attributeRegistryInvoker: AttributeRegistryInvoker, api: AttributeApi)(
-  implicit ec: ExecutionContext
-) extends AttributeRegistryService {
+final case class AttributeRegistryServiceImpl(attributeRegistryInvoker: AttributeRegistryInvoker, api: AttributeApi)
+    extends AttributeRegistryService {
 
-  val logger: Logger = LoggerFactory.getLogger(this.getClass)
+  implicit val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
   override def createAttribute(origin: String, attribute: String, name: String, description: String)(
     bearerToken: String
@@ -30,38 +29,14 @@ final case class AttributeRegistryServiceImpl(attributeRegistryInvoker: Attribut
       origin = Some(origin),
       name = name
     )
-    val seeds: Seq[AttributeSeed] = Seq(seed)
-
+    val seeds: Seq[AttributeSeed]               = Seq(seed)
     val request: ApiRequest[AttributesResponse] = api.createAttributes(seeds)(BearerToken(bearerToken))
-
-    attributeRegistryInvoker
-      .execute(request)
-      .map { x =>
-        logger.info(s"Retrieving attributes ${x.code}")
-        logger.info(s"Retrieving attributes ${x.content}")
-        x.content
-      }
-      .recoverWith { case ex =>
-        logger.error("Retrieving attributes FAILED", ex)
-        Future.failed[AttributesResponse](ex)
-      }
+    attributeRegistryInvoker.invoke(request, "Retrieve attributes")
   }
 
   def getAttribute(id: UUID)(bearerToken: String): Future[Attribute] = {
-
-    val request: ApiRequest[Attribute]         = api.getAttributeById(id)(BearerToken(bearerToken))
-    val result: Future[ApiResponse[Attribute]] = attributeRegistryInvoker.execute(request)
-
-    result
-      .map { x =>
-        logger.info(s"Retrieving attribute ${x.code}")
-        logger.info(s"Retrieving attribute ${x.content}")
-        x.content
-      }
-      .recoverWith { case ex =>
-        logger.error("Retrieving attribute FAILED", ex)
-        Future.failed[Attribute](ex)
-      }
+    val request: ApiRequest[Attribute] = api.getAttributeById(id)(BearerToken(bearerToken))
+    attributeRegistryInvoker.invoke(request, "Retrieve attribute")
   }
 
 }

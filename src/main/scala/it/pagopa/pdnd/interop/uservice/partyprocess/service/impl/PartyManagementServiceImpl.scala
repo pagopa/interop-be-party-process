@@ -15,7 +15,7 @@ import scala.concurrent.{ExecutionContext, Future}
 final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api: PartyApi)(implicit
   ec: ExecutionContext
 ) extends PartyManagementService {
-  val logger: Logger = LoggerFactory.getLogger(this.getClass)
+  implicit val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
   override def retrieveRelationships(
     from: Option[UUID],
@@ -162,24 +162,22 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
   }
 
   private def invoke[T](request: ApiRequest[T], logMessage: String)(implicit m: Manifest[T]): Future[T] =
-    invoker
-      .execute[T](request)
-      .map { response =>
-        logger.info(s"$logMessage. Status code: ${response.code.toString}")
-        response.content
-      }
-      .recoverWith {
+    invoker.invoke(
+      request,
+      logMessage,
+      (logger, msg) => {
         case ex @ ApiError(code, message, _, _, _) if code == 409 =>
-          logger.error(s"$logMessage. code > $code - message > $message", ex)
+          logger.error(s"$msg. code > $code - message > $message", ex)
           Future.failed[T](ResourceConflictError)
         case ex @ ApiError(code, message, _, _, _) if code == 404 =>
-          logger.error(s"$logMessage. code > $code - message > $message", ex)
+          logger.error(s"$msg. code > $code - message > $message", ex)
           Future.failed[T](ResourceNotFoundError)
         case ex @ ApiError(code, message, _, _, _) =>
-          logger.error(s"$logMessage. code > $code - message > $message", ex)
+          logger.error(s"$msg. code > $code - message > $message", ex)
           Future.failed[T](new RuntimeException(message))
         case ex =>
-          logger.error(s"$logMessage. Error: ${ex.getMessage}", ex)
+          logger.error(s"$msg. Error: ${ex.getMessage}", ex)
           Future.failed[T](ex)
       }
+    )
 }
