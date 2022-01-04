@@ -7,7 +7,7 @@ import eu.europa.esig.dss.enumerations.{DigestAlgorithm, Indication, SignatureFo
 import eu.europa.esig.dss.model.DSSDocument
 import eu.europa.esig.dss.validation.reports.Reports
 import eu.europa.esig.dss.validation.{AdvancedSignature, SignedDocumentValidator}
-import it.pagopa.pdnd.interop.uservice.partyprocess.error.InvalidSignature
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.PartyProcessErrors.InvalidSignature
 import it.pagopa.pdnd.interop.uservice.partyprocess.error.validation._
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{User => UserRegistryUser}
 

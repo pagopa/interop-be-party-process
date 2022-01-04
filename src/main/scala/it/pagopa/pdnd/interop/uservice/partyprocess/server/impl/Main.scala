@@ -32,6 +32,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{
   classicActorSystem,
   executionContext
 }
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.PartyProcessErrors.ValidationRequestError
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.partyprocess.service._
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.impl._
@@ -144,8 +145,7 @@ object Main
         val error =
           problemOf(
             StatusCodes.BadRequest,
-            "0000",
-            defaultMessage = OpenapiUtils.errorFromRequestValidationReport(report)
+            ValidationRequestError(OpenapiUtils.errorFromRequestValidationReport(report))
           )
         complete(error.status, error)(HealthApiMarshallerImpl.toEntityMarshallerProblem)
       })
