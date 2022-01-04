@@ -6,7 +6,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.error.validation.ValidationE
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.SignatureValidationService
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{User => UserRegistryUser}
 
-case object SignatureValidationServiceMock extends SignatureValidationService {
+case object PassthroughSignatureValidationService extends SignatureValidationService {
 
   private final val fakeValidationResult: ValidatedNel[ValidationError, Unit] = Validated.validNel(())
 

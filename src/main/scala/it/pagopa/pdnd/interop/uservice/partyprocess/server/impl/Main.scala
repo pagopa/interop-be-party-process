@@ -34,7 +34,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.partyprocess.service._
-import it.pagopa.pdnd.interop.uservice.partyprocess.service.impl.{SignatureValidationServiceMock, _}
+import it.pagopa.pdnd.interop.uservice.partyprocess.service.impl.{PassthroughSignatureValidationService, _}
 import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.api.InstitutionApi
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.api.UserApi
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.invoker.ApiKeyValue
@@ -76,7 +76,7 @@ trait UserRegistryManagementDependency {
 trait SignatureValidationServiceDependency {
   final val signatureValidationService: SignatureValidationService =
     if (ApplicationConfiguration.signatureValidationEnabled) SignatureValidationServiceImpl
-    else SignatureValidationServiceMock
+    else PassthroughSignatureValidationService
 }
 
 object Main
