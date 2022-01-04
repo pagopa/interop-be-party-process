@@ -75,7 +75,7 @@ trait UserRegistryManagementDependency {
 
 trait SignatureValidationServiceDependency {
   final val signatureValidationService: SignatureValidationService =
-    if (ApplicationConfiguration.signatureVerificationEnabled) SignatureValidationServiceImpl
+    if (ApplicationConfiguration.signatureValidationEnabled) SignatureValidationServiceImpl
     else SignatureValidationServiceMock
 }
 
