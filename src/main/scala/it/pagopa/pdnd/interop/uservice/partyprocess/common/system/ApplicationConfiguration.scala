@@ -10,7 +10,6 @@ object ApplicationConfiguration {
   def getPartyProxyUrl: String        = config.getString("services.party-proxy")
   def getAttributeRegistryUrl: String = config.getString("services.attribute-registry")
   def getUserRegistryURL: String      = config.getString("services.user-registry-management")
-
   /*
      _________  ________  ________  ________
     |\___   ___\\   __  \|\   ___ \|\   __  \
@@ -24,6 +23,8 @@ object ApplicationConfiguration {
    */
   def destinationMails: Option[Seq[String]] =
     Option(config.getString("uservice-party-process.destination-mails")).map(_.split(",").toSeq)
+
+  def signatureValidationEnabled: Boolean = config.getBoolean("uservice-party-process.signature-validation-enabled")
 
   def euListOfTrustedListsURL: String = config.getString("uservice-party-process.eu_list_of_trusted_lists_url")
   def euOfficialJournalUrl: String    = config.getString("uservice-party-process.eu_official_journal_url")

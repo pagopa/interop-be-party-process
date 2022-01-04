@@ -426,7 +426,6 @@ paths:
                 $ref: '#/components/schemas/Problem'
   '/onboarding/complete/{tokenId}':
     post:
-      security: [ ]
       tags:
         - process
       summary: create an onboarding entry
@@ -489,7 +488,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
     delete:
-      security: [ ]
       tags:
         - process
       summary: invalidate an onboarding request
