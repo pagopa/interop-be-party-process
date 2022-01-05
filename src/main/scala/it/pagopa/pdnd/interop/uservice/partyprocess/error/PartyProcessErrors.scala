@@ -2,7 +2,7 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.error
 
 import akka.http.scaladsl.model.ErrorInfo
 import it.pagopa.pdnd.interop.commons.utils.errors.ComponentError
-import it.pagopa.pdnd.interop.uservice.partyprocess.error.validation.ValidationError
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.validation.SignatureValidationError
 
 import java.util.UUID
 
@@ -22,8 +22,8 @@ object PartyProcessErrors {
   final case class InstitutionNotOnboarded(institutionId: String, productId: String)
       extends ComponentError("0004", s"InstitutionId $institutionId is not onboarded for product $productId")
 
-  final case class InvalidSignature(validationErrors: List[ValidationError])
-      extends ComponentError("0005", s"Signature not valid ${validationErrors.mkString("\n")}")
+  final case class InvalidSignature(signatureValidationErrors: List[SignatureValidationError])
+      extends ComponentError("0005", s"Signature not valid ${signatureValidationErrors.mkString("\n")}")
 
   final case class RelationshipDocumentNotFound(relationshipId: String)
       extends ComponentError("0006", s"Relationship document not found for relationship $relationshipId")

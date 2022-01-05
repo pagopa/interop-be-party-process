@@ -513,20 +513,20 @@ class ProcessApiServiceImpl(
 
     onComplete(result) {
       case Success(_) => confirmOnboarding200
-      case Failure(InvalidSignature(validationErrors)) =>
+      case Failure(InvalidSignature(signatureValidationErrors)) =>
         logger.error(
           "Error while confirming onboarding of token identified with {} - {}",
           tokenId,
-          validationErrors.mkString(", ")
+          signatureValidationErrors.mkString(", ")
         )
         val errorResponse: Problem = Problem(
           `type` = defaultProblemType,
           status = StatusCodes.Conflict.intValue,
           title = StatusCodes.Conflict.defaultMessage,
-          errors = validationErrors.map(validationError =>
+          errors = signatureValidationErrors.map(signatureValidationError =>
             ProblemError(
-              code = s"$serviceErrorCodePrefix-${validationError.getErrorCode}",
-              detail = validationError.getMessage
+              code = s"$serviceErrorCodePrefix-${signatureValidationError.code}",
+              detail = signatureValidationError.msg
             )
           )
         )
