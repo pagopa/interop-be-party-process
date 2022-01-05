@@ -3908,7 +3908,15 @@ class PartyProcessSpec
           _: Seq[String],
           _: Seq[String]
         )(_: String))
-        .expects(None, Some(organization.id), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
+        .expects(
+          None,
+          Some(organization.id),
+          Seq(PartyManagementDependency.PartyRole.MANAGER),
+          Seq.empty,
+          Seq.empty,
+          Seq.empty,
+          *
+        )
         .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(relationship))))
         .once()
 
@@ -3952,21 +3960,6 @@ class PartyProcessSpec
 
       val managerId = UUID.randomUUID()
 
-      val relationship =
-        PartyManagementDependency.Relationship(
-          id = UUID.randomUUID(),
-          from = managerId,
-          to = organization.id,
-          filePath = None,
-          fileName = None,
-          contentType = None,
-          role = PartyManagementDependency.PartyRole.MANAGER,
-          product = product,
-          state = PartyManagementDependency.RelationshipState.PENDING,
-          createdAt = relationshipTimestamp,
-          updatedAt = None
-        )
-
       (mockJWTReader
         .getClaims(_: String))
         .expects(*)
@@ -3982,8 +3975,16 @@ class PartyProcessSpec
           _: Seq[String],
           _: Seq[String]
         )(_: String))
-        .expects(None, Some(organization.id), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
-        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(relationship))))
+        .expects(
+          None,
+          Some(organization.id),
+          Seq(PartyManagementDependency.PartyRole.MANAGER),
+          Seq(PartyManagementDependency.RelationshipState.ACTIVE),
+          Seq.empty,
+          Seq.empty,
+          *
+        )
+        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq.empty)))
         .once()
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(managerId.toString)))
@@ -3992,7 +3993,7 @@ class PartyProcessSpec
         Http()
           .singleRequest(
             HttpRequest(
-              uri = s"$url/institutions/$institutionId/products",
+              uri = s"$url/institutions/$institutionId/products?states=ACTIVE",
               method = HttpMethods.GET,
               headers = authorization
             )

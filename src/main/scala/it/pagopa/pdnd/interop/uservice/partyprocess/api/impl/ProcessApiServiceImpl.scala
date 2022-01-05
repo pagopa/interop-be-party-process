@@ -961,25 +961,27 @@ class ProcessApiServiceImpl(
   /** Code: 200, Message: successful operation, DataType: Products
     * Code: 404, Message: Institution not found, DataType: Problem
     */
-  override def retrieveInstitutionProducts(institutionId: String)(implicit
+  override def retrieveInstitutionProducts(institutionId: String, states: String)(implicit
     toEntityMarshallerProducts: ToEntityMarshaller[Products],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     contexts: Seq[(String, String)]
   ): Route = {
+    val statesArray = parseArrayParameters(states)
     logger.info("Retrieving products for institution {}", institutionId)
     val result = for {
-      bearer       <- getFutureBearer(contexts)
-      _            <- getCallerUserIdentifier(bearer)
-      organization <- partyManagementService.retrieveOrganizationByExternalId(institutionId)(bearer)
+      bearer          <- getFutureBearer(contexts)
+      _               <- getCallerUserIdentifier(bearer)
+      organization    <- partyManagementService.retrieveOrganizationByExternalId(institutionId)(bearer)
+      statesEnumArray <- statesArray.traverse(PartyManagementDependency.RelationshipState.fromValue).toFuture
       organizationRelationships <- partyManagementService.retrieveRelationships(
         from = None,
         to = Some(organization.id),
-        roles = Seq.empty,
-        states = Seq.empty,
+        roles = Seq(PartyManagementDependency.PartyRole.MANAGER),
+        states = statesEnumArray,
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
-    } yield Products(products = extractActiveProducts(organizationRelationships).map(relationshipProductToApi))
+    } yield Products(products = extractProducts(organizationRelationships).map(relationshipProductToApi))
 
     onComplete(result) {
       case Success(institution) if institution.products.isEmpty =>
@@ -998,8 +1000,8 @@ class ProcessApiServiceImpl(
     }
   }
 
-  private def extractActiveProducts(relationships: Relationships): Seq[RelationshipProduct] = {
-    relationships.items.filter(isAnOnboardedManager).map(_.product)
+  private def extractProducts(relationships: Relationships): Seq[RelationshipProduct] = {
+    relationships.items.map(_.product).distinct
   }
 
   private def getFileAsString(filePath: String): Future[String] = for {

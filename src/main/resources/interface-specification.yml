@@ -288,6 +288,15 @@ paths:
           required: true
           schema:
             type: string
+        - name: states
+          in: query
+          description: comma separated sequence of states to filter the response with
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/RelationshipState'
+            default: [ ]
+          explode: false
       responses:
         '200':
           description: successful operation
