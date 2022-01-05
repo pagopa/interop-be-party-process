@@ -35,7 +35,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{
 import it.pagopa.pdnd.interop.uservice.partyprocess.error.PartyProcessErrors.ValidationRequestError
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.partyprocess.service._
-import it.pagopa.pdnd.interop.uservice.partyprocess.service.impl._
+import it.pagopa.pdnd.interop.uservice.partyprocess.service.impl.{PassthroughSignatureValidationService, _}
 import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.api.InstitutionApi
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.api.UserApi
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.invoker.ApiKeyValue
@@ -74,13 +74,20 @@ trait UserRegistryManagementDependency {
     )
 }
 
+trait SignatureValidationServiceDependency {
+  final val signatureValidationService: SignatureValidationService =
+    if (ApplicationConfiguration.signatureValidationEnabled) SignatureValidationServiceImpl
+    else PassthroughSignatureValidationService
+}
+
 object Main
     extends App
     with CORSSupport
     with PartyManagementDependency
     with PartyProxyDependency
     with AttributeRegistryDependency
-    with UserRegistryManagementDependency {
+    with UserRegistryManagementDependency
+    with SignatureValidationServiceDependency {
 
   val dependenciesLoaded: Future[(FileManager, PersistedTemplate, JWTReader)] = for {
     fileManager  <- FileManager.getConcreteImplementation(StorageConfiguration.runtimeFileManager).toFuture
@@ -119,7 +126,7 @@ object Main
         PDFCreatorImpl,
         fileManager,
         signatureService,
-        SignatureValidationService,
+        signatureValidationService,
         mailer,
         mailTemplate,
         jwtReader
