@@ -6,11 +6,12 @@ import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
+import com.typesafe.scalalogging.Logger
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
+import it.pagopa.pdnd.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.getFutureBearer
-import it.pagopa.pdnd.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.pdnd.interop.commons.utils.OpenapiUtils._
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions._
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
@@ -34,8 +35,8 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{
   roleToDependency
 }
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration
-import it.pagopa.pdnd.interop.uservice.partyprocess.error._
-import it.pagopa.pdnd.interop.uservice.partyprocess.model.{User, _}
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.PartyProcessErrors._
+import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.service._
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.Certification.{
   NONE => CertificationEnumsNone
@@ -53,8 +54,6 @@ import java.nio.file.{Files, Path}
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
-import com.typesafe.scalalogging.Logger
-import it.pagopa.pdnd.interop.uservice.partyprocess.error.PartyProcessErrors._
 
 class ProcessApiServiceImpl(
   partyManagementService: PartyManagementService,
@@ -886,7 +885,7 @@ class ProcessApiServiceImpl(
   private def getCallerUserIdentifier(bearer: String): Future[UUID] = {
     val subject = for {
       claims <- jwtReader.getClaims(bearer).toFuture
-      uidTxt <- Option(claims.getStringClaim(uidClaim)).toFuture(PartyProcessErrors.ClaimNotFound(uidClaim))
+      uidTxt <- Option(claims.getStringClaim(uidClaim)).toFuture(ClaimNotFound(uidClaim))
       uid    <- uidTxt.toFutureUUID
     } yield uid
 
