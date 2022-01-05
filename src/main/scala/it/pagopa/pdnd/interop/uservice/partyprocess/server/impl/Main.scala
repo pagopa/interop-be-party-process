@@ -131,7 +131,7 @@ object Main
         jwtReader
       ),
       new ProcessApiMarshallerImpl(),
-      SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
+      jwtReader.OAuth2JWTValidatorAsContexts
     )
 
     val healthApi: HealthApi = new HealthApi(
