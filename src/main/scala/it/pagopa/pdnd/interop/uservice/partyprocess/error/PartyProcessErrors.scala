@@ -8,8 +8,6 @@ import java.util.UUID
 
 object PartyProcessErrors {
 
-  final case class ValidationRequestError(errorMessage: String) extends ComponentError("0000", errorMessage)
-
   final case class ClaimNotFound(claim: String) extends ComponentError("0001", s"Claim $claim not found")
 
   final case class ContentTypeParsingError(contentType: String, errors: List[ErrorInfo])

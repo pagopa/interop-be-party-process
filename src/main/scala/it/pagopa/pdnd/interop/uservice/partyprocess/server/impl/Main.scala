@@ -16,6 +16,7 @@ import it.pagopa.pdnd.interop.commons.mail.service.impl.CourierMailerConfigurati
 import it.pagopa.pdnd.interop.commons.mail.service.impl.DefaultPDNDMailer
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.Authenticator
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions.TryOps
+import it.pagopa.pdnd.interop.commons.utils.errors.ValidationRequestError
 import it.pagopa.pdnd.interop.commons.utils.{CORSSupport, OpenapiUtils}
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.api.AttributeApi
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
@@ -32,10 +33,9 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{
   classicActorSystem,
   executionContext
 }
-import it.pagopa.pdnd.interop.uservice.partyprocess.error.PartyProcessErrors.ValidationRequestError
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.partyprocess.service._
-import it.pagopa.pdnd.interop.uservice.partyprocess.service.impl.{PassthroughSignatureValidationService, _}
+import it.pagopa.pdnd.interop.uservice.partyprocess.service.impl._
 import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.api.InstitutionApi
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.api.UserApi
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.invoker.ApiKeyValue
