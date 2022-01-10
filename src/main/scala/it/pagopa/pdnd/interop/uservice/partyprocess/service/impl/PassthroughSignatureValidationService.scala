@@ -2,7 +2,7 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
 import cats.data.{Validated, ValidatedNel}
 import eu.europa.esig.dss.validation.SignedDocumentValidator
-import it.pagopa.pdnd.interop.uservice.partyprocess.error.validation.SignatureValidationError
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.SignatureValidationError
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.SignatureValidationService
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{User => UserRegistryUser}
 

@@ -2,7 +2,6 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.error
 
 import akka.http.scaladsl.model.ErrorInfo
 import it.pagopa.pdnd.interop.commons.utils.errors.ComponentError
-import it.pagopa.pdnd.interop.uservice.partyprocess.error.validation.SignatureValidationError
 
 import java.util.UUID
 

@@ -1,4 +1,4 @@
-package it.pagopa.pdnd.interop.uservice.partyprocess.error.validation
+package it.pagopa.pdnd.interop.uservice.partyprocess.error
 
 import it.pagopa.pdnd.interop.commons.utils.errors.PDNDError
 
