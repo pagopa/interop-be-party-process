@@ -1,5 +1,6 @@
 package {{invokerPackage}}
 
+import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 {{#apiInfo}}{{#apis}}{{#operations}}import {{package}}.{{classname}}
 {{/operations}}{{/apis}}{{/apiInfo}}
@@ -12,10 +13,14 @@ import com.atlassian.oai.validator.model.Request.Method
 import com.atlassian.oai.validator.model.SimpleRequest.Builder
 import com.atlassian.oai.validator.report.ValidationReport
 import com.github.mustachejava.DefaultMustacheFactory
+
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
-import java.io.{BufferedWriter, File, FileWriter, StringWriter}
+import java.io.{BufferedWriter, File, FileOutputStream, FileWriter, StringWriter}
+import com.typesafe.config.{Config, ConfigFactory}
 import scala.collection.mutable
 
 class Controller({{#apiInfo}}{{#apis}}{{#operations}}{{classVarName}}: {{classname}}{{^-last}}, {{/-last}}{{/operations}}{{/apis}}{{/apiInfo}}, validationExceptionToRoute: Option[ValidationReport => Route] = None)(implicit system: ActorSystem) {

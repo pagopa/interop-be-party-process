@@ -29,7 +29,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{relationshipStateToApi, roleToApi}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.ProcessApiServiceImpl
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{classicActorSystem, executionContext}
-import it.pagopa.pdnd.interop.uservice.partyprocess.error.validation.ValidationError
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.SignatureValidationError
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.{Products => ModelProducts, _}
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.partyprocess.{model => PartyProcess}
@@ -1858,31 +1858,31 @@ class PartyProcessSpec
       (mockSignatureValidationService
         .isDocumentSigned(_: SignedDocumentValidator))
         .expects(*)
-        .returning(().validNel[ValidationError])
+        .returning(().validNel[SignatureValidationError])
         .once()
 
       (mockSignatureValidationService
         .verifySignature(_: SignedDocumentValidator))
         .expects(*)
-        .returning(().validNel[ValidationError])
+        .returning(().validNel[SignatureValidationError])
         .once()
 
       (mockSignatureValidationService
         .verifySignatureForm(_: SignedDocumentValidator))
         .expects(*)
-        .returning(().validNel[ValidationError])
+        .returning(().validNel[SignatureValidationError])
         .once()
 
       (mockSignatureValidationService
         .verifyDigest(_: SignedDocumentValidator, _: String))
         .expects(*, *)
-        .returning(().validNel[ValidationError])
+        .returning(().validNel[SignatureValidationError])
         .once()
 
       (mockSignatureValidationService
         .verifyManagerTaxCode(_: SignedDocumentValidator, _: Seq[UserRegistryUser]))
         .expects(*, *)
-        .returning(().validNel[ValidationError])
+        .returning(().validNel[SignatureValidationError])
         .once()
 
       (mockPartyManagementService

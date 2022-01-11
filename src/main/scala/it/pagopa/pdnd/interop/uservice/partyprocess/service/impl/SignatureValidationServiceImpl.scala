@@ -6,7 +6,8 @@ import eu.europa.esig.dss.enumerations.{DigestAlgorithm, Indication, SignatureFo
 import eu.europa.esig.dss.model.DSSDocument
 import eu.europa.esig.dss.validation.reports.Reports
 import eu.europa.esig.dss.validation.{AdvancedSignature, SignedDocumentValidator}
-import it.pagopa.pdnd.interop.uservice.partyprocess.error.validation._
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.SignatureValidationError
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.ValidationErrors._
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.SignatureValidationService
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{User => UserRegistryUser}
 
@@ -18,7 +19,7 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
 
   private final val signatureRegex: Regex = "(TINIT-)(.*)".r
 
-  def verifySignatureForm(documentValidator: SignedDocumentValidator): ValidatedNel[ValidationError, Unit] = {
+  def verifySignatureForm(documentValidator: SignedDocumentValidator): ValidatedNel[SignatureValidationError, Unit] = {
     val signatures: List[AdvancedSignature] = documentValidator.getSignatures.asScala.toList
     val invalidSignatureForms: List[SignatureForm] =
       signatures.map(_.getSignatureForm).filter(_ != SignatureForm.CAdES)
@@ -27,24 +28,24 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
 
     validation match {
       case Left(throwable)  => throwable.invalidNel[Unit]
-      case Right(validated) => validated.validNel[ValidationError]
+      case Right(validated) => validated.validNel[SignatureValidationError]
     }
   }
 
-  def isDocumentSigned(documentValidator: SignedDocumentValidator): ValidatedNel[ValidationError, Unit] = {
-    val validation: Either[ValidationError, Unit] =
+  def isDocumentSigned(documentValidator: SignedDocumentValidator): ValidatedNel[SignatureValidationError, Unit] = {
+    val validation: Either[SignatureValidationError, Unit] =
       Either.cond(documentValidator.getSignatures.asScala.nonEmpty, (), SignatureNotFound)
 
     validation match {
       case Left(throwable)  => throwable.invalidNel[Unit]
-      case Right(validated) => validated.validNel[ValidationError]
+      case Right(validated) => validated.validNel[SignatureValidationError]
     }
   }
 
   def verifyDigest(
     documentValidator: SignedDocumentValidator,
     originalDigest: String
-  ): ValidatedNel[ValidationError, Unit] = {
+  ): ValidatedNel[SignatureValidationError, Unit] = {
 
     val sign: AdvancedSignature       = documentValidator.getSignatures.get(0)
     val incomingOriginal: DSSDocument = documentValidator.getOriginalDocuments(sign.getId).get(0)
@@ -55,13 +56,13 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
 
     validation match {
       case Left(throwable)  => throwable.invalidNel[Unit]
-      case Right(validated) => validated.validNel[ValidationError]
+      case Right(validated) => validated.validNel[SignatureValidationError]
     }
 
   }
 
-  def verifySignature(documentValidator: SignedDocumentValidator): ValidatedNel[ValidationError, Unit] = {
-    val validation: Either[ValidationError, Unit] = {
+  def verifySignature(documentValidator: SignedDocumentValidator): ValidatedNel[SignatureValidationError, Unit] = {
+    val validation: Either[SignatureValidationError, Unit] = {
       for {
         reports   <- validateDocument(documentValidator)
         validated <- isValid(reports)
@@ -70,16 +71,16 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
 
     validation match {
       case Left(throwable)  => throwable.invalidNel[Unit]
-      case Right(validated) => validated.validNel[ValidationError]
+      case Right(validated) => validated.validNel[SignatureValidationError]
     }
   }
 
   def verifyManagerTaxCode(
     documentValidator: SignedDocumentValidator,
     legals: Seq[UserRegistryUser]
-  ): ValidatedNel[ValidationError, Unit] = {
+  ): ValidatedNel[SignatureValidationError, Unit] = {
 
-    val validation: Either[ValidationError, Unit] = for {
+    val validation: Either[SignatureValidationError, Unit] = for {
       reports          <- validateDocument(documentValidator)
       signatureTaxCode <- extractTaxCode(reports)
       validated <- Either.cond(
@@ -91,18 +92,20 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
 
     validation match {
       case Left(throwable)  => throwable.invalidNel[Unit]
-      case Right(validated) => validated.validNel[ValidationError]
+      case Right(validated) => validated.validNel[SignatureValidationError]
     }
   }
 
-  private def validateDocument(documentValidator: SignedDocumentValidator): Either[ValidationError, Reports] = {
+  private def validateDocument(
+    documentValidator: SignedDocumentValidator
+  ): Either[SignatureValidationError, Reports] = {
     Try(documentValidator.validateDocument()) match {
       case Success(value) => Right(value)
       case Failure(ex)    => Left(DocumentValidationFail(ex.getMessage))
     }
   }
 
-  private def extractTaxCode(reports: Reports): Either[ValidationError, String] = {
+  private def extractTaxCode(reports: Reports): Either[SignatureValidationError, String] = {
     for {
       prefixedTaxCode <- reports.getDiagnosticData.getUsedCertificates.asScala
         .flatMap(c => Option(c.getSubjectSerialNumber))
@@ -115,7 +118,7 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
     } yield taxCode
   }
 
-  private def isValid(reports: Reports): Either[ValidationError, Unit] = {
+  private def isValid(reports: Reports): Either[SignatureValidationError, Unit] = {
     Either
       .cond(
         reports.getEtsiValidationReportJaxb.getSignatureValidationReport
