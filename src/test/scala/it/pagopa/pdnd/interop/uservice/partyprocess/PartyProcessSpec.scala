@@ -182,6 +182,7 @@ class PartyProcessSpec
         product = "product",
         productRole = "admin"
       )
+
     val delegate =
       User(
         name = "delegate",
@@ -201,7 +202,8 @@ class PartyProcessSpec
       fileName = None,
       contentType = None,
       role = PartyManagementDependency.PartyRole.MANAGER,
-      product = PartyManagementDependency.RelationshipProduct(id = "", role = "", createdAt = OffsetDateTime.now()),
+      product =
+        PartyManagementDependency.RelationshipProduct(id = "product", role = "admin", createdAt = OffsetDateTime.now()),
       state = state,
       createdAt = OffsetDateTime.now(),
       updatedAt = None
@@ -274,8 +276,9 @@ class PartyProcessSpec
     request(data, "onboarding/organization", HttpMethods.POST)
   }
 
-  def performOnboardingRequestByRoleForSuccess(
-    state: Option[PartyManagementDependency.RelationshipState]
+  def performOnboardingRequest(
+    state: Option[PartyManagementDependency.RelationshipState],
+    product: Option[String]
   ): HttpResponse = {
     val taxCode1       = "managerTaxCode"
     val taxCode2       = "delegateTaxCode"
@@ -342,8 +345,8 @@ class PartyProcessSpec
         productRole = "admin"
       )
 
-    val relationships = state match {
-      case Some(st) =>
+    val relationships = (state, product) match {
+      case (Some(st), Some(pr)) =>
         Seq(
           PartyManagementDependency.Relationship(
             id = UUID.randomUUID(),
@@ -353,14 +356,31 @@ class PartyProcessSpec
             fileName = None,
             contentType = None,
             role = PartyManagementDependency.PartyRole.MANAGER,
-            product =
-              PartyManagementDependency.RelationshipProduct(id = "", role = "", createdAt = OffsetDateTime.now()),
+            product = PartyManagementDependency
+              .RelationshipProduct(id = pr, role = "admin", createdAt = OffsetDateTime.now()),
             state = st,
             createdAt = OffsetDateTime.now(),
             updatedAt = None
           )
         )
-      case None => Seq.empty
+      case (Some(st), None) =>
+        Seq(
+          PartyManagementDependency.Relationship(
+            id = UUID.randomUUID(),
+            from = UUID.randomUUID(),
+            to = UUID.randomUUID(),
+            filePath = None,
+            fileName = None,
+            contentType = None,
+            role = PartyManagementDependency.PartyRole.MANAGER,
+            product = PartyManagementDependency
+              .RelationshipProduct(id = "product", role = "admin", createdAt = OffsetDateTime.now()),
+            state = st,
+            createdAt = OffsetDateTime.now(),
+            updatedAt = None
+          )
+        )
+      case _ => Seq.empty
     }
 
     (mockJWTReader
@@ -1363,15 +1383,7 @@ class PartyProcessSpec
 
     "onboard an organization with a legal and a delegate" in {
 
-      val response = performOnboardingRequestByRoleForSuccess(Some(PartyManagementDependency.RelationshipState.PENDING))
-
-      response.status mustBe StatusCodes.Created
-
-    }
-
-    "onboard an organization with a legal and a delegate (MANAGER RESTORE PENDING)" in {
-
-      val response = performOnboardingRequestByRoleForSuccess(Some(PartyManagementDependency.RelationshipState.PENDING))
+      val response = performOnboardingRequest(Some(PartyManagementDependency.RelationshipState.PENDING), None)
 
       response.status mustBe StatusCodes.Created
 
@@ -1379,7 +1391,7 @@ class PartyProcessSpec
 
     "onboard an organization with a legal and a delegate (MANAGER PENDING)" in {
 
-      val response = performOnboardingRequestByRoleForSuccess(Some(PartyManagementDependency.RelationshipState.PENDING))
+      val response = performOnboardingRequest(Some(PartyManagementDependency.RelationshipState.PENDING), None)
 
       response.status mustBe StatusCodes.Created
 
@@ -1388,7 +1400,25 @@ class PartyProcessSpec
     "onboard an organization with a legal and a delegate (MANAGER REJECTED)" in {
 
       val response =
-        performOnboardingRequestByRoleForSuccess(Some(PartyManagementDependency.RelationshipState.REJECTED))
+        performOnboardingRequest(Some(PartyManagementDependency.RelationshipState.REJECTED), None)
+
+      response.status mustBe StatusCodes.Created
+
+    }
+
+    "onboard an organization with a legal and a delegate (MANAGER ACTIVE for a different product)" in {
+
+      val response =
+        performOnboardingRequest(Some(PartyManagementDependency.RelationshipState.ACTIVE), Some("product1"))
+
+      response.status mustBe StatusCodes.Created
+
+    }
+
+    "onboard an organization with a legal and a delegate (MANAGER SUSPENDED for a different product)" in {
+
+      val response =
+        performOnboardingRequest(Some(PartyManagementDependency.RelationshipState.SUSPENDED), Some("product1"))
 
       response.status mustBe StatusCodes.Created
 
