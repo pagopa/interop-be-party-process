@@ -294,7 +294,7 @@ paths:
           schema:
             type: array
             items:
-              $ref: '#/components/schemas/RelationshipState'
+              $ref: '#/components/schemas/ProductState'
             default: [ ]
           explode: false
       responses:
@@ -752,13 +752,23 @@ components:
       required:
         - person
         - institutions
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+        state:
+          $ref: '#/components/schemas/ProductState'
+      required:
+        - id
+        - state
     Products:
       type: object
       properties:
         products:
           type: array
           items:
-            $ref: '#/components/schemas/ProductInfo'
+            $ref: '#/components/schemas/Product'
       required:
         - products
     ProductRolesResponse:
@@ -802,6 +812,12 @@ components:
         - SUSPENDED
         - DELETED
         - REJECTED
+    ProductState:
+      type: string
+      description: Represents the product state
+      enum:
+        - PENDING
+        - ACTIVE
     Problem:
       properties:
         type:
