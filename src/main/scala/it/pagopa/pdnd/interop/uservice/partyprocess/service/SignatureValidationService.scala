@@ -4,35 +4,35 @@ import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, Validated, ValidatedNel}
 import cats.implicits._
 import eu.europa.esig.dss.validation.SignedDocumentValidator
-import it.pagopa.pdnd.interop.uservice.partyprocess.error.InvalidSignature
-import it.pagopa.pdnd.interop.uservice.partyprocess.error.validation._
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.PartyProcessErrors.InvalidSignature
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.SignatureValidationError
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{User => UserRegistryUser}
 
 import scala.concurrent.Future
 
 trait SignatureValidationService {
 
-  def verifySignatureForm(documentValidator: SignedDocumentValidator): ValidatedNel[ValidationError, Unit]
+  def verifySignatureForm(documentValidator: SignedDocumentValidator): ValidatedNel[SignatureValidationError, Unit]
 
-  def isDocumentSigned(documentValidator: SignedDocumentValidator): ValidatedNel[ValidationError, Unit]
+  def isDocumentSigned(documentValidator: SignedDocumentValidator): ValidatedNel[SignatureValidationError, Unit]
 
   def verifyDigest(
     documentValidator: SignedDocumentValidator,
     originalDigest: String
-  ): ValidatedNel[ValidationError, Unit]
+  ): ValidatedNel[SignatureValidationError, Unit]
 
-  def verifySignature(documentValidator: SignedDocumentValidator): ValidatedNel[ValidationError, Unit]
+  def verifySignature(documentValidator: SignedDocumentValidator): ValidatedNel[SignatureValidationError, Unit]
 
   def verifyManagerTaxCode(
     documentValidator: SignedDocumentValidator,
     legals: Seq[UserRegistryUser]
-  ): ValidatedNel[ValidationError, Unit]
+  ): ValidatedNel[SignatureValidationError, Unit]
 
 }
 
 object SignatureValidationService {
-  def validateSignature(validations: ValidatedNel[ValidationError, Unit]*): Future[Unit] = {
-    val result: Validated[NonEmptyList[ValidationError], Unit] = validations.reduce((v1, v2) => v1.combine(v2))
+  def validateSignature(validations: ValidatedNel[SignatureValidationError, Unit]*): Future[Unit] = {
+    val result: Validated[NonEmptyList[SignatureValidationError], Unit] = validations.reduce((v1, v2) => v1.combine(v2))
 
     result match {
       case Valid(unit) => Future.successful(unit)

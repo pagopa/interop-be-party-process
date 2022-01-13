@@ -1,6 +1,6 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
-import it.pagopa.pdnd.interop.uservice.partyprocess.error.ResourceConflictError
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.PartyProcessErrors.ResourceConflictError
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.{
   UserRegistryManagementInvoker,
   UserRegistryManagementService

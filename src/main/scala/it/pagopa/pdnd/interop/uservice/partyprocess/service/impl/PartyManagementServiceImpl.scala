@@ -4,7 +4,10 @@ import akka.http.scaladsl.server.directives.FileInfo
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.{ApiError, ApiRequest, BearerToken}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model._
-import it.pagopa.pdnd.interop.uservice.partyprocess.error.{ResourceConflictError, ResourceNotFoundError}
+import it.pagopa.pdnd.interop.uservice.partyprocess.error.PartyProcessErrors.{
+  ResourceConflictError,
+  ResourceNotFoundError
+}
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.{PartyManagementInvoker, PartyManagementService}
 import org.slf4j.{Logger, LoggerFactory}
 
