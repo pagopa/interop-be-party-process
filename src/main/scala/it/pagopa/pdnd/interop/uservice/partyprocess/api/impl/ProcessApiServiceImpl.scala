@@ -219,7 +219,8 @@ class ProcessApiServiceImpl(
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
-      _        <- notExistsAnOnboardedManager(relationships)
+      product  <- extractProduct(onboardingRequest)
+      _        <- notExistsAnOnboardedManager(relationships, product)
       response <- performOnboardingWithSignature(onboardingRequest, organization, currentUser)(bearer, contexts)
     } yield response
 
@@ -272,7 +273,8 @@ class ProcessApiServiceImpl(
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
-      _        <- existsAnOnboardedManager(organizationRelationships)
+      product  <- extractProduct(onboardingRequest)
+      _        <- existsAnOnboardedManager(organizationRelationships, product)
       response <- performOnboardingWithSignature(onboardingRequest, organization, currentUser)(bearer, contexts)
     } yield response
 
@@ -402,7 +404,8 @@ class ProcessApiServiceImpl(
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
-      _ <- existsAnOnboardedManager(relationships)
+      product <- extractProduct(onboardingRequest)
+      _       <- existsAnOnboardedManager(relationships, product)
       result <- performOnboardingWithoutSignature(onboardingRequest, Set(PartyRole.SUB_DELEGATE), organization)(
         bearer,
         contexts
@@ -436,7 +439,8 @@ class ProcessApiServiceImpl(
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
-      _ <- existsAnOnboardedManager(relationships)
+      product <- extractProduct(onboardingRequest)
+      _       <- existsAnOnboardedManager(relationships, product)
       result <- performOnboardingWithoutSignature(onboardingRequest, Set(PartyRole.OPERATOR), organization)(
         bearer,
         contexts
@@ -566,48 +570,37 @@ class ProcessApiServiceImpl(
     val areValidUsers: Boolean = users.forall(user => roles.contains(user.role))
     Future.fromTry(
       Either
-        .cond(
-          users.nonEmpty && areValidUsers,
-          users,
-          new RuntimeException(
-            s"Roles ${users.filter(user => !roles.contains(user.role)).mkString(", ")} are not admitted for this operation"
-          )
-        )
+        .cond(users.nonEmpty && areValidUsers, users, RolesNotAdmittedError(users, roles))
         .toTry
     )
   }
 
-  private def existsAnOnboardedManager(relationships: Relationships): Future[Unit] = Future.fromTry {
+  private def existsAnOnboardedManager(relationships: Relationships, product: String): Future[Unit] = Future.fromTry {
     Either
-      .cond(
-        relationships.items.exists(isAnOnboardedManager),
-        (),
-        new RuntimeException("No onboarded managers for this institution.")
-      )
+      .cond(relationships.items.exists(isAnOnboardedManager(product)), (), ManagerNotFoundError)
       .toTry
   }
 
-  private def isAnOnboardedManager(relationship: Relationship): Boolean = {
+  private def isAnOnboardedManager(product: String): Relationship => Boolean = relationship => {
 
     relationship.role == PartyManagementDependency.PartyRole.MANAGER &&
-    (
-      relationship.state != PartyManagementDependency.RelationshipState.PENDING &&
-        relationship.state != PartyManagementDependency.RelationshipState.REJECTED
-    )
-
-  }
-
-  private def notExistsAnOnboardedManager(relationships: Relationships): Future[Unit] = Future.fromTry {
-    Either
-      .cond(
-        relationships.items.forall(isNotAnOnboardedManager),
-        (),
-        new RuntimeException("Onboarded managers found for this institution.")
+      relationship.product.id == product &&
+      (
+        relationship.state != PartyManagementDependency.RelationshipState.PENDING &&
+          relationship.state != PartyManagementDependency.RelationshipState.REJECTED
       )
-      .toTry
+
   }
 
-  private def isNotAnOnboardedManager(relationship: Relationship): Boolean = !isAnOnboardedManager(relationship)
+  private def notExistsAnOnboardedManager(relationships: Relationships, product: String): Future[Unit] =
+    Future.fromTry {
+      Either
+        .cond(relationships.items.forall(isNotAnOnboardedManager(product)), (), ManagerFoundError)
+        .toTry
+    }
+
+  private def isNotAnOnboardedManager(product: String): Relationship => Boolean = relationship =>
+    !isAnOnboardedManager(product)(relationship)
 
   private def addUser(
     user: User
@@ -649,13 +642,13 @@ class ProcessApiServiceImpl(
       category <- categories.items
         .find(cat => institution.category == cat.code)
         .map(Future.successful)
-        .getOrElse(Future.failed(new RuntimeException(s"Invalid category ${institution.category}")))
+        .getOrElse(Future.failed(InvalidCategoryError(institution.category)))
       attributes <- attributeRegistryService.createAttribute("IPA", category.code, category.name, category.kind)(bearer)
       _ = logger.info("getInstitution {}", institution.id)
       seed = OrganizationSeed(
         institutionId = institution.id,
         description = institution.description,
-        digitalAddress = institution.digitalAddress, // TODO Must be non optional
+        digitalAddress = institution.digitalAddress,
         taxCode = institution.taxCode,
         attributes = attributes.attributes.filter(attr => attr.code.contains(institution.category)).map(_.id),
         products = Set.empty

@@ -2,6 +2,7 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.error
 
 import akka.http.scaladsl.model.ErrorInfo
 import it.pagopa.pdnd.interop.commons.utils.errors.ComponentError
+import it.pagopa.pdnd.interop.uservice.partyprocess.model.{PartyRole, User}
 
 import java.util.UUID
 
@@ -81,5 +82,16 @@ object PartyProcessErrors {
       extends ComponentError("0030", s"Products not found for institution $institutionId")
 
   final case object GetProductsError extends ComponentError("0031", "Error while getting products")
+
+  final case object ManagerFoundError    extends ComponentError("0032", "Onboarded managers found for this institution")
+  final case object ManagerNotFoundError extends ComponentError("0033", "No onboarded managers for this institution")
+
+  final case class RolesNotAdmittedError(users: Seq[User], roles: Set[PartyRole])
+      extends ComponentError(
+        "0034",
+        s"Roles ${users.filter(user => !roles.contains(user.role)).mkString(", ")} are not admitted for this operation"
+      )
+
+  final case class InvalidCategoryError(category: String) extends ComponentError("0035", s"Invalid category $category")
 
 }
