@@ -3885,7 +3885,8 @@ class PartyProcessSpec
   }
 
   "Institution products retrieval" must {
-    "retrieve products when the organization had an onboarding" in {
+
+    "retrieve products" in {
       val uid = "bf80fac0-2775-4646-8fcf-28e083751901"
 
       val institutionId     = "institutionId"
@@ -3900,9 +3901,12 @@ class PartyProcessSpec
         attributes = Seq.empty
       )
 
-      val managerId = UUID.randomUUID()
+      val managerId        = UUID.randomUUID()
+      val activeProduct    = "activeProduct"
+      val pendingProduct   = "pendingProduct"
+      val suspendedProduct = "suspendedProduct"
 
-      val relationship =
+      val relationships = Seq(
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
           from = managerId,
@@ -3911,11 +3915,38 @@ class PartyProcessSpec
           fileName = None,
           contentType = None,
           role = PartyManagementDependency.PartyRole.MANAGER,
-          product = product,
+          product = product.copy(id = activeProduct),
           state = PartyManagementDependency.RelationshipState.ACTIVE,
           createdAt = relationshipTimestamp,
           updatedAt = None
+        ),
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = managerId,
+          to = organization.id,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product.copy(id = pendingProduct),
+          state = PartyManagementDependency.RelationshipState.PENDING,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        ),
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = managerId,
+          to = organization.id,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product.copy(id = suspendedProduct),
+          state = PartyManagementDependency.RelationshipState.SUSPENDED,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
         )
+      )
 
       (mockJWTReader
         .getClaims(_: String))
@@ -3938,8 +3969,21 @@ class PartyProcessSpec
           _: Seq[String],
           _: Seq[String]
         )(_: String))
-        .expects(None, Some(organization.id), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
-        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(relationship))))
+        .expects(
+          None,
+          Some(organization.id),
+          Seq(PartyManagementDependency.PartyRole.MANAGER),
+          Seq(
+            PartyManagementDependency.RelationshipState.PENDING,
+            PartyManagementDependency.RelationshipState.ACTIVE,
+            PartyManagementDependency.RelationshipState.SUSPENDED,
+            PartyManagementDependency.RelationshipState.DELETED
+          ),
+          Seq.empty,
+          Seq.empty,
+          *
+        )
+        .returning(Future.successful(PartyManagementDependency.Relationships(items = relationships)))
         .once()
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(managerId.toString)))
@@ -3957,10 +4001,301 @@ class PartyProcessSpec
 
       val body = Unmarshal(response.entity).to[ModelProducts].futureValue
 
-      body.products must contain only productInfo
+      val expected = Set(
+        Product(id = activeProduct, ProductState.ACTIVE),
+        Product(id = pendingProduct, ProductState.PENDING),
+        Product(id = suspendedProduct, ProductState.ACTIVE)
+      )
+
+      body.products.toSet mustBe expected
     }
 
-    "retrieve no products when the organization had not an onboarding" in {
+    "retrieve products asking PENDING" in {
+      val uid = "bf80fac0-2775-4646-8fcf-28e083751901"
+
+      val institutionId     = "institutionId"
+      val institutionIdUUID = UUID.randomUUID()
+
+      val organization = Organization(
+        id = institutionIdUUID,
+        institutionId = institutionId,
+        description = "",
+        digitalAddress = "",
+        taxCode = "",
+        attributes = Seq.empty
+      )
+
+      val managerId        = UUID.randomUUID()
+      val activeProduct    = "activeProduct"
+      val suspendedProduct = "suspendedProduct"
+      val deletedProduct   = "deletedProduct"
+      val pendingProduct   = "pendingProduct"
+
+      val relationships = Seq(
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = managerId,
+          to = organization.id,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product.copy(id = pendingProduct),
+          state = PartyManagementDependency.RelationshipState.PENDING,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        ),
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = managerId,
+          to = organization.id,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product.copy(id = activeProduct),
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        ),
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = managerId,
+          to = organization.id,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product.copy(id = suspendedProduct),
+          state = PartyManagementDependency.RelationshipState.SUSPENDED,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        ),
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = managerId,
+          to = organization.id,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product.copy(id = deletedProduct),
+          state = PartyManagementDependency.RelationshipState.DELETED,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        )
+      )
+
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(mockUid(uid))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveOrganizationByExternalId(_: String)(_: String))
+        .expects(institutionId, *)
+        .returning(Future.successful(organization))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          None,
+          Some(organization.id),
+          Seq(PartyManagementDependency.PartyRole.MANAGER),
+          Seq(
+            PartyManagementDependency.RelationshipState.PENDING,
+            PartyManagementDependency.RelationshipState.ACTIVE,
+            PartyManagementDependency.RelationshipState.SUSPENDED,
+            PartyManagementDependency.RelationshipState.DELETED
+          ),
+          Seq.empty,
+          Seq.empty,
+          *
+        )
+        .returning(Future.successful(PartyManagementDependency.Relationships(items = relationships)))
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(managerId.toString)))
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/institutions/$institutionId/products?states=PENDING",
+              method = HttpMethods.GET,
+              headers = authorization
+            )
+          )
+          .futureValue
+
+      val body = Unmarshal(response.entity).to[ModelProducts].futureValue
+
+      val expected = Product(pendingProduct, ProductState.PENDING)
+
+      body.products must contain only expected
+    }
+
+    "retrieve products asking ACTIVE" in {
+      val uid = "bf80fac0-2775-4646-8fcf-28e083751901"
+
+      val institutionId     = "institutionId"
+      val institutionIdUUID = UUID.randomUUID()
+
+      val organization = Organization(
+        id = institutionIdUUID,
+        institutionId = institutionId,
+        description = "",
+        digitalAddress = "",
+        taxCode = "",
+        attributes = Seq.empty
+      )
+
+      val managerId        = UUID.randomUUID()
+      val activeProduct    = "activeProduct"
+      val suspendedProduct = "suspendedProduct"
+      val deletedProduct   = "deletedProduct"
+      val pendingProduct   = "pendingProduct"
+
+      val relationships = Seq(
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = managerId,
+          to = organization.id,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product.copy(id = pendingProduct),
+          state = PartyManagementDependency.RelationshipState.PENDING,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        ),
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = managerId,
+          to = organization.id,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product.copy(id = activeProduct),
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        ),
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = managerId,
+          to = organization.id,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product.copy(id = suspendedProduct),
+          state = PartyManagementDependency.RelationshipState.SUSPENDED,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        ),
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = managerId,
+          to = organization.id,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product.copy(id = deletedProduct),
+          state = PartyManagementDependency.RelationshipState.DELETED,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        ),
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = managerId,
+          to = organization.id,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product.copy(id = deletedProduct),
+          state = PartyManagementDependency.RelationshipState.PENDING,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        )
+      )
+
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(mockUid(uid))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveOrganizationByExternalId(_: String)(_: String))
+        .expects(institutionId, *)
+        .returning(Future.successful(organization))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          None,
+          Some(organization.id),
+          Seq(PartyManagementDependency.PartyRole.MANAGER),
+          Seq(
+            PartyManagementDependency.RelationshipState.PENDING,
+            PartyManagementDependency.RelationshipState.ACTIVE,
+            PartyManagementDependency.RelationshipState.SUSPENDED,
+            PartyManagementDependency.RelationshipState.DELETED
+          ),
+          Seq.empty,
+          Seq.empty,
+          *
+        )
+        .returning(Future.successful(PartyManagementDependency.Relationships(items = relationships)))
+        .once()
+
+      val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(managerId.toString)))
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/institutions/$institutionId/products?states=ACTIVE",
+              method = HttpMethods.GET,
+              headers = authorization
+            )
+          )
+          .futureValue
+
+      val body = Unmarshal(response.entity).to[ModelProducts].futureValue
+
+      val expected = Set(
+        Product(activeProduct, ProductState.ACTIVE),
+        Product(suspendedProduct, ProductState.ACTIVE),
+        Product(deletedProduct, ProductState.ACTIVE)
+      )
+
+      body.products.toSet mustBe expected
+    }
+
+    "retrieve no products" in {
       val uid               = "bf80fac0-2775-4646-8fcf-28e083751901"
       val institutionId     = "institutionId"
       val institutionIdUUID = UUID.randomUUID()
@@ -3982,21 +4317,6 @@ class PartyProcessSpec
 
       val managerId = UUID.randomUUID()
 
-      val relationship =
-        PartyManagementDependency.Relationship(
-          id = UUID.randomUUID(),
-          from = managerId,
-          to = organization.id,
-          filePath = None,
-          fileName = None,
-          contentType = None,
-          role = PartyManagementDependency.PartyRole.MANAGER,
-          product = product,
-          state = PartyManagementDependency.RelationshipState.PENDING,
-          createdAt = relationshipTimestamp,
-          updatedAt = None
-        )
-
       (mockJWTReader
         .getClaims(_: String))
         .expects(*)
@@ -4012,8 +4332,21 @@ class PartyProcessSpec
           _: Seq[String],
           _: Seq[String]
         )(_: String))
-        .expects(None, Some(organization.id), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
-        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(relationship))))
+        .expects(
+          None,
+          Some(organization.id),
+          Seq(PartyManagementDependency.PartyRole.MANAGER),
+          Seq(
+            PartyManagementDependency.RelationshipState.PENDING,
+            PartyManagementDependency.RelationshipState.ACTIVE,
+            PartyManagementDependency.RelationshipState.SUSPENDED,
+            PartyManagementDependency.RelationshipState.DELETED
+          ),
+          Seq.empty,
+          Seq.empty,
+          *
+        )
+        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq.empty)))
         .once()
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(managerId.toString)))
@@ -4022,7 +4355,7 @@ class PartyProcessSpec
         Http()
           .singleRequest(
             HttpRequest(
-              uri = s"$url/institutions/$institutionId/products",
+              uri = s"$url/institutions/$institutionId/products?states=ACTIVE",
               method = HttpMethods.GET,
               headers = authorization
             )

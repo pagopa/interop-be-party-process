@@ -20,7 +20,6 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   OrganizationSeed,
   PersonSeed,
   Relationship,
-  RelationshipProduct,
   RelationshipProductSeed,
   RelationshipSeed,
   Relationships,
@@ -72,14 +71,32 @@ class ProcessApiServiceImpl(
 
   private val logger = Logger.takingImplicit[ContextFieldsToLog](LoggerFactory.getLogger(this.getClass))
 
-  final val adminPartyRoles: Set[PartyRole] = Set(PartyRole.MANAGER, PartyRole.DELEGATE, PartyRole.SUB_DELEGATE)
+  private final val adminPartyRoles: Set[PartyRole] = Set(PartyRole.MANAGER, PartyRole.DELEGATE, PartyRole.SUB_DELEGATE)
 
-  final val validOnboardingStates: Seq[PartyManagementDependency.RelationshipState] =
+  private final val validOnboardingStates: Seq[PartyManagementDependency.RelationshipState] =
     List(
       PartyManagementDependency.RelationshipState.ACTIVE,
       PartyManagementDependency.RelationshipState.DELETED,
       PartyManagementDependency.RelationshipState.SUSPENDED
     )
+
+  private final val statesForAllProducts: Seq[PartyManagementDependency.RelationshipState] =
+    Seq(
+      PartyManagementDependency.RelationshipState.PENDING,
+      PartyManagementDependency.RelationshipState.ACTIVE,
+      PartyManagementDependency.RelationshipState.SUSPENDED,
+      PartyManagementDependency.RelationshipState.DELETED
+    )
+
+  private final val statesForActiveProducts: Set[PartyManagementDependency.RelationshipState] =
+    Set[PartyManagementDependency.RelationshipState](
+      PartyManagementDependency.RelationshipState.ACTIVE,
+      PartyManagementDependency.RelationshipState.SUSPENDED,
+      PartyManagementDependency.RelationshipState.DELETED
+    )
+
+  private final val statesForPendingProducts: Set[PartyManagementDependency.RelationshipState] =
+    Set[PartyManagementDependency.RelationshipState](PartyManagementDependency.RelationshipState.PENDING)
 
   private def sendOnboardingMail(
     addresses: Seq[String],
@@ -949,25 +966,27 @@ class ProcessApiServiceImpl(
   /** Code: 200, Message: successful operation, DataType: Products
     * Code: 404, Message: Institution not found, DataType: Problem
     */
-  override def retrieveInstitutionProducts(institutionId: String)(implicit
+  override def retrieveInstitutionProducts(institutionId: String, states: String)(implicit
     toEntityMarshallerProducts: ToEntityMarshaller[Products],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     contexts: Seq[(String, String)]
   ): Route = {
+
     logger.info("Retrieving products for institution {}", institutionId)
     val result = for {
       bearer       <- getFutureBearer(contexts)
       _            <- getCallerUserIdentifier(bearer)
+      statesFilter <- parseArrayParameters(states).traverse(par => ProductState.fromValue(par)).toFuture
       organization <- partyManagementService.retrieveOrganizationByExternalId(institutionId)(bearer)
       organizationRelationships <- partyManagementService.retrieveRelationships(
         from = None,
         to = Some(organization.id),
-        roles = Seq.empty,
-        states = Seq.empty,
+        roles = Seq(PartyManagementDependency.PartyRole.MANAGER),
+        states = statesForAllProducts,
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
-    } yield Products(products = extractActiveProducts(organizationRelationships).map(relationshipProductToApi))
+    } yield Products(products = extractProducts(organizationRelationships, statesFilter))
 
     onComplete(result) {
       case Success(institution) if institution.products.isEmpty =>
@@ -986,17 +1005,23 @@ class ProcessApiServiceImpl(
     }
   }
 
-  private def extractActiveProducts(relationships: Relationships): Seq[RelationshipProduct] = {
-    relationships.items
-      .filterNot(rl =>
-        Set[PartyManagementDependency.RelationshipState](
-          PartyManagementDependency.RelationshipState.PENDING,
-          PartyManagementDependency.RelationshipState.REJECTED
-        )
-          .contains(rl.state)
-      )
-      .map(_.product)
-      .distinct
+  private def extractProducts(relationships: Relationships, statesFilter: List[ProductState]): Seq[Product] = {
+
+    val grouped: Seq[(String, Seq[PartyManagementDependency.RelationshipState])] = relationships.items
+      .groupBy(rl => rl.product.id)
+      .toSeq
+      .map { case (product, relationships) => product -> relationships.map(_.state) }
+
+    val allProducts: Seq[Product] = grouped.flatMap {
+      case (product, states) if states.exists(st => statesForActiveProducts.contains(st)) =>
+        Some(Product(product, ProductState.ACTIVE))
+      case (product, states) if states.nonEmpty && states.forall(st => statesForPendingProducts.contains(st)) =>
+        Some(Product(product, ProductState.PENDING))
+      case _ => None
+    }.distinct
+
+    allProducts.filter(product => statesFilter.forall(state => state == product.state))
+
   }
 
   private def getFileAsString(filePath: String): Future[String] = for {

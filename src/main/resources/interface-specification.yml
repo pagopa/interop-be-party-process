@@ -288,6 +288,15 @@ paths:
           required: true
           schema:
             type: string
+        - name: states
+          in: query
+          description: comma separated sequence of states to filter the response with
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/ProductState'
+            default: [ ]
+          explode: false
       responses:
         '200':
           description: successful operation
@@ -743,13 +752,23 @@ components:
       required:
         - person
         - institutions
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+        state:
+          $ref: '#/components/schemas/ProductState'
+      required:
+        - id
+        - state
     Products:
       type: object
       properties:
         products:
           type: array
           items:
-            $ref: '#/components/schemas/ProductInfo'
+            $ref: '#/components/schemas/Product'
       required:
         - products
     ProductRolesResponse:
@@ -793,6 +812,12 @@ components:
         - SUSPENDED
         - DELETED
         - REJECTED
+    ProductState:
+      type: string
+      description: Represents the product state
+      enum:
+        - PENDING
+        - ACTIVE
     Problem:
       properties:
         type:
