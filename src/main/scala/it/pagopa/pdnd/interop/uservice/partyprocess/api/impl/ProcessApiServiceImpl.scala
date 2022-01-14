@@ -25,7 +25,7 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   Relationships,
   Problem => _
 }
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model, model => PartyManagementDependency}
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApiService
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{
   relationshipProductToApi,
@@ -976,16 +976,16 @@ class ProcessApiServiceImpl(
     val result = for {
       bearer       <- getFutureBearer(contexts)
       _            <- getCallerUserIdentifier(bearer)
+      statesFilter <- parseArrayParameters(states).traverse(par => ProductState.fromValue(par)).toFuture
       organization <- partyManagementService.retrieveOrganizationByExternalId(institutionId)(bearer)
       organizationRelationships <- partyManagementService.retrieveRelationships(
         from = None,
         to = Some(organization.id),
         roles = Seq(PartyManagementDependency.PartyRole.MANAGER),
-        states = statesForSearchingProducts,
+        states = statesForAllProducts,
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
-      statesFilter <- parseArrayParameters(states).traverse(par => ProductState.fromValue(par)).toFuture
     } yield Products(products = extractProducts(organizationRelationships, statesFilter))
 
     onComplete(result) {
