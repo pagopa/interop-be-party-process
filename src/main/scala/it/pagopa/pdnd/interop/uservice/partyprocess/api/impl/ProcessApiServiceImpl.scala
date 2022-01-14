@@ -80,7 +80,7 @@ class ProcessApiServiceImpl(
       PartyManagementDependency.RelationshipState.SUSPENDED
     )
 
-  private final val statesForSearchingProducts: Seq[PartyManagementDependency.RelationshipState] =
+  private final val statesForAllProducts: Seq[PartyManagementDependency.RelationshipState] =
     Seq(
       PartyManagementDependency.RelationshipState.PENDING,
       PartyManagementDependency.RelationshipState.ACTIVE,
