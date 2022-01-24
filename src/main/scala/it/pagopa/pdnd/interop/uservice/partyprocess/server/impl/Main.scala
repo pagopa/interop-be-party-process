@@ -16,6 +16,7 @@ import it.pagopa.pdnd.interop.commons.mail.service.impl.CourierMailerConfigurati
 import it.pagopa.pdnd.interop.commons.mail.service.impl.DefaultPDNDMailer
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.Authenticator
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions.TryOps
+import it.pagopa.pdnd.interop.commons.utils.errors.GenericComponentErrors.ValidationRequestError
 import it.pagopa.pdnd.interop.commons.utils.{CORSSupport, OpenapiUtils}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{
@@ -64,12 +65,19 @@ trait UserRegistryManagementDependency {
     )
 }
 
+trait SignatureValidationServiceDependency {
+  final val signatureValidationService: SignatureValidationService =
+    if (ApplicationConfiguration.signatureValidationEnabled) SignatureValidationServiceImpl
+    else PassthroughSignatureValidationService
+}
+
 object Main
     extends App
     with CORSSupport
     with PartyManagementDependency
     with PartyProxyDependency
-    with UserRegistryManagementDependency {
+    with UserRegistryManagementDependency
+    with SignatureValidationServiceDependency {
 
   val dependenciesLoaded: Future[(FileManager, PersistedTemplate, JWTReader)] = for {
     fileManager  <- FileManager.getConcreteImplementation(StorageConfiguration.runtimeFileManager).toFuture
@@ -107,13 +115,13 @@ object Main
         PDFCreatorImpl,
         fileManager,
         signatureService,
-        SignatureValidationService,
+        signatureValidationService,
         mailer,
         mailTemplate,
         jwtReader
       ),
       new ProcessApiMarshallerImpl(),
-      SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
+      jwtReader.OAuth2JWTValidatorAsContexts
     )
 
     val healthApi: HealthApi = new HealthApi(
@@ -133,8 +141,7 @@ object Main
         val error =
           problemOf(
             StatusCodes.BadRequest,
-            "0000",
-            defaultMessage = OpenapiUtils.errorFromRequestValidationReport(report)
+            ValidationRequestError(OpenapiUtils.errorFromRequestValidationReport(report))
           )
         complete(error.status, error)(HealthApiMarshallerImpl.toEntityMarshallerProblem)
       })

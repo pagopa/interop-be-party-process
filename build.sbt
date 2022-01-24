@@ -12,8 +12,8 @@ ThisBuild / libraryDependencies := Dependencies.Jars.`server`.map(m =>
 
 ThisBuild / version := ComputeVersion.version
 
-resolvers in ThisBuild += "Pagopa Nexus Snapshots" at s"https://gateway.interop.pdnd.dev/nexus/repository/maven-snapshots/"
-resolvers in ThisBuild += "Pagopa Nexus Releases" at s"https://gateway.interop.pdnd.dev/nexus/repository/maven-releases/"
+ThisBuild / resolvers += "Pagopa Nexus Snapshots" at s"https://gateway.interop.pdnd.dev/nexus/repository/maven-snapshots/"
+ThisBuild / resolvers += "Pagopa Nexus Releases" at s"https://gateway.interop.pdnd.dev/nexus/repository/maven-releases/"
 ThisBuild / resolvers += "cefdigital" at s"https://ec.europa.eu/cefdigital/artifact/content/repositories/esignaturedss"
 
 credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
@@ -73,7 +73,7 @@ lazy val client = project
     name := "pdnd-interop-uservice-party-process-client",
     scalacOptions := Seq(),
     scalafmtOnCompile := true,
-    version := (version in ThisBuild).value,
+    version := (ThisBuild / version).value,
     libraryDependencies := Dependencies.Jars.client.map(m =>
       if (scalaVersion.value.startsWith("3.0"))
         m.withDottyCompat(scalaVersion.value)
@@ -120,4 +120,4 @@ lazy val root = (project in file("."))
 javaAgents += "io.kamon" % "kanela-agent" % "1.0.13"
 
 Test / fork := true
-javaOptions in Test += "-Dconfig.file=src/test/resources/application-test.conf"
+Test / javaOptions += "-Dconfig.file=src/test/resources/application-test.conf"

@@ -2,6 +2,8 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.common.system
 
 import com.typesafe.config.{Config, ConfigFactory}
 
+import scala.util.Try
+
 object ApplicationConfiguration {
   lazy val config: Config = ConfigFactory.load()
 
@@ -22,7 +24,9 @@ object ApplicationConfiguration {
       TODO MOVE TO PARTY REGISTRY MOCK
    */
   def destinationMails: Option[Seq[String]] =
-    Option(config.getString("uservice-party-process.destination-mails")).map(_.split(",").toSeq)
+    Try(config.getString("uservice-party-process.destination-mails")).toOption.map(_.split(",").toSeq)
+
+  def signatureValidationEnabled: Boolean = config.getBoolean("uservice-party-process.signature-validation-enabled")
 
   def euListOfTrustedListsURL: String = config.getString("uservice-party-process.eu_list_of_trusted_lists_url")
   def euOfficialJournalUrl: String    = config.getString("uservice-party-process.eu_official_journal_url")

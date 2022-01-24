@@ -2,6 +2,7 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.api
 
 import akka.http.scaladsl.model.StatusCode
 import it.pagopa.pdnd.interop.commons.utils.SprayCommonFormats.{fileFormat, offsetDateTimeFormat, uuidFormat}
+import it.pagopa.pdnd.interop.commons.utils.errors.ComponentError
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
@@ -20,26 +21,22 @@ package object impl extends DefaultJsonProtocol {
   implicit val onboardingDataFormat: RootJsonFormat[OnboardingData]         = jsonFormat8(OnboardingData)
   implicit val onboardingInfoFormat: RootJsonFormat[OnboardingInfo]         = jsonFormat2(OnboardingInfo)
   implicit val relationshipInfoFormat: RootJsonFormat[RelationshipInfo]     = jsonFormat10(RelationshipInfo)
+  implicit val productFormat: RootJsonFormat[Product]                       = jsonFormat2(Product)
   implicit val productsFormat: RootJsonFormat[Products]                     = jsonFormat1(Products)
 
   final val serviceErrorCodePrefix: String = "002"
   final val defaultProblemType: String     = "about:blank"
   final val uidClaim: String               = "uid"
 
-  def problemOf(
-    httpError: StatusCode,
-    errorCode: String,
-    exception: Throwable = new RuntimeException(),
-    defaultMessage: String = "Unknown error"
-  ): Problem =
+  def problemOf(httpError: StatusCode, error: ComponentError, defaultMessage: String = "Unknown error"): Problem =
     Problem(
       `type` = defaultProblemType,
       status = httpError.intValue,
       title = httpError.defaultMessage,
       errors = Seq(
         ProblemError(
-          code = s"$serviceErrorCodePrefix-$errorCode",
-          detail = Option(exception.getMessage).getOrElse(defaultMessage)
+          code = s"$serviceErrorCodePrefix-${error.code}",
+          detail = Option(error.getMessage).getOrElse(defaultMessage)
         )
       )
     )
