@@ -243,7 +243,7 @@ class ProcessApiServiceImpl(
 
     onComplete(result) {
       case Success(response) =>
-        onboardingOrganization201(response)
+        onboardingOrganization200(response)
       case Failure(ex: ContractNotFound) =>
         logger.error("Error while onboarding organization {}", onboardingRequest.institutionId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
@@ -432,7 +432,7 @@ class ProcessApiServiceImpl(
     } yield result
 
     onComplete(result) {
-      case Success(relationships) => onboardingSubDelegatesOnOrganization201(relationships)
+      case Success(relationships) => onboardingSubDelegatesOnOrganization200(relationships)
       case Failure(ex) =>
         logger.error("Error while onboarding subdelegates on organization {}", onboardingRequest.institutionId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, OnboardingSubdelegatesError)
@@ -469,7 +469,7 @@ class ProcessApiServiceImpl(
     } yield result
 
     onComplete(result) {
-      case Success(relationships) => onboardingOperators201(relationships)
+      case Success(relationships) => onboardingOperators200(relationships)
       case Failure(ex) =>
         logger.error("Error while onboarding operators on organization {}", onboardingRequest.institutionId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, OnboardingOperatorsError)
