@@ -222,7 +222,7 @@ class PartyProcessSpec
 
     (mockPartyRegistryService.getCategories _)
       .expects(*)
-      .returning(Future.successful(Categories(Seq(Category("C17", "attrs", "test")))))
+      .returning(Future.successful(Categories(Seq(Category("C17", "attrs", "test", "IPA")))))
       .once()
 
     (mockPartyManagementService
@@ -385,7 +385,7 @@ class PartyProcessSpec
 
     (mockPartyRegistryService.getCategories _)
       .expects(*)
-      .returning(Future.successful(Categories(Seq(Category("C17", "attrs", "test")))))
+      .returning(Future.successful(Categories(Seq(Category("C17", "attrs", "test", "IPA")))))
       .once()
 
     (mockPartyManagementService

@@ -658,7 +658,7 @@ class ProcessApiServiceImpl(
         description = institution.description,
         digitalAddress = institution.digitalAddress,
         taxCode = institution.taxCode,
-        attributes = Seq(PartyManagementAttribute("IPA", category.code)),
+        attributes = Seq(PartyManagementAttribute(category.origin, category.code)),
         products = Set.empty
       )
       organization <- partyManagementService.createOrganization(seed)(bearer)
