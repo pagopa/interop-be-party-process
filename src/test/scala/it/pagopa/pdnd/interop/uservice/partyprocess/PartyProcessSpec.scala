@@ -1385,7 +1385,7 @@ class PartyProcessSpec
 
       val response = performOnboardingRequest(Some(PartyManagementDependency.RelationshipState.PENDING), None)
 
-      response.status mustBe StatusCodes.Created
+      response.status mustBe StatusCodes.OK
 
     }
 
@@ -1393,7 +1393,7 @@ class PartyProcessSpec
 
       val response = performOnboardingRequest(Some(PartyManagementDependency.RelationshipState.PENDING), None)
 
-      response.status mustBe StatusCodes.Created
+      response.status mustBe StatusCodes.OK
 
     }
 
@@ -1402,7 +1402,7 @@ class PartyProcessSpec
       val response =
         performOnboardingRequest(Some(PartyManagementDependency.RelationshipState.REJECTED), None)
 
-      response.status mustBe StatusCodes.Created
+      response.status mustBe StatusCodes.OK
 
     }
 
@@ -1411,7 +1411,7 @@ class PartyProcessSpec
       val response =
         performOnboardingRequest(Some(PartyManagementDependency.RelationshipState.ACTIVE), Some("product1"))
 
-      response.status mustBe StatusCodes.Created
+      response.status mustBe StatusCodes.OK
 
     }
 
@@ -1420,7 +1420,7 @@ class PartyProcessSpec
       val response =
         performOnboardingRequest(Some(PartyManagementDependency.RelationshipState.SUSPENDED), Some("product1"))
 
-      response.status mustBe StatusCodes.Created
+      response.status mustBe StatusCodes.OK
 
     }
 
@@ -1637,7 +1637,7 @@ class PartyProcessSpec
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/operators", HttpMethods.POST)
 
-      response.status mustBe StatusCodes.Created
+      response.status mustBe StatusCodes.OK
 
     }
 
@@ -1854,7 +1854,7 @@ class PartyProcessSpec
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/subdelegates", HttpMethods.POST)
 
-      response.status mustBe StatusCodes.Created
+      response.status mustBe StatusCodes.OK
 
     }
 

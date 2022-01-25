@@ -11,7 +11,7 @@ object ValidationErrors {
         s"Original contract digest $originalDigest is not equal to $incomingDigest"
       )
 
-  case object InvalidDocumentSignature extends SignatureValidationError("0102", s"Document signature is invalid")
+  case object InvalidDocumentSignature extends SignatureValidationError("1002", s"Document signature is invalid")
 
   final case class InvalidSignatureForms(invalidSignatureForms: List[String])
       extends SignatureValidationError(
@@ -29,7 +29,7 @@ object ValidationErrors {
       extends SignatureValidationError("1005", "Invalid tax code format found in digital signature")
 
   case object TaxCodeNotFoundInSignature
-      extends SignatureValidationError("0106", "No tax code has been found in digital signature")
+      extends SignatureValidationError("1006", "No tax code has been found in digital signature")
 
   case object SignatureNotFound
       extends SignatureValidationError("1007", "No tax code has been found in digital signature")
