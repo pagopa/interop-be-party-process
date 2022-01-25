@@ -183,6 +183,10 @@ paths:
       responses:
         '201':
           description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelationshipsResponse'
         '400':
           description: Invalid ID supplied
           content:
@@ -205,6 +209,10 @@ paths:
       responses:
         '201':
           description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelationshipsResponse'
         '400':
           description: Invalid ID supplied
           content:

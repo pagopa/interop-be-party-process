@@ -403,14 +403,16 @@ class ProcessApiServiceImpl(
 
   }
 
-  /** Code: 201, Message: successful operation
+  /** Code: 201, Message: successful operation, DataType: Seq[RelationshipInfo]
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
-  override def onboardingSubDelegatesOnOrganization(
-    onboardingRequest: OnboardingRequest
-  )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
+  override def onboardingSubDelegatesOnOrganization(onboardingRequest: OnboardingRequest)(implicit
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerRelationshipInfoarray: ToEntityMarshaller[Seq[RelationshipInfo]],
+    contexts: Seq[(String, String)]
+  ): Route = {
     logger.info("Onboarding subdelegates on organization {}", onboardingRequest.institutionId)
-    val result: Future[Unit] = for {
+    val result: Future[Seq[RelationshipInfo]] = for {
       bearer       <- getFutureBearer(contexts)
       organization <- partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
       relationships <- partyManagementService.retrieveRelationships(
@@ -430,7 +432,7 @@ class ProcessApiServiceImpl(
     } yield result
 
     onComplete(result) {
-      case Success(_) => onboardingSubDelegatesOnOrganization201
+      case Success(relationships) => onboardingSubDelegatesOnOrganization201(relationships)
       case Failure(ex) =>
         logger.error("Error while onboarding subdelegates on organization {}", onboardingRequest.institutionId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, OnboardingSubdelegatesError)
@@ -438,14 +440,16 @@ class ProcessApiServiceImpl(
     }
   }
 
-  /** Code: 201, Message: successful operation
+  /** Code: 201, Message: successful operation, DataType: Seq[RelationshipInfo]
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     */
-  override def onboardingOperators(
-    onboardingRequest: OnboardingRequest
-  )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
+  override def onboardingOperators(onboardingRequest: OnboardingRequest)(implicit
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerRelationshipInfoarray: ToEntityMarshaller[Seq[RelationshipInfo]],
+    contexts: Seq[(String, String)]
+  ): Route = {
     logger.info("Onboarding operators on organization {}", onboardingRequest.institutionId)
-    val result: Future[Unit] = for {
+    val result: Future[Seq[RelationshipInfo]] = for {
       bearer       <- getFutureBearer(contexts)
       organization <- partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
       relationships <- partyManagementService.retrieveRelationships(
@@ -465,7 +469,7 @@ class ProcessApiServiceImpl(
     } yield result
 
     onComplete(result) {
-      case Success(_) => onboardingOperators201
+      case Success(relationships) => onboardingOperators201(relationships)
       case Failure(ex) =>
         logger.error("Error while onboarding operators on organization {}", onboardingRequest.institutionId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, OnboardingOperatorsError)
@@ -477,11 +481,11 @@ class ProcessApiServiceImpl(
     onboardingRequest: OnboardingRequest,
     rolesToCheck: Set[PartyRole],
     organization: Organization
-  )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Unit] = {
+  )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Seq[RelationshipInfo]] = {
     for {
       validUsers <- verifyUsersByRoles(onboardingRequest.users, rolesToCheck)
       users      <- Future.traverse(validUsers)(user => addUser(user))
-      _ <- Future.traverse(users) { case (user, role, product, productRole) =>
+      relationships <- Future.traverse(users) { case (user, role, product, productRole) =>
         val relationshipSeed: RelationshipSeed =
           RelationshipSeed(
             from = user.id,
@@ -489,10 +493,12 @@ class ProcessApiServiceImpl(
             role = roleToDependency(role),
             product = RelationshipProductSeed(product, productRole)
           )
-        partyManagementService.createRelationship(relationshipSeed)(bearer)
+        partyManagementService
+          .createRelationship(relationshipSeed)(bearer)
+          .map(rl => relationshipToRelationshipInfo(user, rl))
       }
       _ = logger.info(s"Users created ${users.map(_.toString).mkString(",")}")
-    } yield ()
+    } yield relationships
   }
 
   /** Code: 200, Message: successful operation
