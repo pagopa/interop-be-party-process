@@ -82,7 +82,7 @@ paths:
             schema:
               $ref: '#/components/schemas/OnboardingRequest'
       responses:
-        '201':
+        '200':
           description: successful operation
           content:
             application/json:
@@ -181,8 +181,12 @@ paths:
             schema:
               $ref: '#/components/schemas/OnboardingRequest'
       responses:
-        '201':
+        '200':
           description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelationshipsResponse'
         '400':
           description: Invalid ID supplied
           content:
@@ -203,8 +207,12 @@ paths:
             schema:
               $ref: '#/components/schemas/OnboardingRequest'
       responses:
-        '201':
+        '200':
           description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelationshipsResponse'
         '400':
           description: Invalid ID supplied
           content:
@@ -730,16 +738,13 @@ components:
     Attribute:
       type: object
       properties:
-        id:
+        origin:
           type: string
-        name:
-          type: string
-        description:
+        code:
           type: string
       required:
-        - id
-        - name
-        - description
+        - origin
+        - code
     OnboardingInfo:
       properties:
         person:

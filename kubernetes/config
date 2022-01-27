@@ -28,12 +28,10 @@ wellKnownURL=$WELL_KNOWN_URL
 
 partyManagementVersion="0.1"
 partyProxyVersion="0.1"
-attributeRegistryVersion="0.1"
 userRegistryManagementVersion="0.1"
 
 partyManagementUrl="http://pdnd-interop-uservice-party-management.pdnd-interop-uservice-party-management.svc.cluster.local:8088/pdnd-interop-uservice-party-management/"$partyManagementVersion
 partyProxyUrl="http://pdnd-interop-uservice-party-registry-proxy.pdnd-interop-uservice-party-registry-proxy.svc.cluster.local:8088/pdnd-interop-uservice-party-registry-proxy/"$partyProxyVersion
-attributeRegistryUrl="http://pdnd-interop-uservice-attribute-registry-management.pdnd-interop-uservice-attribute-registry-management.svc.cluster.local:8088/pdnd-interop-uservice-attribute-registry-management/"$attributeRegistryVersion
 userRegistryManagementUrl="http://pdnd-interop-uservice-user-registry-management.pdnd-interop-uservice-user-registry-management.svc.cluster.local:8088/pdnd-interop-uservice-user-registry-management/"$userRegistryManagementVersion
 
 euListOfTrustedListsURL=$EU_LIST_OF_TRUSTED_LISTS_URL
