@@ -23,7 +23,8 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   RelationshipProductSeed,
   RelationshipSeed,
   Relationships,
-  Problem => _
+  Problem => _,
+  Attribute => PartyManagementAttribute
 }
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApiService
@@ -57,7 +58,6 @@ import scala.util.{Failure, Success, Try}
 class ProcessApiServiceImpl(
   partyManagementService: PartyManagementService,
   partyRegistryService: PartyRegistryService,
-  attributeRegistryService: AttributeRegistryService,
   userRegistryManagementService: UserRegistryManagementService,
   pdfCreator: PDFCreator,
   fileManager: FileManager,
@@ -192,12 +192,6 @@ class ProcessApiServiceImpl(
   private def getOnboardingData(bearer: String)(relationship: Relationship): Future[OnboardingData] = {
     for {
       organization <- partyManagementService.retrieveOrganization(relationship.to)(bearer)
-      attributes <- Future.traverse(organization.attributes)(id =>
-        for {
-          uuid      <- id.toFutureUUID
-          attribute <- attributeRegistryService.getAttribute(uuid)(bearer)
-        } yield attribute
-      )
     } yield OnboardingData(
       institutionId = organization.institutionId,
       taxCode = organization.taxCode,
@@ -206,9 +200,7 @@ class ProcessApiServiceImpl(
       state = relationshipStateToApi(relationship.state),
       role = roleToApi(relationship.role),
       productInfo = relationshipProductToApi(relationship.product),
-      attributes = attributes.map(attribute =>
-        Attribute(id = attribute.id, name = attribute.name, description = attribute.description)
-      )
+      attributes = organization.attributes.map(attribute => Attribute(attribute.origin, attribute.code))
     )
 
   }
@@ -666,14 +658,13 @@ class ProcessApiServiceImpl(
         .find(cat => institution.category == cat.code)
         .map(Future.successful)
         .getOrElse(Future.failed(InvalidCategoryError(institution.category)))
-      attributes <- attributeRegistryService.createAttribute("IPA", category.code, category.name, category.kind)(bearer)
       _ = logger.info("getInstitution {}", institution.id)
       seed = OrganizationSeed(
         institutionId = institution.id,
         description = institution.description,
         digitalAddress = institution.digitalAddress,
         taxCode = institution.taxCode,
-        attributes = attributes.attributes.filter(attr => attr.code.contains(institution.category)).map(_.id),
+        attributes = Seq(PartyManagementAttribute(category.origin, category.code)),
         products = Set.empty
       )
       organization <- partyManagementService.createOrganization(seed)(bearer)
