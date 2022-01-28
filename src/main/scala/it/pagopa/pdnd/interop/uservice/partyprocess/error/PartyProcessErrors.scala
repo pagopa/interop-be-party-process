@@ -94,4 +94,7 @@ object PartyProcessErrors {
 
   final case class InvalidCategoryError(category: String) extends ComponentError("0035", s"Invalid category $category")
 
+  final case class TokenAlreadyConsumed(tokenId: String)
+      extends ComponentError("0036", s"Token $tokenId has already consumed")
+
 }
