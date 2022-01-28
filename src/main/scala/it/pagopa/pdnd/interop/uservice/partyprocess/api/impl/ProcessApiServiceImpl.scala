@@ -590,15 +590,14 @@ class ProcessApiServiceImpl(
 
   }
 
-  private def isTokenValid(tokenId: String, relationships: Seq[Relationship]): Future[Unit] = Future.fromTry {
+  private def isTokenValid(tokenId: String, relationships: Seq[Relationship]): Future[Unit] =
     Either
       .cond(
         relationships.nonEmpty && relationships.forall(_.state == PartyManagementDependency.RelationshipState.PENDING),
         (),
         TokenAlreadyConsumed(tokenId)
       )
-      .toTry
-  }
+      .toFuture
 
   private def verifyUsersByRoles(users: Seq[User], roles: Set[PartyRole]): Future[Seq[User]] = {
     val areValidUsers: Boolean = users.forall(user => roles.contains(user.role))
