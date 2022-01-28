@@ -1017,7 +1017,7 @@ class ProcessApiServiceImpl(
       case _ => None
     }.distinct
 
-    allProducts.filter(product => statesFilter.forall(state => state == product.state))
+    allProducts.filter(product => statesFilter.isEmpty || statesFilter.contains(product.state))
 
   }
 
