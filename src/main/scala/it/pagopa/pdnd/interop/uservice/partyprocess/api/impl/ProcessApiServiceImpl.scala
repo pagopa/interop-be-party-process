@@ -521,7 +521,7 @@ class ProcessApiServiceImpl(
       relationships <- Future.traverse(token.legals)(legal =>
         partyManagementService.getRelationshipById(legal.relationshipId)(bearer)
       )
-      _          <- isTokenValid(tokenId, relationships)
+      _          <- isTokenNotConsumed(tokenId, relationships)
       legalUsers <- Future.traverse(token.legals)(legal => userRegistryManagementService.getUserById(legal.partyId))
       validator  <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
       _ <- SignatureValidationService.validateSignature(
@@ -575,7 +575,7 @@ class ProcessApiServiceImpl(
       relationships <- Future.traverse(token.legals)(legal =>
         partyManagementService.getRelationshipById(legal.relationshipId)(bearer)
       )
-      _      <- isTokenValid(tokenId, relationships)
+      _      <- isTokenNotConsumed(tokenId, relationships)
       result <- partyManagementService.invalidateToken(tokenIdUUID)(bearer)
     } yield result
 
