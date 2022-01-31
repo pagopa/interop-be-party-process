@@ -590,7 +590,7 @@ class ProcessApiServiceImpl(
 
   }
 
-  private def isTokenValid(tokenId: String, relationships: Seq[Relationship]): Future[Unit] =
+  private def isTokenNotConsumed(tokenId: String, relationships: Seq[Relationship]): Future[Unit] =
     Either
       .cond(
         relationships.nonEmpty && relationships.forall(_.state == PartyManagementDependency.RelationshipState.PENDING),
