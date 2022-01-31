@@ -518,8 +518,12 @@ class ProcessApiServiceImpl(
       bearer      <- getFutureBearer(contexts)
       tokenIdUUID <- tokenId.toFutureUUID
       token       <- partyManagementService.getToken(tokenIdUUID)(bearer)
-      legalUsers  <- Future.traverse(token.legals)(legal => userRegistryManagementService.getUserById(legal.partyId))
-      validator   <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
+      relationships <- Future.traverse(token.legals)(legal =>
+        partyManagementService.getRelationshipById(legal.relationshipId)(bearer)
+      )
+      _          <- isTokenNotConsumed(tokenId, relationships)
+      legalUsers <- Future.traverse(token.legals)(legal => userRegistryManagementService.getUserById(legal.partyId))
+      validator  <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
       _ <- SignatureValidationService.validateSignature(
         signatureValidationService.isDocumentSigned(validator),
         signatureValidationService.verifySignature(validator),
@@ -567,7 +571,12 @@ class ProcessApiServiceImpl(
     val result: Future[Unit] = for {
       bearer      <- getFutureBearer(contexts)
       tokenIdUUID <- tokenId.toFutureUUID
-      result      <- partyManagementService.invalidateToken(tokenIdUUID)(bearer)
+      token       <- partyManagementService.getToken(tokenIdUUID)(bearer)
+      relationships <- Future.traverse(token.legals)(legal =>
+        partyManagementService.getRelationshipById(legal.relationshipId)(bearer)
+      )
+      _      <- isTokenNotConsumed(tokenId, relationships)
+      result <- partyManagementService.invalidateToken(tokenIdUUID)(bearer)
     } yield result
 
     onComplete(result) {
@@ -580,6 +589,15 @@ class ProcessApiServiceImpl(
     }
 
   }
+
+  private def isTokenNotConsumed(tokenId: String, relationships: Seq[Relationship]): Future[Unit] =
+    Either
+      .cond(
+        relationships.nonEmpty && relationships.forall(_.state == PartyManagementDependency.RelationshipState.PENDING),
+        (),
+        TokenAlreadyConsumed(tokenId)
+      )
+      .toFuture
 
   private def verifyUsersByRoles(users: Seq[User], roles: Set[PartyRole]): Future[Seq[User]] = {
     val areValidUsers: Boolean = users.forall(user => roles.contains(user.role))
