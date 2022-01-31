@@ -1617,6 +1617,7 @@ class PartyProcessSpec
       val partyIdDelegate: UUID        = UUID.randomUUID()
       val relationshipIdDelegate: UUID = UUID.randomUUID()
       val delegateTaxCode: String      = "TINIT-DELEGATE"
+      val institutionId: UUID          = UUID.randomUUID()
 
       val token: TokenInfo =
         TokenInfo(
@@ -1669,6 +1670,50 @@ class PartyProcessSpec
         .getToken(_: UUID)(_: String))
         .expects(tokenId, *)
         .returning(Future.successful(token))
+
+      (mockPartyManagementService
+        .getRelationshipById(_: UUID)(_: String))
+        .expects(*, *)
+        .returning(
+          Future.successful(
+            Relationship(
+              id = relationshipIdManager,
+              from = relationshipIdDelegate,
+              to = institutionId,
+              filePath = None,
+              fileName = None,
+              contentType = None,
+              tokenId = None,
+              role = PartyManagementDependency.PartyRole.MANAGER,
+              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
+              state = PartyManagementDependency.RelationshipState.PENDING,
+              createdAt = OffsetDateTime.now(),
+              updatedAt = None
+            )
+          )
+        )
+
+      (mockPartyManagementService
+        .getRelationshipById(_: UUID)(_: String))
+        .expects(*, *)
+        .returning(
+          Future.successful(
+            Relationship(
+              id = relationshipIdDelegate,
+              from = partyIdDelegate,
+              to = institutionId,
+              filePath = None,
+              fileName = None,
+              contentType = None,
+              tokenId = None,
+              role = PartyManagementDependency.PartyRole.DELEGATE,
+              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
+              state = PartyManagementDependency.RelationshipState.PENDING,
+              createdAt = OffsetDateTime.now(),
+              updatedAt = None
+            )
+          )
+        )
 
       (mockUserRegistryService
         .getUserById(_: UUID))
@@ -1726,9 +1771,161 @@ class PartyProcessSpec
 
     }
 
+    "fail trying to confirm a token on already confirmed" in {
+
+      val tokenId: UUID                = UUID.randomUUID()
+      val partyIdManager: UUID         = UUID.randomUUID()
+      val relationshipIdManager: UUID  = UUID.randomUUID()
+      val partyIdDelegate: UUID        = UUID.randomUUID()
+      val relationshipIdDelegate: UUID = UUID.randomUUID()
+      val institutionId: UUID          = UUID.randomUUID()
+
+      val token: TokenInfo =
+        TokenInfo(
+          id = tokenId,
+          checksum = "6ddee820d06383127ef029f571285339",
+          legals = Seq(
+            RelationshipBinding(partyId = partyIdManager, relationshipId = relationshipIdManager),
+            RelationshipBinding(partyId = partyIdDelegate, relationshipId = relationshipIdDelegate)
+          )
+        )
+      val path = Paths.get("src/test/resources/contract-test-01.pdf")
+
+      (mockPartyManagementService
+        .getToken(_: UUID)(_: String))
+        .expects(tokenId, *)
+        .returning(Future.successful(token))
+
+      (mockPartyManagementService
+        .getRelationshipById(_: UUID)(_: String))
+        .expects(*, *)
+        .returning(
+          Future.successful(
+            Relationship(
+              id = relationshipIdManager,
+              from = relationshipIdDelegate,
+              to = institutionId,
+              filePath = None,
+              fileName = None,
+              contentType = None,
+              tokenId = None,
+              role = PartyManagementDependency.PartyRole.MANAGER,
+              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
+              state = PartyManagementDependency.RelationshipState.ACTIVE,
+              createdAt = OffsetDateTime.now(),
+              updatedAt = None
+            )
+          )
+        )
+
+      (mockPartyManagementService
+        .getRelationshipById(_: UUID)(_: String))
+        .expects(*, *)
+        .returning(
+          Future.successful(
+            Relationship(
+              id = relationshipIdDelegate,
+              from = partyIdDelegate,
+              to = institutionId,
+              filePath = None,
+              fileName = None,
+              contentType = None,
+              tokenId = None,
+              role = PartyManagementDependency.PartyRole.DELEGATE,
+              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
+              state = PartyManagementDependency.RelationshipState.ACTIVE,
+              createdAt = OffsetDateTime.now(),
+              updatedAt = None
+            )
+          )
+        )
+
+      val formData =
+        Multipart.FormData.fromPath(name = "contract", MediaTypes.`application/octet-stream`, file = path, 100000)
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/onboarding/complete/${tokenId.toString}",
+              method = HttpMethods.POST,
+              entity = formData.toEntity,
+              headers = authorization
+            )
+          )
+          .futureValue
+
+      response.status mustBe StatusCodes.BadRequest
+
+    }
+
     "delete token" in {
 
-      val tokenId: UUID = UUID.randomUUID()
+      val tokenId: UUID                = UUID.randomUUID()
+      val relationshipIdManager: UUID  = UUID.randomUUID()
+      val partyIdManager: UUID         = UUID.randomUUID()
+      val relationshipIdDelegate: UUID = UUID.randomUUID()
+      val partyIdDelegate: UUID        = UUID.randomUUID()
+      val institutionId: UUID          = UUID.randomUUID()
+
+      val token: TokenInfo =
+        TokenInfo(
+          id = tokenId,
+          checksum = "6ddee820d06383127ef029f571285339",
+          legals = Seq(
+            RelationshipBinding(partyId = partyIdManager, relationshipId = relationshipIdManager),
+            RelationshipBinding(partyId = partyIdDelegate, relationshipId = relationshipIdDelegate)
+          )
+        )
+
+      (mockPartyManagementService
+        .getToken(_: UUID)(_: String))
+        .expects(tokenId, *)
+        .returning(Future.successful(token))
+
+      (mockPartyManagementService
+        .getRelationshipById(_: UUID)(_: String))
+        .expects(*, *)
+        .returning(
+          Future.successful(
+            Relationship(
+              id = relationshipIdManager,
+              from = relationshipIdDelegate,
+              to = institutionId,
+              filePath = None,
+              fileName = None,
+              contentType = None,
+              tokenId = None,
+              role = PartyManagementDependency.PartyRole.MANAGER,
+              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
+              state = PartyManagementDependency.RelationshipState.PENDING,
+              createdAt = OffsetDateTime.now(),
+              updatedAt = None
+            )
+          )
+        )
+
+      (mockPartyManagementService
+        .getRelationshipById(_: UUID)(_: String))
+        .expects(*, *)
+        .returning(
+          Future.successful(
+            Relationship(
+              id = relationshipIdDelegate,
+              from = partyIdDelegate,
+              to = institutionId,
+              filePath = None,
+              fileName = None,
+              contentType = None,
+              tokenId = None,
+              role = PartyManagementDependency.PartyRole.DELEGATE,
+              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
+              state = PartyManagementDependency.RelationshipState.PENDING,
+              createdAt = OffsetDateTime.now(),
+              updatedAt = None
+            )
+          )
+        )
 
       (mockPartyManagementService
         .invalidateToken(_: UUID)(_: String))
@@ -1747,6 +1944,89 @@ class PartyProcessSpec
           .futureValue
 
       response.status mustBe StatusCodes.OK
+
+    }
+
+    "fail trying to delete a token on already confirmed" in {
+
+      val tokenId: UUID                = UUID.randomUUID()
+      val relationshipIdManager: UUID  = UUID.randomUUID()
+      val partyIdManager: UUID         = UUID.randomUUID()
+      val relationshipIdDelegate: UUID = UUID.randomUUID()
+      val partyIdDelegate: UUID        = UUID.randomUUID()
+      val institutionId: UUID          = UUID.randomUUID()
+
+      val token: TokenInfo =
+        TokenInfo(
+          id = tokenId,
+          checksum = "6ddee820d06383127ef029f571285339",
+          legals = Seq(
+            RelationshipBinding(partyId = partyIdManager, relationshipId = relationshipIdManager),
+            RelationshipBinding(partyId = partyIdDelegate, relationshipId = relationshipIdDelegate)
+          )
+        )
+
+      (mockPartyManagementService
+        .getToken(_: UUID)(_: String))
+        .expects(tokenId, *)
+        .returning(Future.successful(token))
+
+      (mockPartyManagementService
+        .getRelationshipById(_: UUID)(_: String))
+        .expects(*, *)
+        .returning(
+          Future.successful(
+            Relationship(
+              id = relationshipIdManager,
+              from = relationshipIdDelegate,
+              to = institutionId,
+              filePath = None,
+              fileName = None,
+              contentType = None,
+              tokenId = None,
+              role = PartyManagementDependency.PartyRole.MANAGER,
+              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
+              state = PartyManagementDependency.RelationshipState.ACTIVE,
+              createdAt = OffsetDateTime.now(),
+              updatedAt = None
+            )
+          )
+        )
+
+      (mockPartyManagementService
+        .getRelationshipById(_: UUID)(_: String))
+        .expects(*, *)
+        .returning(
+          Future.successful(
+            Relationship(
+              id = relationshipIdDelegate,
+              from = partyIdDelegate,
+              to = institutionId,
+              filePath = None,
+              fileName = None,
+              contentType = None,
+              tokenId = None,
+              role = PartyManagementDependency.PartyRole.DELEGATE,
+              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
+              state = PartyManagementDependency.RelationshipState.ACTIVE,
+              createdAt = OffsetDateTime.now(),
+              updatedAt = None
+            )
+          )
+        )
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/onboarding/complete/${tokenId.toString}",
+              method = HttpMethods.DELETE,
+              headers = authorization
+            )
+          )
+          .futureValue
+
+      response.status mustBe StatusCodes.BadRequest
 
     }
 
