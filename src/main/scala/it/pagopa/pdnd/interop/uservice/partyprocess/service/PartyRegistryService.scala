@@ -1,11 +1,11 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.service
 
-import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.{Categories, Institution}
+import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.{Category, Institution}
 
 import scala.concurrent.Future
 
 trait PartyRegistryService {
   def getInstitution(institutionId: String)(bearerToken: String): Future[Institution]
-  def getCategories(bearerToken: String): Future[Categories]
+  def getCategory(code: String, origin: String)(bearerToken: String): Future[Category]
   def searchInstitution(text: String, offset: Int, limit: Int)(bearerToken: String): Future[List[Institution]]
 }
