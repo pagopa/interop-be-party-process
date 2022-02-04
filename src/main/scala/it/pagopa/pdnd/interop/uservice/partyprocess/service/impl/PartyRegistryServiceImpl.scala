@@ -22,8 +22,8 @@ final case class PartyRegistryServiceImpl(
     logger.info(s"getInstitution ${request.toString}")
     invoker.invoke(request, "Retrieving institution")
   }
-  override def getCategory(code: String, origin: String)(bearerToken: String): Future[Category] = {
-    val request: ApiRequest[Category] = categoryApi.getCategory(code = code, origin = origin)
+  override def getCategory(origin: String, code: String)(bearerToken: String): Future[Category] = {
+    val request: ApiRequest[Category] = categoryApi.getCategory(origin = origin, code = code)
     logger.info(s"getCategory ${request.toString}")
     invoker.invoke(request, "Retrieving category")
   }

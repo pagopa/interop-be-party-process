@@ -672,7 +672,7 @@ class ProcessApiServiceImpl(
   )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Organization] =
     for {
       institution <- partyRegistryService.getInstitution(institutionId)(bearer)
-      category    <- partyRegistryService.getCategory(institution.category, institution.origin)(bearer)
+      category    <- partyRegistryService.getCategory(institution.origin, institution.category)(bearer)
       _ = logger.info("getInstitution {}", institution.id)
       seed = OrganizationSeed(
         institutionId = institution.id,
