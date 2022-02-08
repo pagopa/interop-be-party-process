@@ -200,7 +200,8 @@ class ProcessApiServiceImpl(
       state = relationshipStateToApi(relationship.state),
       role = roleToApi(relationship.role),
       productInfo = relationshipProductToApi(relationship.product),
-      attributes = organization.attributes.map(attribute => Attribute(attribute.origin, attribute.code))
+      attributes =
+        organization.attributes.map(attribute => Attribute(attribute.origin, attribute.code, attribute.description))
     )
 
   }
@@ -671,18 +672,14 @@ class ProcessApiServiceImpl(
   )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Organization] =
     for {
       institution <- partyRegistryService.getInstitution(institutionId)(bearer)
-      categories  <- partyRegistryService.getCategories(bearer)
-      category <- categories.items
-        .find(cat => institution.category == cat.code)
-        .map(Future.successful)
-        .getOrElse(Future.failed(InvalidCategoryError(institution.category)))
+      category    <- partyRegistryService.getCategory(institution.origin, institution.category)(bearer)
       _ = logger.info("getInstitution {}", institution.id)
       seed = OrganizationSeed(
         institutionId = institution.id,
         description = institution.description,
         digitalAddress = institution.digitalAddress,
         taxCode = institution.taxCode,
-        attributes = Seq(PartyManagementAttribute(category.origin, category.code)),
+        attributes = Seq(PartyManagementAttribute(category.origin, category.code, category.name)),
         products = Set.empty
       )
       organization <- partyManagementService.createOrganization(seed)(bearer)

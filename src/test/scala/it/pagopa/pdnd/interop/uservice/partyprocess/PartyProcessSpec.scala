@@ -30,7 +30,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.error.SignatureValidationErr
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.{Products => ModelProducts, _}
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.partyprocess.{model => PartyProcess}
-import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.{Categories, Category, Institution, Manager}
+import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.{Category, Institution, Manager}
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.Certification.{
   NONE => CertificationEnumsNone
 }
@@ -142,7 +142,8 @@ class PartyProcessSpec
         category = "C17",
         manager = Manager("name", "surname"),
         description = "description",
-        digitalAddress = "digitalAddress"
+        digitalAddress = "digitalAddress",
+        origin = "origin"
       )
 
     val organization1 = PartyManagementDependency.Organization(
@@ -220,9 +221,10 @@ class PartyProcessSpec
       .returning(Future.successful(institution1))
       .once()
 
-    (mockPartyRegistryService.getCategories _)
-      .expects(*)
-      .returning(Future.successful(Categories(Seq(Category("C17", "attrs", "test", "IPA")))))
+    (mockPartyRegistryService
+      .getCategory(_: String, _: String)(_: String))
+      .expects(*, *, *)
+      .returning(Future.successful(Category("C17", "attrs", "test", "IPA")))
       .once()
 
     (mockPartyManagementService
@@ -273,7 +275,8 @@ class PartyProcessSpec
         category = "C17",
         manager = Manager("name", "surname"),
         description = "description",
-        digitalAddress = "digitalAddress"
+        digitalAddress = "digitalAddress",
+        origin = "origin"
       )
 
     val organization1 = PartyManagementDependency.Organization(
@@ -383,9 +386,10 @@ class PartyProcessSpec
       .returning(Future.successful(institution1))
       .once()
 
-    (mockPartyRegistryService.getCategories _)
-      .expects(*)
-      .returning(Future.successful(Categories(Seq(Category("C17", "attrs", "test", "IPA")))))
+    (mockPartyRegistryService
+      .getCategory(_: String, _: String)(_: String))
+      .expects(*, *, *)
+      .returning(Future.successful(Category("C17", "attrs", "test", "IPA")))
       .once()
 
     (mockPartyManagementService
@@ -645,12 +649,12 @@ class PartyProcessSpec
       val orgPartyId1    = "af80fac0-2775-4646-8fcf-28e083751901"
       val orgPartyId2    = "af80fac0-2775-4646-8fcf-28e083751902"
 
-      val attribute1 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1")
-      val attribute2 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2")
-      val attribute3 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3")
-      val attribute4 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name4")
-      val attribute5 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name5")
-      val attribute6 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name6")
+      val attribute1 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1", "origin")
+      val attribute2 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2", "origin")
+      val attribute3 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3", "origin")
+      val attribute4 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name4", "origin")
+      val attribute5 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name5", "origin")
+      val attribute6 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name6", "origin")
 
       val person1 = UserRegistryUser(
         id = UUID.fromString(personPartyId1),
@@ -692,9 +696,9 @@ class PartyProcessSpec
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
         attributes = Seq(
-          PartyManagementDependency.Attribute(attribute1.origin, attribute1.code),
-          PartyManagementDependency.Attribute(attribute2.origin, attribute2.code),
-          PartyManagementDependency.Attribute(attribute3.origin, attribute3.code)
+          PartyManagementDependency.Attribute(attribute1.origin, attribute1.code, attribute1.description),
+          PartyManagementDependency.Attribute(attribute2.origin, attribute2.code, attribute2.description),
+          PartyManagementDependency.Attribute(attribute3.origin, attribute3.code, attribute3.description)
         ),
         taxCode = "123"
       )
@@ -704,9 +708,9 @@ class PartyProcessSpec
         digitalAddress = "digitalAddress2",
         id = UUID.fromString(orgPartyId2),
         attributes = Seq(
-          PartyManagementDependency.Attribute(attribute4.origin, attribute4.code),
-          PartyManagementDependency.Attribute(attribute5.origin, attribute5.code),
-          PartyManagementDependency.Attribute(attribute6.origin, attribute6.code)
+          PartyManagementDependency.Attribute(attribute4.origin, attribute4.code, attribute4.description),
+          PartyManagementDependency.Attribute(attribute5.origin, attribute5.code, attribute5.description),
+          PartyManagementDependency.Attribute(attribute6.origin, attribute6.code, attribute6.description)
         ),
         taxCode = "123"
       )
@@ -733,9 +737,9 @@ class PartyProcessSpec
             role = roleToApi(relationship2.role),
             productInfo = productInfo,
             attributes = Seq(
-              partyprocess.model.Attribute(attribute4.origin, attribute4.code),
-              partyprocess.model.Attribute(attribute5.origin, attribute5.code),
-              partyprocess.model.Attribute(attribute6.origin, attribute6.code)
+              partyprocess.model.Attribute(attribute4.origin, attribute4.code, attribute4.description),
+              partyprocess.model.Attribute(attribute5.origin, attribute5.code, attribute5.description),
+              partyprocess.model.Attribute(attribute6.origin, attribute6.code, attribute6.description)
             )
           )
         )
@@ -820,9 +824,9 @@ class PartyProcessSpec
       val institutionId1 = "institutionId1"
       val orgPartyId1    = UUID.randomUUID() // "af80fac0-2775-4646-8fcf-28e083751801"
       val personPartyId1 = "af80fac0-2775-4646-8fcf-28e083751800"
-      val attribute1     = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1")
-      val attribute2     = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2")
-      val attribute3     = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3")
+      val attribute1     = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1", "origin")
+      val attribute2     = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2", "origin")
+      val attribute3     = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3", "origin")
 
       val person1 = UserRegistryUser(
         id = UUID.fromString(personPartyId1),
@@ -853,9 +857,9 @@ class PartyProcessSpec
         digitalAddress = "digitalAddress1",
         id = orgPartyId1,
         attributes = Seq(
-          PartyManagementDependency.Attribute(attribute1.origin, attribute1.code),
-          PartyManagementDependency.Attribute(attribute2.origin, attribute2.code),
-          PartyManagementDependency.Attribute(attribute3.origin, attribute3.code)
+          PartyManagementDependency.Attribute(attribute1.origin, attribute1.code, attribute1.description),
+          PartyManagementDependency.Attribute(attribute2.origin, attribute2.code, attribute2.description),
+          PartyManagementDependency.Attribute(attribute3.origin, attribute3.code, attribute3.description)
         ),
         taxCode = "123"
       )
@@ -958,9 +962,9 @@ class PartyProcessSpec
       val institutionId1 = UUID.randomUUID()
       val personPartyId1 = "af80fac0-2775-4646-8fcf-28e083751800"
       val orgPartyId1    = "af80fac0-2775-4646-8fcf-28e083751801"
-      val attribute1     = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name1")
-      val attribute2     = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name2")
-      val attribute3     = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name3")
+      val attribute1     = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name1", "origin")
+      val attribute2     = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name2", "origin")
+      val attribute3     = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name3", "origin")
 
       val person1 = UserRegistryUser(
         id = UUID.fromString(personPartyId1),
@@ -1006,9 +1010,9 @@ class PartyProcessSpec
             role = roleToApi(relationship1.role),
             productInfo = productInfo,
             attributes = Seq(
-              partyprocess.model.Attribute(attribute1.origin, attribute1.code),
-              partyprocess.model.Attribute(attribute2.origin, attribute2.code),
-              partyprocess.model.Attribute(attribute3.origin, attribute3.code)
+              partyprocess.model.Attribute(attribute1.origin, attribute1.code, attribute1.description),
+              partyprocess.model.Attribute(attribute2.origin, attribute2.code, attribute2.description),
+              partyprocess.model.Attribute(attribute3.origin, attribute3.code, attribute3.description)
             )
           )
         )
