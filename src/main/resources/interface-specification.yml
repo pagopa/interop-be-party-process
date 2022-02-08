@@ -742,9 +742,12 @@ components:
           type: string
         code:
           type: string
+        description:
+          type: string
       required:
         - origin
         - code
+        - description
     OnboardingInfo:
       properties:
         person:

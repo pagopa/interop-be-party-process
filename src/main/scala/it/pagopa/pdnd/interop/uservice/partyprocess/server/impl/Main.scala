@@ -6,10 +6,12 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.server.directives.SecurityDirectives
 import akka.management.scaladsl.AkkaManagement
+import com.nimbusds.jose.proc.SecurityContext
+import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier
 import it.pagopa.pdnd.interop.commons.files.StorageConfiguration
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
-import it.pagopa.pdnd.interop.commons.jwt.service.impl.DefaultJWTReader
+import it.pagopa.pdnd.interop.commons.jwt.service.impl.{DefaultJWTReader, getClaimsVerifier}
 import it.pagopa.pdnd.interop.commons.jwt.{JWTConfiguration, PublicKeysHolder}
 import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.pdnd.interop.commons.mail.service.impl.CourierMailerConfiguration.CourierMailer
@@ -35,7 +37,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.partyprocess.service._
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.impl._
-import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.api.InstitutionApi
+import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.api.{CategoryApi, InstitutionApi}
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.api.UserApi
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.invoker.ApiKeyValue
 import kamon.Kamon
@@ -53,7 +55,11 @@ trait PartyManagementDependency {
 
 trait PartyProxyDependency {
   final val partyProcessService: PartyRegistryService =
-    PartyRegistryServiceImpl(PartyProxyInvoker(), InstitutionApi(ApplicationConfiguration.getPartyProxyUrl))
+    PartyRegistryServiceImpl(
+      PartyProxyInvoker(),
+      InstitutionApi(ApplicationConfiguration.getPartyProxyUrl),
+      CategoryApi(ApplicationConfiguration.getPartyProxyUrl)
+    )
 }
 
 trait UserRegistryManagementDependency {
@@ -85,6 +91,8 @@ object Main
     keyset       <- JWTConfiguration.jwtReader.loadKeyset().toFuture
     jwtValidator = new DefaultJWTReader with PublicKeysHolder {
       var publicKeyset = keyset
+
+      override protected val claimsVerifier: DefaultJWTClaimsVerifier[SecurityContext] = getClaimsVerifier()
     }
   } yield (fileManager, mailTemplate, jwtValidator)
 
