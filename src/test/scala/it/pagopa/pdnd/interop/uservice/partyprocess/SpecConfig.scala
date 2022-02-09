@@ -15,5 +15,5 @@ object SpecConfig {
     .parseResourcesAnySyntax("application-test")
     .withFallback(testDataConfig)
 
-  val port: Int = config.getInt("uservice-party-process.port")
+  val port: Int = config.getInt("party-process.port")
 }

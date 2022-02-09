@@ -25,6 +25,7 @@ smtpAddress=$SMTP_HOST
 smtpPort=$SMTP_PORT
 smtpSSL=$SMTP_SSL
 wellKnownURL=$WELL_KNOWN_URL
+mainAudience=$MAIN_AUDIENCE
 
 partyManagementVersion="0.1"
 partyProxyVersion="0.1"

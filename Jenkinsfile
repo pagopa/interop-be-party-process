@@ -60,6 +60,7 @@ pipeline {
         STORAGE_PSW="${AWS_PSW}"
         SMTP = credentials('smtp')
         USER_REGISTRY_API_KEY = credentials('userRegistryApiKey')
+        MAIN_AUDIENCE = "${env.MAIN_AUDIENCE}"
         REPLICAS_NR = 1
       }
       steps {

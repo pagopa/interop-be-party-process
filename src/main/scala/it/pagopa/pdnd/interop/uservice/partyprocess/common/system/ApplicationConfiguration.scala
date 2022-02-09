@@ -2,15 +2,16 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.common.system
 
 import com.typesafe.config.{Config, ConfigFactory}
 
+import scala.jdk.CollectionConverters.ListHasAsScala
 import scala.util.Try
 
 object ApplicationConfiguration {
   lazy val config: Config = ConfigFactory.load()
 
-  def serverPort: Int               = config.getInt("uservice-party-process.port")
-  def getPartyManagementUrl: String = config.getString("services.party-management")
-  def getPartyProxyUrl: String      = config.getString("services.party-proxy")
-  def getUserRegistryURL: String    = config.getString("services.user-registry-management")
+  lazy val serverPort: Int               = config.getInt("party-process.port")
+  lazy val getPartyManagementUrl: String = config.getString("party-process.services.party-management")
+  lazy val getPartyProxyUrl: String      = config.getString("party-process.services.party-proxy")
+  lazy val getUserRegistryURL: String    = config.getString("party-process.services.user-registry-management")
 
   /*
      _________  ________  ________  ________
@@ -23,33 +24,36 @@ object ApplicationConfiguration {
       TODO THIS IS A TEMPORARY SOLUTION!
       TODO MOVE TO PARTY REGISTRY MOCK
    */
-  def destinationMails: Option[Seq[String]] =
-    Try(config.getString("uservice-party-process.destination-mails")).toOption.map(_.split(",").toSeq)
+  lazy val destinationMails: Option[Seq[String]] =
+    Try(config.getString("party-process.destination-mails")).toOption.map(_.split(",").toSeq)
 
-  def signatureValidationEnabled: Boolean = config.getBoolean("uservice-party-process.signature-validation-enabled")
+  lazy val signatureValidationEnabled: Boolean =
+    config.getBoolean("party-process.signature-validation-enabled")
 
-  def euListOfTrustedListsURL: String = config.getString("uservice-party-process.eu_list_of_trusted_lists_url")
-  def euOfficialJournalUrl: String    = config.getString("uservice-party-process.eu_official_journal_url")
+  lazy val euListOfTrustedListsURL: String = config.getString("party-process.eu_list_of_trusted_lists_url")
+  lazy val euOfficialJournalUrl: String    = config.getString("party-process.eu_official_journal_url")
 
-  def mailTemplatePath: String   = config.getString("uservice-party-process.mail-template.path")
-  def userRegistryApiKey: String = config.getString("uservice-party-process.user-registry-api-key")
+  lazy val mailTemplatePath: String   = config.getString("party-process.mail-template.path")
+  lazy val userRegistryApiKey: String = config.getString("party-process.user-registry-api-key")
 
-  def onboardingMailPlaceholdersReplacement: Map[String, String] = {
+  lazy val onboardingMailPlaceholdersReplacement: Map[String, String] = {
     Map(
-      config.getString("uservice-party-process.mail-template.onboarding-mail-placeholders.confirm-token.name") -> config
-        .getString("uservice-party-process.mail-template.onboarding-mail-placeholders.confirm-token.placeholder"),
-      config.getString("uservice-party-process.mail-template.onboarding-mail-placeholders.reject-token.name") -> config
-        .getString("uservice-party-process.mail-template.onboarding-mail-placeholders.reject-token.placeholder")
+      config.getString("party-process.mail-template.onboarding-mail-placeholders.confirm-token.name") -> config
+        .getString("party-process.mail-template.onboarding-mail-placeholders.confirm-token.placeholder"),
+      config.getString("party-process.mail-template.onboarding-mail-placeholders.reject-token.name") -> config
+        .getString("party-process.mail-template.onboarding-mail-placeholders.reject-token.placeholder")
     )
   }
-  def onboardingMailUserNamePlaceholder: String =
-    config.getString("uservice-party-process.mail-template.onboarding-mail-placeholders.userName")
-  def onboardingMailUserSurnamePlaceholder: String =
-    config.getString("uservice-party-process.mail-template.onboarding-mail-placeholders.userSurname")
-  def onboardingMailTaxCodePlaceholder: String =
-    config.getString("uservice-party-process.mail-template.onboarding-mail-placeholders.userTaxCode")
-  def onboardingMailProductPlaceholder: String =
-    config.getString("uservice-party-process.mail-template.onboarding-mail-placeholders.product")
+  lazy val onboardingMailUserNamePlaceholder: String =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.userName")
+  lazy val onboardingMailUserSurnamePlaceholder: String =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.userSurname")
+  lazy val onboardingMailTaxCodePlaceholder: String =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.userTaxCode")
+  lazy val onboardingMailProductPlaceholder: String =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.product")
 
-  def storageContainer: String = config.getString("pdnd-interop-commons.storage.container")
+  lazy val storageContainer: String = config.getString("party-process.storage.container")
+
+  lazy val jwtAudience: Set[String] = config.getStringList("party-process.jwt.audience").asScala.toSet
 }
