@@ -92,7 +92,8 @@ object Main
     jwtValidator = new DefaultJWTReader with PublicKeysHolder {
       var publicKeyset = keyset
 
-      override protected val claimsVerifier: DefaultJWTClaimsVerifier[SecurityContext] = getClaimsVerifier()
+      override protected val claimsVerifier: DefaultJWTClaimsVerifier[SecurityContext] =
+        getClaimsVerifier(audience = ApplicationConfiguration.jwtAudience)
     }
   } yield (fileManager, mailTemplate, jwtValidator)
 
