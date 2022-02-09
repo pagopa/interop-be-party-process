@@ -61,6 +61,7 @@ pipeline {
         SMTP = credentials('smtp')
         USER_REGISTRY_API_KEY = credentials('userRegistryApiKey')
         MAIN_AUDIENCE = "${env.MAIN_AUDIENCE}"
+        SIGNATURE_VALIDATION_ENABLED = false
         REPLICAS_NR = 1
       }
       steps {
