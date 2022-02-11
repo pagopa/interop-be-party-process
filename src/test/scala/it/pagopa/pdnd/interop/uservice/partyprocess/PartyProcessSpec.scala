@@ -22,9 +22,9 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
 }
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.pdnd.interop.uservice.partyprocess
-import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApi
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{relationshipStateToApi, roleToApi}
-import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.ProcessApiServiceImpl
+import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{ProcessApiServiceImpl, PublicApiServiceImpl}
+import it.pagopa.pdnd.interop.uservice.partyprocess.api.{ProcessApi, PublicApi}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{classicActorSystem, executionContext}
 import it.pagopa.pdnd.interop.uservice.partyprocess.error.SignatureValidationError
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.{Products => ModelProducts, _}
@@ -95,22 +95,32 @@ class PartyProcessSpec
     loadEnvVars()
     val processApi = new ProcessApi(
       new ProcessApiServiceImpl(
-        mockPartyManagementService,
-        mockPartyRegistryService,
-        mockUserRegistryService,
-        mockPdfCreator,
-        mockFileManager,
-        mockSignatureService,
-        mockSignatureValidationService,
-        mockMailer,
-        mockMailTemplate,
-        mockJWTReader
+        partyManagementService = mockPartyManagementService,
+        partyRegistryService = mockPartyRegistryService,
+        userRegistryManagementService = mockUserRegistryService,
+        pdfCreator = mockPdfCreator,
+        fileManager = mockFileManager,
+        signatureService = mockSignatureService,
+        mailer = mockMailer,
+        mailTemplate = mockMailTemplate,
+        jwtReader = mockJWTReader
       ),
       processApiMarshaller,
       wrappingDirective
     )
 
-    controller = Some(new Controller(mockHealthApi, processApi))
+    val publicApi = new PublicApi(
+      new PublicApiServiceImpl(
+        partyManagementService = mockPartyManagementService,
+        userRegistryManagementService = mockUserRegistryService,
+        signatureService = mockSignatureService,
+        signatureValidationService = mockSignatureValidationService
+      ),
+      publicApiMarshaller,
+      wrappingDirective
+    )
+
+    controller = Some(new Controller(health = mockHealthApi, process = processApi, public = publicApi))
 
     controller foreach { controller =>
       bindServer = Some(
