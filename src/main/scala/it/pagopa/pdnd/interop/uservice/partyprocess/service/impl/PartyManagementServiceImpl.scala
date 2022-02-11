@@ -1,7 +1,7 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
 import akka.http.scaladsl.server.directives.FileInfo
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.{PartyApi, PublicApi}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.{ApiError, ApiRequest, BearerToken}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model._
 import it.pagopa.pdnd.interop.uservice.partyprocess.error.PartyProcessErrors.{
@@ -15,8 +15,8 @@ import java.io.File
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
-final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api: PartyApi)(implicit
-  ec: ExecutionContext
+final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api: PartyApi, publicApi: PublicApi)(
+  implicit ec: ExecutionContext
 ) extends PartyManagementService {
   implicit val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
@@ -118,21 +118,21 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
   def getToken(tokenId: UUID)(bearerToken: String): Future[TokenInfo] = {
     logger.info(s"Retrieving token for $tokenId")
 
-    val request = api.getToken(tokenId)(BearerToken(bearerToken))
+    val request = publicApi.getToken(tokenId)
     invoke(request, "Token retrieve")
   }
 
   override def consumeToken(tokenId: UUID, fileParts: (FileInfo, File))(bearerToken: String): Future[Unit] = {
     logger.info(s"Consuming token $tokenId")
 
-    val request = api.consumeToken(tokenId, fileParts._2)(BearerToken(bearerToken))
+    val request = publicApi.consumeToken(tokenId, fileParts._2)
     invoke(request, "Token consume")
   }
 
   override def invalidateToken(tokenId: UUID)(bearerToken: String): Future[Unit] = {
     logger.info(s"Invalidating token $tokenId")
 
-    val request = api.invalidateToken(tokenId)(BearerToken(bearerToken))
+    val request = publicApi.invalidateToken(tokenId)
     invoke(request, "Token invalidation")
   }
 

@@ -19,16 +19,18 @@ import it.pagopa.pdnd.interop.commons.mail.service.impl.DefaultPDNDMailer
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.Authenticator
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions.TryOps
 import it.pagopa.pdnd.interop.commons.utils.errors.GenericComponentErrors.ValidationRequestError
-import it.pagopa.pdnd.interop.commons.utils.{CORSSupport, OpenapiUtils}
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
+import it.pagopa.pdnd.interop.commons.utils.{AkkaUtils, CORSSupport, OpenapiUtils}
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.{api => partyManagementApi}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{
   HealthApiMarshallerImpl,
   HealthServiceApiImpl,
   ProcessApiMarshallerImpl,
   ProcessApiServiceImpl,
+  PublicApiMarshallerImpl,
+  PublicApiServiceImpl,
   problemOf
 }
-import it.pagopa.pdnd.interop.uservice.partyprocess.api.{HealthApi, ProcessApi}
+import it.pagopa.pdnd.interop.uservice.partyprocess.api.{HealthApi, ProcessApi, PublicApi}
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{
   ApplicationConfiguration,
   classicActorSystem,
@@ -37,8 +39,8 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.{
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.partyprocess.service._
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.impl._
-import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.api.{CategoryApi, InstitutionApi}
-import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.api.UserApi
+import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.{api => partyregistryproxyApi}
+import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.{api => userregistrymanagement}
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.invoker.ApiKeyValue
 import kamon.Kamon
 
@@ -50,15 +52,19 @@ case object StartupErrorShutdown extends CoordinatedShutdown.Reason
 
 trait PartyManagementDependency {
   final val partyManagementService: PartyManagementService =
-    PartyManagementServiceImpl(PartyManagementInvoker(), PartyApi(ApplicationConfiguration.getPartyManagementUrl))
+    PartyManagementServiceImpl(
+      PartyManagementInvoker(),
+      partyManagementApi.PartyApi(ApplicationConfiguration.getPartyManagementUrl),
+      partyManagementApi.PublicApi(ApplicationConfiguration.getPartyManagementUrl)
+    )
 }
 
 trait PartyProxyDependency {
   final val partyProcessService: PartyRegistryService =
     PartyRegistryServiceImpl(
       PartyProxyInvoker(),
-      InstitutionApi(ApplicationConfiguration.getPartyProxyUrl),
-      CategoryApi(ApplicationConfiguration.getPartyProxyUrl)
+      partyregistryproxyApi.InstitutionApi(ApplicationConfiguration.getPartyProxyUrl),
+      partyregistryproxyApi.CategoryApi(ApplicationConfiguration.getPartyProxyUrl)
     )
 }
 
@@ -67,7 +73,7 @@ trait UserRegistryManagementDependency {
   final val userRegistryManagementService: UserRegistryManagementService =
     UserRegistryManagementServiceImpl(
       UserRegistryManagementInvoker(),
-      UserApi(ApplicationConfiguration.getUserRegistryURL)
+      userregistrymanagement.UserApi(ApplicationConfiguration.getUserRegistryURL)
     )
 }
 
@@ -118,19 +124,29 @@ object Main
 
     val processApi: ProcessApi = new ProcessApi(
       new ProcessApiServiceImpl(
-        partyManagementService,
-        partyProcessService,
-        userRegistryManagementService,
-        PDFCreatorImpl,
-        fileManager,
-        signatureService,
-        signatureValidationService,
-        mailer,
-        mailTemplate,
-        jwtReader
+        partyManagementService = partyManagementService,
+        partyRegistryService = partyProcessService,
+        userRegistryManagementService = userRegistryManagementService,
+        pdfCreator = PDFCreatorImpl,
+        fileManager = fileManager,
+        signatureService = signatureService,
+        mailer = mailer,
+        mailTemplate = mailTemplate,
+        jwtReader = jwtReader
       ),
-      new ProcessApiMarshallerImpl(),
+      ProcessApiMarshallerImpl,
       jwtReader.OAuth2JWTValidatorAsContexts
+    )
+
+    val publicApi: PublicApi = new PublicApi(
+      new PublicApiServiceImpl(
+        partyManagementService = partyManagementService,
+        userRegistryManagementService = userRegistryManagementService,
+        signatureService = signatureService,
+        signatureValidationService = signatureValidationService
+      ),
+      PublicApiMarshallerImpl,
+      SecurityDirectives.authenticateBasic("Public", AkkaUtils.PassThroughAuthenticator)
     )
 
     val healthApi: HealthApi = new HealthApi(
@@ -144,8 +160,9 @@ object Main
     }
 
     val controller: Controller = new Controller(
-      healthApi,
-      processApi,
+      health = healthApi,
+      process = processApi,
+      public = publicApi,
       validationExceptionToRoute = Some(report => {
         val error =
           problemOf(

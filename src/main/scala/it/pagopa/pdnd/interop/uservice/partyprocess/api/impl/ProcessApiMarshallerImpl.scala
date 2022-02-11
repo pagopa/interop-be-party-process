@@ -12,7 +12,7 @@ import java.io.File
 import java.nio.charset.StandardCharsets
 import scala.io.{BufferedSource, Codec}
 
-class ProcessApiMarshallerImpl extends ProcessApiMarshaller with SprayJsonSupport with DefaultJsonProtocol {
+object ProcessApiMarshallerImpl extends ProcessApiMarshaller with SprayJsonSupport with DefaultJsonProtocol {
 
   override implicit def toEntityMarshallerOnboardingResponse: ToEntityMarshaller[OnboardingResponse] =
     sprayJsonMarshaller[OnboardingResponse]

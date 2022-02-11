@@ -6,8 +6,12 @@ import com.nimbusds.jwt.JWTClaimsSet
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
 import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
-import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{ProcessApiMarshallerImpl, uidClaim}
-import it.pagopa.pdnd.interop.uservice.partyprocess.api.{HealthApi, ProcessApiMarshaller}
+import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.{
+  ProcessApiMarshallerImpl,
+  PublicApiMarshallerImpl,
+  uidClaim
+}
+import it.pagopa.pdnd.interop.uservice.partyprocess.api.{HealthApi, ProcessApiMarshaller, PublicApiMarshaller}
 import it.pagopa.pdnd.interop.uservice.partyprocess.service._
 import org.scalamock.scalatest.MockFactory
 
@@ -23,7 +27,8 @@ object MockMailEngine extends MailEngine {
 
 trait SpecHelper { self: MockFactory =>
 
-  val processApiMarshaller: ProcessApiMarshaller                 = new ProcessApiMarshallerImpl
+  val processApiMarshaller: ProcessApiMarshaller                 = ProcessApiMarshallerImpl
+  val publicApiMarshaller: PublicApiMarshaller                   = PublicApiMarshallerImpl
   val mockHealthApi: HealthApi                                   = mock[HealthApi]
   val mockPartyManagementService: PartyManagementService         = mock[PartyManagementService]
   val mockPartyRegistryService: PartyRegistryService             = mock[PartyRegistryService]
