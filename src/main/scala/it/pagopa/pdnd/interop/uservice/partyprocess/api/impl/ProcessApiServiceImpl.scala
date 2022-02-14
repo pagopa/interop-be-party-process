@@ -28,6 +28,7 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApiService
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{
+  certificationToApi,
   relationshipProductToApi,
   relationshipStateToApi,
   roleToApi,
@@ -163,7 +164,6 @@ class ProcessApiServiceImpl(
         .toFuture
       statesArray = if (statesParamArray.isEmpty) defaultStates else statesParamArray
       user <- userRegistryManagementService.getUserById(uid)
-      personInfo = PersonInfo(user.name, user.surname, user.externalId)
       relationships <- partyManagementService.retrieveRelationships(
         from = Some(uid),
         to = organization.map(_.id),
@@ -172,6 +172,15 @@ class ProcessApiServiceImpl(
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
+      personInfo = PersonInfo(
+        name = user.name,
+        surname = user.surname,
+        taxCode = user.externalId,
+        certification = certificationToApi(user.certification),
+        institutionContacts = relationships.items
+          .flatMap(rl => user.extras.email.map(email => rl.to.toString -> Seq(Contact(email = email))))
+          .toMap
+      )
       onboardingData <- Future.traverse(relationships.items)(getOnboardingData(bearer))
     } yield OnboardingInfo(personInfo, onboardingData)
 
@@ -572,7 +581,9 @@ class ProcessApiServiceImpl(
         digitalAddress = institution.digitalAddress,
         taxCode = institution.taxCode,
         attributes = Seq(PartyManagementAttribute(category.origin, category.code, category.name)),
-        products = Set.empty
+        products = Set.empty,
+        address = institution.address,
+        zipCode = institution.zipCode
       )
       organization <- partyManagementService.createOrganization(seed)(bearer)
       _ = logger.info("organization created {}", organization.institutionId)

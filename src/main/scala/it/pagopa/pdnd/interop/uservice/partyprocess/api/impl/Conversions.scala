@@ -3,6 +3,7 @@ package it.pagopa.pdnd.interop.uservice.partyprocess.api.impl
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.RelationshipProduct
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
+import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.{model => UserRegistryManagementDependency}
 
 object Conversions {
   def roleToDependency(role: PartyRole): PartyManagementDependency.PartyRole =
@@ -33,5 +34,11 @@ object Conversions {
   def relationshipProductToApi(product: RelationshipProduct): ProductInfo = {
     ProductInfo(id = product.id, role = product.role, createdAt = product.createdAt)
   }
+
+  def certificationToApi(certification: UserRegistryManagementDependency.Certification): Certification =
+    certification match {
+      case UserRegistryManagementDependency.Certification.NONE => Certification.NONE
+      case UserRegistryManagementDependency.Certification.SPID => Certification.SPID
+    }
 
 }
