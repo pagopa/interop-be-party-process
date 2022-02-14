@@ -11,6 +11,7 @@ import cats.implicits.catsSyntaxValidatedId
 import com.nimbusds.jwt.JWTClaimsSet
 import eu.europa.esig.dss.validation.SignedDocumentValidator
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.Authenticator
+import it.pagopa.pdnd.interop.commons.utils.errors.GenericComponentErrors.ResourceConflictError
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   OrganizationSeed,
   RelationshipBinding,
@@ -1643,7 +1644,6 @@ class PartyProcessSpec
       val partyIdDelegate: UUID        = UUID.randomUUID()
       val relationshipIdDelegate: UUID = UUID.randomUUID()
       val delegateTaxCode: String      = "TINIT-DELEGATE"
-      val institutionId: UUID          = UUID.randomUUID()
 
       val token: TokenInfo =
         TokenInfo(
@@ -1693,53 +1693,9 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService
-        .getToken(_: UUID)(_: String))
-        .expects(tokenId, *)
+        .verifyToken(_: UUID))
+        .expects(tokenId)
         .returning(Future.successful(token))
-
-      (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String))
-        .expects(*, *)
-        .returning(
-          Future.successful(
-            Relationship(
-              id = relationshipIdManager,
-              from = relationshipIdDelegate,
-              to = institutionId,
-              filePath = None,
-              fileName = None,
-              contentType = None,
-              tokenId = None,
-              role = PartyManagementDependency.PartyRole.MANAGER,
-              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
-              state = PartyManagementDependency.RelationshipState.PENDING,
-              createdAt = OffsetDateTime.now(),
-              updatedAt = None
-            )
-          )
-        )
-
-      (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String))
-        .expects(*, *)
-        .returning(
-          Future.successful(
-            Relationship(
-              id = relationshipIdDelegate,
-              from = partyIdDelegate,
-              to = institutionId,
-              filePath = None,
-              fileName = None,
-              contentType = None,
-              tokenId = None,
-              role = PartyManagementDependency.PartyRole.DELEGATE,
-              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
-              state = PartyManagementDependency.RelationshipState.PENDING,
-              createdAt = OffsetDateTime.now(),
-              updatedAt = None
-            )
-          )
-        )
 
       (mockUserRegistryService
         .getUserById(_: UUID))
@@ -1774,8 +1730,8 @@ class PartyProcessSpec
         )
 
       (mockPartyManagementService
-        .consumeToken(_: UUID, _: (FileInfo, File))(_: String))
-        .expects(tokenId, *, *)
+        .consumeToken(_: UUID, _: (FileInfo, File)))
+        .expects(tokenId, *)
         .returning(Future.successful(()))
 
       val formData =
@@ -1799,72 +1755,14 @@ class PartyProcessSpec
 
     "fail trying to confirm a token on already confirmed" in {
 
-      val tokenId: UUID                = UUID.randomUUID()
-      val partyIdManager: UUID         = UUID.randomUUID()
-      val relationshipIdManager: UUID  = UUID.randomUUID()
-      val partyIdDelegate: UUID        = UUID.randomUUID()
-      val relationshipIdDelegate: UUID = UUID.randomUUID()
-      val institutionId: UUID          = UUID.randomUUID()
+      val tokenId: UUID = UUID.randomUUID()
 
-      val token: TokenInfo =
-        TokenInfo(
-          id = tokenId,
-          checksum = "6ddee820d06383127ef029f571285339",
-          legals = Seq(
-            RelationshipBinding(partyId = partyIdManager, relationshipId = relationshipIdManager),
-            RelationshipBinding(partyId = partyIdDelegate, relationshipId = relationshipIdDelegate)
-          )
-        )
       val path = Paths.get("src/test/resources/contract-test-01.pdf")
 
       (mockPartyManagementService
-        .getToken(_: UUID)(_: String))
-        .expects(tokenId, *)
-        .returning(Future.successful(token))
-
-      (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String))
-        .expects(*, *)
-        .returning(
-          Future.successful(
-            Relationship(
-              id = relationshipIdManager,
-              from = relationshipIdDelegate,
-              to = institutionId,
-              filePath = None,
-              fileName = None,
-              contentType = None,
-              tokenId = None,
-              role = PartyManagementDependency.PartyRole.MANAGER,
-              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
-              state = PartyManagementDependency.RelationshipState.ACTIVE,
-              createdAt = OffsetDateTime.now(),
-              updatedAt = None
-            )
-          )
-        )
-
-      (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String))
-        .expects(*, *)
-        .returning(
-          Future.successful(
-            Relationship(
-              id = relationshipIdDelegate,
-              from = partyIdDelegate,
-              to = institutionId,
-              filePath = None,
-              fileName = None,
-              contentType = None,
-              tokenId = None,
-              role = PartyManagementDependency.PartyRole.DELEGATE,
-              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
-              state = PartyManagementDependency.RelationshipState.ACTIVE,
-              createdAt = OffsetDateTime.now(),
-              updatedAt = None
-            )
-          )
-        )
+        .verifyToken(_: UUID))
+        .expects(tokenId)
+        .returning(Future.failed(ResourceConflictError(tokenId.toString)))
 
       val formData =
         Multipart.FormData.fromPath(name = "contract", MediaTypes.`application/octet-stream`, file = path, 100000)
@@ -1881,7 +1779,7 @@ class PartyProcessSpec
           )
           .futureValue
 
-      response.status mustBe StatusCodes.BadRequest
+      response.status mustBe StatusCodes.Conflict
 
     }
 
@@ -1892,7 +1790,6 @@ class PartyProcessSpec
       val partyIdManager: UUID         = UUID.randomUUID()
       val relationshipIdDelegate: UUID = UUID.randomUUID()
       val partyIdDelegate: UUID        = UUID.randomUUID()
-      val institutionId: UUID          = UUID.randomUUID()
 
       val token: TokenInfo =
         TokenInfo(
@@ -1905,57 +1802,13 @@ class PartyProcessSpec
         )
 
       (mockPartyManagementService
-        .getToken(_: UUID)(_: String))
-        .expects(tokenId, *)
+        .verifyToken(_: UUID))
+        .expects(tokenId)
         .returning(Future.successful(token))
 
       (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String))
-        .expects(*, *)
-        .returning(
-          Future.successful(
-            Relationship(
-              id = relationshipIdManager,
-              from = relationshipIdDelegate,
-              to = institutionId,
-              filePath = None,
-              fileName = None,
-              contentType = None,
-              tokenId = None,
-              role = PartyManagementDependency.PartyRole.MANAGER,
-              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
-              state = PartyManagementDependency.RelationshipState.PENDING,
-              createdAt = OffsetDateTime.now(),
-              updatedAt = None
-            )
-          )
-        )
-
-      (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String))
-        .expects(*, *)
-        .returning(
-          Future.successful(
-            Relationship(
-              id = relationshipIdDelegate,
-              from = partyIdDelegate,
-              to = institutionId,
-              filePath = None,
-              fileName = None,
-              contentType = None,
-              tokenId = None,
-              role = PartyManagementDependency.PartyRole.DELEGATE,
-              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
-              state = PartyManagementDependency.RelationshipState.PENDING,
-              createdAt = OffsetDateTime.now(),
-              updatedAt = None
-            )
-          )
-        )
-
-      (mockPartyManagementService
-        .invalidateToken(_: UUID)(_: String))
-        .expects(tokenId, *)
+        .invalidateToken(_: UUID))
+        .expects(tokenId)
         .returning(Future.successful(()))
 
       val response =
@@ -1975,71 +1828,12 @@ class PartyProcessSpec
 
     "fail trying to delete a token on already confirmed" in {
 
-      val tokenId: UUID                = UUID.randomUUID()
-      val relationshipIdManager: UUID  = UUID.randomUUID()
-      val partyIdManager: UUID         = UUID.randomUUID()
-      val relationshipIdDelegate: UUID = UUID.randomUUID()
-      val partyIdDelegate: UUID        = UUID.randomUUID()
-      val institutionId: UUID          = UUID.randomUUID()
-
-      val token: TokenInfo =
-        TokenInfo(
-          id = tokenId,
-          checksum = "6ddee820d06383127ef029f571285339",
-          legals = Seq(
-            RelationshipBinding(partyId = partyIdManager, relationshipId = relationshipIdManager),
-            RelationshipBinding(partyId = partyIdDelegate, relationshipId = relationshipIdDelegate)
-          )
-        )
+      val tokenId: UUID = UUID.randomUUID()
 
       (mockPartyManagementService
-        .getToken(_: UUID)(_: String))
-        .expects(tokenId, *)
-        .returning(Future.successful(token))
-
-      (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String))
-        .expects(*, *)
-        .returning(
-          Future.successful(
-            Relationship(
-              id = relationshipIdManager,
-              from = relationshipIdDelegate,
-              to = institutionId,
-              filePath = None,
-              fileName = None,
-              contentType = None,
-              tokenId = None,
-              role = PartyManagementDependency.PartyRole.MANAGER,
-              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
-              state = PartyManagementDependency.RelationshipState.ACTIVE,
-              createdAt = OffsetDateTime.now(),
-              updatedAt = None
-            )
-          )
-        )
-
-      (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String))
-        .expects(*, *)
-        .returning(
-          Future.successful(
-            Relationship(
-              id = relationshipIdDelegate,
-              from = partyIdDelegate,
-              to = institutionId,
-              filePath = None,
-              fileName = None,
-              contentType = None,
-              tokenId = None,
-              role = PartyManagementDependency.PartyRole.DELEGATE,
-              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
-              state = PartyManagementDependency.RelationshipState.ACTIVE,
-              createdAt = OffsetDateTime.now(),
-              updatedAt = None
-            )
-          )
-        )
+        .verifyToken(_: UUID))
+        .expects(tokenId)
+        .returning(Future.failed(ResourceConflictError(tokenId.toString)))
 
       val response =
         Http()
@@ -2052,7 +1846,7 @@ class PartyProcessSpec
           )
           .futureValue
 
-      response.status mustBe StatusCodes.BadRequest
+      response.status mustBe StatusCodes.Conflict
 
     }
 

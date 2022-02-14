@@ -1,9 +1,10 @@
 package it.pagopa.pdnd.interop.uservice.partyprocess.service.impl
 
-import it.pagopa.pdnd.interop.uservice.partyprocess.error.PartyProcessErrors.ResourceConflictError
+import it.pagopa.pdnd.interop.commons.utils.errors.GenericComponentErrors.ResourceConflictError
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.{
   UserRegistryManagementInvoker,
-  UserRegistryManagementService
+  UserRegistryManagementService,
+  unknown
 }
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.api.UserApi
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.invoker.{ApiError, ApiKeyValue, ApiRequest}
@@ -20,25 +21,27 @@ final case class UserRegistryManagementServiceImpl(invoker: UserRegistryManageme
 
   override def getUserById(userId: UUID): Future[User] = {
     val request: ApiRequest[User] = api.getUserById(userId)
-    invokeAPI(request, "Retrieve User By ID")
+    invokeAPI(request, "Retrieve User By ID", Some(userId.toString))
   }
 
   override def getUserByExternalId(externalId: String): Future[User] = {
     val request: ApiRequest[User] = api.getUserByExternalId(EmbeddedExternalId(externalId))
-    invokeAPI(request, "Retrieve User By External ID")
+    invokeAPI(request, "Retrieve User By External ID", Some(externalId))
   }
 
   override def createUser(seed: UserSeed): Future[User] = {
     val request: ApiRequest[User] = api.createUser(seed)
-    invokeAPI(request, "Create User")
+    invokeAPI(request, "Create User", None)
   }
 
   override def updateUser(seed: UserSeed): Future[User] = {
     val request: ApiRequest[User] = api.updateUser(seed)
-    invokeAPI(request, "Update User")
+    invokeAPI(request, "Update User", None)
   }
 
-  private def invokeAPI[T](request: ApiRequest[T], logMessage: String)(implicit m: Manifest[T]): Future[T] =
+  private def invokeAPI[T](request: ApiRequest[T], logMessage: String, entityId: Option[String])(implicit
+    m: Manifest[T]
+  ): Future[T] =
     invoker
       .invoke(
         request,
@@ -46,7 +49,7 @@ final case class UserRegistryManagementServiceImpl(invoker: UserRegistryManageme
         (logger, msg) => {
           case ex @ ApiError(code, message, _, _, _) if code == 409 =>
             logger.error(s"$msg. code > $code - message > $message", ex)
-            Future.failed[T](ResourceConflictError)
+            Future.failed[T](ResourceConflictError(entityId.getOrElse(unknown)))
           case ex: ApiError[_] =>
             logger.error(s"$msg. code > ${ex.code} - message > ${ex.message}", ex)
             Future.failed(ex)

@@ -47,12 +47,17 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
     originalDigest: String
   ): ValidatedNel[SignatureValidationError, Unit] = {
 
-    val sign: AdvancedSignature       = documentValidator.getSignatures.get(0)
-    val incomingOriginal: DSSDocument = documentValidator.getOriginalDocuments(sign.getId).get(0)
-    val incomingDigest: String        = incomingOriginal.getDigest(DigestAlgorithm.SHA256)
+    val signs: List[AdvancedSignature] = documentValidator.getSignatures.asScala.toList
 
-    val validation: Either[InvalidContractDigest, Unit] =
-      Either.cond(originalDigest == incomingDigest, (), InvalidContractDigest(originalDigest, incomingDigest))
+    val isDigestVerified: Boolean = signs.exists { sign =>
+      val incomingOriginal: DSSDocument = documentValidator.getOriginalDocuments(sign.getId).get(0)
+      val incomingDigest: String        = incomingOriginal.getDigest(DigestAlgorithm.SHA256)
+
+      originalDigest == incomingDigest
+
+    }
+
+    val validation = Either.cond(isDigestVerified, (), InvalidContractDigest)
 
     validation match {
       case Left(throwable)  => throwable.invalidNel[Unit]

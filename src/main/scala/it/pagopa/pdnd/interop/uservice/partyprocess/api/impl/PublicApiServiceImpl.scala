@@ -7,10 +7,9 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import com.typesafe.scalalogging.Logger
 import it.pagopa.pdnd.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
-import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.getFutureBearer
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions._
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{Relationship, Problem => _}
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
+import it.pagopa.pdnd.interop.commons.utils.errors.GenericComponentErrors.ResourceConflictError
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{Problem => _}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.PublicApiService
 import it.pagopa.pdnd.interop.uservice.partyprocess.error.PartyProcessErrors._
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
@@ -54,15 +53,10 @@ class PublicApiServiceImpl(
   ): Route = {
     logger.info("Confirm onboarding of token identified with {}", tokenId)
     val result: Future[Unit] = for {
-      bearer      <- getFutureBearer(contexts)
       tokenIdUUID <- tokenId.toFutureUUID
-      token       <- partyManagementService.getToken(tokenIdUUID)(bearer)
-      relationships <- Future.traverse(token.legals)(legal =>
-        partyManagementService.getRelationshipById(legal.relationshipId)(bearer)
-      )
-      _          <- isTokenNotConsumed(tokenId, relationships)
-      legalUsers <- Future.traverse(token.legals)(legal => userRegistryManagementService.getUserById(legal.partyId))
-      validator  <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
+      token       <- partyManagementService.verifyToken(tokenIdUUID)
+      legalUsers  <- Future.traverse(token.legals)(legal => userRegistryManagementService.getUserById(legal.partyId))
+      validator   <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
       _ <- SignatureValidationService.validateSignature(
         signatureValidationService.isDocumentSigned(validator),
         signatureValidationService.verifySignature(validator),
@@ -70,7 +64,7 @@ class PublicApiServiceImpl(
         signatureValidationService.verifyDigest(validator, token.checksum),
         signatureValidationService.verifyManagerTaxCode(validator, legalUsers)
       )
-      _ <- partyManagementService.consumeToken(token.id, contract)(bearer)
+      _ <- partyManagementService.consumeToken(token.id, contract)
     } yield ()
 
     onComplete(result) {
@@ -93,6 +87,10 @@ class PublicApiServiceImpl(
           )
         )
         confirmOnboarding409(errorResponse)
+      case Failure(ex: ResourceConflictError) =>
+        logger.error("Error while confirming onboarding of token identified with {} - {}", tokenId, ex)
+        val errorResponse: Problem = problemOf(StatusCodes.Conflict, ex)
+        confirmOnboarding409(errorResponse)
       case Failure(ex) =>
         logger.error("Error while confirming onboarding of token identified with {} - {}", tokenId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, ConfirmOnboardingError)
@@ -108,18 +106,17 @@ class PublicApiServiceImpl(
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
     logger.info("Invalidating onboarding for token identified with {}", tokenId)
     val result: Future[Unit] = for {
-      bearer      <- getFutureBearer(contexts)
       tokenIdUUID <- tokenId.toFutureUUID
-      token       <- partyManagementService.getToken(tokenIdUUID)(bearer)
-      relationships <- Future.traverse(token.legals)(legal =>
-        partyManagementService.getRelationshipById(legal.relationshipId)(bearer)
-      )
-      _      <- isTokenNotConsumed(tokenId, relationships)
-      result <- partyManagementService.invalidateToken(tokenIdUUID)(bearer)
+      token       <- partyManagementService.verifyToken(tokenIdUUID)
+      result      <- partyManagementService.invalidateToken(token.id)
     } yield result
 
     onComplete(result) {
       case Success(_) => invalidateOnboarding200
+      case Failure(ex: ResourceConflictError) =>
+        logger.error("Error while confirming onboarding of token identified with {} - {}", tokenId, ex)
+        val errorResponse: Problem = problemOf(StatusCodes.Conflict, ex)
+        confirmOnboarding409(errorResponse)
       case Failure(ex) =>
         logger.error("Error while invalidating onboarding for token identified with {}", tokenId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, InvalidateOnboardingError)
@@ -128,14 +125,5 @@ class PublicApiServiceImpl(
     }
 
   }
-
-  private def isTokenNotConsumed(tokenId: String, relationships: Seq[Relationship]): Future[Unit] =
-    Either
-      .cond(
-        relationships.nonEmpty && relationships.forall(_.state == PartyManagementDependency.RelationshipState.PENDING),
-        (),
-        TokenAlreadyConsumed(tokenId)
-      )
-      .toFuture
 
 }
