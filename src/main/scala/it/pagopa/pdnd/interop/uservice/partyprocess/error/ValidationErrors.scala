@@ -5,11 +5,7 @@ object ValidationErrors {
   final case class DocumentValidationFail(errorMessage: String)
       extends SignatureValidationError("1000", s"Error trying to validate document, due: $errorMessage")
 
-  final case class InvalidContractDigest(originalDigest: String, incomingDigest: String)
-      extends SignatureValidationError(
-        "1001",
-        s"Original contract digest $originalDigest is not equal to $incomingDigest"
-      )
+  case object InvalidContractDigest extends SignatureValidationError("1001", s"Invalid file digest")
 
   case object InvalidDocumentSignature extends SignatureValidationError("1002", s"Document signature is invalid")
 
@@ -31,7 +27,6 @@ object ValidationErrors {
   case object TaxCodeNotFoundInSignature
       extends SignatureValidationError("1006", "No tax code has been found in digital signature")
 
-  case object SignatureNotFound
-      extends SignatureValidationError("1007", "No tax code has been found in digital signature")
+  case object SignatureNotFound extends SignatureValidationError("1007", "No signature found")
 
 }

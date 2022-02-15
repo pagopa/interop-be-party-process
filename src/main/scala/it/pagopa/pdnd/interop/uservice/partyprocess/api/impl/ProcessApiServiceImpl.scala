@@ -13,7 +13,7 @@ import it.pagopa.pdnd.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.getFutureBearer
 import it.pagopa.pdnd.interop.commons.utils.OpenapiUtils._
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions._
-import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.ApiError
+import it.pagopa.pdnd.interop.commons.utils.errors.GenericComponentErrors.{ResourceConflictError, ResourceNotFoundError}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   Organization,
   OrganizationSeed,
@@ -27,12 +27,7 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
 }
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.pdnd.interop.uservice.partyprocess.api.ProcessApiService
-import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions.{
-  relationshipProductToApi,
-  relationshipStateToApi,
-  roleToApi,
-  roleToDependency
-}
+import it.pagopa.pdnd.interop.uservice.partyprocess.api.impl.Conversions._
 import it.pagopa.pdnd.interop.uservice.partyprocess.common.system.ApplicationConfiguration
 import it.pagopa.pdnd.interop.uservice.partyprocess.error.PartyProcessErrors._
 import it.pagopa.pdnd.interop.uservice.partyprocess.model._
@@ -163,7 +158,6 @@ class ProcessApiServiceImpl(
         .toFuture
       statesArray = if (statesParamArray.isEmpty) defaultStates else statesParamArray
       user <- userRegistryManagementService.getUserById(uid)
-      personInfo = PersonInfo(user.name, user.surname, user.externalId)
       relationships <- partyManagementService.retrieveRelationships(
         from = Some(uid),
         to = organization.map(_.id),
@@ -172,15 +166,26 @@ class ProcessApiServiceImpl(
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
+      personInfo = PersonInfo(
+        name = user.name,
+        surname = user.surname,
+        taxCode = user.externalId,
+        certification = certificationToApi(user.certification),
+        institutionContacts = relationships.items
+          .flatMap(rl => user.extras.email.map(email => rl.to.toString -> Seq(Contact(email = email))))
+          .toMap
+      )
       onboardingData <- Future.traverse(relationships.items)(getOnboardingData(bearer))
     } yield OnboardingInfo(personInfo, onboardingData)
 
     onComplete(result) {
       case Success(res) => getOnboardingInfo200(res)
-      case Failure(ResourceNotFoundError) =>
-        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ResourceNotFoundError)
+      case Failure(ex: ResourceNotFoundError) =>
+        logger.info("No onboarding information found for {}", ex.resourceId, ex)
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         getOnboardingInfo404(errorResponse)
-      case Failure(_) =>
+      case Failure(ex) =>
+        logger.error("Error getting onboarding info ", ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, GettingOnboardingInfoError)
         getOnboardingInfo400(errorResponse)
 
@@ -251,10 +256,9 @@ class ProcessApiServiceImpl(
     onboardingRequest: OnboardingRequest
   )(bearer: String, contexts: Seq[(String, String)]): Future[Organization] =
     createOrganization(onboardingRequest.institutionId)(bearer, contexts).recoverWith {
-      case ResourceConflictError =>
+      case _: ResourceConflictError =>
         partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
       case ex =>
-        logger.error("Error while creating or getting organization {}", onboardingRequest.institutionId, ex)(contexts)
         Future.failed(ex)
     }
 
@@ -375,7 +379,7 @@ class ProcessApiServiceImpl(
     partyManagementService
       .createRelationship(relationshipSeed)(bearer)
       .recoverWith {
-        case ResourceConflictError =>
+        case _: ResourceConflictError =>
           for {
             relationships <- partyManagementService.retrieveRelationships(
               from = Some(personId),
@@ -534,8 +538,8 @@ class ProcessApiServiceImpl(
     logger.info("Adding user {}", user.toString)
     createPerson(user)(bearer)
       .recoverWith {
-        case ResourceConflictError => userRegistryManagementService.getUserByExternalId(user.taxCode)
-        case ex                    => Future.failed(ex)
+        case _: ResourceConflictError => userRegistryManagementService.getUserByExternalId(user.taxCode)
+        case ex                       => Future.failed(ex)
       }
       .map((_, user.role, user.product, user.productRole))
   }
@@ -553,8 +557,8 @@ class ProcessApiServiceImpl(
           )
         )
         .recoverWith {
-          case ResourceConflictError => userRegistryManagementService.getUserByExternalId(user.taxCode)
-          case ex                    => Future.failed(ex)
+          case _: ResourceConflictError => userRegistryManagementService.getUserByExternalId(user.taxCode)
+          case ex                       => Future.failed(ex)
         }
       _ <- partyManagementService.createPerson(PersonSeed(user.id))(bearer)
     } yield user
@@ -572,7 +576,9 @@ class ProcessApiServiceImpl(
         digitalAddress = institution.digitalAddress,
         taxCode = institution.taxCode,
         attributes = Seq(PartyManagementAttribute(category.origin, category.code, category.name)),
-        products = Set.empty
+        products = Set.empty,
+        address = institution.address,
+        zipCode = institution.zipCode
       )
       organization <- partyManagementService.createOrganization(seed)(bearer)
       _ = logger.info("organization created {}", organization.institutionId)
@@ -735,13 +741,13 @@ class ProcessApiServiceImpl(
       case Success(document) =>
         val output: MessageEntity = convertToMessageEntity(document)
         complete(output)
-      case Failure(ex: ApiError[_]) if ex.code == 400 =>
+      case Failure(ex: ResourceNotFoundError) =>
         logger.error("Error while getting onboarding document of relationship {}", relationshipId, ex)
-        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, BadRequestError)
-        getOnboardingDocument400(errorResponse)
-      case Failure(ex: ApiError[_]) if ex.code == 404 =>
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
+        getOnboardingDocument404(errorResponse)
+      case Failure(ex: RelationshipDocumentNotFound) =>
         logger.error("Error while getting onboarding document of relationship {}", relationshipId, ex)
-        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ResourceNotFoundError)
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         getOnboardingDocument404(errorResponse)
       case Failure(ex) =>
         logger.error("Error while getting onboarding document of relationship {}", relationshipId, ex)

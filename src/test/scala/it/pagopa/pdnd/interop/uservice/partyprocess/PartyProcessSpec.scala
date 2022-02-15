@@ -11,6 +11,7 @@ import cats.implicits.catsSyntaxValidatedId
 import com.nimbusds.jwt.JWTClaimsSet
 import eu.europa.esig.dss.validation.SignedDocumentValidator
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.Authenticator
+import it.pagopa.pdnd.interop.commons.utils.errors.GenericComponentErrors.ResourceConflictError
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
   OrganizationSeed,
   RelationshipBinding,
@@ -30,7 +31,7 @@ import it.pagopa.pdnd.interop.uservice.partyprocess.error.SignatureValidationErr
 import it.pagopa.pdnd.interop.uservice.partyprocess.model.{Products => ModelProducts, _}
 import it.pagopa.pdnd.interop.uservice.partyprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.partyprocess.{model => PartyProcess}
-import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.{Category, Institution, Manager}
+import it.pagopa.pdnd.interop.uservice.partyregistryproxy.client.model.{Category, Institution}
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.Certification.{
   NONE => CertificationEnumsNone
 }
@@ -150,10 +151,11 @@ class PartyProcessSpec
         aoo = None,
         taxCode = "taxCode",
         category = "C17",
-        manager = Manager("name", "surname"),
         description = "description",
         digitalAddress = "digitalAddress",
-        origin = "origin"
+        origin = "origin",
+        address = "address",
+        zipCode = "zipCode"
       )
 
     val organization1 = PartyManagementDependency.Organization(
@@ -162,7 +164,9 @@ class PartyProcessSpec
       digitalAddress = "digitalAddress1",
       id = UUID.fromString(orgPartyId1),
       attributes = Seq.empty,
-      taxCode = "123"
+      taxCode = "123",
+      address = "address",
+      zipCode = "zipCode"
     )
 
     val manager =
@@ -283,10 +287,11 @@ class PartyProcessSpec
         aoo = None,
         taxCode = "taxCode",
         category = "C17",
-        manager = Manager("name", "surname"),
         description = "description",
         digitalAddress = "digitalAddress",
-        origin = "origin"
+        origin = "origin",
+        address = "address",
+        zipCode = "zipCode"
       )
 
     val organization1 = PartyManagementDependency.Organization(
@@ -295,7 +300,9 @@ class PartyProcessSpec
       digitalAddress = "digitalAddress1",
       id = UUID.fromString(orgPartyId1),
       attributes = Seq.empty,
-      taxCode = "123"
+      taxCode = "123",
+      address = "address",
+      zipCode = "zipCode"
     )
 
     val file = new File("src/test/resources/fake.file")
@@ -526,7 +533,9 @@ class PartyProcessSpec
         digitalAddress = "",
         id = orgPartyId,
         attributes = Seq.empty,
-        taxCode = ""
+        taxCode = "",
+        address = "",
+        zipCode = ""
       )
 
       val relationship =
@@ -600,7 +609,9 @@ class PartyProcessSpec
         digitalAddress = "",
         id = orgPartyId,
         attributes = Seq.empty,
-        taxCode = ""
+        taxCode = "",
+        address = "",
+        zipCode = ""
       )
 
       (mockPartyManagementService
@@ -666,9 +677,9 @@ class PartyProcessSpec
       val attribute5 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name5", "origin")
       val attribute6 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name6", "origin")
 
-      val person1 = UserRegistryUser(
+      val user = UserRegistryUser(
         id = UUID.fromString(personPartyId1),
-        externalId = "CF1",
+        externalId = taxCode1,
         name = "Mario",
         surname = "Rossi",
         certification = CertificationEnumsNone,
@@ -678,7 +689,7 @@ class PartyProcessSpec
       val relationship1 =
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
-          from = person1.id,
+          from = user.id,
           to = institutionId1,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
@@ -689,7 +700,7 @@ class PartyProcessSpec
       val relationship2 =
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
-          from = person1.id,
+          from = user.id,
           to = institutionId2,
           role = PartyManagementDependency.PartyRole.DELEGATE,
           product = product,
@@ -710,7 +721,9 @@ class PartyProcessSpec
           PartyManagementDependency.Attribute(attribute2.origin, attribute2.code, attribute2.description),
           PartyManagementDependency.Attribute(attribute3.origin, attribute3.code, attribute3.description)
         ),
-        taxCode = "123"
+        taxCode = "123",
+        address = "address",
+        zipCode = "zipCode"
       )
       val organization2 = PartyManagementDependency.Organization(
         institutionId = institutionId2.toString,
@@ -722,11 +735,19 @@ class PartyProcessSpec
           PartyManagementDependency.Attribute(attribute5.origin, attribute5.code, attribute5.description),
           PartyManagementDependency.Attribute(attribute6.origin, attribute6.code, attribute6.description)
         ),
-        taxCode = "123"
+        taxCode = "123",
+        address = "address",
+        zipCode = "zipCode"
       )
 
       val expected = OnboardingInfo(
-        person = PersonInfo(name = person1.name, surname = person1.surname, taxCode = person1.externalId),
+        person = PersonInfo(
+          name = user.name,
+          surname = user.surname,
+          taxCode = user.externalId,
+          certification = Certification.NONE,
+          institutionContacts = Map.empty
+        ),
         institutions = Seq(
           OnboardingData(
             institutionId = organization1.institutionId,
@@ -766,18 +787,7 @@ class PartyProcessSpec
       (mockUserRegistryService
         .getUserById(_: UUID))
         .expects(UUID.fromString(mockUidUUID))
-        .returning(
-          Future.successful(
-            UserRegistryUser(
-              id = UUID.fromString(mockUidUUID),
-              externalId = taxCode1,
-              name = "Mario",
-              surname = "Rossi",
-              certification = CertificationEnumsNone,
-              extras = UserRegistryUserExtras(email = Some("super@mario.it"), birthDate = None)
-            )
-          )
-        )
+        .returning(Future.successful(user))
         .once()
 
       (mockPartyManagementService
@@ -832,25 +842,25 @@ class PartyProcessSpec
     "retrieve an onboarding info with institution id filter" in {
       val taxCode1       = "CF1"
       val institutionId1 = "institutionId1"
-      val orgPartyId1    = UUID.randomUUID() // "af80fac0-2775-4646-8fcf-28e083751801"
+      val orgPartyId1    = UUID.randomUUID()
       val personPartyId1 = "af80fac0-2775-4646-8fcf-28e083751800"
       val attribute1     = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1", "origin")
       val attribute2     = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2", "origin")
       val attribute3     = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3", "origin")
 
-      val person1 = UserRegistryUser(
+      val user = UserRegistryUser(
         id = UUID.fromString(personPartyId1),
-        externalId = "CF1",
+        externalId = taxCode1,
         name = "Mario",
         surname = "Rossi",
         certification = CertificationEnumsNone,
-        extras = UserRegistryUserExtras(email = None, birthDate = None)
+        extras = UserRegistryUserExtras(email = Some("super@mario.it"), birthDate = None)
       )
 
       val relationship1 =
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
-          from = person1.id,
+          from = user.id,
           to = orgPartyId1,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
@@ -871,11 +881,19 @@ class PartyProcessSpec
           PartyManagementDependency.Attribute(attribute2.origin, attribute2.code, attribute2.description),
           PartyManagementDependency.Attribute(attribute3.origin, attribute3.code, attribute3.description)
         ),
-        taxCode = "123"
+        taxCode = "123",
+        address = "address",
+        zipCode = "zipCode"
       )
 
       val expected = OnboardingInfo(
-        person = PersonInfo(name = person1.name, surname = person1.surname, taxCode = person1.externalId),
+        person = PersonInfo(
+          name = user.name,
+          surname = user.surname,
+          taxCode = user.externalId,
+          certification = Certification.NONE,
+          institutionContacts = Map(orgPartyId1.toString -> Seq(Contact(email = user.extras.email.get)))
+        ),
         institutions = Seq(
           OnboardingData(
             institutionId = organization1.institutionId,
@@ -901,18 +919,7 @@ class PartyProcessSpec
       (mockUserRegistryService
         .getUserById(_: UUID))
         .expects(UUID.fromString(mockUidUUID))
-        .returning(
-          Future.successful(
-            UserRegistryUser(
-              id = UUID.fromString(mockUidUUID),
-              externalId = taxCode1,
-              name = "Mario",
-              surname = "Rossi",
-              certification = CertificationEnumsNone,
-              extras = UserRegistryUserExtras(email = Some("super@mario.it"), birthDate = None)
-            )
-          )
-        )
+        .returning(Future.successful(user))
         .once()
 
       (mockPartyManagementService
@@ -976,19 +983,20 @@ class PartyProcessSpec
       val attribute2     = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name2", "origin")
       val attribute3     = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name3", "origin")
 
-      val person1 = UserRegistryUser(
-        id = UUID.fromString(personPartyId1),
-        externalId = "CF1",
-        name = "Mario",
-        surname = "Rossi",
-        certification = CertificationEnumsNone,
-        extras = UserRegistryUserExtras(email = None, birthDate = None)
-      )
+      val user =
+        UserRegistryUser(
+          id = UUID.fromString(personPartyId1),
+          externalId = taxCode1,
+          name = "Mario",
+          surname = "Rossi",
+          certification = CertificationEnumsNone,
+          extras = UserRegistryUserExtras(email = Some("super@mario.it"), birthDate = None)
+        )
 
       val relationship1 =
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
-          from = person1.id,
+          from = user.id,
           to = institutionId1,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
@@ -1005,11 +1013,19 @@ class PartyProcessSpec
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
         attributes = Seq(attribute1, attribute2, attribute3),
-        taxCode = "123"
+        taxCode = "123",
+        address = "address",
+        zipCode = "zipCode"
       )
 
       val expected = OnboardingInfo(
-        person = PersonInfo(name = person1.name, surname = person1.surname, taxCode = person1.externalId),
+        person = PersonInfo(
+          name = user.name,
+          surname = user.surname,
+          taxCode = user.externalId,
+          certification = Certification.NONE,
+          institutionContacts = Map(institutionId1.toString -> Seq(Contact(email = user.extras.email.get)))
+        ),
         institutions = Seq(
           OnboardingData(
             institutionId = organization1.institutionId,
@@ -1039,18 +1055,7 @@ class PartyProcessSpec
       (mockUserRegistryService
         .getUserById(_: UUID))
         .expects(UUID.fromString(mockUidUUID))
-        .returning(
-          Future.successful(
-            UserRegistryUser(
-              id = UUID.fromString(mockUidUUID),
-              externalId = taxCode1,
-              name = "Mario",
-              surname = "Rossi",
-              certification = CertificationEnumsNone,
-              extras = UserRegistryUserExtras(email = Some("super@mario.it"), birthDate = None)
-            )
-          )
-        )
+        .returning(Future.successful(user))
         .once()
 
       (mockPartyManagementService
@@ -1223,7 +1228,9 @@ class PartyProcessSpec
               description = "test",
               digitalAddress = "big@fish.it",
               attributes = Seq.empty,
-              taxCode = "123"
+              taxCode = "123",
+              address = "address",
+              zipCode = "zipCode"
             )
           )
         )
@@ -1266,7 +1273,9 @@ class PartyProcessSpec
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
         attributes = Seq.empty,
-        taxCode = "123"
+        taxCode = "123",
+        address = "address",
+        zipCode = "zipCode"
       )
 
       val relationships =
@@ -1440,7 +1449,9 @@ class PartyProcessSpec
               description = "test",
               digitalAddress = "big@fish.it",
               attributes = Seq.empty,
-              taxCode = "123"
+              taxCode = "123",
+              address = "address",
+              zipCode = "zipCode"
             )
           )
         )
@@ -1483,7 +1494,9 @@ class PartyProcessSpec
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
         attributes = Seq.empty,
-        taxCode = "123"
+        taxCode = "123",
+        address = "address",
+        zipCode = "zipCode"
       )
 
       val relationships =
@@ -1631,7 +1644,6 @@ class PartyProcessSpec
       val partyIdDelegate: UUID        = UUID.randomUUID()
       val relationshipIdDelegate: UUID = UUID.randomUUID()
       val delegateTaxCode: String      = "TINIT-DELEGATE"
-      val institutionId: UUID          = UUID.randomUUID()
 
       val token: TokenInfo =
         TokenInfo(
@@ -1681,53 +1693,9 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService
-        .getToken(_: UUID)(_: String))
-        .expects(tokenId, *)
+        .verifyToken(_: UUID))
+        .expects(tokenId)
         .returning(Future.successful(token))
-
-      (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String))
-        .expects(*, *)
-        .returning(
-          Future.successful(
-            Relationship(
-              id = relationshipIdManager,
-              from = relationshipIdDelegate,
-              to = institutionId,
-              filePath = None,
-              fileName = None,
-              contentType = None,
-              tokenId = None,
-              role = PartyManagementDependency.PartyRole.MANAGER,
-              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
-              state = PartyManagementDependency.RelationshipState.PENDING,
-              createdAt = OffsetDateTime.now(),
-              updatedAt = None
-            )
-          )
-        )
-
-      (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String))
-        .expects(*, *)
-        .returning(
-          Future.successful(
-            Relationship(
-              id = relationshipIdDelegate,
-              from = partyIdDelegate,
-              to = institutionId,
-              filePath = None,
-              fileName = None,
-              contentType = None,
-              tokenId = None,
-              role = PartyManagementDependency.PartyRole.DELEGATE,
-              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
-              state = PartyManagementDependency.RelationshipState.PENDING,
-              createdAt = OffsetDateTime.now(),
-              updatedAt = None
-            )
-          )
-        )
 
       (mockUserRegistryService
         .getUserById(_: UUID))
@@ -1762,8 +1730,8 @@ class PartyProcessSpec
         )
 
       (mockPartyManagementService
-        .consumeToken(_: UUID, _: (FileInfo, File))(_: String))
-        .expects(tokenId, *, *)
+        .consumeToken(_: UUID, _: (FileInfo, File)))
+        .expects(tokenId, *)
         .returning(Future.successful(()))
 
       val formData =
@@ -1787,72 +1755,14 @@ class PartyProcessSpec
 
     "fail trying to confirm a token on already confirmed" in {
 
-      val tokenId: UUID                = UUID.randomUUID()
-      val partyIdManager: UUID         = UUID.randomUUID()
-      val relationshipIdManager: UUID  = UUID.randomUUID()
-      val partyIdDelegate: UUID        = UUID.randomUUID()
-      val relationshipIdDelegate: UUID = UUID.randomUUID()
-      val institutionId: UUID          = UUID.randomUUID()
+      val tokenId: UUID = UUID.randomUUID()
 
-      val token: TokenInfo =
-        TokenInfo(
-          id = tokenId,
-          checksum = "6ddee820d06383127ef029f571285339",
-          legals = Seq(
-            RelationshipBinding(partyId = partyIdManager, relationshipId = relationshipIdManager),
-            RelationshipBinding(partyId = partyIdDelegate, relationshipId = relationshipIdDelegate)
-          )
-        )
       val path = Paths.get("src/test/resources/contract-test-01.pdf")
 
       (mockPartyManagementService
-        .getToken(_: UUID)(_: String))
-        .expects(tokenId, *)
-        .returning(Future.successful(token))
-
-      (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String))
-        .expects(*, *)
-        .returning(
-          Future.successful(
-            Relationship(
-              id = relationshipIdManager,
-              from = relationshipIdDelegate,
-              to = institutionId,
-              filePath = None,
-              fileName = None,
-              contentType = None,
-              tokenId = None,
-              role = PartyManagementDependency.PartyRole.MANAGER,
-              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
-              state = PartyManagementDependency.RelationshipState.ACTIVE,
-              createdAt = OffsetDateTime.now(),
-              updatedAt = None
-            )
-          )
-        )
-
-      (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String))
-        .expects(*, *)
-        .returning(
-          Future.successful(
-            Relationship(
-              id = relationshipIdDelegate,
-              from = partyIdDelegate,
-              to = institutionId,
-              filePath = None,
-              fileName = None,
-              contentType = None,
-              tokenId = None,
-              role = PartyManagementDependency.PartyRole.DELEGATE,
-              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
-              state = PartyManagementDependency.RelationshipState.ACTIVE,
-              createdAt = OffsetDateTime.now(),
-              updatedAt = None
-            )
-          )
-        )
+        .verifyToken(_: UUID))
+        .expects(tokenId)
+        .returning(Future.failed(ResourceConflictError(tokenId.toString)))
 
       val formData =
         Multipart.FormData.fromPath(name = "contract", MediaTypes.`application/octet-stream`, file = path, 100000)
@@ -1869,7 +1779,7 @@ class PartyProcessSpec
           )
           .futureValue
 
-      response.status mustBe StatusCodes.BadRequest
+      response.status mustBe StatusCodes.Conflict
 
     }
 
@@ -1880,7 +1790,6 @@ class PartyProcessSpec
       val partyIdManager: UUID         = UUID.randomUUID()
       val relationshipIdDelegate: UUID = UUID.randomUUID()
       val partyIdDelegate: UUID        = UUID.randomUUID()
-      val institutionId: UUID          = UUID.randomUUID()
 
       val token: TokenInfo =
         TokenInfo(
@@ -1893,57 +1802,13 @@ class PartyProcessSpec
         )
 
       (mockPartyManagementService
-        .getToken(_: UUID)(_: String))
-        .expects(tokenId, *)
+        .verifyToken(_: UUID))
+        .expects(tokenId)
         .returning(Future.successful(token))
 
       (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String))
-        .expects(*, *)
-        .returning(
-          Future.successful(
-            Relationship(
-              id = relationshipIdManager,
-              from = relationshipIdDelegate,
-              to = institutionId,
-              filePath = None,
-              fileName = None,
-              contentType = None,
-              tokenId = None,
-              role = PartyManagementDependency.PartyRole.MANAGER,
-              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
-              state = PartyManagementDependency.RelationshipState.PENDING,
-              createdAt = OffsetDateTime.now(),
-              updatedAt = None
-            )
-          )
-        )
-
-      (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String))
-        .expects(*, *)
-        .returning(
-          Future.successful(
-            Relationship(
-              id = relationshipIdDelegate,
-              from = partyIdDelegate,
-              to = institutionId,
-              filePath = None,
-              fileName = None,
-              contentType = None,
-              tokenId = None,
-              role = PartyManagementDependency.PartyRole.DELEGATE,
-              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
-              state = PartyManagementDependency.RelationshipState.PENDING,
-              createdAt = OffsetDateTime.now(),
-              updatedAt = None
-            )
-          )
-        )
-
-      (mockPartyManagementService
-        .invalidateToken(_: UUID)(_: String))
-        .expects(tokenId, *)
+        .invalidateToken(_: UUID))
+        .expects(tokenId)
         .returning(Future.successful(()))
 
       val response =
@@ -1963,71 +1828,12 @@ class PartyProcessSpec
 
     "fail trying to delete a token on already confirmed" in {
 
-      val tokenId: UUID                = UUID.randomUUID()
-      val relationshipIdManager: UUID  = UUID.randomUUID()
-      val partyIdManager: UUID         = UUID.randomUUID()
-      val relationshipIdDelegate: UUID = UUID.randomUUID()
-      val partyIdDelegate: UUID        = UUID.randomUUID()
-      val institutionId: UUID          = UUID.randomUUID()
-
-      val token: TokenInfo =
-        TokenInfo(
-          id = tokenId,
-          checksum = "6ddee820d06383127ef029f571285339",
-          legals = Seq(
-            RelationshipBinding(partyId = partyIdManager, relationshipId = relationshipIdManager),
-            RelationshipBinding(partyId = partyIdDelegate, relationshipId = relationshipIdDelegate)
-          )
-        )
+      val tokenId: UUID = UUID.randomUUID()
 
       (mockPartyManagementService
-        .getToken(_: UUID)(_: String))
-        .expects(tokenId, *)
-        .returning(Future.successful(token))
-
-      (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String))
-        .expects(*, *)
-        .returning(
-          Future.successful(
-            Relationship(
-              id = relationshipIdManager,
-              from = relationshipIdDelegate,
-              to = institutionId,
-              filePath = None,
-              fileName = None,
-              contentType = None,
-              tokenId = None,
-              role = PartyManagementDependency.PartyRole.MANAGER,
-              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
-              state = PartyManagementDependency.RelationshipState.ACTIVE,
-              createdAt = OffsetDateTime.now(),
-              updatedAt = None
-            )
-          )
-        )
-
-      (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String))
-        .expects(*, *)
-        .returning(
-          Future.successful(
-            Relationship(
-              id = relationshipIdDelegate,
-              from = partyIdDelegate,
-              to = institutionId,
-              filePath = None,
-              fileName = None,
-              contentType = None,
-              tokenId = None,
-              role = PartyManagementDependency.PartyRole.DELEGATE,
-              product = PartyManagementDependency.RelationshipProduct("product", "admin", OffsetDateTime.now()),
-              state = PartyManagementDependency.RelationshipState.ACTIVE,
-              createdAt = OffsetDateTime.now(),
-              updatedAt = None
-            )
-          )
-        )
+        .verifyToken(_: UUID))
+        .expects(tokenId)
+        .returning(Future.failed(ResourceConflictError(tokenId.toString)))
 
       val response =
         Http()
@@ -2040,7 +1846,7 @@ class PartyProcessSpec
           )
           .futureValue
 
-      response.status mustBe StatusCodes.BadRequest
+      response.status mustBe StatusCodes.Conflict
 
     }
 
@@ -2063,7 +1869,9 @@ class PartyProcessSpec
         description = "",
         digitalAddress = "",
         taxCode = "",
-        attributes = Seq.empty
+        attributes = Seq.empty,
+        address = "",
+        zipCode = ""
       )
 
       val adminRelationship =
@@ -2312,7 +2120,9 @@ class PartyProcessSpec
         description = "",
         digitalAddress = "",
         taxCode = "",
-        attributes = Seq.empty
+        attributes = Seq.empty,
+        address = "",
+        zipCode = ""
       )
 
       val adminRelationship =
@@ -2500,7 +2310,9 @@ class PartyProcessSpec
         description = "",
         digitalAddress = "",
         taxCode = "",
-        attributes = Seq.empty
+        attributes = Seq.empty,
+        address = "",
+        zipCode = ""
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -2667,7 +2479,9 @@ class PartyProcessSpec
         description = "",
         digitalAddress = "",
         taxCode = "",
-        attributes = Seq.empty
+        attributes = Seq.empty,
+        address = "",
+        zipCode = ""
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -2806,7 +2620,9 @@ class PartyProcessSpec
         description = "",
         digitalAddress = "",
         taxCode = "",
-        attributes = Seq.empty
+        attributes = Seq.empty,
+        address = "",
+        zipCode = ""
       )
 
       val relationshipId1 = UUID.randomUUID()
@@ -2941,7 +2757,9 @@ class PartyProcessSpec
         description = "",
         digitalAddress = "",
         taxCode = "",
-        attributes = Seq.empty
+        attributes = Seq.empty,
+        address = "",
+        zipCode = ""
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -3089,7 +2907,9 @@ class PartyProcessSpec
         description = "",
         digitalAddress = "",
         taxCode = "",
-        attributes = Seq.empty
+        attributes = Seq.empty,
+        address = "",
+        zipCode = ""
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -3280,7 +3100,9 @@ class PartyProcessSpec
         description = "",
         digitalAddress = "",
         taxCode = "",
-        attributes = Seq.empty
+        attributes = Seq.empty,
+        address = "",
+        zipCode = ""
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -3637,7 +3459,9 @@ class PartyProcessSpec
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
         attributes = Seq.empty,
-        taxCode = "123"
+        taxCode = "123",
+        address = "address",
+        zipCode = "zipCode"
       )
 
       val file = new File("src/test/resources/fake.file")
@@ -3832,7 +3656,9 @@ class PartyProcessSpec
         digitalAddress = "digitalAddress1",
         id = UUID.fromString(orgPartyId1),
         attributes = Seq.empty,
-        taxCode = "123"
+        taxCode = "123",
+        address = "address",
+        zipCode = "zipCode"
       )
 
       val managerId = UUID.randomUUID()
@@ -3942,7 +3768,9 @@ class PartyProcessSpec
         description = "",
         digitalAddress = "",
         taxCode = "",
-        attributes = Seq.empty
+        attributes = Seq.empty,
+        address = "",
+        zipCode = ""
       )
 
       val managerId        = UUID.randomUUID()
@@ -4066,7 +3894,9 @@ class PartyProcessSpec
         description = "",
         digitalAddress = "",
         taxCode = "",
-        attributes = Seq.empty
+        attributes = Seq.empty,
+        address = "",
+        zipCode = ""
       )
 
       val managerId        = UUID.randomUUID()
@@ -4200,7 +4030,9 @@ class PartyProcessSpec
         description = "",
         digitalAddress = "",
         taxCode = "",
-        attributes = Seq.empty
+        attributes = Seq.empty,
+        address = "",
+        zipCode = ""
       )
 
       val managerId        = UUID.randomUUID()
@@ -4351,7 +4183,9 @@ class PartyProcessSpec
         description = "",
         digitalAddress = "",
         taxCode = "",
-        attributes = Seq.empty
+        attributes = Seq.empty,
+        address = "",
+        zipCode = ""
       )
 
       val managerId        = UUID.randomUUID()
@@ -4489,7 +4323,9 @@ class PartyProcessSpec
         description = "",
         digitalAddress = "",
         taxCode = "",
-        attributes = Seq.empty
+        attributes = Seq.empty,
+        address = "",
+        zipCode = ""
       )
 
       val managerId       = UUID.randomUUID()
@@ -4595,7 +4431,9 @@ class PartyProcessSpec
         description = "",
         digitalAddress = "",
         taxCode = "",
-        attributes = Seq.empty
+        attributes = Seq.empty,
+        address = "",
+        zipCode = ""
       )
 
       val managerId      = UUID.randomUUID()
@@ -4700,7 +4538,9 @@ class PartyProcessSpec
         description = "",
         digitalAddress = "",
         taxCode = "",
-        attributes = Seq.empty
+        attributes = Seq.empty,
+        address = "",
+        zipCode = ""
       )
 
       (mockPartyManagementService

@@ -3,6 +3,9 @@ import akka.actor.ActorSystem
 import it.pagopa.pdnd.interop.uservice._
 
 package object service {
+
+  final val replacementEntityId: String = "UNKNOWN"
+
   type PartyProxyInvoker             = partyregistryproxy.client.invoker.ApiInvoker
   type PartyManagementInvoker        = partymanagement.client.invoker.ApiInvoker
   type UserRegistryManagementInvoker = userregistrymanagement.client.invoker.ApiInvoker

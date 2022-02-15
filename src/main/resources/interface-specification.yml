@@ -560,12 +560,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-        "400":
-          description: Bad request
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
   /status:
     get:
       security:
@@ -684,6 +678,23 @@ components:
         - role
         - product
         - productRole
+    Certification:
+      type: string
+      enum:
+        - SPID
+        - NONE
+    Contact:
+      properties:
+        email:
+          type: string
+      additionalProperties: false
+      required:
+        - email
+    Contacts:
+      additionalProperties:
+        type: array
+        items:
+          $ref: '#/components/schemas/Contact'
     PersonInfo:
       properties:
         name:
@@ -692,11 +703,17 @@ components:
           type: string
         taxCode:
           type: string
+        certification:
+          $ref: '#/components/schemas/Certification'
+        institutionContacts:
+          $ref: '#/components/schemas/Contacts'
       additionalProperties: false
       required:
         - name
         - surname
         - taxCode
+        - certification
+        - institutionContacts
     ProductInfo:
       type: object
       properties:

@@ -46,10 +46,6 @@ object PartyProcessErrors {
   final case class RelationshipNotSuspendable(relationshipId: String, status: String)
       extends ComponentError("0010", s"Relationship $relationshipId is in status $status and cannot be suspended")
 
-  final case object ResourceConflictError extends ComponentError("0011", s"Resource already exists")
-
-  final case object ResourceNotFoundError extends ComponentError("0012", s"Resource not found")
-
   final case class UidValidationError(message: String)
       extends ComponentError("0013", s"Error while uid validation: $message")
 
@@ -93,8 +89,5 @@ object PartyProcessErrors {
       )
 
   final case class InvalidCategoryError(category: String) extends ComponentError("0035", s"Invalid category $category")
-
-  final case class TokenAlreadyConsumed(tokenId: String)
-      extends ComponentError("0036", s"Token $tokenId has already consumed")
 
 }

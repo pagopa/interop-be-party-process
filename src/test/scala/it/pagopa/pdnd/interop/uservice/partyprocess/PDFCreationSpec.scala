@@ -14,14 +14,15 @@ import scala.io.Source
 //IGNORING THIS TO AVOID TEMPORARY FILES POLLUTION
 class PDFCreationSpec extends AnyWordSpecLike with Matchers with ScalaFutures {
 
-  val path = getClass.getResource(s"/template-html.txt").getPath
-  val file = new File(path)
+  val path: String = getClass.getResource(s"/template-html.txt").getPath
+  val file: File   = new File(path)
 
   "PDFBox should edit the pdf" should {
 
     "test reading" ignore {
 
-      val htmlTemplate = Source.fromFile(file).mkString
+      val htmlTemplateSource = Source.fromFile(file)
+      val htmlTemplate       = htmlTemplateSource.mkString
 
       val org = Organization(
         id = UUID.randomUUID(),
@@ -29,7 +30,9 @@ class PDFCreationSpec extends AnyWordSpecLike with Matchers with ScalaFutures {
         description = "Comune di Milano",
         digitalAddress = "prova.test@test.it",
         taxCode = "1234",
-        attributes = Seq.empty
+        attributes = Seq.empty,
+        address = "",
+        zipCode = ""
       )
 
       val users = Seq(
@@ -72,6 +75,7 @@ class PDFCreationSpec extends AnyWordSpecLike with Matchers with ScalaFutures {
       )
 
       println(PDFCreatorImpl.createContract(htmlTemplate, users, org).futureValue.getPath)
+      htmlTemplateSource.close()
 
     }
 
