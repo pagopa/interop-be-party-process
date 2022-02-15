@@ -4,7 +4,7 @@ import it.pagopa.pdnd.interop.commons.utils.errors.GenericComponentErrors.Resour
 import it.pagopa.pdnd.interop.uservice.partyprocess.service.{
   UserRegistryManagementInvoker,
   UserRegistryManagementService,
-  unknown
+  replacementEntityId
 }
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.api.UserApi
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.invoker.{ApiError, ApiKeyValue, ApiRequest}
@@ -49,7 +49,7 @@ final case class UserRegistryManagementServiceImpl(invoker: UserRegistryManageme
         (logger, msg) => {
           case ex @ ApiError(code, message, _, _, _) if code == 409 =>
             logger.error(s"$msg. code > $code - message > $message", ex)
-            Future.failed[T](ResourceConflictError(entityId.getOrElse(unknown)))
+            Future.failed[T](ResourceConflictError(entityId.getOrElse(replacementEntityId)))
           case ex: ApiError[_] =>
             logger.error(s"$msg. code > ${ex.code} - message > ${ex.message}", ex)
             Future.failed(ex)

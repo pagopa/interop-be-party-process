@@ -181,9 +181,11 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(res) => getOnboardingInfo200(res)
       case Failure(ex: ResourceNotFoundError) =>
+        logger.info("No onboarding information found for {}", ex.resourceId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         getOnboardingInfo404(errorResponse)
-      case Failure(_) =>
+      case Failure(ex) =>
+        logger.error("Error getting onboarding info ", ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, GettingOnboardingInfoError)
         getOnboardingInfo400(errorResponse)
 
@@ -257,7 +259,6 @@ class ProcessApiServiceImpl(
       case _: ResourceConflictError =>
         partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
       case ex =>
-        logger.error("Error while creating or getting organization {}", onboardingRequest.institutionId, ex)(contexts)
         Future.failed(ex)
     }
 

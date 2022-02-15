@@ -4,7 +4,7 @@ import it.pagopa.pdnd.interop.uservice._
 
 package object service {
 
-  final val unknown: String = "UNKNOWN"
+  final val replacementEntityId: String = "UNKNOWN"
 
   type PartyProxyInvoker             = partyregistryproxy.client.invoker.ApiInvoker
   type PartyManagementInvoker        = partymanagement.client.invoker.ApiInvoker

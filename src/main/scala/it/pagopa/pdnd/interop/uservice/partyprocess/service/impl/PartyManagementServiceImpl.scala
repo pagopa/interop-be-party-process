@@ -5,7 +5,7 @@ import it.pagopa.pdnd.interop.commons.utils.errors.GenericComponentErrors.{Resou
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.{PartyApi, PublicApi}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.{ApiError, ApiRequest, BearerToken}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model._
-import it.pagopa.pdnd.interop.uservice.partyprocess.service.{PartyManagementInvoker, PartyManagementService, unknown}
+import it.pagopa.pdnd.interop.uservice.partyprocess.service.{PartyManagementInvoker, PartyManagementService, replacementEntityId}
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.File
@@ -171,10 +171,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       (logger, msg) => {
         case ex @ ApiError(code, message, _, _, _) if code == 409 =>
           logger.error(s"$msg. code > $code - message > $message", ex)
-          Future.failed[T](ResourceConflictError(entityId.getOrElse(unknown)))
+          Future.failed[T](ResourceConflictError(entityId.getOrElse(replacementEntityId)))
         case ex @ ApiError(code, message, _, _, _) if code == 404 =>
           logger.error(s"$msg. code > $code - message > $message", ex)
-          Future.failed[T](ResourceNotFoundError(entityId.getOrElse(unknown)))
+          Future.failed[T](ResourceNotFoundError(entityId.getOrElse(replacementEntityId)))
         case ex @ ApiError(code, message, _, _, _) =>
           logger.error(s"$msg. code > $code - message > $message", ex)
           Future.failed[T](new RuntimeException(message))
