@@ -606,6 +606,7 @@ class ProcessApiServiceImpl(
     */
   override def getUserInstitutionRelationships(
     institutionId: String,
+    personId: Option[String],
     roles: String,
     states: String,
     products: String,
@@ -636,8 +637,9 @@ class ProcessApiServiceImpl(
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
+      from <- personId.traverse(_.toFutureUUID)
       institutionIdRelationships <- partyManagementService.retrieveRelationships(
-        from = None,
+        from = from,
         to = Some(organization.id),
         roles = rolesEnumArray,
         states = statesEnumArray,

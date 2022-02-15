@@ -239,6 +239,12 @@ paths:
           schema:
             type: string
         - in: query
+          name: personId
+          description: the person identifier
+          schema:
+            type: string
+            format: uuid
+        - in: query
           name: roles
           description: comma separated sequence of role to filter the response with
           schema:
