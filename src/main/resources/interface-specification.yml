@@ -738,6 +738,10 @@ components:
           type: string
         digitalAddress:
           type: string
+        address:
+          type: string
+        zipCode:
+          type: string
         state:
           $ref: '#/components/schemas/RelationshipState'
         role:
@@ -755,6 +759,8 @@ components:
         - taxCode
         - description
         - digitalAddress
+        - address
+        - zipCode
         - state
         - role
         - productInfo

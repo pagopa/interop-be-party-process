@@ -5,7 +5,11 @@ import it.pagopa.pdnd.interop.commons.utils.errors.GenericComponentErrors.{Resou
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.{PartyApi, PublicApi}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.{ApiError, ApiRequest, BearerToken}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model._
-import it.pagopa.pdnd.interop.uservice.partyprocess.service.{PartyManagementInvoker, PartyManagementService, replacementEntityId}
+import it.pagopa.pdnd.interop.uservice.partyprocess.service.{
+  PartyManagementInvoker,
+  PartyManagementService,
+  replacementEntityId
+}
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.File

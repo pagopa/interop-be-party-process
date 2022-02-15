@@ -200,6 +200,8 @@ class ProcessApiServiceImpl(
       taxCode = organization.taxCode,
       description = organization.description,
       digitalAddress = organization.digitalAddress,
+      address = organization.address,
+      zipCode = organization.zipCode,
       state = relationshipStateToApi(relationship.state),
       role = roleToApi(relationship.role),
       productInfo = relationshipProductToApi(relationship.product),
