@@ -14,27 +14,30 @@ spec:
     metadata:
       labels:
         app: {{name}}
+        actorSystemName: {{name}}
     spec:
       imagePullSecrets:
         - name: regcred
       containers:
         - name: {{name}}
           image: {{repository}}/{{name}}:{{version}}
+          command: ["bin/{{name}}"]
+          args: ["-Dconfig.override_with_env_vars=true"]
           imagePullPolicy: Always
           readinessProbe:
             httpGet:
               path: /ready
               port: management
             periodSeconds: 10
-            failureThreshold: 3
-            initialDelaySeconds: 10
+            failureThreshold: 5
+            initialDelaySeconds: 30
           livenessProbe:
             httpGet:
               path: "/alive"
               port: management
             periodSeconds: 10
             failureThreshold: 5
-            initialDelaySeconds: 20
+            initialDelaySeconds: 30
           ports:
             - name: management
               containerPort: 8558
@@ -45,6 +48,9 @@ spec:
             - name: monitoring
               containerPort: 9095
               protocol: TCP
+          securityContext:
+            runAsUser: 1001
+            allowPrivilegeEscalation: false
           env:
             - name: VAULT_ADDR
               valueFrom:
