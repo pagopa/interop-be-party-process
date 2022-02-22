@@ -34,17 +34,18 @@ pipeline {
     stage('Test and Deploy µservice') {
       agent { label 'sbt-template' }
       environment {
-        NEXUS = 'gateway.interop.pdnd.dev'
-        DOCKER_REPO = 'gateway.interop.pdnd.dev'
-        MAVEN_REPO = 'gateway.interop.pdnd.dev'
+        NEXUS = "${env.NEXUS}"
+        DOCKER_REPO = 'ghcr.io/pagopa'
+        MAVEN_REPO = "${env.MAVEN_REPO}"
         NEXUS_CREDENTIALS = credentials('pdnd-nexus')
+        GITHUB_PAT = credentials('github-pat')
         PDND_TRUST_STORE_PSW = credentials('pdnd-interop-trust-psw')
       }
       steps {
         container('sbt-container') {
           unstash "pdnd_trust_store"
           script {
-            sh '''docker login $NEXUS -u $NEXUS_CREDENTIALS_USR -p $NEXUS_CREDENTIALS_PSW'''
+            sh '''echo $GITHUB_PAT_PSW | docker login $DOCKER_REPO  -u $GITHUB_PAT_USR --password-stdin'''
             sbtAction 'docker:publish'
           }
         }
@@ -54,7 +55,7 @@ pipeline {
     stage('Apply Kubernetes files') {
       agent { label 'sbt-template' }
       environment {
-        DOCKER_REPO = 'gateway.interop.pdnd.dev'
+        DOCKER_REPO = 'https://ghcr.io/pagopa'
         AWS = credentials('jenkins-aws')
         STORAGE_USR="${AWS_USR}"
         STORAGE_PSW="${AWS_PSW}"
