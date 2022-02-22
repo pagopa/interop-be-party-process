@@ -31,9 +31,9 @@ partyManagementVersion="0.1"
 partyProxyVersion="0.1"
 userRegistryManagementVersion="0.1"
 
-partyManagementUrl="http://pdnd-interop-uservice-party-management.pdnd-interop-uservice-party-management.svc.cluster.local:8088/pdnd-interop-uservice-party-management/"$partyManagementVersion
-partyProxyUrl="http://pdnd-interop-uservice-party-registry-proxy.pdnd-interop-uservice-party-registry-proxy.svc.cluster.local:8088/pdnd-interop-uservice-party-registry-proxy/"$partyProxyVersion
-userRegistryManagementUrl="http://pdnd-interop-uservice-user-registry-management.pdnd-interop-uservice-user-registry-management.svc.cluster.local:8088/pdnd-interop-uservice-user-registry-management/"$userRegistryManagementVersion
+partyManagementUrl="http://interop-be-party-management.interop-be-party-management.svc.cluster.local:8088/party-management/"$partyManagementVersion
+partyProxyUrl="http://interop-be-party-registry-proxy.interop-be-party-registry-proxy.svc.cluster.local:8088/party-registry-proxy/"$partyProxyVersion
+userRegistryManagementUrl="http://interop-be-user-registry-management.interop-be-user-registry-management.svc.cluster.local:8088/user-registry-management/"$userRegistryManagementVersion
 
 euListOfTrustedListsURL=$EU_LIST_OF_TRUSTED_LISTS_URL
 euOfficialJournalUrl=$EU_OFFICIAL_JOURNAL_URL
