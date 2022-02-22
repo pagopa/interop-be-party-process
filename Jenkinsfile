@@ -55,7 +55,7 @@ pipeline {
     stage('Apply Kubernetes files') {
       agent { label 'sbt-template' }
       environment {
-        DOCKER_REPO = 'https://ghcr.io/pagopa'
+        DOCKER_REPO = 'ghcr.io/pagopa'
         AWS = credentials('jenkins-aws')
         STORAGE_USR="${AWS_USR}"
         STORAGE_PSW="${AWS_PSW}"
