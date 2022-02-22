@@ -38,14 +38,14 @@ pipeline {
         DOCKER_REPO = 'ghcr.io/pagopa'
         MAVEN_REPO = "${env.MAVEN_REPO}"
         NEXUS_CREDENTIALS = credentials('pdnd-nexus')
-        CR_PAT = credentials('container-registry-pat')
+        GITHUB_PAT = credentials('container-registry-pat')
         PDND_TRUST_STORE_PSW = credentials('pdnd-interop-trust-psw')
       }
       steps {
         container('sbt-container') {
           unstash "pdnd_trust_store"
           script {
-            sh '''echo $CR_PAT_PSW | docker login $DOCKER_REPO  -u $CR_PAT_USR --password-stdin'''
+            sh '''echo $GITHUB_PAT_PSW | docker login $DOCKER_REPO  -u $GITHUB_PAT_USR --password-stdin'''
             sbtAction 'docker:publish'
           }
         }
