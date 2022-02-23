@@ -58,6 +58,8 @@ generateCode := {
 
 }
 
+(Compile / compile) := ((Compile / compile) dependsOn generateCode).value
+
 Compile / PB.targets := Seq(scalapb.gen() -> (Compile / sourceManaged).value / "protobuf")
 
 cleanFiles += baseDirectory.value / "generated" / "src"
