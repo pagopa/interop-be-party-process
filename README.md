@@ -1,4 +1,4 @@
-# PDND Interoperability - Party Process Micro Service
+# Interoperability - Party Process Micro Service
 
 ---
 

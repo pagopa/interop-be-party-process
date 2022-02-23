@@ -1,4 +1,5 @@
 import ProjectSettings.ProjectFrom
+import com.typesafe.sbt.packager.docker.Cmd
 
 ThisBuild / scalaVersion := "2.13.6"
 ThisBuild / organization := "it.pagopa"
@@ -16,17 +17,20 @@ ThisBuild / resolvers += "Pagopa Nexus Snapshots" at s"https://gateway.interop.p
 ThisBuild / resolvers += "Pagopa Nexus Releases" at s"https://gateway.interop.pdnd.dev/nexus/repository/maven-releases/"
 ThisBuild / resolvers += "cefdigital" at s"https://ec.europa.eu/cefdigital/artifact/content/repositories/esignaturedss"
 
-credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
-
 lazy val generateCode = taskKey[Unit]("A task for generating the code starting from the swagger definition")
 
 val packagePrefix = settingKey[String]("The package prefix derived from the uservice name")
 
 packagePrefix := name.value
-  .replaceFirst("pdnd-", "pdnd.")
   .replaceFirst("interop-", "interop.")
-  .replaceFirst("uservice-", "uservice.")
+  .replaceFirst("be-", "")
   .replaceAll("-", "")
+
+val projectName = settingKey[String]("The project name prefix derived from the uservice name")
+
+projectName:= name.value
+  .replaceFirst("interop-", "")
+  .replaceFirst("be-", "")
 
 generateCode := {
   import sys.process._
@@ -34,7 +38,7 @@ generateCode := {
   Process(s"""openapi-generator-cli generate -t template/scala-akka-http-server
              |                               -i src/main/resources/interface-specification.yml
              |                               -g scala-akka-http-server
-             |                               -p projectName=${name.value}
+             |                               -p projectName=${projectName.value}
              |                               -p invokerPackage=it.pagopa.${packagePrefix.value}.server
              |                               -p modelPackage=it.pagopa.${packagePrefix.value}.model
              |                               -p apiPackage=it.pagopa.${packagePrefix.value}.api
@@ -45,7 +49,7 @@ generateCode := {
   Process(s"""openapi-generator-cli generate -t template/scala-akka-http-client
              |                               -i src/main/resources/interface-specification.yml
              |                               -g scala-akka
-             |                               -p projectName=${name.value}
+             |                               -p projectName=${projectName.value}
              |                               -p invokerPackage=it.pagopa.${packagePrefix.value}.client.invoker
              |                               -p modelPackage=it.pagopa.${packagePrefix.value}.client.model
              |                               -p apiPackage=it.pagopa.${packagePrefix.value}.client.api
@@ -56,6 +60,8 @@ generateCode := {
 
 (Compile / compile) := ((Compile / compile) dependsOn generateCode).value
 
+Compile / PB.targets := Seq(scalapb.gen() -> (Compile / sourceManaged).value / "protobuf")
+
 cleanFiles += baseDirectory.value / "generated" / "src"
 
 cleanFiles += baseDirectory.value / "generated" / "target"
@@ -64,22 +70,24 @@ cleanFiles += baseDirectory.value / "client" / "src"
 
 cleanFiles += baseDirectory.value / "client" / "target"
 
-lazy val generated =
-  project.in(file("generated")).settings(scalacOptions := Seq(), scalafmtOnCompile := true).setupBuildInfo
+lazy val generated = project
+  .in(file("generated"))
+  .settings(scalacOptions := Seq())
+  .setupBuildInfo
 
 lazy val client = project
   .in(file("client"))
   .settings(
-    name := "pdnd-interop-uservice-party-process-client",
+    name := "interop-be-party-process-client",
     scalacOptions := Seq(),
     scalafmtOnCompile := true,
-    version := (ThisBuild / version).value,
     libraryDependencies := Dependencies.Jars.client.map(m =>
       if (scalaVersion.value.startsWith("3.0"))
         m.withDottyCompat(scalaVersion.value)
       else
         m
     ),
+    credentials += Credentials(Path.userHome / ".sbt" / ".credentials"),
     updateOptions := updateOptions.value.withGigahorse(false),
     Docker / publish := {},
     publishTo := {
@@ -94,12 +102,12 @@ lazy val client = project
 
 lazy val root = (project in file("."))
   .settings(
-    name := "pdnd-interop-uservice-party-process",
+    name := "interop-be-party-process",
     Test / parallelExecution := false,
+    scalafmtOnCompile := true,
     dockerBuildOptions ++= Seq("--network=host"),
     dockerRepository := Some(System.getenv("DOCKER_REPO")),
     dockerBaseImage := "adoptopenjdk:11-jdk-hotspot",
-    dockerUpdateLatest := true,
     daemonUser := "daemon",
     Docker / version := s"${
       val buildVersion = (ThisBuild / version).value
@@ -110,7 +118,8 @@ lazy val root = (project in file("."))
     }".toLowerCase,
     Docker / packageName := s"${name.value}",
     Docker / dockerExposedPorts := Seq(8080),
-    scalafmtOnCompile := true
+    Docker / maintainer := "https://pagopa.it",
+    dockerCommands += Cmd("LABEL", s"org.opencontainers.image.source https://github.com/pagopa/${name.value}")
   )
   .aggregate(client)
   .dependsOn(generated)

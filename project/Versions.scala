@@ -17,7 +17,7 @@ object Versions {
   lazy val scalatestVersion      = "3.2.10"
 }
 
-object PDNDVersions {
+object PagopaVersions {
   lazy val commonsVersion                = "0.1.1-SNAPSHOT"
   lazy val partyManagementVersion        = "0.1.5-SNAPSHOT"
   lazy val partyProxyVersion             = "0.1.3-SNAPSHOT"

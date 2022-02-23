@@ -1,5 +1,5 @@
 import Versions._
-import PDNDVersions._
+import PagopaVersions._
 import sbt._
 
 object Dependencies {
@@ -25,18 +25,18 @@ object Dependencies {
     lazy val namespace = "it.pagopa"
 
     lazy val partyManagementClient =
-      namespace %% "pdnd-interop-uservice-party-management-client" % partyManagementVersion
+      namespace %% "interop-be-party-management-client" % partyManagementVersion
 
     lazy val partyProxyClient =
-      namespace %% "pdnd-interop-uservice-party-registry-proxy-client" % partyProxyVersion
+      namespace %% "interop-be-party-registry-proxy-client" % partyProxyVersion
 
     lazy val userRegistryManagementClient =
       namespace %% "pdnd-interop-uservice-user-registry-management-client" % userRegistryManagementVersion
 
-    lazy val commons     = namespace %% "pdnd-interop-commons-utils"        % commonsVersion
-    lazy val commonsMail = namespace %% "pdnd-interop-commons-mail-manager" % commonsVersion
-    lazy val commonsFile = namespace %% "pdnd-interop-commons-file-manager" % commonsVersion
-    lazy val commonsJWT  = namespace %% "pdnd-interop-commons-jwt"          % commonsVersion
+    lazy val commons     = namespace %% "interop-commons-utils"        % commonsVersion
+    lazy val commonsMail = namespace %% "interop-commons-mail-manager" % commonsVersion
+    lazy val commonsFile = namespace %% "interop-commons-file-manager" % commonsVersion
+    lazy val commonsJWT  = namespace %% "interop-commons-jwt"          % commonsVersion
 
   }
 
