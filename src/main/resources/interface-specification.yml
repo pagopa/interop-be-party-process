@@ -632,8 +632,12 @@ components:
           type: string
         surname:
           type: string
-        email:
+        taxCode:
           type: string
+        certification:
+          $ref: '#/components/schemas/Certification'
+        institutionContacts:
+          $ref: '#/components/schemas/Contacts'
         role:
           $ref: '#/components/schemas/PartyRole'
         product:
@@ -652,6 +656,9 @@ components:
         - from
         - name
         - surname
+        - taxCode
+        - certification
+        - institutionContacts
         - role
         - product
         - state
