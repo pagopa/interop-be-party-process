@@ -808,16 +808,16 @@ class ProcessApiServiceImpl(
 
   }
 
-  private def relationshipToRelationshipInfo(
-    userRegistryUser: UserRegistryUser,
-    relationship: Relationship
-  ): RelationshipInfo = {
+  private def relationshipToRelationshipInfo(user: UserRegistryUser, relationship: Relationship): RelationshipInfo = {
     RelationshipInfo(
       id = relationship.id,
       from = relationship.from,
-      name = userRegistryUser.name,
-      surname = userRegistryUser.surname,
-      email = userRegistryUser.extras.email,
+      name = user.name,
+      surname = user.surname,
+      taxCode = user.externalId,
+      certification = certificationToApi(user.certification),
+      institutionContacts =
+        user.extras.email.map(email => relationship.to.toString -> Seq(Contact(email = email))).toMap,
       role = roleToApi(relationship.role),
       product = relationshipProductToApi(relationship.product),
       state = relationshipStateToApi(relationship.state),

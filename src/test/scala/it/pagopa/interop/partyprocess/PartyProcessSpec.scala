@@ -2005,7 +2005,7 @@ class PartyProcessSpec
 
       val userRegistryUser1 = UserRegistryUser(
         id = userId1,
-        externalId = "taxCode",
+        externalId = "taxCode1",
         name = "name1",
         surname = "surname1",
         certification = CertificationEnumsNone,
@@ -2020,7 +2020,7 @@ class PartyProcessSpec
 
       val userRegistryUser2 = UserRegistryUser(
         id = userId2,
-        externalId = "taxCode",
+        externalId = "taxCode2",
         name = "name2",
         surname = "surname2",
         certification = CertificationEnumsNone,
@@ -2035,7 +2035,7 @@ class PartyProcessSpec
 
       val userRegistryUser3 = UserRegistryUser(
         id = userId3,
-        externalId = "taxCode",
+        externalId = "taxCode3",
         name = "name3",
         surname = "surname3",
         certification = CertificationEnumsNone,
@@ -2062,54 +2062,64 @@ class PartyProcessSpec
 
       val body = Unmarshal(response.entity).to[Seq[RelationshipInfo]].futureValue
       response.status mustBe StatusCodes.OK
-      body must contain only (RelationshipInfo(
-        id = adminRelationshipId,
-        from = adminIdentifier,
-        name = "name",
-        surname = "surname",
-        email = Some("email@mail.com"),
-        role = PartyRole.DELEGATE,
-        product = productInfo,
-        state = ACTIVE,
-        createdAt = relationshipTimestamp,
-        updatedAt = None
-      ),
-      RelationshipInfo(
-        id = relationshipId1,
-        from = userId1,
-        name = "name1",
-        surname = "surname1",
-        email = Some("email1@mail.com"),
-        role = PartyRole.MANAGER,
-        product = productInfo,
-        state = RelationshipState.ACTIVE,
-        createdAt = relationshipTimestamp,
-        updatedAt = None
-      ),
-      RelationshipInfo(
-        id = relationshipId2,
-        from = userId2,
-        name = "name2",
-        surname = "surname2",
-        email = Some("email2@mail.com"),
-        role = PartyRole.OPERATOR,
-        product = productInfo.copy(role = "security"),
-        state = RelationshipState.ACTIVE,
-        createdAt = relationshipTimestamp,
-        updatedAt = None
-      ),
-      RelationshipInfo(
-        id = relationshipId3,
-        from = userId3,
-        name = "name3",
-        surname = "surname3",
-        email = Some("email3@mail.com"),
-        role = PartyRole.OPERATOR,
-        product = productInfo.copy(role = "api"),
-        state = RelationshipState.ACTIVE,
-        createdAt = relationshipTimestamp,
-        updatedAt = None
-      ))
+      body must contain only (
+        RelationshipInfo(
+          id = adminRelationshipId,
+          from = adminIdentifier,
+          name = "name",
+          surname = "surname",
+          taxCode = "taxCode",
+          certification = Certification.NONE,
+          institutionContacts = Map(institutionIdUUID.toString -> Seq(Contact(email = "email@mail.com"))),
+          role = PartyRole.DELEGATE,
+          product = productInfo,
+          state = ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        ),
+        RelationshipInfo(
+          id = relationshipId1,
+          from = userId1,
+          name = "name1",
+          surname = "surname1",
+          taxCode = "taxCode1",
+          certification = Certification.NONE,
+          institutionContacts = Map(institutionIdUUID.toString -> Seq(Contact(email = "email1@mail.com"))),
+          role = PartyRole.MANAGER,
+          product = productInfo,
+          state = RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        ),
+        RelationshipInfo(
+          id = relationshipId2,
+          from = userId2,
+          name = "name2",
+          surname = "surname2",
+          taxCode = "taxCode2",
+          certification = Certification.NONE,
+          institutionContacts = Map(institutionIdUUID.toString -> Seq(Contact(email = "email2@mail.com"))),
+          role = PartyRole.OPERATOR,
+          product = productInfo.copy(role = "security"),
+          state = RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        ),
+        RelationshipInfo(
+          id = relationshipId3,
+          from = userId3,
+          name = "name3",
+          surname = "surname3",
+          taxCode = "taxCode3",
+          certification = Certification.NONE,
+          institutionContacts = Map(institutionIdUUID.toString -> Seq(Contact(email = "email3@mail.com"))),
+          role = PartyRole.OPERATOR,
+          product = productInfo.copy(role = "api"),
+          state = RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        )
+      )
 
     }
 
@@ -2237,7 +2247,7 @@ class PartyProcessSpec
 
       val userRegistryUser2 = UserRegistryUser(
         id = userId1,
-        externalId = "taxCode",
+        externalId = "taxCode2",
         name = "name2",
         surname = "surname2",
         certification = CertificationEnumsNone,
@@ -2252,7 +2262,7 @@ class PartyProcessSpec
 
       val userRegistryUser3 = UserRegistryUser(
         id = userId2,
-        externalId = "taxCode",
+        externalId = "taxCode3",
         name = "name3",
         surname = "surname3",
         certification = CertificationEnumsNone,
@@ -2284,7 +2294,9 @@ class PartyProcessSpec
         from = userId1,
         name = "name2",
         surname = "surname2",
-        email = Some("email2@mail.com"),
+        taxCode = "taxCode2",
+        certification = Certification.NONE,
+        institutionContacts = Map(institutionIdUUID.toString -> Seq(Contact(email = "email2@mail.com"))),
         role = PartyRole.OPERATOR,
         product = productInfo.copy(role = "security"),
         state = RelationshipState.ACTIVE,
@@ -2296,7 +2308,9 @@ class PartyProcessSpec
         from = userId2,
         name = "name3",
         surname = "surname3",
-        email = Some("email3@mail.com"),
+        taxCode = "taxCode3",
+        certification = Certification.NONE,
+        institutionContacts = Map(institutionIdUUID.toString -> Seq(Contact(email = "email3@mail.com"))),
         role = PartyRole.OPERATOR,
         product = productInfo.copy(role = "api"),
         state = RelationshipState.ACTIVE,
@@ -2434,7 +2448,7 @@ class PartyProcessSpec
 
       val userRegistryUser2 = UserRegistryUser(
         id = userId2,
-        externalId = "taxCode",
+        externalId = "taxCode2",
         name = "name2",
         surname = "surname2",
         certification = CertificationEnumsNone,
@@ -2468,7 +2482,9 @@ class PartyProcessSpec
           from = userId2,
           name = "name2",
           surname = "surname2",
-          email = Some("email2@mail.com"),
+          taxCode = "taxCode2",
+          certification = Certification.NONE,
+          institutionContacts = Map(institutionIdUUID.toString -> Seq(Contact(email = "email2@mail.com"))),
           role = PartyRole.OPERATOR,
           product = productInfo.copy(role = "security"),
           state = RelationshipState.ACTIVE,
@@ -2578,7 +2594,7 @@ class PartyProcessSpec
 
       val userRegistryUser2 = UserRegistryUser(
         id = userId1,
-        externalId = "taxCode",
+        externalId = "taxCode2",
         name = "name2",
         surname = "surname2",
         certification = CertificationEnumsNone,
@@ -2610,7 +2626,9 @@ class PartyProcessSpec
         from = userId1,
         name = "name2",
         surname = "surname2",
-        email = Some("email2@mail.com"),
+        taxCode = "taxCode2",
+        certification = Certification.NONE,
+        institutionContacts = Map(institutionIdUUID.toString -> Seq(Contact(email = "email2@mail.com"))),
         role = PartyRole.OPERATOR,
         product = productInfo.copy(id = "Interop", role = "security"),
         state = RelationshipState.ACTIVE,
@@ -2714,7 +2732,7 @@ class PartyProcessSpec
 
       val userRegistryUser = UserRegistryUser(
         id = adminIdentifier,
-        externalId = "taxCode",
+        externalId = "taxCode1",
         name = "name1",
         surname = "surname1",
         certification = CertificationEnumsNone,
@@ -2746,7 +2764,9 @@ class PartyProcessSpec
         from = adminIdentifier,
         name = "name1",
         surname = "surname1",
-        email = Some("email1@mail.com"),
+        taxCode = "taxCode1",
+        certification = Certification.NONE,
+        institutionContacts = Map(institutionIdUUID.toString -> Seq(Contact(email = "email1@mail.com"))),
         role = PartyRole.MANAGER,
         product = productInfo,
         state = RelationshipState.ACTIVE,
@@ -2863,7 +2883,7 @@ class PartyProcessSpec
 
       val userRegistryUser2 = UserRegistryUser(
         id = userId2,
-        externalId = "taxCode",
+        externalId = "taxCode2",
         name = "name2",
         surname = "surname2",
         certification = CertificationEnumsNone,
@@ -2895,7 +2915,9 @@ class PartyProcessSpec
         from = userId2,
         name = "name2",
         surname = "surname2",
-        email = Some("email2@mail.com"),
+        taxCode = "taxCode2",
+        certification = Certification.NONE,
+        institutionContacts = Map(institutionIdUUID.toString -> Seq(Contact(email = "email2@mail.com"))),
         role = PartyRole.DELEGATE,
         product = productInfo,
         state = RelationshipState.PENDING,
@@ -3028,7 +3050,7 @@ class PartyProcessSpec
 
       val userRegistryUser3 = UserRegistryUser(
         id = userId3,
-        externalId = "taxCode",
+        externalId = "taxCode3",
         name = "name3",
         surname = "surname3",
         certification = CertificationEnumsNone,
@@ -3043,7 +3065,7 @@ class PartyProcessSpec
 
       val userRegistryUser4 = UserRegistryUser(
         id = userId4,
-        externalId = "taxCode",
+        externalId = "taxCode4",
         name = "name4",
         surname = "surname4",
         certification = CertificationEnumsNone,
@@ -3077,7 +3099,9 @@ class PartyProcessSpec
           from = userId3,
           name = "name3",
           surname = "surname3",
-          email = Some("email3@mail.com"),
+          taxCode = "taxCode3",
+          certification = Certification.NONE,
+          institutionContacts = Map(institutionIdUUID.toString -> Seq(Contact(email = "email3@mail.com"))),
           role = PartyRole.OPERATOR,
           product = productInfo.copy(id = "Interop", role = "security"),
           state = RelationshipState.ACTIVE,
@@ -3089,7 +3113,9 @@ class PartyProcessSpec
           from = userId4,
           name = "name4",
           surname = "surname4",
-          email = Some("email4@mail.com"),
+          taxCode = "taxCode4",
+          certification = Certification.NONE,
+          institutionContacts = Map(institutionIdUUID.toString -> Seq(Contact(email = "email4@mail.com"))),
           role = PartyRole.OPERATOR,
           product = productInfo.copy(id = "Interop", role = "api"),
           state = RelationshipState.ACTIVE,

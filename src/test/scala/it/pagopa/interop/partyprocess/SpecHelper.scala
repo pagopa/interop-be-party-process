@@ -54,8 +54,11 @@ trait SpecHelper { self: MockFactory =>
     System.setProperty("PARTY_PROXY_URL", "local")
     System.setProperty("ATTRIBUTE_REGISTRY_URL", "local")
     System.setProperty("USER_REGISTRY_MANAGEMENT_URL", "local")
+    System.setProperty("USER_REGISTRY_API_KEY", "apiKey")
+    System.setProperty("EU_LIST_OF_TRUSTED_LISTS_URL", "url")
+    System.setProperty("EU_OFFICIAL_JOURNAL_URL", "url")
 
-    System.setProperty("SMTP_SERVER", "localhost")
+    System.setProperty("SMTP_HOST", "localhost")
     System.setProperty("SMTP_USR", "local")
     System.setProperty("SMTP_PSW", "local")
     System.setProperty("SMTP_PORT", "10")
