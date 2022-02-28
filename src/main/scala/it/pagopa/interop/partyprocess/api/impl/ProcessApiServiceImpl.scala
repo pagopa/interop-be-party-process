@@ -297,8 +297,8 @@ class ProcessApiServiceImpl(
       )(bearer)
       product <- extractProduct(onboardingRequest)
       _       <- existsAnOnboardedManager(organizationRelationships, product)
-      currentManager = extractActiveManager(organizationRelationships, product)
-      response <- performOnboardingWithSignature(onboardingRequest, currentManager, organization, currentUser)(
+      activeManager = extractActiveManager(organizationRelationships, product)
+      response <- performOnboardingWithSignature(onboardingRequest, activeManager, organization, currentUser)(
         bearer,
         contexts
       )
@@ -349,13 +349,13 @@ class ProcessApiServiceImpl(
 
   private def performOnboardingWithSignature(
     onboardingRequest: OnboardingRequest,
-    currentManager: Option[Relationship],
+    activeManager: Option[Relationship],
     organization: Organization,
     currentUser: UserRegistryUser
   )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Unit] = {
     for {
       validUsers       <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
-      validManager     <- getValidManager(currentManager, validUsers)
+      validManager     <- getValidManager(activeManager, validUsers)
       personsWithRoles <- Future.traverse(validUsers)(addUser)
       relationships <- Future.traverse(personsWithRoles) { case (person, role, product, productRole) =>
         createOrGetRelationship(person.id, organization.id, roleToDependency(role), product, productRole)(bearer)
