@@ -4,28 +4,8 @@ import akka.http.scaladsl.marshalling.ToEntityMarshaller
 import akka.http.scaladsl.model.{ContentType, HttpEntity, MessageEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
-import cats.implicits.toTraverseOps
+import cats.implicits._
 import com.typesafe.scalalogging.Logger
-import it.pagopa.interop.partyprocess.error.PartyProcessErrors.{
-  ActivateRelationshipError,
-  ContractNotFound,
-  DeleteRelationshipError,
-  GetProductsError,
-  GetRelationshipError,
-  GettingOnboardingInfoError,
-  ManagerFoundError,
-  ManagerNotFoundError,
-  OnboardingLegalsError,
-  OnboardingOperationError,
-  OnboardingOperatorsError,
-  OnboardingSubdelegatesError,
-  OnboardingVerificationError,
-  RelationshipDocumentNotFound,
-  RelationshipNotFound,
-  RetrievingUserRelationshipsError,
-  SuspendingRelationshipError,
-  UidValidationError
-}
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
@@ -244,7 +224,7 @@ class ProcessApiServiceImpl(
       uid          <- getCallerUserIdentifier(bearer)
       currentUser  <- userRegistryManagementService.getUserById(uid)
       organization <- createOrGetOrganization(onboardingRequest)(bearer, contexts)
-      relationships <- partyManagementService.retrieveRelationships(
+      organizationRelationships <- partyManagementService.retrieveRelationships(
         from = None,
         to = Some(organization.id),
         roles = Seq.empty,
@@ -252,9 +232,13 @@ class ProcessApiServiceImpl(
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
-      product  <- extractProduct(onboardingRequest)
-      _        <- notExistsAnOnboardedManager(relationships, product)
-      response <- performOnboardingWithSignature(onboardingRequest, organization, currentUser)(bearer, contexts)
+      product <- extractProduct(onboardingRequest)
+      _       <- notExistsAnOnboardedManager(organizationRelationships, product)
+      currentManager = extractActiveManager(organizationRelationships, product)
+      response <- performOnboardingWithSignature(onboardingRequest, currentManager, organization, currentUser)(
+        bearer,
+        contexts
+      )
     } yield response
 
     onComplete(result) {
@@ -310,9 +294,13 @@ class ProcessApiServiceImpl(
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
-      product  <- extractProduct(onboardingRequest)
-      _        <- existsAnOnboardedManager(organizationRelationships, product)
-      response <- performOnboardingWithSignature(onboardingRequest, organization, currentUser)(bearer, contexts)
+      product <- extractProduct(onboardingRequest)
+      _       <- existsAnOnboardedManager(organizationRelationships, product)
+      currentManager = extractActiveManager(organizationRelationships, product)
+      response <- performOnboardingWithSignature(onboardingRequest, currentManager, organization, currentUser)(
+        bearer,
+        contexts
+      )
     } yield response
 
     onComplete(result) {
@@ -328,20 +316,52 @@ class ProcessApiServiceImpl(
     }
   }
 
+  private def extractActiveManager(relationships: Relationships, product: String): Option[Relationship] = {
+    relationships.items.find(rl =>
+      product == rl.product.id && rl.role == PartyManagementDependency.PartyRole.MANAGER && rl.state == PartyManagementDependency.RelationshipState.ACTIVE
+    )
+  }
+
+  private def getValidManager(manager: Option[Relationship], users: Seq[User]): Future[User] = {
+    manager match {
+      case Some(m) => getUserFromRelationship(m)
+      case None    => users.find(user => user.role == PartyRole.MANAGER).toFuture(ManagerFoundError)
+
+    }
+  }
+
+  private def getUserFromRelationship(relationship: Relationship): Future[User] = {
+    userRegistryManagementService
+      .getUserById(relationship.from)
+      .map(user =>
+        User(
+          name = user.name,
+          surname = user.surname,
+          taxCode = user.externalId,
+          role = roleToApi(relationship.role),
+          email = None,
+          product = relationship.product.id,
+          productRole = relationship.product.role
+        )
+      )
+  }
+
   private def performOnboardingWithSignature(
     onboardingRequest: OnboardingRequest,
+    currentManager: Option[Relationship],
     organization: Organization,
     currentUser: UserRegistryUser
   )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Unit] = {
     for {
       validUsers       <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
+      validManager     <- getValidManager(currentManager, validUsers)
       personsWithRoles <- Future.traverse(validUsers)(addUser)
       relationships <- Future.traverse(personsWithRoles) { case (person, role, product, productRole) =>
         createOrGetRelationship(person.id, organization.id, roleToDependency(role), product, productRole)(bearer)
       }
       contract         <- onboardingRequest.contract.toFuture(ContractNotFound(onboardingRequest.institutionId))
       contractTemplate <- getFileAsString(contract.path)
-      pdf              <- pdfCreator.createContract(contractTemplate, validUsers, organization)
+      pdf              <- pdfCreator.createContract(contractTemplate, validManager, validUsers, organization)
       digest           <- signatureService.createDigest(pdf)
       token <- partyManagementService.createToken(
         Relationships(relationships),

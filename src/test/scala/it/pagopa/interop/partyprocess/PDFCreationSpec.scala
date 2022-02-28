@@ -74,7 +74,12 @@ class PDFCreationSpec extends AnyWordSpecLike with Matchers with ScalaFutures {
         )
       )
 
-      println(PDFCreatorImpl.createContract(htmlTemplate, users, org).futureValue.getPath)
+      println(
+        PDFCreatorImpl
+          .createContract(htmlTemplate, users.find(_.role == PartyRole.MANAGER).get, users, org)
+          .futureValue
+          .getPath
+      )
       htmlTemplateSource.close()
 
     }

@@ -503,7 +503,7 @@ class PartyProcessSpec
       .expects(*, *)
       .returning(Future.successful(new ByteArrayOutputStream()))
       .once()
-    (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful(file)).once()
+    (mockPdfCreator.createContract _).expects(*, *, *, *).returning(Future.successful(file)).once()
     (mockPartyManagementService
       .createToken(_: PartyManagementDependency.Relationships, _: String, _: String, _: String)(_: String))
       .expects(*, *, *, *, *)
@@ -3525,7 +3525,7 @@ class PartyProcessSpec
           email = None
         )
 
-      val relationship =
+      val managerRelationship =
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
           from = managerId,
@@ -3536,6 +3536,21 @@ class PartyProcessSpec
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
           state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        )
+
+      val delegateRelationship =
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = delegateId,
+          to = organization1.id,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = PartyManagementDependency.PartyRole.DELEGATE,
+          product = product,
+          state = PartyManagementDependency.RelationshipState.PENDING,
           createdAt = relationshipTimestamp,
           updatedAt = None
         )
@@ -3563,6 +3578,23 @@ class PartyProcessSpec
         )
         .once()
 
+      (mockUserRegistryService
+        .getUserById(_: UUID))
+        .expects(managerId)
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = managerId,
+              externalId = manager.taxCode,
+              name = manager.name,
+              surname = manager.surname,
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(email = manager.email, birthDate = None)
+            )
+          )
+        )
+        .once()
+
       (mockSignatureService
         .createDigest(_: File))
         .expects(*)
@@ -3585,7 +3617,7 @@ class PartyProcessSpec
           _: Seq[String]
         )(_: String))
         .expects(None, Some(organization1.id), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
-        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(relationship))))
+        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(managerRelationship))))
         .once()
 
       (mockUserRegistryService
@@ -3599,6 +3631,12 @@ class PartyProcessSpec
             extras = UserRegistryUserExtras(email = manager.email, birthDate = None)
           )
         )
+        .returning(Future.failed(ResourceConflictError(manager.taxCode)))
+        .once()
+
+      (mockUserRegistryService
+        .getUserByExternalId(_: String))
+        .expects(manager.taxCode)
         .returning(
           Future.successful(
             UserRegistryUser(
@@ -3617,6 +3655,42 @@ class PartyProcessSpec
         .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
         .expects(PartyManagementDependency.PersonSeed(managerId), *)
         .returning(Future.successful(PartyManagementDependency.Person(managerId)))
+        .once()
+
+      (mockPartyManagementService
+        .createRelationship(_: RelationshipSeed)(_: String))
+        .expects(
+          RelationshipSeed(
+            from = managerRelationship.from,
+            to = managerRelationship.to,
+            role = managerRelationship.role,
+            product =
+              RelationshipProductSeed(id = managerRelationship.product.id, role = managerRelationship.product.role)
+          ),
+          *
+        )
+        .returning(Future.failed(ResourceConflictError(managerRelationship.id.toString)))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          Some(managerRelationship.from),
+          Some(managerRelationship.to),
+          Seq(managerRelationship.role),
+          Seq.empty,
+          Seq(managerRelationship.product.id),
+          Seq(managerRelationship.product.role),
+          *
+        )
+        .returning(Future.successful(Relationships(Seq(managerRelationship))))
         .once()
 
       (mockUserRegistryService
@@ -3652,15 +3726,27 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .createRelationship(_: RelationshipSeed)(_: String))
-        .expects(*, *)
-        .returning(Future.successful(relationship))
-        .repeat(2)
+        .expects(
+          RelationshipSeed(
+            from = delegateRelationship.from,
+            to = delegateRelationship.to,
+            role = delegateRelationship.role,
+            product =
+              RelationshipProductSeed(id = delegateRelationship.product.id, role = delegateRelationship.product.role)
+          ),
+          *
+        )
+        .returning(Future.successful(delegateRelationship))
+        .once()
+
       (mockFileManager
         .get(_: String)(_: String))
         .expects(*, *)
         .returning(Future.successful(new ByteArrayOutputStream()))
         .once()
-      (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful(file)).once()
+
+      (mockPdfCreator.createContract _).expects(*, *, *, *).returning(Future.successful(file)).once()
+
       (mockPartyManagementService
         .createToken(_: PartyManagementDependency.Relationships, _: String, _: String, _: String)(_: String))
         .expects(*, *, *, *, *)
