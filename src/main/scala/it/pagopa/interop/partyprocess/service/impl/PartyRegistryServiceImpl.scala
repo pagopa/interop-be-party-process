@@ -19,20 +19,20 @@ final case class PartyRegistryServiceImpl(
 
   override def getInstitution(institutionId: String)(bearerToken: String): Future[Institution] = {
     val request: ApiRequest[Institution] = institutionApi.getInstitutionById(institutionId)
-    logger.info(s"getInstitution ${request.toString}")
-    invoker.invoke(request, "Retrieving institution")
+    invoker.invoke(request, s"Retrieving institution $institutionId")
   }
   override def getCategory(origin: String, code: String)(bearerToken: String): Future[Category] = {
     val request: ApiRequest[Category] = categoryApi.getCategory(origin = origin, code = code)
-    logger.info(s"getCategory ${request.toString}")
-    invoker.invoke(request, "Retrieving category")
+    invoker.invoke(request, s"Retrieving category $code for origin $origin")
   }
 
   override def searchInstitution(text: String, offset: Int, limit: Int)(
     bearerToken: String
   ): Future[List[Institution]] = {
     val request: ApiRequest[Institutions] = institutionApi.searchInstitution(text, offset, limit)
-    invoker.execute(request).map(_.content.items.toList)
+    invoker
+      .invoke(request, s"Searching institution from text $text, offset $offset, limit $limit")
+      .map(_.items.toList)
   }
 
 }
