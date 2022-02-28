@@ -68,10 +68,10 @@ class PublicApiServiceImpl(
     } yield ()
 
     onComplete(result) {
-      case Success(_) => confirmOnboarding200
+      case Success(_) => confirmOnboarding204
       case Failure(InvalidSignature(signatureValidationErrors)) =>
         logger.error(
-          "Error while confirming onboarding of token identified with {} - {}",
+          "Error while confirming onboarding of token identified with {} - {}, reason: {}",
           tokenId,
           signatureValidationErrors.mkString(", ")
         )
@@ -88,11 +88,11 @@ class PublicApiServiceImpl(
         )
         confirmOnboarding409(errorResponse)
       case Failure(ex: ResourceConflictError) =>
-        logger.error("Error while confirming onboarding of token identified with {} - {}", tokenId, ex)
+        logger.error("Error while confirming onboarding of token identified with {} - {}", tokenId, ex.getMessage)
         val errorResponse: Problem = problemOf(StatusCodes.Conflict, ex)
         confirmOnboarding409(errorResponse)
       case Failure(ex) =>
-        logger.error("Error while confirming onboarding of token identified with {} - {}", tokenId, ex)
+        logger.error("Error while confirming onboarding of token identified with {} - {}", tokenId, ex.getMessage)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, ConfirmOnboardingError)
         confirmOnboarding400(errorResponse)
     }
@@ -112,13 +112,13 @@ class PublicApiServiceImpl(
     } yield result
 
     onComplete(result) {
-      case Success(_) => invalidateOnboarding200
+      case Success(_) => invalidateOnboarding204
       case Failure(ex: ResourceConflictError) =>
-        logger.error("Error while confirming onboarding of token identified with {} - {}", tokenId, ex)
+        logger.error("Error while confirming onboarding of token identified with {} - {}", tokenId, ex.getMessage)
         val errorResponse: Problem = problemOf(StatusCodes.Conflict, ex)
         confirmOnboarding409(errorResponse)
       case Failure(ex) =>
-        logger.error("Error while invalidating onboarding for token identified with {}", tokenId, ex)
+        logger.error("Error while invalidating onboarding for token identified with {}", tokenId, ex.getMessage)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, InvalidateOnboardingError)
         invalidateOnboarding400(errorResponse)
 

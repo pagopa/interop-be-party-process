@@ -1164,7 +1164,7 @@ class PartyProcessSpec
 
       val response = performOnboardingRequest(Some(PartyManagementDependency.RelationshipState.PENDING), None)
 
-      response.status mustBe StatusCodes.OK
+      response.status mustBe StatusCodes.NoContent
 
     }
 
@@ -1172,7 +1172,7 @@ class PartyProcessSpec
 
       val response = performOnboardingRequest(Some(PartyManagementDependency.RelationshipState.PENDING), None)
 
-      response.status mustBe StatusCodes.OK
+      response.status mustBe StatusCodes.NoContent
 
     }
 
@@ -1181,7 +1181,7 @@ class PartyProcessSpec
       val response =
         performOnboardingRequest(Some(PartyManagementDependency.RelationshipState.REJECTED), None)
 
-      response.status mustBe StatusCodes.OK
+      response.status mustBe StatusCodes.NoContent
 
     }
 
@@ -1190,7 +1190,7 @@ class PartyProcessSpec
       val response =
         performOnboardingRequest(Some(PartyManagementDependency.RelationshipState.ACTIVE), Some("product1"))
 
-      response.status mustBe StatusCodes.OK
+      response.status mustBe StatusCodes.NoContent
 
     }
 
@@ -1199,7 +1199,7 @@ class PartyProcessSpec
       val response =
         performOnboardingRequest(Some(PartyManagementDependency.RelationshipState.SUSPENDED), Some("product1"))
 
-      response.status mustBe StatusCodes.OK
+      response.status mustBe StatusCodes.NoContent
 
     }
 
@@ -1759,7 +1759,7 @@ class PartyProcessSpec
           )
           .futureValue
 
-      response.status mustBe StatusCodes.OK
+      response.status mustBe StatusCodes.NoContent
 
     }
 
@@ -1832,7 +1832,7 @@ class PartyProcessSpec
           )
           .futureValue
 
-      response.status mustBe StatusCodes.OK
+      response.status mustBe StatusCodes.NoContent
 
     }
 
@@ -3676,7 +3676,7 @@ class PartyProcessSpec
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/legals", HttpMethods.POST)
 
-      response.status mustBe StatusCodes.OK
+      response.status mustBe StatusCodes.NoContent
 
     }
 

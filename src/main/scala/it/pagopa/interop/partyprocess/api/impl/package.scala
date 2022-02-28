@@ -1,7 +1,7 @@
 package it.pagopa.interop.partyprocess.api
 
 import akka.http.scaladsl.model.StatusCode
-import it.pagopa.interop.commons.utils.SprayCommonFormats.{fileFormat, offsetDateTimeFormat, uuidFormat}
+import it.pagopa.interop.commons.utils.SprayCommonFormats.{offsetDateTimeFormat, uuidFormat}
 import it.pagopa.interop.commons.utils.errors.ComponentError
 import it.pagopa.interop.partyprocess.model._
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
@@ -14,7 +14,6 @@ package object impl extends DefaultJsonProtocol {
   implicit val userFormat: RootJsonFormat[User]                             = jsonFormat7(User)
   implicit val onboardingContractFormat: RootJsonFormat[OnboardingContract] = jsonFormat2(OnboardingContract)
   implicit val onboardingRequestFormat: RootJsonFormat[OnboardingRequest]   = jsonFormat3(OnboardingRequest)
-  implicit val onboardingResponseFormat: RootJsonFormat[OnboardingResponse] = jsonFormat2(OnboardingResponse)
   implicit val contactFormat: RootJsonFormat[Contact]                       = jsonFormat1(Contact)
   implicit val personInfoFormat: RootJsonFormat[PersonInfo]                 = jsonFormat5(PersonInfo)
   implicit val attributeDataFormat: RootJsonFormat[Attribute]               = jsonFormat3(Attribute.apply)

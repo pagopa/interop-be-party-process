@@ -14,9 +14,6 @@ import scala.io.{BufferedSource, Codec}
 
 object ProcessApiMarshallerImpl extends ProcessApiMarshaller with SprayJsonSupport with DefaultJsonProtocol {
 
-  override implicit def toEntityMarshallerOnboardingResponse: ToEntityMarshaller[OnboardingResponse] =
-    sprayJsonMarshaller[OnboardingResponse]
-
   override implicit def toEntityMarshallerFile: ToEntityMarshaller[File] =
     Marshaller.withFixedContentType(ContentTypes.`application/octet-stream`) { f =>
       val source: BufferedSource = scala.io.Source.fromFile(f.getPath)(Codec(StandardCharsets.UTF_8.name))
