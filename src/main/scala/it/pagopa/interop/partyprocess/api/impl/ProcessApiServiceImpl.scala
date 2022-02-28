@@ -263,11 +263,19 @@ class ProcessApiServiceImpl(
       case Success(response) =>
         onboardingOrganization200(response)
       case Failure(ex: ContractNotFound) =>
-        logger.error("Error while onboarding organization {}", onboardingRequest.institutionId, ex)
+        logger.error(
+          "Error while onboarding organization {}, reason: {}",
+          onboardingRequest.institutionId,
+          ex.getMessage
+        )
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         onboardingOrganization404(errorResponse)
       case Failure(ex) =>
-        logger.error("Error while onboarding organization {}", onboardingRequest.institutionId, ex)
+        logger.error(
+          "Error while onboarding organization {}, reason: {}",
+          onboardingRequest.institutionId,
+          ex.getMessage
+        )
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, OnboardingOperationError)
         onboardingOrganization400(errorResponse)
     }
