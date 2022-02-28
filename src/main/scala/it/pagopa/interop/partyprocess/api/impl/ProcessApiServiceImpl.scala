@@ -196,6 +196,7 @@ class ProcessApiServiceImpl(
     for {
       organization <- partyManagementService.retrieveOrganization(relationship.to)(bearer)
     } yield OnboardingData(
+      id = organization.id,
       institutionId = organization.institutionId,
       taxCode = organization.taxCode,
       description = organization.description,

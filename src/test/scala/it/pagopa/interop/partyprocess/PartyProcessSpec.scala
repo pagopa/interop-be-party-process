@@ -752,6 +752,7 @@ class PartyProcessSpec
         ),
         institutions = Seq(
           OnboardingData(
+            id = organization1.id,
             institutionId = organization1.institutionId,
             description = organization1.description,
             taxCode = organization1.taxCode,
@@ -764,6 +765,7 @@ class PartyProcessSpec
             attributes = Seq(attribute1, attribute2, attribute3)
           ),
           OnboardingData(
+            id = organization2.id,
             institutionId = organization2.institutionId,
             description = organization2.description,
             taxCode = organization2.taxCode,
@@ -902,6 +904,7 @@ class PartyProcessSpec
         ),
         institutions = Seq(
           OnboardingData(
+            id = organization1.id,
             institutionId = organization1.institutionId,
             description = organization1.description,
             taxCode = organization1.taxCode,
@@ -1036,6 +1039,7 @@ class PartyProcessSpec
         ),
         institutions = Seq(
           OnboardingData(
+            id = organization1.id,
             institutionId = organization1.institutionId,
             description = organization1.description,
             taxCode = organization1.taxCode,
