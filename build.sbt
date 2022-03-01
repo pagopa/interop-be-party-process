@@ -28,7 +28,7 @@ packagePrefix := name.value
 
 val projectName = settingKey[String]("The project name prefix derived from the uservice name")
 
-projectName:= name.value
+projectName := name.value
   .replaceFirst("interop-", "")
   .replaceFirst("be-", "")
 
@@ -70,6 +70,8 @@ cleanFiles += baseDirectory.value / "client" / "src"
 
 cleanFiles += baseDirectory.value / "client" / "target"
 
+ThisBuild / credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
+
 lazy val generated = project
   .in(file("generated"))
   .settings(scalacOptions := Seq())
@@ -87,7 +89,6 @@ lazy val client = project
       else
         m
     ),
-    credentials += Credentials(Path.userHome / ".sbt" / ".credentials"),
     updateOptions := updateOptions.value.withGigahorse(false),
     Docker / publish := {},
     publishTo := {
