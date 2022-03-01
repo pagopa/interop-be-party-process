@@ -724,6 +724,9 @@ components:
         - createdAt
     OnboardingData:
       properties:
+        id:
+          type: string
+          format: uuid
         institutionId:
           type: string
         description:
@@ -749,6 +752,7 @@ components:
             $ref: '#/components/schemas/Attribute'
       additionalProperties: false
       required:
+        - id
         - institutionId
         - taxCode
         - description

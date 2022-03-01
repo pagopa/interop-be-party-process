@@ -503,7 +503,7 @@ class PartyProcessSpec
       .expects(*, *)
       .returning(Future.successful(new ByteArrayOutputStream()))
       .once()
-    (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful(file)).once()
+    (mockPdfCreator.createContract _).expects(*, *, *, *).returning(Future.successful(file)).once()
     (mockPartyManagementService
       .createToken(_: PartyManagementDependency.Relationships, _: String, _: String, _: String)(_: String))
       .expects(*, *, *, *, *)
@@ -752,6 +752,7 @@ class PartyProcessSpec
         ),
         institutions = Seq(
           OnboardingData(
+            id = organization1.id,
             institutionId = organization1.institutionId,
             description = organization1.description,
             taxCode = organization1.taxCode,
@@ -764,6 +765,7 @@ class PartyProcessSpec
             attributes = Seq(attribute1, attribute2, attribute3)
           ),
           OnboardingData(
+            id = organization2.id,
             institutionId = organization2.institutionId,
             description = organization2.description,
             taxCode = organization2.taxCode,
@@ -902,6 +904,7 @@ class PartyProcessSpec
         ),
         institutions = Seq(
           OnboardingData(
+            id = organization1.id,
             institutionId = organization1.institutionId,
             description = organization1.description,
             taxCode = organization1.taxCode,
@@ -1036,6 +1039,7 @@ class PartyProcessSpec
         ),
         institutions = Seq(
           OnboardingData(
+            id = organization1.id,
             institutionId = organization1.institutionId,
             description = organization1.description,
             taxCode = organization1.taxCode,
@@ -3483,7 +3487,7 @@ class PartyProcessSpec
   }
 
   "Users creation" must {
-    "create users" in {
+    "create delegate with a manager active" in {
       val taxCode1       = "managerTaxCode"
       val taxCode2       = "delegateTaxCode"
       val institutionId1 = "IST2"
@@ -3525,7 +3529,7 @@ class PartyProcessSpec
           email = None
         )
 
-      val relationship =
+      val managerRelationship =
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
           from = managerId,
@@ -3536,6 +3540,21 @@ class PartyProcessSpec
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = product,
           state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        )
+
+      val delegateRelationship =
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = delegateId,
+          to = organization1.id,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = PartyManagementDependency.PartyRole.DELEGATE,
+          product = product,
+          state = PartyManagementDependency.RelationshipState.PENDING,
           createdAt = relationshipTimestamp,
           updatedAt = None
         )
@@ -3563,6 +3582,23 @@ class PartyProcessSpec
         )
         .once()
 
+      (mockUserRegistryService
+        .getUserById(_: UUID))
+        .expects(managerId)
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = managerId,
+              externalId = manager.taxCode,
+              name = manager.name,
+              surname = manager.surname,
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(email = manager.email, birthDate = None)
+            )
+          )
+        )
+        .once()
+
       (mockSignatureService
         .createDigest(_: File))
         .expects(*)
@@ -3585,7 +3621,7 @@ class PartyProcessSpec
           _: Seq[String]
         )(_: String))
         .expects(None, Some(organization1.id), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
-        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(relationship))))
+        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(managerRelationship))))
         .once()
 
       (mockUserRegistryService
@@ -3599,6 +3635,12 @@ class PartyProcessSpec
             extras = UserRegistryUserExtras(email = manager.email, birthDate = None)
           )
         )
+        .returning(Future.failed(ResourceConflictError(manager.taxCode)))
+        .once()
+
+      (mockUserRegistryService
+        .getUserByExternalId(_: String))
+        .expects(manager.taxCode)
         .returning(
           Future.successful(
             UserRegistryUser(
@@ -3617,6 +3659,42 @@ class PartyProcessSpec
         .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
         .expects(PartyManagementDependency.PersonSeed(managerId), *)
         .returning(Future.successful(PartyManagementDependency.Person(managerId)))
+        .once()
+
+      (mockPartyManagementService
+        .createRelationship(_: RelationshipSeed)(_: String))
+        .expects(
+          RelationshipSeed(
+            from = managerRelationship.from,
+            to = managerRelationship.to,
+            role = managerRelationship.role,
+            product =
+              RelationshipProductSeed(id = managerRelationship.product.id, role = managerRelationship.product.role)
+          ),
+          *
+        )
+        .returning(Future.failed(ResourceConflictError(managerRelationship.id.toString)))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          Some(managerRelationship.from),
+          Some(managerRelationship.to),
+          Seq(managerRelationship.role),
+          Seq.empty,
+          Seq(managerRelationship.product.id),
+          Seq(managerRelationship.product.role),
+          *
+        )
+        .returning(Future.successful(Relationships(Seq(managerRelationship))))
         .once()
 
       (mockUserRegistryService
@@ -3652,15 +3730,27 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .createRelationship(_: RelationshipSeed)(_: String))
-        .expects(*, *)
-        .returning(Future.successful(relationship))
-        .repeat(2)
+        .expects(
+          RelationshipSeed(
+            from = delegateRelationship.from,
+            to = delegateRelationship.to,
+            role = delegateRelationship.role,
+            product =
+              RelationshipProductSeed(id = delegateRelationship.product.id, role = delegateRelationship.product.role)
+          ),
+          *
+        )
+        .returning(Future.successful(delegateRelationship))
+        .once()
+
       (mockFileManager
         .get(_: String)(_: String))
         .expects(*, *)
         .returning(Future.successful(new ByteArrayOutputStream()))
         .once()
-      (mockPdfCreator.createContract _).expects(*, *, *).returning(Future.successful(file)).once()
+
+      (mockPdfCreator.createContract _).expects(*, *, *, *).returning(Future.successful(file)).once()
+
       (mockPartyManagementService
         .createToken(_: PartyManagementDependency.Relationships, _: String, _: String, _: String)(_: String))
         .expects(*, *, *, *, *)
@@ -3680,7 +3770,160 @@ class PartyProcessSpec
 
     }
 
-    "not create users when no active manager exist for a relationship" in {
+    "fail trying to create a delegate with a manager pending" in {
+      val users = createInvalidManagerTest(PartyManagementDependency.RelationshipState.PENDING)
+
+      val req = OnboardingRequest(
+        users = users,
+        institutionId = "institutionId1",
+        contract = Some(OnboardingContract("a", "b"))
+      )
+
+      val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
+      val response = request(data, "onboarding/legals", HttpMethods.POST)
+
+      response.status mustBe StatusCodes.BadRequest
+
+    }
+
+    "fail trying to create a delegate with a manager rejected" in {
+      val users = createInvalidManagerTest(PartyManagementDependency.RelationshipState.REJECTED)
+
+      val req = OnboardingRequest(
+        users = users,
+        institutionId = "institutionId1",
+        contract = Some(OnboardingContract("a", "b"))
+      )
+
+      val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
+      val response = request(data, "onboarding/legals", HttpMethods.POST)
+
+      response.status mustBe StatusCodes.BadRequest
+
+    }
+
+    "fail trying to create a delegate with a manager deleted" in {
+      val users = createInvalidManagerTest(PartyManagementDependency.RelationshipState.DELETED)
+
+      val req = OnboardingRequest(
+        users = users,
+        institutionId = "institutionId1",
+        contract = Some(OnboardingContract("a", "b"))
+      )
+
+      val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
+      val response = request(data, "onboarding/legals", HttpMethods.POST)
+
+      response.status mustBe StatusCodes.BadRequest
+
+    }
+
+    "fail trying to create a delegate with a manager suspended" in {
+      val users = createInvalidManagerTest(PartyManagementDependency.RelationshipState.SUSPENDED)
+
+      val req = OnboardingRequest(
+        users = users,
+        institutionId = "institutionId1",
+        contract = Some(OnboardingContract("a", "b"))
+      )
+
+      val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
+      val response = request(data, "onboarding/legals", HttpMethods.POST)
+
+      response.status mustBe StatusCodes.BadRequest
+
+    }
+
+    def createInvalidManagerTest(managerState: PartyManagementDependency.RelationshipState): Seq[User] = {
+      val taxCode1       = "delegateTaxCode"
+      val institutionId1 = "IST2"
+      val orgPartyId1    = "bf80fac0-2775-4646-8fcf-28e083751901"
+
+      val organization1 = PartyManagementDependency.Organization(
+        institutionId = institutionId1,
+        description = "org1",
+        digitalAddress = "digitalAddress1",
+        id = UUID.fromString(orgPartyId1),
+        attributes = Seq.empty,
+        taxCode = "123",
+        address = "address",
+        zipCode = "zipCode"
+      )
+
+      val managerId = UUID.randomUUID()
+
+      val delegate =
+        User(
+          name = "delegate",
+          surname = "delegate",
+          taxCode = taxCode1,
+          role = PartyRole.DELEGATE,
+          product = "product",
+          productRole = "admin",
+          email = None
+        )
+
+      val managerRelationship =
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = managerId,
+          to = organization1.id,
+          filePath = None,
+          fileName = None,
+          contentType = None,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = product,
+          state = managerState,
+          createdAt = relationshipTimestamp,
+          updatedAt = None
+        )
+
+      (mockJWTReader
+        .getClaims(_: String))
+        .expects(*)
+        .returning(Success(jwtClaimsSet))
+        .once()
+
+      (mockUserRegistryService
+        .getUserById(_: UUID))
+        .expects(*)
+        .returning(
+          Future.successful(
+            UserRegistryUser(
+              id = UUID.randomUUID(),
+              externalId = "",
+              name = "",
+              surname = "",
+              certification = CertificationEnumsNone,
+              extras = UserRegistryUserExtras(email = None, birthDate = None)
+            )
+          )
+        )
+        .once()
+
+      (mockPartyManagementService
+        .retrieveOrganizationByExternalId(_: String)(_: String))
+        .expects(*, *)
+        .returning(Future.successful(organization1))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(None, Some(organization1.id), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
+        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(managerRelationship))))
+        .once()
+
+      Seq(delegate)
+    }
+
+    "not create legals when no active manager exist for a relationship" in {
       val taxCode1       = "managerTaxCode"
       val taxCode2       = "delegateTaxCode"
       val institutionId1 = "IST2"

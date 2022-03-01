@@ -22,11 +22,16 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
     XRLog.setLevel(logger, java.util.logging.Level.SEVERE)
   )
 
-  def createContract(contractTemplate: String, users: Seq[User], organization: Organization): Future[File] =
+  def createContract(
+    contractTemplate: String,
+    manager: User,
+    users: Seq[User],
+    organization: Organization
+  ): Future[File] =
     Future.fromTry {
       for {
         file <- createTempFile
-        data <- setupData(users, organization)
+        data <- setupData(manager, users, organization)
         pdf  <- getPDFAsFile(file.toPath, contractTemplate, data)
       } yield pdf
 
@@ -39,9 +44,8 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
     }
   }
 
-  private def setupData(users: Seq[User], organization: Organization): Try[Map[String, String]] = {
+  private def setupData(manager: User, users: Seq[User], organization: Organization): Try[Map[String, String]] = {
     for {
-      manager      <- users.find(u => u.role == PartyRole.MANAGER).toTry("Manager not found")
       managerEmail <- manager.email.toTry("Manager email not found")
     } yield Map(
       "institutionName"    -> organization.description,
