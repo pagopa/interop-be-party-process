@@ -317,21 +317,17 @@ class ProcessApiServiceImpl(
     }
   }
 
-  private def extractActiveManager(relationships: Relationships, product: String): Option[Relationship] = {
+  private def extractActiveManager(relationships: Relationships, product: String): Option[Relationship] =
     relationships.items.find(rl =>
       product == rl.product.id && rl.role == PartyManagementDependency.PartyRole.MANAGER && rl.state == PartyManagementDependency.RelationshipState.ACTIVE
     )
-  }
 
-  private def getValidManager(manager: Option[Relationship], users: Seq[User]): Future[User] = {
-    manager match {
-      case Some(m) => getUserFromRelationship(m)
-      case None    => users.find(user => user.role == PartyRole.MANAGER).toFuture(ManagerFoundError)
+  private def getValidManager(manager: Option[Relationship], users: Seq[User]): Future[User] =
+    manager
+      .map(getUserFromRelationship)
+      .getOrElse(users.find(user => user.role == PartyRole.MANAGER).toFuture(ManagerFoundError))
 
-    }
-  }
-
-  private def getUserFromRelationship(relationship: Relationship): Future[User] = {
+  private def getUserFromRelationship(relationship: Relationship): Future[User] =
     userRegistryManagementService
       .getUserById(relationship.from)
       .map(user =>
@@ -345,7 +341,6 @@ class ProcessApiServiceImpl(
           productRole = relationship.product.role
         )
       )
-  }
 
   private def performOnboardingWithSignature(
     onboardingRequest: OnboardingRequest,
