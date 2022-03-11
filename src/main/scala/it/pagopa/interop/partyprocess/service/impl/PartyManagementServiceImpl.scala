@@ -48,17 +48,17 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
     invoke(request, "Relationships retrieval by institution id", None)
   }
 
-  override def retrieveOrganization(organizationId: UUID)(bearerToken: String): Future[Organization] = {
-    val request: ApiRequest[Organization] = api.getOrganizationById(organizationId)(BearerToken(bearerToken))
-    invoke(request, s"Organization retrieval $organizationId", Some(organizationId.toString))
+  override def retrieveInstitution(institutionId: UUID)(bearerToken: String): Future[Institution] = {
+    val request: ApiRequest[Institution] = api.getInstitutionById(institutionId)(BearerToken(bearerToken))
+    invoke(request, s"Institution retrieval $institutionId", Some(institutionId.toString))
   }
 
-  override def retrieveOrganizationByExternalId(
-    externalOrganizationId: String
-  )(bearerToken: String): Future[Organization] = {
-    val request: ApiRequest[Organization] =
-      api.getOrganizationByExternalId(externalOrganizationId)(BearerToken(bearerToken))
-    invoke(request, s"Organization retrieval by external id $externalOrganizationId", Some(externalOrganizationId))
+  override def retrieveInstitutionByExternalId(
+    externalInstitutionId: String
+  )(bearerToken: String): Future[Institution] = {
+    val request: ApiRequest[Institution] =
+      api.getInstitutionByExternalId(externalInstitutionId)(BearerToken(bearerToken))
+    invoke(request, s"Institution retrieval by external id $externalInstitutionId", Some(externalInstitutionId))
   }
 
   override def createPerson(person: PersonSeed)(bearerToken: String): Future[Person] = {
@@ -66,12 +66,12 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
     invoke(request, s"Person creation with id ${person.id.toString}", Some(person.id.toString))
   }
 
-  override def createOrganization(organization: OrganizationSeed)(bearerToken: String): Future[Organization] = {
-    val request: ApiRequest[Organization] = api.createOrganization(organization)(BearerToken(bearerToken))
+  override def createInstitution(institution: InstitutionSeed)(bearerToken: String): Future[Institution] = {
+    val request: ApiRequest[Institution] = api.createInstitution(institution)(BearerToken(bearerToken))
     invoke(
       request,
-      s"Organization creation with institution id ${organization.institutionId}",
-      Some(organization.institutionId)
+      s"Institution creation with institution id ${institution.institutionId}",
+      Some(institution.institutionId)
     )
   }
 

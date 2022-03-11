@@ -22,6 +22,9 @@ object ProcessApiMarshallerImpl extends ProcessApiMarshaller with SprayJsonSuppo
       out.getBytes(StandardCharsets.UTF_8.name)
     }
 
+  override implicit def toEntityMarshallerInstitution: ToEntityMarshaller[Institution] =
+    sprayJsonMarshaller[Institution]
+
   override implicit def toEntityMarshallerOnboardingInfo: ToEntityMarshaller[OnboardingInfo] =
     sprayJsonMarshaller[OnboardingInfo]
 
