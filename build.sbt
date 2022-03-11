@@ -59,6 +59,7 @@ generateCode := {
 }
 
 (Compile / compile) := ((Compile / compile) dependsOn generateCode).value
+(Test / test) := ((Test / test) dependsOn generateCode).value
 
 Compile / PB.targets := Seq(scalapb.gen() -> (Compile / sourceManaged).value / "protobuf")
 

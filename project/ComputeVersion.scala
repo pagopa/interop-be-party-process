@@ -11,7 +11,7 @@ object ComputeVersion {
   private val branchNameIfHead: String = "git symbolic-ref -q --short HEAD" // same as git branch --show-current
   private val thisCommitTag: String    = "git describe --tags --exact-match"
   private val shortCommitHash: String  = "git rev-parse --short HEAD"
-  private val gitOutput: String        = (branchNameIfHead #|| thisCommitTag #|| shortCommitHash).lineStream_!.head
+  private val gitOutput: String        = (thisCommitTag #|| branchNameIfHead #|| shortCommitHash).lineStream_!.head
 
   private val tag: Regex = "([0-9]+)\\.([0-9]+)\\.([0-9]+)".r
 

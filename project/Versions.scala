@@ -18,8 +18,8 @@ object Versions {
 }
 
 object PagopaVersions {
-  lazy val commonsVersion                = "0.1.1-SNAPSHOT"
-  lazy val partyManagementVersion        = "0.1.5-SNAPSHOT"
-  lazy val partyProxyVersion             = "0.1.3-SNAPSHOT"
-  lazy val userRegistryManagementVersion = "0.1.1-SNAPSHOT"
+  lazy val commonsVersion                = "0.1.1"
+  lazy val partyManagementVersion        = "0.1.7"
+  lazy val partyProxyVersion             = "0.1.3"
+  lazy val userRegistryManagementVersion = "0.1.1"
 }
