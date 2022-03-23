@@ -91,8 +91,8 @@ class PartyProcessSpec
     state = PartyManagementDependency.RelationshipState.PENDING,
     createdAt = OffsetDateTime.now()
   )
-  val claims: String             = s"""{"uid" : "${UUID.randomUUID().toString}"}"""
-  val jwtClaimsSet: JWTClaimsSet = JWTClaimsSet.parse(claims)
+  val claims: String                   = s"""{"uid" : "${UUID.randomUUID().toString}"}"""
+  val jwtClaimsSet: JWTClaimsSet       = JWTClaimsSet.parse(claims)
 
   override def beforeAll(): Unit = {
     loadEnvVars()
@@ -145,7 +145,7 @@ class PartyProcessSpec
     val taxCode2       = "delegateTaxCode"
     val institutionId1 = "IST2"
     val orgPartyId1    = "bf80fac0-2775-4646-8fcf-28e083751901"
-    val institution1 =
+    val institution1   =
       Institution(
         id = institutionId1,
         o = Some(institutionId1),
@@ -281,7 +281,7 @@ class PartyProcessSpec
     val taxCode2       = "delegateTaxCode"
     val institutionId1 = "IST2"
     val orgPartyId1    = "bf80fac0-2775-4646-8fcf-28e083751901"
-    val institution1 =
+    val institution1   =
       Institution(
         id = institutionId1,
         o = Some(institutionId1),
@@ -311,7 +311,7 @@ class PartyProcessSpec
 
     val managerId  = UUID.randomUUID()
     val delegateId = UUID.randomUUID()
-    val manager =
+    val manager    =
       User(
         name = "manager",
         surname = "manager",
@@ -321,7 +321,7 @@ class PartyProcessSpec
         product = "product",
         productRole = "admin"
       )
-    val delegate =
+    val delegate   =
       User(
         name = "delegate",
         surname = "delegate",
@@ -350,7 +350,7 @@ class PartyProcessSpec
             updatedAt = None
           )
         )
-      case (Some(st), None) =>
+      case (Some(st), None)     =>
         Seq(
           PartyManagementDependency.Relationship(
             id = UUID.randomUUID(),
@@ -367,7 +367,7 @@ class PartyProcessSpec
             updatedAt = None
           )
         )
-      case _ => Seq.empty
+      case _                    => Seq.empty
     }
 
     (mockJWTReader
@@ -1122,7 +1122,7 @@ class PartyProcessSpec
     "fail the onboarding info retrieval when the institution id filter contains an invalid string" in {
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
-      val response =
+      val response                          =
         Http()
           .singleRequest(
             HttpRequest(
@@ -1668,7 +1668,7 @@ class PartyProcessSpec
             RelationshipBinding(partyId = partyIdDelegate, relationshipId = relationshipIdDelegate)
           )
         )
-      val path = Paths.get("src/test/resources/contract-test-01.pdf")
+      val path             = Paths.get("src/test/resources/contract-test-01.pdf")
 
       (mockSignatureService
         .createDocumentValidator(_: Array[Byte]))
@@ -1899,7 +1899,7 @@ class PartyProcessSpec
           createdAt = relationshipTimestamp,
           updatedAt = None
         )
-      val relationship1 =
+      val relationship1     =
         PartyManagementDependency.Relationship(
           id = relationshipId1,
           from = userId1,
@@ -2053,7 +2053,7 @@ class PartyProcessSpec
         .once()
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(adminIdentifier.toString)))
-      val response =
+      val response                          =
         Http()
           .singleRequest(
             HttpRequest(
@@ -2280,7 +2280,7 @@ class PartyProcessSpec
         .once()
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(adminIdentifier.toString)))
-      val response =
+      val response                          =
         Http()
           .singleRequest(
             HttpRequest(
@@ -2359,7 +2359,7 @@ class PartyProcessSpec
           createdAt = relationshipTimestamp,
           updatedAt = None
         )
-      val relationship1 =
+      val relationship1     =
         PartyManagementDependency.Relationship(
           id = relationshipId1,
           from = userId1,
@@ -2612,7 +2612,7 @@ class PartyProcessSpec
         .once()
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(adminIdentifier.toString)))
-      val response =
+      val response                          =
         Http()
           .singleRequest(
             HttpRequest(
@@ -2673,7 +2673,7 @@ class PartyProcessSpec
 
       val adminRelationships =
         PartyManagementDependency.Relationships(items = Seq(adminRelationship))
-      val relationships =
+      val relationships      =
         PartyManagementDependency.Relationships(items = Seq(adminRelationship))
 
       (mockJWTReader
@@ -2750,7 +2750,7 @@ class PartyProcessSpec
         .once()
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(adminIdentifier.toString)))
-      val response =
+      val response                          =
         Http()
           .singleRequest(
             HttpRequest(
@@ -2810,7 +2810,7 @@ class PartyProcessSpec
           createdAt = relationshipTimestamp,
           updatedAt = None
         )
-      val relationship2 =
+      val relationship2     =
         PartyManagementDependency.Relationship(
           id = relationshipId2,
           from = userId2,
@@ -2824,7 +2824,7 @@ class PartyProcessSpec
 
       val adminRelationships =
         PartyManagementDependency.Relationships(items = Seq(adminRelationship))
-      val relationships =
+      val relationships      =
         PartyManagementDependency.Relationships(items = Seq(relationship2))
 
       (mockJWTReader
@@ -2901,7 +2901,7 @@ class PartyProcessSpec
         .once()
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(adminIdentifier.toString)))
-      val response =
+      val response                          =
         Http()
           .singleRequest(
             HttpRequest(
@@ -3083,7 +3083,7 @@ class PartyProcessSpec
         .once()
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(adminIdentifier.toString)))
-      val response =
+      val response                          =
         Http()
           .singleRequest(
             HttpRequest(
@@ -3161,7 +3161,7 @@ class PartyProcessSpec
 
       val adminRelationships =
         PartyManagementDependency.Relationships(items = Seq(adminRelationship))
-      val relationships =
+      val relationships      =
         PartyManagementDependency.Relationships(items = Seq())
 
       (mockJWTReader
@@ -3223,7 +3223,7 @@ class PartyProcessSpec
         .once()
 
       val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(adminIdentifier.toString)))
-      val response =
+      val response                          =
         Http()
           .singleRequest(
             HttpRequest(
@@ -3508,7 +3508,7 @@ class PartyProcessSpec
 
       val managerId  = UUID.randomUUID()
       val delegateId = UUID.randomUUID()
-      val manager =
+      val manager    =
         User(
           name = "manager",
           surname = "manager",
@@ -3518,7 +3518,7 @@ class PartyProcessSpec
           productRole = "admin",
           email = None
         )
-      val delegate =
+      val delegate   =
         User(
           name = "delegate",
           surname = "delegate",
@@ -3941,7 +3941,7 @@ class PartyProcessSpec
       )
 
       val managerId = UUID.randomUUID()
-      val manager =
+      val manager   =
         User(
           name = "manager",
           surname = "manager",
@@ -3951,7 +3951,7 @@ class PartyProcessSpec
           productRole = "admin",
           email = None
         )
-      val delegate =
+      val delegate  =
         User(
           name = "delegate",
           surname = "delegate",

@@ -40,17 +40,17 @@ object ApplicationConfiguration {
     Map(
       config.getString("party-process.mail-template.onboarding-mail-placeholders.confirm-token.name") -> config
         .getString("party-process.mail-template.onboarding-mail-placeholders.confirm-token.placeholder"),
-      config.getString("party-process.mail-template.onboarding-mail-placeholders.reject-token.name") -> config
+      config.getString("party-process.mail-template.onboarding-mail-placeholders.reject-token.name")  -> config
         .getString("party-process.mail-template.onboarding-mail-placeholders.reject-token.placeholder")
     )
   }
-  lazy val onboardingMailUserNamePlaceholder: String =
+  lazy val onboardingMailUserNamePlaceholder: String                  =
     config.getString("party-process.mail-template.onboarding-mail-placeholders.userName")
-  lazy val onboardingMailUserSurnamePlaceholder: String =
+  lazy val onboardingMailUserSurnamePlaceholder: String               =
     config.getString("party-process.mail-template.onboarding-mail-placeholders.userSurname")
-  lazy val onboardingMailTaxCodePlaceholder: String =
+  lazy val onboardingMailTaxCodePlaceholder: String                   =
     config.getString("party-process.mail-template.onboarding-mail-placeholders.userTaxCode")
-  lazy val onboardingMailProductPlaceholder: String =
+  lazy val onboardingMailProductPlaceholder: String                   =
     config.getString("party-process.mail-template.onboarding-mail-placeholders.product")
 
   lazy val storageContainer: String = config.getString("party-process.storage.container")

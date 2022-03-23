@@ -101,7 +101,7 @@ object Main
 
   dependenciesLoaded.transformWith {
     case Success((fileManager, mailTemplate, jwtValidator)) => launchApp(fileManager, mailTemplate, jwtValidator)
-    case Failure(ex) =>
+    case Failure(ex)                                        =>
       classicActorSystem.log.error(s"Startup error: ${ex.getMessage}")
       classicActorSystem.log.error(s"${ex.getStackTrace.mkString("\n")}")
       CoordinatedShutdown(classicActorSystem).run(StartupErrorShutdown)

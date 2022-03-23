@@ -84,11 +84,6 @@ object Dependencies {
     lazy val core      = namespace %% "scalamock" % scalaMockVersion
   }
 
-  private[this] object awssdk {
-    lazy val namespace = "software.amazon.awssdk"
-    lazy val s3        = namespace % "s3" % awsSdkVersion
-  }
-
   private[this] object cats {
     lazy val namespace = "org.typelevel"
     lazy val core      = namespace %% "cats-core" % catsVersion
@@ -109,7 +104,6 @@ object Dependencies {
       akka.persistence                    % Compile,
       akka.slf4j                          % Compile,
       akka.stream                         % Compile,
-      awssdk.s3                           % Compile,
       cats.core                           % Compile,
       europa.dssCades                     % Compile,
       europa.dssPades                     % Compile,

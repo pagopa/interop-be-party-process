@@ -71,8 +71,8 @@ object PartyProcessErrors {
   final case object BadRequestError             extends ComponentError("0026", "Bad request error")
   final case class OnboardingDocumentError(relationshipId: String)
       extends ComponentError("0027", s"Error retrieving document for relationship $relationshipId")
-  final case object GetRelationshipError    extends ComponentError("0028", "Error while getting relationship")
-  final case object DeleteRelationshipError extends ComponentError("0029", "Error while deleting relationship")
+  final case object GetRelationshipError        extends ComponentError("0028", "Error while getting relationship")
+  final case object DeleteRelationshipError     extends ComponentError("0029", "Error while deleting relationship")
 
   final case class ProductsNotFoundError(institutionId: String)
       extends ComponentError("0030", s"Products not found for institution $institutionId")

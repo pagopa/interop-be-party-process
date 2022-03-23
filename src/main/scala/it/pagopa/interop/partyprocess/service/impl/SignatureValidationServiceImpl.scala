@@ -20,8 +20,8 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
   private final val signatureRegex: Regex = "(TINIT-)(.*)".r
 
   def verifySignatureForm(documentValidator: SignedDocumentValidator): ValidatedNel[SignatureValidationError, Unit] = {
-    val signatures: List[AdvancedSignature] = documentValidator.getSignatures.asScala.toList
-    val invalidSignatureForms: List[SignatureForm] =
+    val signatures: List[AdvancedSignature]             = documentValidator.getSignatures.asScala.toList
+    val invalidSignatureForms: List[SignatureForm]      =
       signatures.map(_.getSignatureForm).filter(_ != SignatureForm.CAdES)
     val validation: Either[InvalidSignatureForms, Unit] =
       Either.cond(invalidSignatureForms.isEmpty, (), InvalidSignatureForms(invalidSignatureForms.map(_.toString)))
@@ -88,7 +88,7 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
     val validation: Either[SignatureValidationError, Unit] = for {
       reports          <- validateDocument(documentValidator)
       signatureTaxCode <- extractTaxCode(reports)
-      validated <- Either.cond(
+      validated        <- Either.cond(
         legals.exists(legal => legal.externalId == signatureTaxCode),
         (),
         InvalidSignatureTaxCode
@@ -116,7 +116,7 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
         .flatMap(c => Option(c.getSubjectSerialNumber))
         .headOption
         .toRight(TaxCodeNotFoundInSignature)
-      taxCode <- prefixedTaxCode match {
+      taxCode         <- prefixedTaxCode match {
         case signatureRegex(_, taxCode) => Right(taxCode)
         case _                          => Left(InvalidSignatureTaxCodeFormat)
       }
