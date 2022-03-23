@@ -155,10 +155,10 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
         case ex @ ApiError(code, message, _, _, _) if code == 404 =>
           logger.error(s"$msg. code > $code - message > $message", ex)
           Future.failed[T](ResourceNotFoundError(entityId.getOrElse(replacementEntityId)))
-        case ex @ ApiError(code, message, _, _, _) =>
+        case ex @ ApiError(code, message, _, _, _)                =>
           logger.error(s"$msg. code > $code - message > $message", ex)
           Future.failed[T](new RuntimeException(message))
-        case ex =>
+        case ex                                                   =>
           logger.error(s"$msg. Error: ${ex.getMessage}", ex)
           Future.failed[T](ex)
       }

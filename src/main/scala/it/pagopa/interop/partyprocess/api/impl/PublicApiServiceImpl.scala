@@ -57,18 +57,18 @@ class PublicApiServiceImpl(
       token       <- partyManagementService.verifyToken(tokenIdUUID)
       legalUsers  <- Future.traverse(token.legals)(legal => userRegistryManagementService.getUserById(legal.partyId))
       validator   <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
-      _ <- SignatureValidationService.validateSignature(
+      _           <- SignatureValidationService.validateSignature(
         signatureValidationService.isDocumentSigned(validator),
         signatureValidationService.verifySignature(validator),
         signatureValidationService.verifySignatureForm(validator),
         signatureValidationService.verifyDigest(validator, token.checksum),
         signatureValidationService.verifyManagerTaxCode(validator, legalUsers)
       )
-      _ <- partyManagementService.consumeToken(token.id, contract)
+      _           <- partyManagementService.consumeToken(token.id, contract)
     } yield ()
 
     onComplete(result) {
-      case Success(_) => confirmOnboarding204
+      case Success(_)                                           => confirmOnboarding204
       case Failure(InvalidSignature(signatureValidationErrors)) =>
         logger.error(
           "Error while confirming onboarding of token identified with {} - {}, reason: {}",
@@ -87,11 +87,11 @@ class PublicApiServiceImpl(
           )
         )
         confirmOnboarding409(errorResponse)
-      case Failure(ex: ResourceConflictError) =>
+      case Failure(ex: ResourceConflictError)                   =>
         logger.error("Error while confirming onboarding of token identified with {} - {}", tokenId, ex.getMessage)
         val errorResponse: Problem = problemOf(StatusCodes.Conflict, ex)
         confirmOnboarding409(errorResponse)
-      case Failure(ex) =>
+      case Failure(ex)                                          =>
         logger.error("Error while confirming onboarding of token identified with {} - {}", tokenId, ex.getMessage)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, ConfirmOnboardingError)
         confirmOnboarding400(errorResponse)
@@ -112,12 +112,12 @@ class PublicApiServiceImpl(
     } yield result
 
     onComplete(result) {
-      case Success(_) => invalidateOnboarding204
+      case Success(_)                         => invalidateOnboarding204
       case Failure(ex: ResourceConflictError) =>
         logger.error("Error while confirming onboarding of token identified with {} - {}", tokenId, ex.getMessage)
         val errorResponse: Problem = problemOf(StatusCodes.Conflict, ex)
         confirmOnboarding409(errorResponse)
-      case Failure(ex) =>
+      case Failure(ex)                        =>
         logger.error("Error while invalidating onboarding for token identified with {}", tokenId, ex.getMessage)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, InvalidateOnboardingError)
         invalidateOnboarding400(errorResponse)
