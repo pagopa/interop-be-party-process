@@ -57,14 +57,14 @@ class PublicApiServiceImpl(
       token       <- partyManagementService.verifyToken(tokenIdUUID)
       legalUsers  <- Future.traverse(token.legals)(legal => userRegistryManagementService.getUserById(legal.partyId))
       validator   <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
-      _           <- SignatureValidationService.validateSignature(
-        signatureValidationService.isDocumentSigned(validator),
+      _ <- SignatureValidationService.validateSignature(signatureValidationService.isDocumentSigned(validator))
+      _ <- SignatureValidationService.validateSignature(
         signatureValidationService.verifySignature(validator),
         signatureValidationService.verifySignatureForm(validator),
         signatureValidationService.verifyDigest(validator, token.checksum),
         signatureValidationService.verifyManagerTaxCode(validator, legalUsers)
       )
-      _           <- partyManagementService.consumeToken(token.id, contract)
+      _ <- partyManagementService.consumeToken(token.id, contract)
     } yield ()
 
     onComplete(result) {
