@@ -16,7 +16,7 @@ object Dependencies {
     lazy val slf4j       = namespace           %% "akka-slf4j"               % akkaVersion
     lazy val testkit     = namespace           %% "akka-actor-testkit-typed" % akkaVersion
 
-    lazy val management = "com.lightbend.akka.management" %% "akka-management" % akkaManagementVersion
+    lazy val management          = "com.lightbend.akka.management" %% "akka-management" % akkaManagementVersion
     lazy val managementLogLevels =
       "com.lightbend.akka.management" %% "akka-management-loglevels-logback" % akkaManagementVersion
   }
@@ -84,11 +84,6 @@ object Dependencies {
     lazy val core      = namespace %% "scalamock" % scalaMockVersion
   }
 
-  private[this] object awssdk {
-    lazy val namespace = "software.amazon.awssdk"
-    lazy val s3        = namespace % "s3" % awsSdkVersion
-  }
-
   private[this] object cats {
     lazy val namespace = "org.typelevel"
     lazy val core      = namespace %% "cats-core" % catsVersion
@@ -98,7 +93,7 @@ object Dependencies {
 
     lazy val `server`: Seq[ModuleID] = Seq(
       // For making Java 12 happy
-      "javax.annotation" % "javax.annotation-api" % "1.3.2" % "compile",
+      "javax.annotation"                  % "javax.annotation-api" % "1.3.2" % "compile",
       //
       akka.actor                          % Compile,
       akka.actorTyped                     % Compile,
@@ -109,7 +104,6 @@ object Dependencies {
       akka.persistence                    % Compile,
       akka.slf4j                          % Compile,
       akka.stream                         % Compile,
-      awssdk.s3                           % Compile,
       cats.core                           % Compile,
       europa.dssCades                     % Compile,
       europa.dssPades                     % Compile,
@@ -132,7 +126,7 @@ object Dependencies {
       scalatest.core                      % Test,
       scalamock.core                      % Test
     )
-    lazy val client: Seq[ModuleID] =
+    lazy val client: Seq[ModuleID]   =
       Seq(
         akka.stream     % Compile,
         akka.http       % Compile,

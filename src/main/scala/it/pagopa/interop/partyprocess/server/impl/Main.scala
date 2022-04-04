@@ -22,6 +22,8 @@ import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.ValidationR
 import it.pagopa.interop.commons.utils.{AkkaUtils, CORSSupport, OpenapiUtils}
 import it.pagopa.interop.partymanagement.client.{api => partyManagementApi}
 import it.pagopa.interop.partyprocess.api.impl.{
+  ExternalApiMarshallerImpl,
+  ExternalApiServiceImpl,
   HealthApiMarshallerImpl,
   HealthServiceApiImpl,
   ProcessApiMarshallerImpl,
@@ -30,7 +32,7 @@ import it.pagopa.interop.partyprocess.api.impl.{
   PublicApiServiceImpl,
   problemOf
 }
-import it.pagopa.interop.partyprocess.api.{HealthApi, ProcessApi, PublicApi}
+import it.pagopa.interop.partyprocess.api.{ExternalApi, HealthApi, ProcessApi, PublicApi}
 import it.pagopa.interop.partyprocess.common.system.{ApplicationConfiguration, classicActorSystem, executionContext}
 import it.pagopa.interop.partyprocess.server.Controller
 import it.pagopa.interop.partyprocess.service._
@@ -51,6 +53,7 @@ trait PartyManagementDependency {
     PartyManagementServiceImpl(
       PartyManagementInvoker(),
       partyManagementApi.PartyApi(ApplicationConfiguration.getPartyManagementUrl),
+      partyManagementApi.ExternalApi(ApplicationConfiguration.getPartyManagementUrl),
       partyManagementApi.PublicApi(ApplicationConfiguration.getPartyManagementUrl)
     )
 }
@@ -101,7 +104,7 @@ object Main
 
   dependenciesLoaded.transformWith {
     case Success((fileManager, mailTemplate, jwtValidator)) => launchApp(fileManager, mailTemplate, jwtValidator)
-    case Failure(ex) =>
+    case Failure(ex)                                        =>
       classicActorSystem.log.error(s"Startup error: ${ex.getMessage}")
       classicActorSystem.log.error(s"${ex.getStackTrace.mkString("\n")}")
       CoordinatedShutdown(classicActorSystem).run(StartupErrorShutdown)
@@ -127,8 +130,7 @@ object Main
         fileManager = fileManager,
         signatureService = signatureService,
         mailer = mailer,
-        mailTemplate = mailTemplate,
-        jwtReader = jwtReader
+        mailTemplate = mailTemplate
       ),
       ProcessApiMarshallerImpl,
       jwtReader.OAuth2JWTValidatorAsContexts
@@ -145,6 +147,15 @@ object Main
       SecurityDirectives.authenticateBasic("Public", AkkaUtils.PassThroughAuthenticator)
     )
 
+    val externalApi: ExternalApi = new ExternalApi(
+      new ExternalApiServiceImpl(
+        partyManagementService = partyManagementService,
+        userRegistryManagementService = userRegistryManagementService
+      ),
+      ExternalApiMarshallerImpl,
+      SecurityDirectives.authenticateBasic("Public", AkkaUtils.PassThroughAuthenticator)
+    )
+
     val healthApi: HealthApi = new HealthApi(
       new HealthServiceApiImpl(),
       HealthApiMarshallerImpl,
@@ -158,6 +169,7 @@ object Main
     val controller: Controller = new Controller(
       health = healthApi,
       process = processApi,
+      external = externalApi,
       public = publicApi,
       validationExceptionToRoute = Some(report => {
         val error =

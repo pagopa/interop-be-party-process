@@ -5,19 +5,11 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.marshalling.ToEntityMarshaller
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import it.pagopa.interop.partyprocess.api.impl._
-import it.pagopa.interop.partyprocess.model.{
-  OnboardingContract,
-  OnboardingInfo,
-  OnboardingRequest,
-  Products,
-  RelationshipInfo,
-  User
-}
+import it.pagopa.interop.partyprocess.model._
 import spray.json.RootJsonFormat
 
 import scala.concurrent.Await
@@ -43,19 +35,12 @@ package object partyprocess extends SprayJsonSupport {
   implicit def fromEntityUnmarshallerOnboardingRequest: ToEntityMarshaller[OnboardingRequest] =
     sprayJsonMarshaller[OnboardingRequest]
 
-  final val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken("token")))
-
   def request(data: Source[ByteString, Any], path: String, verb: HttpMethod)(implicit
     system: ClassicActorSystemProvider
   ): HttpResponse = {
     Await.result(
       Http().singleRequest(
-        HttpRequest(
-          uri = s"$url/$path",
-          method = verb,
-          entity = HttpEntity(ContentTypes.`application/json`, data),
-          headers = authorization
-        )
+        HttpRequest(uri = s"$url/$path", method = verb, entity = HttpEntity(ContentTypes.`application/json`, data))
       ),
       Duration.Inf
     )

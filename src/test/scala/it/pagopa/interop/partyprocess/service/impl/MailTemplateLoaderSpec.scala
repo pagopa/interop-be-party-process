@@ -20,7 +20,7 @@ class MailTemplateLoaderSpec extends AnyWordSpecLike with Matchers with ScalaFut
   "a mail template file" should {
     "be properly loaded" in {
       val fileManager = FileManager.getConcreteImplementation(config.getString("interop-commons.storage.type")).get
-      val template =
+      val template    =
         MailTemplate.get(config.getString("party-process.mail-template.path"), fileManager).futureValue
 
       template.subject shouldBe "Procedura di interoperabilità"

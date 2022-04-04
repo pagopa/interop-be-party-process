@@ -21,6 +21,11 @@ tags:
     externalDocs:
       description: Find out more
       url: 'http://swagger.io'
+  - name: external
+    description: External id endpoints
+    externalDocs:
+      description: Find out more
+      url: 'http://swagger.io'
   - name: public
     description: Public endpoints
     externalDocs:
@@ -216,15 +221,15 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  /institutions/external-id/{institutionId}/relationships:
+  /external/institutions/{externalId}/relationships:
     get:
       tags:
-        - process
+        - external
       summary: returns the relationships related to the institution
       description: Return ok
       operationId: getUserInstitutionRelationships
       parameters:
-        - name: institutionId
+        - name: externalId
           in: path
           description: The external identifier of the institution
           required: true
@@ -285,15 +290,15 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  /institutions/external-id/{institutionId}/products:
+  /external/institutions/{externalId}/products:
     get:
       tags:
-        - process
+        - external
       summary: institution products retrieval
       description: retrieves the products this institution is related to.
       operationId: retrieveInstitutionProducts
       parameters:
-        - name: institutionId
+        - name: externalId
           in: path
           description: The external identifier of the institution
           required: true
@@ -479,16 +484,16 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  '/institutions/external-id/{institutionId}':
+  '/external/institutions/{externalId}':
     get:
       security: [{}]
       tags:
-        - process
+        - external
       summary: Gets the corresponding institution using external institution id
       description: Gets institution using external institution id
       operationId: getInstitutionByExternalId
       parameters:
-        - name: institutionId
+        - name: externalId
           in: path
           description: The external identifier of the institution
           required: true
