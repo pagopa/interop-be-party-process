@@ -23,8 +23,8 @@ import it.pagopa.interop.partymanagement.client.model.{
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess
 import it.pagopa.interop.partyprocess.api.impl.Conversions._
-import it.pagopa.interop.partyprocess.api.impl.{ExternalApiServiceImpl, ProcessApiServiceImpl, PublicApiServiceImpl}
-import it.pagopa.interop.partyprocess.api.{ExternalApi, ProcessApi, PublicApi}
+import it.pagopa.interop.partyprocess.api.impl.{ProcessApiServiceImpl, PublicApiServiceImpl}
+import it.pagopa.interop.partyprocess.api.{ProcessApi, PublicApi}
 import it.pagopa.interop.partyprocess.common.system.{classicActorSystem, executionContext}
 import it.pagopa.interop.partyprocess.error.SignatureValidationError
 import it.pagopa.interop.partyprocess.model.Certification.NONE
@@ -113,15 +113,6 @@ class PartyProcessSpec
       wrappingDirective
     )
 
-    val externalApi = new ExternalApi(
-      new ExternalApiServiceImpl(
-        partyManagementService = mockPartyManagementService,
-        userRegistryManagementService = mockUserRegistryService
-      ),
-      externalApiMarshaller,
-      wrappingDirective
-    )
-
     val publicApi = new PublicApi(
       new PublicApiServiceImpl(
         partyManagementService = mockPartyManagementService,
@@ -133,9 +124,7 @@ class PartyProcessSpec
       wrappingDirective
     )
 
-    controller = Some(
-      new Controller(health = mockHealthApi, process = processApi, external = externalApi, public = publicApi)
-    )
+    controller = Some(new Controller(health = mockHealthApi, process = processApi, public = publicApi))
 
     controller foreach { controller =>
       bindServer = Some(
@@ -158,6 +147,7 @@ class PartyProcessSpec
     val taxCode2             = "delegateTaxCode"
     val institutionId        = UUID.randomUUID().toString
     val orgPartyId           = UUID.randomUUID()
+    println(s"1 $orgPartyId")
     val institutionFromProxy = PartyProxyDependencies.Institution(
       id = institutionId,
       o = Some(institutionId),
@@ -287,6 +277,7 @@ class PartyProcessSpec
     val taxCode2             = "delegateTaxCode"
     val institutionId        = UUID.randomUUID().toString
     val orgPartyId           = UUID.randomUUID()
+    println(s"1 $institutionId")
     val institutionFromProxy =
       PartyProxyDependencies.Institution(
         id = institutionId,
@@ -532,6 +523,7 @@ class PartyProcessSpec
     "verify that an institution is already onboarded for a given product" in {
       val institutionId = UUID.randomUUID().toString
       val orgPartyId    = UUID.randomUUID()
+      println(s"2 $institutionId")
       val personPartyId = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
@@ -605,8 +597,8 @@ class PartyProcessSpec
     "verify that an institution is not already onboarded for a given product" in {
       val institutionId = UUID.randomUUID().toString
       val orgPartyId    = UUID.randomUUID()
-
-      val institution = PartyManagementDependency.Institution(
+      println(s"3 $institutionId")
+      val institution   = PartyManagementDependency.Institution(
         id = orgPartyId,
         institutionId = institutionId,
         description = "",
@@ -668,13 +660,14 @@ class PartyProcessSpec
       val institutionId2 = UUID.randomUUID().toString
       val orgPartyId1    = UUID.randomUUID()
       val orgPartyId2    = UUID.randomUUID()
-
-      val attribute1 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1", "origin")
-      val attribute2 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2", "origin")
-      val attribute3 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3", "origin")
-      val attribute4 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name4", "origin")
-      val attribute5 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name5", "origin")
-      val attribute6 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name6", "origin")
+      println(s"4 $institutionId1")
+      println(s"5 $institutionId2")
+      val attribute1     = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1", "origin")
+      val attribute2     = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2", "origin")
+      val attribute3     = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3", "origin")
+      val attribute4     = partyprocess.model.Attribute(UUID.randomUUID().toString, "name4", "origin")
+      val attribute5     = partyprocess.model.Attribute(UUID.randomUUID().toString, "name5", "origin")
+      val attribute6     = partyprocess.model.Attribute(UUID.randomUUID().toString, "name6", "origin")
 
       val user = UserRegistryUser(
         id = uid,
@@ -847,8 +840,8 @@ class PartyProcessSpec
       val attribute1    = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1", "origin")
       val attribute2    = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2", "origin")
       val attribute3    = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3", "origin")
-
-      val user = UserRegistryUser(
+      println(s"6 $institutionId")
+      val user          = UserRegistryUser(
         id = uid,
         externalId = taxCode1,
         name = "Mario",
@@ -979,8 +972,8 @@ class PartyProcessSpec
       val attribute1    = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name1", "origin")
       val attribute2    = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name2", "origin")
       val attribute3    = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name3", "origin")
-
-      val user =
+      println(s"7 $institutionId")
+      val user          =
         UserRegistryUser(
           id = uid,
           externalId = taxCode1,
@@ -1176,8 +1169,8 @@ class PartyProcessSpec
       val institutionId = UUID.randomUUID().toString
       val taxCode1      = "operator1TaxCode"
       val taxCode2      = "operator2TaxCode"
-
-      val operator1 = User(
+      println(s"8 $institutionId")
+      val operator1     = User(
         name = "operator1",
         surname = "operator1",
         taxCode = taxCode1,
@@ -1186,7 +1179,7 @@ class PartyProcessSpec
         product = "product",
         productRole = "admin"
       )
-      val operator2 = User(
+      val operator2     = User(
         name = "operator2",
         surname = "operator2",
         taxCode = taxCode2,
@@ -1246,8 +1239,8 @@ class PartyProcessSpec
       val taxCode2      = "operator2TaxCode"
       val institutionId = UUID.randomUUID().toString
       val orgPartyId    = UUID.randomUUID()
-
-      val institution = PartyManagementDependency.Institution(
+      println(s"9 $institutionId")
+      val institution   = PartyManagementDependency.Institution(
         id = orgPartyId,
         institutionId = institutionId,
         description = "org1",
@@ -1415,8 +1408,8 @@ class PartyProcessSpec
       val institutionId = UUID.randomUUID().toString
       val taxCode1      = "subdelegate1TaxCode"
       val taxCode2      = "subdelegate2TaxCode"
-
-      val subdelegate1 = User(
+      println(s"10 $institutionId")
+      val subdelegate1  = User(
         name = "subdelegate1",
         surname = "subdelegate1",
         taxCode = taxCode1,
@@ -1425,7 +1418,7 @@ class PartyProcessSpec
         product = "product",
         productRole = "admin"
       )
-      val subdelegate2 = User(
+      val subdelegate2  = User(
         name = "subdelegate2",
         surname = "subdelegate2",
         taxCode = taxCode2,
@@ -1486,8 +1479,8 @@ class PartyProcessSpec
       val institutionId  = UUID.randomUUID().toString
       val orgPartyId     = UUID.randomUUID()
       val personPartyId1 = "bf80fac0-2775-4646-8fcf-28e083751900"
-
-      val institution = PartyManagementDependency.Institution(
+      println(s"11 $institutionId")
+      val institution    = PartyManagementDependency.Institution(
         id = orgPartyId,
         institutionId = institutionId,
         description = "org1",
@@ -1856,12 +1849,12 @@ class PartyProcessSpec
 
     "retrieve all the relationships of a specific institution when requested by the admin" in {
 
-      val userId1       = UUID.randomUUID()
-      val userId2       = UUID.randomUUID()
-      val userId3       = UUID.randomUUID()
-      val institutionId = UUID.randomUUID().toString
-      val orgPartyId    = UUID.randomUUID()
-
+      val userId1             = UUID.randomUUID()
+      val userId2             = UUID.randomUUID()
+      val userId3             = UUID.randomUUID()
+      val institutionId       = UUID.randomUUID().toString
+      val orgPartyId          = UUID.randomUUID()
+      println(s"12 $institutionId")
       val adminRelationshipId = UUID.randomUUID()
       val relationshipId1     = UUID.randomUUID()
       val relationshipId2     = UUID.randomUUID()
@@ -1971,9 +1964,8 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(*, *)
+        .expects(institutionId, *)
         .returning(Future.successful(institution))
-        .repeat(1000)
 
       (mockPartyManagementService
         .retrieveRelationships(
@@ -2039,7 +2031,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitution(_: UUID)(_: String))
-        .expects(*, *)
+        .expects(orgPartyId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -2118,11 +2110,11 @@ class PartyProcessSpec
     }
 
     "retrieve all the relationships of a specific institution with filter by productRole when requested by the admin" in {
-      val userId1       = UUID.randomUUID()
-      val userId2       = UUID.randomUUID()
-      val institutionId = UUID.randomUUID().toString
-      val orgPartyId    = UUID.randomUUID()
-
+      val userId1             = UUID.randomUUID()
+      val userId2             = UUID.randomUUID()
+      val institutionId       = UUID.randomUUID().toString
+      val orgPartyId          = UUID.randomUUID()
+      println(s"13 $institutionId")
       val adminRelationshipId = UUID.randomUUID()
       val relationshipId1     = UUID.randomUUID()
       val relationshipId2     = UUID.randomUUID()
@@ -2306,8 +2298,8 @@ class PartyProcessSpec
       val userId3         = UUID.randomUUID()
       val institutionId   = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
-
-      val institution = PartyManagementDependency.Institution(
+      println(s"14 $institutionId")
+      val institution     = PartyManagementDependency.Institution(
         id = orgPartyId,
         institutionId = institutionId,
         description = "",
@@ -2466,8 +2458,8 @@ class PartyProcessSpec
       val userId1         = UUID.randomUUID()
       val institutionId   = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
-
-      val institution = PartyManagementDependency.Institution(
+      println(s"15 $institutionId")
+      val institution     = PartyManagementDependency.Institution(
         id = orgPartyId,
         institutionId = institutionId,
         description = "",
@@ -2603,8 +2595,8 @@ class PartyProcessSpec
       val adminIdentifier = UUID.randomUUID()
       val institutionId   = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
-
-      val institution = PartyManagementDependency.Institution(
+      println(s"16 $institutionId")
+      val institution     = PartyManagementDependency.Institution(
         id = orgPartyId,
         institutionId = institutionId,
         description = "",
@@ -2735,8 +2727,8 @@ class PartyProcessSpec
       val userId2         = UUID.randomUUID()
       val institutionId   = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
-
-      val institution = PartyManagementDependency.Institution(
+      println(s"17 $institutionId")
+      val institution     = PartyManagementDependency.Institution(
         id = orgPartyId,
         institutionId = institutionId,
         description = "",
@@ -2880,8 +2872,8 @@ class PartyProcessSpec
       val userId4         = UUID.randomUUID()
       val institutionId   = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
-
-      val institution = PartyManagementDependency.Institution(
+      println(s"18 $institutionId")
+      val institution     = PartyManagementDependency.Institution(
         id = orgPartyId,
         institutionId = institutionId,
         description = "",
@@ -3071,8 +3063,8 @@ class PartyProcessSpec
       val adminIdentifier = UUID.randomUUID()
       val institutionId   = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
-
-      val institution = PartyManagementDependency.Institution(
+      println(s"19 $institutionId")
+      val institution     = PartyManagementDependency.Institution(
         id = orgPartyId,
         institutionId = institutionId,
         description = "",
@@ -3390,6 +3382,7 @@ class PartyProcessSpec
       val taxCode2      = "delegateTaxCode"
       val institutionId = UUID.randomUUID().toString
       val orgPartyId    = UUID.randomUUID()
+      println(s"20 $institutionId")
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
@@ -3736,6 +3729,7 @@ class PartyProcessSpec
       val taxCode       = UUID.randomUUID().toString
       val institutionId = UUID.randomUUID().toString
       val orgPartyId    = UUID.randomUUID()
+      println(s"21 $institutionId")
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
@@ -3820,6 +3814,7 @@ class PartyProcessSpec
       val taxCode2      = "delegateTaxCode"
       val institutionId = UUID.randomUUID().toString
       val orgPartyId    = UUID.randomUUID()
+      println(s"22 $institutionId")
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
