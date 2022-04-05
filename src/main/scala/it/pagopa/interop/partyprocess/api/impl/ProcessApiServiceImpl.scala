@@ -974,6 +974,7 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(relationships) => getUserInstitutionRelationships200(relationships)
       case Failure(ex)            =>
+        ex.printStackTrace()
         logger.error(
           "Error while getting relationship for institution {} and current user, reason: {}",
           externalId,
