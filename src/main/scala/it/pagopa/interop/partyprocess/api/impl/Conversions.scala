@@ -1,9 +1,13 @@
 package it.pagopa.interop.partyprocess.api.impl
 
-import it.pagopa.interop.partymanagement.client.model.RelationshipProduct
+import it.pagopa.interop.partymanagement.client.model.{Relationship, RelationshipProduct}
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess.model._
+import it.pagopa.interop.partyprocess.service.{PartyManagementService, UserRegistryManagementService}
+import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.User
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.{model => UserRegistryManagementDependency}
+
+import scala.concurrent.{ExecutionContext, Future}
 
 object Conversions {
   def roleToDependency(role: PartyRole): PartyManagementDependency.PartyRole =
@@ -40,5 +44,38 @@ object Conversions {
       case UserRegistryManagementDependency.Certification.NONE => Certification.NONE
       case UserRegistryManagementDependency.Certification.SPID => Certification.SPID
     }
+
+  def relationshipToRelationshipsResponse(
+    userRegistryManagementService: UserRegistryManagementService,
+    partyManagementService: PartyManagementService
+  )(relationship: Relationship, bearer: String)(implicit ec: ExecutionContext): Future[RelationshipInfo] = {
+    for {
+      institution <- partyManagementService.retrieveInstitution(relationship.to)(bearer)
+      user        <- userRegistryManagementService.getUserById(relationship.from)
+    } yield relationshipToRelationshipInfo(relationship, user, institution)
+  }
+
+  private def relationshipToRelationshipInfo(
+    relationship: Relationship,
+    user: User,
+    institution: PartyManagementDependency.Institution
+  ): RelationshipInfo = {
+    RelationshipInfo(
+      id = relationship.id,
+      from = relationship.from,
+      to = relationship.to,
+      name = user.name,
+      surname = user.surname,
+      taxCode = user.externalId,
+      certification = certificationToApi(user.certification),
+      institutionContacts =
+        user.extras.email.map(email => institution.institutionId -> Seq(Contact(email = email))).toMap,
+      role = roleToApi(relationship.role),
+      product = relationshipProductToApi(relationship.product),
+      state = relationshipStateToApi(relationship.state),
+      createdAt = relationship.createdAt,
+      updatedAt = relationship.updatedAt
+    )
+  }
 
 }

@@ -1,19 +1,21 @@
 package it.pagopa.interop.partyprocess
 
-import com.nimbusds.jwt.JWTClaimsSet
 import eu.europa.esig.dss.validation.SignedDocumentValidator
 import eu.europa.esig.dss.validation.reports.Reports
 import it.pagopa.interop.commons.files.service.FileManager
-import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.mail.model.PersistedTemplate
-import it.pagopa.interop.partyprocess.api.impl.{ProcessApiMarshallerImpl, PublicApiMarshallerImpl, uidClaim}
-import it.pagopa.interop.partyprocess.api.{HealthApi, ProcessApiMarshaller, PublicApiMarshaller}
+import it.pagopa.interop.partyprocess.api.impl.{
+  ExternalApiMarshallerImpl,
+  ProcessApiMarshallerImpl,
+  PublicApiMarshallerImpl
+}
+import it.pagopa.interop.partyprocess.api.{ExternalApiMarshaller, HealthApi, ProcessApiMarshaller, PublicApiMarshaller}
 import it.pagopa.interop.partyprocess.service._
 import org.scalamock.scalatest.MockFactory
 
 import java.io.File
+import java.util.UUID
 import scala.concurrent.Future
-import scala.util.Success
 
 object MockMailEngine extends MailEngine {
   override def sendMail(
@@ -24,6 +26,7 @@ object MockMailEngine extends MailEngine {
 trait SpecHelper { self: MockFactory =>
 
   val processApiMarshaller: ProcessApiMarshaller                 = ProcessApiMarshallerImpl
+  val externalApiMarshaller: ExternalApiMarshaller               = ExternalApiMarshallerImpl
   val publicApiMarshaller: PublicApiMarshaller                   = PublicApiMarshallerImpl
   val mockHealthApi: HealthApi                                   = mock[HealthApi]
   val mockPartyManagementService: PartyManagementService         = mock[PartyManagementService]
@@ -37,9 +40,9 @@ trait SpecHelper { self: MockFactory =>
   val mockReports: Reports                                       = mock[Reports]
   val mockSignedDocumentValidator: SignedDocumentValidator       = mock[SignedDocumentValidator]
   val mockMailTemplate: PersistedTemplate                        = PersistedTemplate("mock", "mock")
-  val mockJWTReader: JWTReader                                   = mock[JWTReader]
 
-  def mockUid(uuid: String) = Success(new JWTClaimsSet.Builder().claim(uidClaim, uuid).build())
+  val token = UUID.randomUUID()
+  val uid   = UUID.randomUUID()
 
   def loadEnvVars() = {
     System.setProperty("DELEGATE_PRODUCT_ROLES", "admin")
