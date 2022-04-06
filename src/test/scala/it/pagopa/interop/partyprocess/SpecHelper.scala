@@ -4,8 +4,12 @@ import eu.europa.esig.dss.validation.SignedDocumentValidator
 import eu.europa.esig.dss.validation.reports.Reports
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.mail.model.PersistedTemplate
-import it.pagopa.interop.partyprocess.api.impl.{ProcessApiMarshallerImpl, PublicApiMarshallerImpl}
-import it.pagopa.interop.partyprocess.api.{HealthApi, ProcessApiMarshaller, PublicApiMarshaller}
+import it.pagopa.interop.partyprocess.api.impl.{
+  ExternalApiMarshallerImpl,
+  ProcessApiMarshallerImpl,
+  PublicApiMarshallerImpl
+}
+import it.pagopa.interop.partyprocess.api.{ExternalApiMarshaller, HealthApi, ProcessApiMarshaller, PublicApiMarshaller}
 import it.pagopa.interop.partyprocess.service._
 import org.scalamock.scalatest.MockFactory
 
@@ -22,6 +26,7 @@ object MockMailEngine extends MailEngine {
 trait SpecHelper { self: MockFactory =>
 
   val processApiMarshaller: ProcessApiMarshaller                 = ProcessApiMarshallerImpl
+  val externalApiMarshaller: ExternalApiMarshaller               = ExternalApiMarshallerImpl
   val publicApiMarshaller: PublicApiMarshaller                   = PublicApiMarshallerImpl
   val mockHealthApi: HealthApi                                   = mock[HealthApi]
   val mockPartyManagementService: PartyManagementService         = mock[PartyManagementService]

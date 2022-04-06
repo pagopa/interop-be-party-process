@@ -21,6 +21,11 @@ tags:
     externalDocs:
       description: Find out more
       url: 'http://swagger.io'
+  - name: external
+    description: Implements external endpoints
+    externalDocs:
+      description: Find out more
+      url: 'http://swagger.io'
   - name: public
     description: Public endpoints
     externalDocs:
@@ -219,7 +224,7 @@ paths:
   /external/institutions/{externalId}/relationships:
     get:
       tags:
-        - process
+        - external
       summary: returns the relationships related to the institution
       description: Return ok
       operationId: getUserInstitutionRelationships
@@ -288,7 +293,7 @@ paths:
   /external/institutions/{externalId}/products:
     get:
       tags:
-        - process
+        - external
       summary: institution products retrieval
       description: retrieves the products this institution is related to.
       operationId: retrieveInstitutionProducts
@@ -483,7 +488,7 @@ paths:
     get:
       security: [{}]
       tags:
-        - process
+        - external
       summary: Gets the corresponding institution using external institution id
       description: Gets institution using external institution id
       operationId: getInstitutionByExternalId

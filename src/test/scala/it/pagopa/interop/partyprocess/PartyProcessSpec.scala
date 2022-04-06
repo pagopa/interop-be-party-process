@@ -23,8 +23,8 @@ import it.pagopa.interop.partymanagement.client.model.{
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess
 import it.pagopa.interop.partyprocess.api.impl.Conversions._
-import it.pagopa.interop.partyprocess.api.impl.{ProcessApiServiceImpl, PublicApiServiceImpl}
-import it.pagopa.interop.partyprocess.api.{ProcessApi, PublicApi}
+import it.pagopa.interop.partyprocess.api.impl.{ExternalApiServiceImpl, ProcessApiServiceImpl, PublicApiServiceImpl}
+import it.pagopa.interop.partyprocess.api.{ExternalApi, ProcessApi, PublicApi}
 import it.pagopa.interop.partyprocess.common.system.{classicActorSystem, executionContext}
 import it.pagopa.interop.partyprocess.error.SignatureValidationError
 import it.pagopa.interop.partyprocess.model.Certification.NONE
@@ -113,6 +113,15 @@ class PartyProcessSpec
       wrappingDirective
     )
 
+    val externalApi = new ExternalApi(
+      new ExternalApiServiceImpl(
+        partyManagementService = mockPartyManagementService,
+        userRegistryManagementService = mockUserRegistryService
+      ),
+      externalApiMarshaller,
+      wrappingDirective
+    )
+
     val publicApi = new PublicApi(
       new PublicApiServiceImpl(
         partyManagementService = mockPartyManagementService,
@@ -124,7 +133,9 @@ class PartyProcessSpec
       wrappingDirective
     )
 
-    controller = Some(new Controller(health = mockHealthApi, process = processApi, public = publicApi))
+    controller = Some(
+      new Controller(health = mockHealthApi, external = externalApi, process = processApi, public = publicApi)
+    )
 
     controller foreach { controller =>
       bindServer = Some(
