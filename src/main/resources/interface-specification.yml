@@ -659,7 +659,7 @@ components:
             $ref: '#/components/schemas/User'
         institutionId:
           type: string
-        institutionUpdates:
+        institutionUpdate:
           $ref: '#/components/schemas/InstitutionUpdate'
         pricingPlan:
           type: string
@@ -713,7 +713,7 @@ components:
         pricingPlan:
           type: string
           description: pricing plan
-        institution:
+        institutionUpdate:
           $ref: '#/components/schemas/InstitutionUpdate'
         billing:
           $ref: '#/components/schemas/Billing'
@@ -808,11 +808,6 @@ components:
           type: string
         role:
           type: string
-        pricingPlan:
-          type: string
-          description: pricing plan
-        billing:
-          $ref: '#/components/schemas/Billing'
         createdAt:
           type: string
           format: date-time
@@ -847,6 +842,11 @@ components:
           type: string
           description: institution type
           example: PA
+        pricingPlan:
+          type: string
+          description: pricing plan
+        billing:
+          $ref: '#/components/schemas/Billing'
         origin:
           type: string
           description: The origin form which the institution has been retrieved
