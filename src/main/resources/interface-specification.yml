@@ -672,6 +672,7 @@ components:
       required:
         - users
         - institutionId
+        - billing
     OnboardingContract:
       properties:
         version:
