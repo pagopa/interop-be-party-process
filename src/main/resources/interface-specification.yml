@@ -659,6 +659,10 @@ components:
             $ref: '#/components/schemas/User'
         institutionId:
           type: string
+        origin:
+          type: string
+          description: The origin form which the institution has been retrieved
+          example: IPA
         institutionUpdate:
           $ref: '#/components/schemas/InstitutionUpdate'
         pricingPlan:
@@ -672,7 +676,6 @@ components:
       required:
         - users
         - institutionId
-        - billing
     OnboardingContract:
       properties:
         version:

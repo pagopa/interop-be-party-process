@@ -329,7 +329,17 @@ class ProcessApiServiceImpl(
       validManager     <- getValidManager(activeManager, validUsers)
       personsWithRoles <- Future.traverse(validUsers)(addUser)
       relationships    <- Future.traverse(personsWithRoles) { case (person, role, product, productRole) =>
-        createOrGetRelationship(person.id, institution.id, roleToDependency(role), product, productRole)(bearer)
+        val isManager = role == PartyRole.MANAGER
+        createOrGetRelationship(
+          person.id,
+          institution.id,
+          roleToDependency(role),
+          product,
+          productRole,
+          if (isManager) onboardingRequest.pricingPlan else Option.empty,
+          if (isManager) onboardingRequest.institutionUpdate else Option.empty,
+          if (isManager) onboardingRequest.billing else Option.empty
+        )(bearer)
       }
       contract         <- onboardingRequest.contract.toFuture(ContractNotFound(onboardingRequest.institutionId))
       contractTemplate <- getFileAsString(contract.path)
@@ -386,14 +396,34 @@ class ProcessApiServiceImpl(
     institutionId: UUID,
     role: PartyManagementDependency.PartyRole,
     product: String,
-    productRole: String
+    productRole: String,
+    pricingPlan: Option[String],
+    institutionUpdate: Option[InstitutionUpdate],
+    billing: Option[Billing]
   )(bearer: String): Future[PartyManagementDependency.Relationship] = {
     val relationshipSeed: PartyManagementDependency.RelationshipSeed =
       PartyManagementDependency.RelationshipSeed(
         from = personId,
         to = institutionId,
         role = role,
-        product = PartyManagementDependency.RelationshipProductSeed(product, productRole)
+        product = PartyManagementDependency.RelationshipProductSeed(product, productRole),
+        pricingPlan = pricingPlan,
+        institutionUpdate = institutionUpdate.map(i =>
+          PartyManagementDependency.InstitutionUpdate(
+            institutionType = i.institutionType,
+            description = i.description,
+            digitalAddress = i.digitalAddress,
+            address = i.address,
+            taxCode = i.taxCode
+          )
+        ),
+        billing = billing.map(b =>
+          PartyManagementDependency.Billing(
+            vatNumber = b.vatNumber,
+            recipientCode = b.recipientCode,
+            publicServices = b.publicServices
+          )
+        )
       )
 
     partyManagementService
@@ -616,7 +646,9 @@ class ProcessApiServiceImpl(
         attributes = Seq(PartyManagementDependency.Attribute(category.origin, category.code, category.name)),
         products = Set.empty,
         address = institution.address,
-        zipCode = institution.zipCode
+        zipCode = institution.zipCode,
+        institutionType = "TBD",
+        origin = institution.origin
       )
       institution <- partyManagementService.createInstitution(seed)(bearer)
       _ = logger.info("institution created {}", institution.institutionId)

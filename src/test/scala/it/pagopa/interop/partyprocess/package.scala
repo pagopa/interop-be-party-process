@@ -30,7 +30,7 @@ package object partyprocess extends SprayJsonSupport {
 
   implicit val userFormat: RootJsonFormat[User]                             = jsonFormat7(User)
   implicit val onboardingContractFormat: RootJsonFormat[OnboardingContract] = jsonFormat2(OnboardingContract)
-  implicit val onboardingRequestFormat: RootJsonFormat[OnboardingRequest]   = jsonFormat3(OnboardingRequest)
+  implicit val onboardingRequestFormat: RootJsonFormat[OnboardingRequest]   = jsonFormat7(OnboardingRequest)
 
   implicit def fromEntityUnmarshallerOnboardingRequest: ToEntityMarshaller[OnboardingRequest] =
     sprayJsonMarshaller[OnboardingRequest]

@@ -55,6 +55,24 @@ object Conversions {
     } yield relationshipToRelationshipInfo(relationship, user, institution)
   }
 
+  def institutionUpdateToApi(institutionUpdate: PartyManagementDependency.InstitutionUpdate): InstitutionUpdate = {
+    InstitutionUpdate(
+      institutionType = institutionUpdate.institutionType,
+      description = institutionUpdate.description,
+      digitalAddress = institutionUpdate.digitalAddress,
+      address = institutionUpdate.address,
+      taxCode = institutionUpdate.taxCode
+    )
+  }
+
+  def billingToApi(billing: PartyManagementDependency.Billing): Billing = {
+    Billing(
+      vatNumber = billing.vatNumber,
+      recipientCode = billing.recipientCode,
+      publicServices = billing.publicServices
+    )
+  }
+
   private def relationshipToRelationshipInfo(
     relationship: Relationship,
     user: User,
@@ -74,7 +92,10 @@ object Conversions {
       product = relationshipProductToApi(relationship.product),
       state = relationshipStateToApi(relationship.state),
       createdAt = relationship.createdAt,
-      updatedAt = relationship.updatedAt
+      updatedAt = relationship.updatedAt,
+      pricingPlan = relationship.pricingPlan,
+      institutionUpdate = relationship.institutionUpdate.map(institutionUpdateToApi),
+      billing = relationship.billing.map(billingToApi)
     )
   }
 
