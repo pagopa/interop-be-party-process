@@ -418,7 +418,7 @@ class ProcessApiServiceImpl(
     }
 
     val bodyParameters: Map[String, String] =
-      tokenParameters ++ userParameters // ++ institutionInfoParameters ++ billingParameters
+      tokenParameters ++ userParameters ++ institutionInfoParameters ++ billingParameters
 
     extractProduct(onboardingRequest).map(product =>
       bodyParameters + (ApplicationConfiguration.onboardingMailProductPlaceholder -> product)
