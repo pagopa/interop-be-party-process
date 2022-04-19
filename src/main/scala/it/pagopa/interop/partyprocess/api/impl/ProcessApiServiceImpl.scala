@@ -377,7 +377,48 @@ class ProcessApiServiceImpl(
       ApplicationConfiguration.onboardingMailTaxCodePlaceholder     -> currentUser.externalId
     )
 
-    val bodyParameters: Map[String, String] = tokenParameters ++ userParameters
+    val institutionInfoParameters: scala.collection.mutable.Map[String, String] = scala.collection.mutable.Map()
+    if (onboardingRequest.institutionUpdate != null) {
+      onboardingRequest.institutionUpdate.map(i => {
+        i.institutionType.map(o =>
+          institutionInfoParameters.put(
+            ApplicationConfiguration.onboardingMailInstitutionInfoInstitutionTypePlaceholder,
+            o
+          )
+        )
+        i.description.map(o =>
+          institutionInfoParameters.put(ApplicationConfiguration.onboardingMailInstitutionInfoDescriptionPlaceholder, o)
+        )
+        i.digitalAddress.map(o =>
+          institutionInfoParameters.put(
+            ApplicationConfiguration.onboardingMailInstitutionInfoDigitalAddressPlaceholder,
+            o
+          )
+        )
+        i.address.map(o =>
+          institutionInfoParameters.put(ApplicationConfiguration.onboardingMailInstitutionInfoAddressPlaceholder, o)
+        )
+        i.taxCode.map(o =>
+          institutionInfoParameters.put(ApplicationConfiguration.onboardingMailInstitutionInfoTaxCodePlaceholder, o)
+        )
+      })
+    }
+
+    val billingParameters: scala.collection.mutable.Map[String, String] = scala.collection.mutable.Map()
+    if (onboardingRequest.pricingPlan != null) {
+      onboardingRequest.pricingPlan.map(o =>
+        billingParameters.put(ApplicationConfiguration.onboardingMailBillingPricingPlanPlaceholder, o)
+      )
+    }
+    if (onboardingRequest.billing != null) {
+      onboardingRequest.billing.map(b => {
+        billingParameters.put(ApplicationConfiguration.onboardingMailBillingVatNumberPlaceholder, b.vatNumber)
+        billingParameters.put(ApplicationConfiguration.onboardingMailBillingRecipientCodePlaceholder, b.recipientCode)
+      })
+    }
+
+    val bodyParameters: Map[String, String] =
+      tokenParameters ++ userParameters // ++ institutionInfoParameters ++ billingParameters
 
     extractProduct(onboardingRequest).map(product =>
       bodyParameters + (ApplicationConfiguration.onboardingMailProductPlaceholder -> product)

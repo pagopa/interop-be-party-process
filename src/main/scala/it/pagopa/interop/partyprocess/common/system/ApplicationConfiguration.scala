@@ -53,6 +53,24 @@ object ApplicationConfiguration {
   lazy val onboardingMailProductPlaceholder: String                   =
     config.getString("party-process.mail-template.onboarding-mail-placeholders.product")
 
+  lazy val onboardingMailInstitutionInfoInstitutionTypePlaceholder: String =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.institution-info.institutionType")
+  lazy val onboardingMailInstitutionInfoDescriptionPlaceholder: String     =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.institution-info.description")
+  lazy val onboardingMailInstitutionInfoDigitalAddressPlaceholder: String  =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.institution-info.digitalAddress")
+  lazy val onboardingMailInstitutionInfoAddressPlaceholder: String         =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.institution-info.address")
+  lazy val onboardingMailInstitutionInfoTaxCodePlaceholder: String         =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.institution-info.taxCode")
+
+  lazy val onboardingMailBillingPricingPlanPlaceholder: String   =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.billing.pricingPlan")
+  lazy val onboardingMailBillingVatNumberPlaceholder: String     =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.billing.vatNumber")
+  lazy val onboardingMailBillingRecipientCodePlaceholder: String =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.billing.recipientCode")
+
   lazy val storageContainer: String = config.getString("party-process.storage.container")
 
   lazy val jwtAudience: Set[String] = config.getStringList("party-process.jwt.audience").asScala.toSet

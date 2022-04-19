@@ -567,7 +567,18 @@ class PartyProcessSpec
     val req = OnboardingRequest(
       users = Seq(manager, delegate),
       institutionId = institutionId,
-      contract = Some(OnboardingContract("a", "b"))
+      contract = Some(OnboardingContract("a", "b")),
+      pricingPlan = Option("pricingPlan"),
+      institutionUpdate = Option(
+        InstitutionUpdate(
+          institutionType = Option("OVERRIDE_institutionType"),
+          description = Option("OVERRIDE_description"),
+          digitalAddress = Option("OVERRIDE_digitalAddress"),
+          address = Option("OVERRIDE_address"),
+          taxCode = Option("OVERRIDE_taxCode")
+        )
+      ),
+      billing = Option(Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true)))
     )
 
     val data = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
