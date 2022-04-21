@@ -329,17 +329,30 @@ class ProcessApiServiceImpl(
       validManager     <- getValidManager(activeManager, validUsers)
       personsWithRoles <- Future.traverse(validUsers)(addUser)
       relationships    <- Future.traverse(personsWithRoles) { case (person, role, product, productRole) =>
-        val isManager = role == PartyRole.MANAGER
-        createOrGetRelationship(
+       role match {
+         case PartyRole.MANAGER =>
+           createOrGetRelationship(
           person.id,
           institution.id,
           roleToDependency(role),
           product,
           productRole,
-          if (isManager) onboardingRequest.pricingPlan else Option.empty,
-          if (isManager) onboardingRequest.institutionUpdate else Option.empty,
-          if (isManager) onboardingRequest.billing else Option.empty
+          onboardingRequest.pricingPlan,
+          onboardingRequest.institutionUpdate,
+          onboardingRequest.billing
         )(bearer)
+        case _ => 
+          createOrGetRelationship(
+          person.id,
+          institution.id,
+          roleToDependency(role),
+          product,
+          productRole,
+          None,
+          None,
+          None
+        )(bearer)
+       }
       }
       contract         <- onboardingRequest.contract.toFuture(ContractNotFound(onboardingRequest.institutionId))
       contractTemplate <- getFileAsString(contract.path)
