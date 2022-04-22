@@ -61,7 +61,7 @@ class ExternalApiServiceImpl(
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     contexts: Seq[(String, String)]
   ): Route = {
-    logger.info(s"Retrieving institution for institutionId $externalId")
+    logger.info(s"Retrieving institution for externalId $externalId")
     val result = for {
       bearer      <- getFutureBearer(contexts)
       _           <- getUidFuture(contexts)
@@ -71,7 +71,7 @@ class ExternalApiServiceImpl(
     onComplete(result) {
       case Success(institution) => getInstitutionByExternalId200(InstitutionConverter.dependencyToApi(institution))
       case Failure(ex: UidValidationError) =>
-        logger.error(s"Error while retrieving institution for institutionId $externalId - ${ex.getMessage}")
+        logger.error(s"Error while retrieving institution for externalId $externalId - ${ex.getMessage}")
         val errorResponse: Problem = problemOf(StatusCodes.Unauthorized, ex)
         complete(errorResponse.status, errorResponse)
       case Failure(ex)                     =>

@@ -45,7 +45,7 @@ paths:
       description: Return ok
       operationId: getOnboardingInfo
       parameters:
-        - name: institutionId
+        - name: externalId
           description: The external Id of an institution you can filter the retrieval with
           in: query
           schema:
@@ -106,7 +106,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  '/onboarding/institution/{institutionId}/products/{productId}':
+  '/onboarding/institution/{externalId}/products/{productId}':
     head:
       tags:
         - process
@@ -114,7 +114,7 @@ paths:
       description: Checks if the specified institution has been onboarded on the specified product.
       operationId: verifyOnboarding
       parameters:
-        - name: institutionId
+        - name: externalId
           in: path
           description: The external identifier of the institution
           required: true
@@ -147,7 +147,7 @@ paths:
         - process
       summary: legals onboarding
       description: creates legals entries on already onboarded institution
-      operationId: onboardingLegalsOnInstitution
+      operationId: OnboardingRequest
       requestBody:
         required: true
         content:
@@ -656,7 +656,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/User'
-        institutionId:
+        externalId:
           type: string
         origin:
           type: string
@@ -674,7 +674,7 @@ components:
       additionalProperties: false
       required:
         - users
-        - institutionId
+        - externalId
     OnboardingContract:
       properties:
         version:
@@ -823,7 +823,9 @@ components:
         id:
           type: string
           format: uuid
-        institutionId:
+        externalId:
+          type: string
+        originId:
           type: string
         description:
           type: string
@@ -862,7 +864,8 @@ components:
       additionalProperties: false
       required:
         - id
-        - institutionId
+        - externalId
+        - originId
         - taxCode
         - description
         - digitalAddress
@@ -974,8 +977,12 @@ components:
           type: string
           format: uuid
           example: 97c0f418-bcb3-48d4-825a-fe8b29ae68e5
-        institutionId:
-          description: institution id (e.g iPA code)
+        externalId:
+          description: external institution id
+          example: 'c_f205'
+          type: string
+        originId:
+          description: origin institution id (e.g iPA code)
           example: 'c_f205'
           type: string
         description:
@@ -1006,7 +1013,8 @@ components:
           $ref: '#/components/schemas/Attributes'
       required:
         - id
-        - institutionId
+        - externalId
+        - originId
         - description
         - digitalAddress
         - address
