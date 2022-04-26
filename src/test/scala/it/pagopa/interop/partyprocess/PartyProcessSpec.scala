@@ -154,12 +154,12 @@ class PartyProcessSpec
   }
 
   def performOnboardingRequestByRoleForFailure(state: PartyManagementDependency.RelationshipState): HttpResponse = {
-    val taxCode1      = "managerTaxCode"
-    val taxCode2      = "delegateTaxCode"
-    val originId = UUID.randomUUID().toString
-    val origin = "IPA"
+    val taxCode1   = "managerTaxCode"
+    val taxCode2   = "delegateTaxCode"
+    val originId   = UUID.randomUUID().toString
+    val origin     = "IPA"
     val externalId = UUID.randomUUID().toString
-    val orgPartyId    = UUID.randomUUID()
+    val orgPartyId = UUID.randomUUID()
 
     val institutionFromProxy = PartyProxyDependencies.Institution(
       id = originId,
@@ -292,8 +292,7 @@ class PartyProcessSpec
     val req = OnboardingRequest(
       users = Seq(manager, delegate),
       externalId = externalId,
-      origin = origin
-      contract = Some(OnboardingContract("a", "b"))
+      origin = origin contract = Some(OnboardingContract("a", "b"))
     )
 
     val data = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
@@ -305,12 +304,12 @@ class PartyProcessSpec
     state: Option[PartyManagementDependency.RelationshipState],
     product: Option[String]
   ): HttpResponse = {
-    val taxCode1      = "managerTaxCode"
-    val taxCode2      = "delegateTaxCode"
-    val originId = UUID.randomUUID().toString
+    val taxCode1   = "managerTaxCode"
+    val taxCode2   = "delegateTaxCode"
+    val originId   = UUID.randomUUID().toString
     val externalId = UUID.randomUUID().toString
-    val origin = "ORIGIN"
-    val orgPartyId    = UUID.randomUUID()
+    val origin     = "ORIGIN"
+    val orgPartyId = UUID.randomUUID()
 
     val institutionFromProxy =
       PartyProxyDependencies.Institution(
@@ -601,9 +600,9 @@ class PartyProcessSpec
 
     "verify that an institution is already onboarded for a given product" in {
       val externalId = UUID.randomUUID().toString
-      val originId = UUID.randomUUID().toString
-      val origin = "IPA"
-      val orgPartyId    = UUID.randomUUID()
+      val originId   = UUID.randomUUID().toString
+      val origin     = "IPA"
+      val orgPartyId = UUID.randomUUID()
 
       val personPartyId = UUID.randomUUID()
 
@@ -694,9 +693,9 @@ class PartyProcessSpec
 
     "verify that an institution is not already onboarded for a given product" in {
       val externalId = UUID.randomUUID().toString
-      val originId = UUID.randomUUID().toString
-      val origin = "IPA"
-      val orgPartyId    = UUID.randomUUID()
+      val originId   = UUID.randomUUID().toString
+      val origin     = "IPA"
+      val orgPartyId = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
@@ -758,14 +757,14 @@ class PartyProcessSpec
     }
 
     "retrieve a onboarding info" in {
-      val taxCode1       = "CF1"
+      val taxCode1    = "CF1"
       val externalId1 = UUID.randomUUID().toString
-      val originId1 = UUID.randomUUID().toString
+      val originId1   = UUID.randomUUID().toString
       val externalId2 = UUID.randomUUID().toString
-      val originId2 = UUID.randomUUID().toString
-      val origin ="IPA"
-      val orgPartyId1    = UUID.randomUUID()
-      val orgPartyId2    = UUID.randomUUID()
+      val originId2   = UUID.randomUUID().toString
+      val origin      = "IPA"
+      val orgPartyId1 = UUID.randomUUID()
+      val orgPartyId2 = UUID.randomUUID()
 
       val attribute1 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1", origin)
       val attribute2 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2", origin)
@@ -963,14 +962,14 @@ class PartyProcessSpec
     }
 
     "retrieve an onboarding info with institution id filter" in {
-      val taxCode1      = "CF1"
+      val taxCode1   = "CF1"
       val externalId = UUID.randomUUID().toString
-      val originId = UUID.randomUUID().toString
-      val origin = "IPA"
-      val orgPartyId    = UUID.randomUUID()
-      val attribute1    = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1", "origin")
-      val attribute2    = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2", "origin")
-      val attribute3    = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3", "origin")
+      val originId   = UUID.randomUUID().toString
+      val origin     = "IPA"
+      val orgPartyId = UUID.randomUUID()
+      val attribute1 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1", "origin")
+      val attribute2 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2", "origin")
+      val attribute3 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3", "origin")
 
       val user = UserRegistryUser(
         id = uid,
@@ -1103,9 +1102,7 @@ class PartyProcessSpec
 
       val response =
         Http()
-          .singleRequest(
-            HttpRequest(uri = s"$url/onboarding/info?externalId=$externalId", method = HttpMethods.GET)
-          )
+          .singleRequest(HttpRequest(uri = s"$url/onboarding/info?externalId=$externalId", method = HttpMethods.GET))
           .futureValue
 
       val body = Unmarshal(response.entity).to[OnboardingInfo].futureValue
@@ -1116,14 +1113,14 @@ class PartyProcessSpec
     }
 
     "retrieve an onboarding info with states filter" in {
-      val taxCode1      = "CF1"
+      val taxCode1   = "CF1"
       val externalId = UUID.randomUUID().toString
-      val originId = UUID.randomUUID().toString
-      val origin = "IPA"
-      val orgPartyId    = UUID.randomUUID()
-      val attribute1    = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name1", "origin")
-      val attribute2    = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name2", "origin")
-      val attribute3    = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name3", "origin")
+      val originId   = UUID.randomUUID().toString
+      val origin     = "IPA"
+      val orgPartyId = UUID.randomUUID()
+      val attribute1 = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name1", "origin")
+      val attribute2 = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name2", "origin")
+      val attribute3 = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name3", "origin")
 
       val user =
         UserRegistryUser(
@@ -1336,12 +1333,12 @@ class PartyProcessSpec
     }
 
     "not create operators if does not exists any active legal for a given institution" in {
-      val orgPartyId    = UUID.randomUUID()
+      val orgPartyId = UUID.randomUUID()
       val externalId = UUID.randomUUID().toString
-      val originId = UUID.randomUUID().toString
-      val origin = "IPA"
-      val taxCode1      = "operator1TaxCode"
-      val taxCode2      = "operator2TaxCode"
+      val originId   = UUID.randomUUID().toString
+      val origin     = "IPA"
+      val taxCode1   = "operator1TaxCode"
+      val taxCode2   = "operator2TaxCode"
 
       val operator1 = User(
         name = "operator1",
@@ -1412,12 +1409,12 @@ class PartyProcessSpec
 
     "create operators if exists a legal active for a given institution" in {
 
-      val taxCode1      = "operator1TaxCode"
-      val taxCode2      = "operator2TaxCode"
+      val taxCode1   = "operator1TaxCode"
+      val taxCode2   = "operator2TaxCode"
       val externalId = UUID.randomUUID().toString
-      val originId = UUID.randomUUID().toString
-      val origin = "IPA"
-      val orgPartyId    = UUID.randomUUID()
+      val originId   = UUID.randomUUID().toString
+      val origin     = "IPA"
+      val orgPartyId = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
@@ -1600,11 +1597,11 @@ class PartyProcessSpec
 
     "not create subdelegates if does not exists any active legal for a given institution" in {
 
-      val orgPartyID    = UUID.randomUUID()
+      val orgPartyID = UUID.randomUUID()
       val externalId = UUID.randomUUID().toString
-      val origin = "IPA"
-      val taxCode1      = "subdelegate1TaxCode"
-      val taxCode2      = "subdelegate2TaxCode"
+      val origin     = "IPA"
+      val taxCode1   = "subdelegate1TaxCode"
+      val taxCode2   = "subdelegate2TaxCode"
 
       val subdelegate1 = User(
         name = "subdelegate1",
@@ -1675,8 +1672,8 @@ class PartyProcessSpec
 
       val taxCode1       = "subdelegate1TaxCode"
       val taxCode2       = "subdelegate2TaxCode"
-      val externalId  = UUID.randomUUID().toString
-      val origin  = "IPA"
+      val externalId     = UUID.randomUUID().toString
+      val origin         = "IPA"
       val orgPartyId     = UUID.randomUUID()
       val personPartyId1 = "bf80fac0-2775-4646-8fcf-28e083751900"
 
@@ -2065,11 +2062,11 @@ class PartyProcessSpec
 
     "retrieve all the relationships of a specific institution when requested by the admin" in {
 
-      val userId1       = UUID.randomUUID()
-      val userId2       = UUID.randomUUID()
-      val userId3       = UUID.randomUUID()
+      val userId1    = UUID.randomUUID()
+      val userId2    = UUID.randomUUID()
+      val userId3    = UUID.randomUUID()
       val externalId = UUID.randomUUID().toString
-      val orgPartyId    = UUID.randomUUID()
+      val orgPartyId = UUID.randomUUID()
 
       val adminRelationshipId = UUID.randomUUID()
       val relationshipId1     = UUID.randomUUID()
@@ -2354,10 +2351,10 @@ class PartyProcessSpec
     }
 
     "retrieve all the relationships of a specific institution with filter by productRole when requested by the admin" in {
-      val userId1       = UUID.randomUUID()
-      val userId2       = UUID.randomUUID()
+      val userId1    = UUID.randomUUID()
+      val userId2    = UUID.randomUUID()
       val externalId = UUID.randomUUID().toString
-      val orgPartyId    = UUID.randomUUID()
+      val orgPartyId = UUID.randomUUID()
 
       val adminRelationshipId = UUID.randomUUID()
       val relationshipId1     = UUID.randomUUID()
@@ -2548,7 +2545,7 @@ class PartyProcessSpec
       val userId1         = UUID.randomUUID()
       val userId2         = uid
       val userId3         = UUID.randomUUID()
-      val externalId   = UUID.randomUUID().toString
+      val externalId      = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
@@ -2730,7 +2727,7 @@ class PartyProcessSpec
     "retrieve all the relationships of a specific institution with filter by productRole and products" in {
       val adminIdentifier = UUID.randomUUID()
       val userId1         = uid
-      val externalId   = UUID.randomUUID().toString
+      val externalId      = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
@@ -2847,8 +2844,7 @@ class PartyProcessSpec
         Http()
           .singleRequest(
             HttpRequest(
-              uri =
-                s"$url/external/institutions/$externalId/relationships?productRoles=security,api&products=Interop",
+              uri = s"$url/external/institutions/$externalId/relationships?productRoles=security,api&products=Interop",
               method = HttpMethods.GET
             )
           )
@@ -2875,7 +2871,7 @@ class PartyProcessSpec
 
     "retrieve all the relationships of a specific institution with filter by states requested by admin" in {
       val adminIdentifier = uid
-      val externalId   = UUID.randomUUID().toString
+      val externalId      = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
@@ -3041,7 +3037,7 @@ class PartyProcessSpec
     "retrieve all the relationships of a specific institution with filter by roles when requested by admin" in {
       val adminIdentifier = uid
       val userId2         = UUID.randomUUID()
-      val externalId   = UUID.randomUUID().toString
+      val externalId      = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
@@ -3206,7 +3202,7 @@ class PartyProcessSpec
       val adminIdentifier = uid
       val userId3         = UUID.randomUUID()
       val userId4         = UUID.randomUUID()
-      val externalId   = UUID.randomUUID().toString
+      val externalId      = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
@@ -3419,7 +3415,7 @@ class PartyProcessSpec
 
     "retrieve all the relationships of a specific institution with all filter when no intersection occurs" in {
       val adminIdentifier = uid
-      val externalId   = UUID.randomUUID().toString
+      val externalId      = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
@@ -3736,10 +3732,10 @@ class PartyProcessSpec
 
   "Users creation" must {
     "create delegate with a manager active" in {
-      val taxCode1      = "managerTaxCode"
-      val taxCode2      = "delegateTaxCode"
+      val taxCode1   = "managerTaxCode"
+      val taxCode2   = "delegateTaxCode"
       val externalId = UUID.randomUUID().toString
-      val orgPartyId    = UUID.randomUUID()
+      val orgPartyId = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
@@ -4099,10 +4095,10 @@ class PartyProcessSpec
     }
 
     def createInvalidManagerTest(managerState: PartyManagementDependency.RelationshipState): Seq[User] = {
-      val taxCode       = UUID.randomUUID().toString
+      val taxCode    = UUID.randomUUID().toString
       val externalId = UUID.randomUUID().toString
-      val origin = "IPA"
-      val orgPartyId    = UUID.randomUUID()
+      val origin     = "IPA"
+      val orgPartyId = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
@@ -4199,11 +4195,11 @@ class PartyProcessSpec
     }
 
     "not create legals when no active manager exist for a relationship" in {
-      val taxCode1      = "managerTaxCode"
-      val taxCode2      = "delegateTaxCode"
+      val taxCode1   = "managerTaxCode"
+      val taxCode2   = "delegateTaxCode"
       val externalId = UUID.randomUUID().toString
-      val origin = "IPA"
-      val orgPartyId    = UUID.randomUUID()
+      val origin     = "IPA"
+      val orgPartyId = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,

@@ -111,7 +111,11 @@ class ProcessApiServiceImpl(
     toEntityMarshallerOnboardingInfo: ToEntityMarshaller[OnboardingInfo],
     contexts: Seq[(String, String)]
   ): Route = {
-    logger.info("Getting onboarding info for institution having externalId {} and states {}", externalId.toString, states)
+    logger.info(
+      "Getting onboarding info for institution having externalId {} and states {}",
+      externalId.toString,
+      states
+    )
     val defaultStates =
       List(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING)
 
@@ -227,11 +231,7 @@ class ProcessApiServiceImpl(
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         onboardingInstitution404(errorResponse)
       case Failure(ex)                   =>
-        logger.error(
-          "Error while onboarding institution {}, reason: {}",
-          onboardingRequest.externalId,
-          ex.getMessage
-        )
+        logger.error("Error while onboarding institution {}, reason: {}", onboardingRequest.externalId, ex.getMessage)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, OnboardingOperationError)
         onboardingInstitution400(errorResponse)
     }
@@ -674,11 +674,10 @@ class ProcessApiServiceImpl(
     } yield user
 
   private def createInstitution(
-    externalId: String,
-    origin: String
+    externalId: String
   )(implicit bearer: String, contexts: Seq[(String, String)]): Future[PartyManagementDependency.Institution] =
     for {
-      institution <- partyRegistryService.getInstitution(externalId, origin)(bearer)
+      institution <- partyRegistryService.getInstitution(externalId)(bearer)
       category    <- partyRegistryService.getCategory(institution.origin, institution.category)(bearer)
       _    = logger.info("getInstitution {}", institution.id)
       seed = PartyManagementDependency.InstitutionSeed(

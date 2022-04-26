@@ -867,6 +867,7 @@ components:
         - id
         - externalId
         - originId
+        - origin
         - taxCode
         - description
         - digitalAddress

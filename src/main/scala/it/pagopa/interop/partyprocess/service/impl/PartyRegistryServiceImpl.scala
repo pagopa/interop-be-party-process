@@ -17,7 +17,7 @@ final case class PartyRegistryServiceImpl(
 
   implicit val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  override def getInstitution(externalId: String)(bearerToken: String): Future[Institution]  = {
+  override def getInstitution(externalId: String)(bearerToken: String): Future[Institution]     = {
     val request: ApiRequest[Institution] = institutionApi.getInstitutionById(externalId)(BearerToken(bearerToken))
     invoker.invoke(request, s"Retrieving institution having external $externalId")
   }

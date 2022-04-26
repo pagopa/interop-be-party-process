@@ -20,7 +20,10 @@ object PartyProcessErrors {
       extends ComponentError("0003", s"Contract not found for institution having externalId $externalId")
 
   final case class InstitutionNotOnboarded(externalId: String, productId: String)
-      extends ComponentError("0004", s"Institution having externalId $externalId is not onboarded for product $productId")
+      extends ComponentError(
+        "0004",
+        s"Institution having externalId $externalId is not onboarded for product $productId"
+      )
 
   final case class InvalidSignature(signatureValidationErrors: List[SignatureValidationError])
       extends ComponentError("0005", s"Signature not valid ${signatureValidationErrors.mkString("\n")}")
