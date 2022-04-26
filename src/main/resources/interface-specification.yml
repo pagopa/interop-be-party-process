@@ -147,7 +147,7 @@ paths:
         - process
       summary: legals onboarding
       description: creates legals entries on already onboarded institution
-      operationId: OnboardingRequest
+      operationId: onboardingLegalsOnInstitution
       requestBody:
         required: true
         content:
@@ -675,6 +675,7 @@ components:
       required:
         - users
         - externalId
+        - origin
     OnboardingContract:
       properties:
         version:

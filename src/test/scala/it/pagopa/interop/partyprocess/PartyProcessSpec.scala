@@ -156,33 +156,37 @@ class PartyProcessSpec
   def performOnboardingRequestByRoleForFailure(state: PartyManagementDependency.RelationshipState): HttpResponse = {
     val taxCode1      = "managerTaxCode"
     val taxCode2      = "delegateTaxCode"
-    val institutionId = UUID.randomUUID().toString
+    val originId = UUID.randomUUID().toString
+    val origin = "IPA"
+    val externalId = UUID.randomUUID().toString
     val orgPartyId    = UUID.randomUUID()
 
     val institutionFromProxy = PartyProxyDependencies.Institution(
-      id = institutionId,
-      o = Some(institutionId),
+      id = originId,
+      externalId = externalId,
+      o = Some(originId),
       ou = None,
       aoo = None,
       taxCode = "taxCode",
       category = "C17",
       description = "description",
       digitalAddress = "digitalAddress",
-      origin = "origin",
+      origin = origin,
       address = "address",
       zipCode = "zipCode"
     )
 
     val institution1 = PartyManagementDependency.Institution(
       id = orgPartyId,
-      institutionId = institutionId,
+      externalId = externalId,
+      originId = originId,
       description = "org1",
       digitalAddress = "digitalAddress1",
       attributes = Seq.empty,
       taxCode = "123",
       address = "address",
       zipCode = "zipCode",
-      origin = "IPA",
+      origin = origin,
       institutionType = "PA"
     )
 
@@ -263,7 +267,7 @@ class PartyProcessSpec
     (mockPartyRegistryService
       .getCategory(_: String, _: String)(_: String))
       .expects(*, *, *)
-      .returning(Future.successful(PartyProxyDependencies.Category("C17", "attrs", "test", "IPA")))
+      .returning(Future.successful(PartyProxyDependencies.Category("C17", "attrs", "test", origin)))
       .once()
 
     (mockPartyManagementService
@@ -287,7 +291,8 @@ class PartyProcessSpec
 
     val req = OnboardingRequest(
       users = Seq(manager, delegate),
-      institutionId = institutionId,
+      externalId = externalId,
+      origin = origin
       contract = Some(OnboardingContract("a", "b"))
     )
 
@@ -302,34 +307,38 @@ class PartyProcessSpec
   ): HttpResponse = {
     val taxCode1      = "managerTaxCode"
     val taxCode2      = "delegateTaxCode"
-    val institutionId = UUID.randomUUID().toString
+    val originId = UUID.randomUUID().toString
+    val externalId = UUID.randomUUID().toString
+    val origin = "ORIGIN"
     val orgPartyId    = UUID.randomUUID()
 
     val institutionFromProxy =
       PartyProxyDependencies.Institution(
-        id = institutionId,
-        o = Some(institutionId),
+        id = originId,
+        externalId = externalId,
+        o = Some(originId),
         ou = None,
         aoo = None,
         taxCode = "taxCode",
         category = "C17",
         description = "description",
         digitalAddress = "digitalAddress",
-        origin = "origin",
+        origin = origin,
         address = "address",
         zipCode = "zipCode"
       )
 
     val institution1 = PartyManagementDependency.Institution(
       id = orgPartyId,
-      institutionId = institutionId,
+      externalId = externalId,
+      originId = originId,
       description = "org1",
       digitalAddress = "digitalAddress1",
       attributes = Seq.empty,
       taxCode = "123",
       address = "address",
       zipCode = "zipCode",
-      origin = "IPA",
+      origin = origin,
       institutionType = "PA"
     )
 
@@ -462,7 +471,7 @@ class PartyProcessSpec
     (mockPartyRegistryService
       .getCategory(_: String, _: String)(_: String))
       .expects(*, *, *)
-      .returning(Future.successful(PartyProxyDependencies.Category("C17", "attrs", "test", "IPA")))
+      .returning(Future.successful(PartyProxyDependencies.Category("C17", "attrs", "test", origin)))
       .once()
 
     (mockPartyManagementService
@@ -566,7 +575,9 @@ class PartyProcessSpec
 
     val req = OnboardingRequest(
       users = Seq(manager, delegate),
-      institutionId = institutionId,
+      externalId = externalId,
+      originId = originId,
+      origin = origin,
       contract = Some(OnboardingContract("a", "b")),
       pricingPlan = Option("pricingPlan"),
       institutionUpdate = Option(
@@ -589,21 +600,24 @@ class PartyProcessSpec
   "Processing a request payload" must {
 
     "verify that an institution is already onboarded for a given product" in {
-      val institutionId = UUID.randomUUID().toString
+      val externalId = UUID.randomUUID().toString
+      val originId = UUID.randomUUID().toString
+      val origin = "IPA"
       val orgPartyId    = UUID.randomUUID()
 
       val personPartyId = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
-        institutionId = institutionId,
+        externalId = externalId,
+        originId = originId,
         description = "",
         digitalAddress = "",
         attributes = Seq.empty,
         taxCode = "",
         address = "",
         zipCode = "",
-        origin = "IPA",
+        origin = origin,
         institutionType = "PA"
       )
 
@@ -660,14 +674,14 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
       val response = Await.result(
         Http().singleRequest(
           HttpRequest(
-            uri = s"$url/onboarding/institution/$institutionId/products/${defaultProduct.id}",
+            uri = s"$url/onboarding/institution/$externalId/products/${defaultProduct.id}",
             method = HttpMethods.HEAD
           )
         ),
@@ -679,25 +693,28 @@ class PartyProcessSpec
     }
 
     "verify that an institution is not already onboarded for a given product" in {
-      val institutionId = UUID.randomUUID().toString
+      val externalId = UUID.randomUUID().toString
+      val originId = UUID.randomUUID().toString
+      val origin = "IPA"
       val orgPartyId    = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
-        institutionId = institutionId,
+        externalId = externalId,
+        originId = originId,
         description = "",
         digitalAddress = "",
         attributes = Seq.empty,
         taxCode = "",
         address = "",
         zipCode = "",
-        origin = "IPA",
+        origin = origin,
         institutionType = "PA"
       )
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -729,7 +746,7 @@ class PartyProcessSpec
       val response = Await.result(
         Http().singleRequest(
           HttpRequest(
-            uri = s"$url/onboarding/institution/$institutionId/products/${defaultProduct.id}",
+            uri = s"$url/onboarding/institution/$externalId/products/${defaultProduct.id}",
             method = HttpMethods.HEAD
           )
         ),
@@ -742,17 +759,20 @@ class PartyProcessSpec
 
     "retrieve a onboarding info" in {
       val taxCode1       = "CF1"
-      val institutionId1 = UUID.randomUUID().toString
-      val institutionId2 = UUID.randomUUID().toString
+      val externalId1 = UUID.randomUUID().toString
+      val originId1 = UUID.randomUUID().toString
+      val externalId2 = UUID.randomUUID().toString
+      val originId2 = UUID.randomUUID().toString
+      val origin ="IPA"
       val orgPartyId1    = UUID.randomUUID()
       val orgPartyId2    = UUID.randomUUID()
 
-      val attribute1 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1", "origin")
-      val attribute2 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2", "origin")
-      val attribute3 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3", "origin")
-      val attribute4 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name4", "origin")
-      val attribute5 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name5", "origin")
-      val attribute6 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name6", "origin")
+      val attribute1 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1", origin)
+      val attribute2 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2", origin)
+      val attribute3 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3", origin)
+      val attribute4 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name4", origin)
+      val attribute5 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name5", origin)
+      val attribute6 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name6", origin)
 
       val user = UserRegistryUser(
         id = uid,
@@ -804,7 +824,8 @@ class PartyProcessSpec
 
       val institution1 = PartyManagementDependency.Institution(
         id = orgPartyId1,
-        institutionId = institutionId1,
+        externalId = externalId1,
+        originId = originId1,
         description = "org1",
         digitalAddress = "digitalAddress1",
         attributes = Seq(
@@ -815,12 +836,13 @@ class PartyProcessSpec
         taxCode = "123",
         address = "address",
         zipCode = "zipCode",
-        origin = "IPA",
+        origin = origin,
         institutionType = "PA"
       )
       val institution2 = PartyManagementDependency.Institution(
         id = orgPartyId2,
-        institutionId = institutionId2,
+        externalId = externalId2,
+        originId = originId2,
         description = "org2",
         digitalAddress = "digitalAddress2",
         attributes = Seq(
@@ -831,7 +853,7 @@ class PartyProcessSpec
         taxCode = "123",
         address = "address",
         zipCode = "zipCode",
-        origin = "IPA",
+        origin = origin,
         institutionType = "PA"
       )
 
@@ -846,7 +868,9 @@ class PartyProcessSpec
         institutions = Seq(
           OnboardingData(
             id = institution1.id,
-            institutionId = institution1.institutionId,
+            externalId = institution1.externalId,
+            originId = institution1.originId,
+            origin = origin,
             description = institution1.description,
             taxCode = institution1.taxCode,
             digitalAddress = institution1.digitalAddress,
@@ -859,7 +883,9 @@ class PartyProcessSpec
           ),
           OnboardingData(
             id = institution2.id,
-            institutionId = institution2.institutionId,
+            externalId = institution2.externalId,
+            originId = institution2.originId,
+            origin = institution2.origin,
             description = institution2.description,
             taxCode = institution2.taxCode,
             digitalAddress = institution2.digitalAddress,
@@ -938,7 +964,9 @@ class PartyProcessSpec
 
     "retrieve an onboarding info with institution id filter" in {
       val taxCode1      = "CF1"
-      val institutionId = UUID.randomUUID().toString
+      val externalId = UUID.randomUUID().toString
+      val originId = UUID.randomUUID().toString
+      val origin = "IPA"
       val orgPartyId    = UUID.randomUUID()
       val attribute1    = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1", "origin")
       val attribute2    = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2", "origin")
@@ -983,7 +1011,8 @@ class PartyProcessSpec
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
-        institutionId = institutionId,
+        externalId = externalId,
+        originId = originId,
         description = "org1",
         digitalAddress = "digitalAddress1",
         attributes = Seq(
@@ -994,7 +1023,7 @@ class PartyProcessSpec
         taxCode = "123",
         address = "address",
         zipCode = "zipCode",
-        origin = "IPA",
+        origin = origin,
         institutionType = "PA"
       )
 
@@ -1004,12 +1033,14 @@ class PartyProcessSpec
           surname = user.surname,
           taxCode = user.externalId,
           certification = Certification.NONE,
-          institutionContacts = Map(institutionId -> Seq(Contact(email = user.extras.email.get)))
+          institutionContacts = Map(externalId -> Seq(Contact(email = user.extras.email.get)))
         ),
         institutions = Seq(
           OnboardingData(
             id = institution.id,
-            institutionId = institution.institutionId,
+            externalId = institution.externalId,
+            originId = institution.originId,
+            origin = institution.origin,
             description = institution.description,
             taxCode = institution.taxCode,
             digitalAddress = institution.digitalAddress,
@@ -1039,7 +1070,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -1073,7 +1104,7 @@ class PartyProcessSpec
       val response =
         Http()
           .singleRequest(
-            HttpRequest(uri = s"$url/onboarding/info?institutionId=$institutionId", method = HttpMethods.GET)
+            HttpRequest(uri = s"$url/onboarding/info?externalId=$externalId", method = HttpMethods.GET)
           )
           .futureValue
 
@@ -1086,7 +1117,9 @@ class PartyProcessSpec
 
     "retrieve an onboarding info with states filter" in {
       val taxCode1      = "CF1"
-      val institutionId = UUID.randomUUID().toString
+      val externalId = UUID.randomUUID().toString
+      val originId = UUID.randomUUID().toString
+      val origin = "IPA"
       val orgPartyId    = UUID.randomUUID()
       val attribute1    = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name1", "origin")
       val attribute2    = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name2", "origin")
@@ -1132,14 +1165,15 @@ class PartyProcessSpec
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
-        institutionId = institutionId,
+        externalId = externalId,
+        originId = originId,
         description = "org1",
         digitalAddress = "digitalAddress1",
         attributes = Seq(attribute1, attribute2, attribute3),
         taxCode = "123",
         address = "address",
         zipCode = "zipCode",
-        origin = "IPA",
+        origin = origin,
         institutionType = "PA"
       )
       (mockUserRegistryService
@@ -1181,12 +1215,14 @@ class PartyProcessSpec
           surname = user.surname,
           taxCode = user.externalId,
           certification = Certification.NONE,
-          institutionContacts = Map(institutionId -> Seq(Contact(email = user.extras.email.get)))
+          institutionContacts = Map(externalId -> Seq(Contact(email = user.extras.email.get)))
         ),
         institutions = Seq(
           OnboardingData(
             id = institution.id,
-            institutionId = institution.institutionId,
+            externalId = institution.externalId,
+            originId = institution.originId,
+            origin = institution.origin,
             description = institution.description,
             taxCode = institution.taxCode,
             digitalAddress = institution.digitalAddress,
@@ -1221,7 +1257,7 @@ class PartyProcessSpec
       val response =
         Http()
           .singleRequest(
-            HttpRequest(uri = s"$url/onboarding/info?institutionId=wrong-institution-id", method = HttpMethods.GET)
+            HttpRequest(uri = s"$url/onboarding/info?externalId=wrong-external-id", method = HttpMethods.GET)
           )
           .futureValue
 
@@ -1301,7 +1337,9 @@ class PartyProcessSpec
 
     "not create operators if does not exists any active legal for a given institution" in {
       val orgPartyId    = UUID.randomUUID()
-      val institutionId = UUID.randomUUID().toString
+      val externalId = UUID.randomUUID().toString
+      val originId = UUID.randomUUID().toString
+      val origin = "IPA"
       val taxCode1      = "operator1TaxCode"
       val taxCode2      = "operator2TaxCode"
 
@@ -1326,19 +1364,20 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(
           Future.successful(
             PartyManagementDependency.Institution(
               id = orgPartyId,
-              institutionId = institutionId,
+              externalId = externalId,
+              originId = originId,
               description = "test",
               digitalAddress = "big@fish.it",
               attributes = Seq.empty,
               taxCode = "123",
               address = "address",
               zipCode = "zipCode",
-              origin = "IPA",
+              origin = origin,
               institutionType = "PA"
             )
           )
@@ -1359,7 +1398,8 @@ class PartyProcessSpec
 
       val req = OnboardingRequest(
         users = Seq(operator1, operator2),
-        institutionId = institutionId,
+        externalId = externalId,
+        origin = origin,
         contract = Some(OnboardingContract("a", "b"))
       )
 
@@ -1374,19 +1414,22 @@ class PartyProcessSpec
 
       val taxCode1      = "operator1TaxCode"
       val taxCode2      = "operator2TaxCode"
-      val institutionId = UUID.randomUUID().toString
+      val externalId = UUID.randomUUID().toString
+      val originId = UUID.randomUUID().toString
+      val origin = "IPA"
       val orgPartyId    = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
-        institutionId = institutionId,
+        externalId = externalId,
+        originId = originId,
         description = "org1",
         digitalAddress = "digitalAddress1",
         attributes = Seq.empty,
         taxCode = "123",
         address = "address",
         zipCode = "zipCode",
-        origin = "IPA",
+        origin = origin,
         institutionType = "PA"
       )
 
@@ -1462,7 +1505,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -1544,7 +1587,7 @@ class PartyProcessSpec
 
       val req = OnboardingRequest(
         users = Seq(operator1, operator2),
-        institutionId = institutionId,
+        externalId = externalId,
         contract = Some(OnboardingContract("a", "b"))
       )
 
@@ -1558,7 +1601,8 @@ class PartyProcessSpec
     "not create subdelegates if does not exists any active legal for a given institution" in {
 
       val orgPartyID    = UUID.randomUUID()
-      val institutionId = UUID.randomUUID().toString
+      val externalId = UUID.randomUUID().toString
+      val origin = "IPA"
       val taxCode1      = "subdelegate1TaxCode"
       val taxCode2      = "subdelegate2TaxCode"
 
@@ -1583,19 +1627,19 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(
           Future.successful(
             PartyManagementDependency.Institution(
               id = orgPartyID,
-              institutionId = institutionId,
+              externalId = externalId,
               description = "test",
               digitalAddress = "big@fish.it",
               attributes = Seq.empty,
               taxCode = "123",
               address = "address",
               zipCode = "zipCode",
-              origin = "IPA",
+              origin = origin,
               institutionType = "PA"
             )
           )
@@ -1616,7 +1660,7 @@ class PartyProcessSpec
 
       val req = OnboardingRequest(
         users = Seq(subdelegate1, subdelegate2),
-        institutionId = institutionId,
+        externalId = externalId,
         contract = Some(OnboardingContract("a", "b"))
       )
 
@@ -1631,20 +1675,21 @@ class PartyProcessSpec
 
       val taxCode1       = "subdelegate1TaxCode"
       val taxCode2       = "subdelegate2TaxCode"
-      val institutionId  = UUID.randomUUID().toString
+      val externalId  = UUID.randomUUID().toString
+      val origin  = "IPA"
       val orgPartyId     = UUID.randomUUID()
       val personPartyId1 = "bf80fac0-2775-4646-8fcf-28e083751900"
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
-        institutionId = institutionId,
+        externalId = externalId,
         description = "org1",
         digitalAddress = "digitalAddress1",
         attributes = Seq.empty,
         taxCode = "123",
         address = "address",
         zipCode = "zipCode",
-        origin = "IPA",
+        origin = origin,
         institutionType = "PA"
       )
 
@@ -1720,7 +1765,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -1802,7 +1847,7 @@ class PartyProcessSpec
 
       val req = OnboardingRequest(
         users = Seq(subdelegate1, subdelegate2),
-        institutionId = institutionId,
+        externalId = externalId,
         contract = Some(OnboardingContract("a", "b"))
       )
 
@@ -2023,7 +2068,7 @@ class PartyProcessSpec
       val userId1       = UUID.randomUUID()
       val userId2       = UUID.randomUUID()
       val userId3       = UUID.randomUUID()
-      val institutionId = UUID.randomUUID().toString
+      val externalId = UUID.randomUUID().toString
       val orgPartyId    = UUID.randomUUID()
 
       val adminRelationshipId = UUID.randomUUID()
@@ -2033,7 +2078,7 @@ class PartyProcessSpec
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
-        institutionId = institutionId,
+        externalId = externalId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -2151,7 +2196,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
 
       (mockPartyManagementService
@@ -2225,7 +2270,7 @@ class PartyProcessSpec
       val response =
         Http()
           .singleRequest(
-            HttpRequest(uri = s"$url/external/institutions/$institutionId/relationships", method = HttpMethods.GET)
+            HttpRequest(uri = s"$url/external/institutions/$externalId/relationships", method = HttpMethods.GET)
           )
           .futureValue
 
@@ -2240,7 +2285,7 @@ class PartyProcessSpec
           surname = "surname",
           taxCode = "taxCode",
           certification = Certification.NONE,
-          institutionContacts = Map(institutionId -> Seq(Contact(email = "email@mail.com"))),
+          institutionContacts = Map(externalId -> Seq(Contact(email = "email@mail.com"))),
           role = PartyRole.DELEGATE,
           product = defaultProductInfo,
           state = ACTIVE,
@@ -2255,7 +2300,7 @@ class PartyProcessSpec
           surname = "surname1",
           taxCode = "taxCode1",
           certification = Certification.NONE,
-          institutionContacts = Map(institutionId -> Seq(Contact(email = "email1@mail.com"))),
+          institutionContacts = Map(externalId -> Seq(Contact(email = "email1@mail.com"))),
           role = PartyRole.MANAGER,
           product = defaultProductInfo,
           state = RelationshipState.ACTIVE,
@@ -2282,7 +2327,7 @@ class PartyProcessSpec
           surname = "surname2",
           taxCode = "taxCode2",
           certification = Certification.NONE,
-          institutionContacts = Map(institutionId -> Seq(Contact(email = "email2@mail.com"))),
+          institutionContacts = Map(externalId -> Seq(Contact(email = "email2@mail.com"))),
           role = PartyRole.OPERATOR,
           product = defaultProductInfo.copy(role = "security"),
           state = RelationshipState.ACTIVE,
@@ -2297,7 +2342,7 @@ class PartyProcessSpec
           surname = "surname3",
           taxCode = "taxCode3",
           certification = Certification.NONE,
-          institutionContacts = Map(institutionId -> Seq(Contact(email = "email3@mail.com"))),
+          institutionContacts = Map(externalId -> Seq(Contact(email = "email3@mail.com"))),
           role = PartyRole.OPERATOR,
           product = defaultProductInfo.copy(role = "api"),
           state = RelationshipState.ACTIVE,
@@ -2311,7 +2356,7 @@ class PartyProcessSpec
     "retrieve all the relationships of a specific institution with filter by productRole when requested by the admin" in {
       val userId1       = UUID.randomUUID()
       val userId2       = UUID.randomUUID()
-      val institutionId = UUID.randomUUID().toString
+      val externalId = UUID.randomUUID().toString
       val orgPartyId    = UUID.randomUUID()
 
       val adminRelationshipId = UUID.randomUUID()
@@ -2320,7 +2365,7 @@ class PartyProcessSpec
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
-        institutionId = institutionId,
+        externalId = externalId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -2375,7 +2420,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -2457,7 +2502,7 @@ class PartyProcessSpec
         Http()
           .singleRequest(
             HttpRequest(
-              uri = s"$url/external/institutions/$institutionId/relationships?productRoles=security,api",
+              uri = s"$url/external/institutions/$externalId/relationships?productRoles=security,api",
               method = HttpMethods.GET
             )
           )
@@ -2473,7 +2518,7 @@ class PartyProcessSpec
         surname = "surname2",
         taxCode = "taxCode2",
         certification = Certification.NONE,
-        institutionContacts = Map(institutionId -> Seq(Contact(email = "email2@mail.com"))),
+        institutionContacts = Map(externalId -> Seq(Contact(email = "email2@mail.com"))),
         role = PartyRole.OPERATOR,
         product = defaultProductInfo.copy(role = "security"),
         state = RelationshipState.ACTIVE,
@@ -2488,7 +2533,7 @@ class PartyProcessSpec
         surname = "surname3",
         taxCode = "taxCode3",
         certification = Certification.NONE,
-        institutionContacts = Map(institutionId -> Seq(Contact(email = "email3@mail.com"))),
+        institutionContacts = Map(externalId -> Seq(Contact(email = "email3@mail.com"))),
         role = PartyRole.OPERATOR,
         product = defaultProductInfo.copy(role = "api"),
         state = RelationshipState.ACTIVE,
@@ -2503,12 +2548,12 @@ class PartyProcessSpec
       val userId1         = UUID.randomUUID()
       val userId2         = uid
       val userId3         = UUID.randomUUID()
-      val institutionId   = UUID.randomUUID().toString
+      val externalId   = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
-        institutionId = institutionId,
+        externalId = externalId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -2592,7 +2637,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -2658,7 +2703,7 @@ class PartyProcessSpec
       val response =
         Http()
           .singleRequest(
-            HttpRequest(uri = s"$url/external/institutions/$institutionId/relationships", method = HttpMethods.GET)
+            HttpRequest(uri = s"$url/external/institutions/$externalId/relationships", method = HttpMethods.GET)
           )
           .futureValue
 
@@ -2673,7 +2718,7 @@ class PartyProcessSpec
           surname = "surname2",
           taxCode = "taxCode2",
           certification = Certification.NONE,
-          institutionContacts = Map(institutionId -> Seq(Contact(email = "email2@mail.com"))),
+          institutionContacts = Map(externalId -> Seq(Contact(email = "email2@mail.com"))),
           role = PartyRole.OPERATOR,
           product = defaultProductInfo.copy(role = "security"),
           state = RelationshipState.ACTIVE,
@@ -2685,12 +2730,12 @@ class PartyProcessSpec
     "retrieve all the relationships of a specific institution with filter by productRole and products" in {
       val adminIdentifier = UUID.randomUUID()
       val userId1         = uid
-      val institutionId   = UUID.randomUUID().toString
+      val externalId   = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
-        institutionId = institutionId,
+        externalId = externalId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -2735,7 +2780,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -2803,7 +2848,7 @@ class PartyProcessSpec
           .singleRequest(
             HttpRequest(
               uri =
-                s"$url/external/institutions/$institutionId/relationships?productRoles=security,api&products=Interop",
+                s"$url/external/institutions/$externalId/relationships?productRoles=security,api&products=Interop",
               method = HttpMethods.GET
             )
           )
@@ -2819,7 +2864,7 @@ class PartyProcessSpec
         surname = "surname2",
         taxCode = "taxCode2",
         certification = Certification.NONE,
-        institutionContacts = Map(institutionId -> Seq(Contact(email = "email2@mail.com"))),
+        institutionContacts = Map(externalId -> Seq(Contact(email = "email2@mail.com"))),
         role = PartyRole.OPERATOR,
         product = defaultProductInfo.copy(id = "Interop", role = "security"),
         state = RelationshipState.ACTIVE,
@@ -2830,12 +2875,12 @@ class PartyProcessSpec
 
     "retrieve all the relationships of a specific institution with filter by states requested by admin" in {
       val adminIdentifier = uid
-      val institutionId   = UUID.randomUUID().toString
+      val externalId   = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
-        institutionId = institutionId,
+        externalId = externalId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -2881,7 +2926,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -2956,7 +3001,7 @@ class PartyProcessSpec
         Http()
           .singleRequest(
             HttpRequest(
-              uri = s"$url/external/institutions/$institutionId/relationships?states=ACTIVE",
+              uri = s"$url/external/institutions/$externalId/relationships?states=ACTIVE",
               method = HttpMethods.GET
             )
           )
@@ -2972,7 +3017,7 @@ class PartyProcessSpec
         surname = "surname1",
         taxCode = "taxCode1",
         certification = Certification.NONE,
-        institutionContacts = Map(institutionId -> Seq(Contact(email = "email1@mail.com"))),
+        institutionContacts = Map(externalId -> Seq(Contact(email = "email1@mail.com"))),
         role = PartyRole.MANAGER,
         product = defaultProductInfo,
         state = RelationshipState.ACTIVE,
@@ -2996,12 +3041,12 @@ class PartyProcessSpec
     "retrieve all the relationships of a specific institution with filter by roles when requested by admin" in {
       val adminIdentifier = uid
       val userId2         = UUID.randomUUID()
-      val institutionId   = UUID.randomUUID().toString
+      val externalId   = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
-        institutionId = institutionId,
+        externalId = externalId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -3057,7 +3102,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -3132,7 +3177,7 @@ class PartyProcessSpec
         Http()
           .singleRequest(
             HttpRequest(
-              uri = s"$url/external/institutions/$institutionId/relationships?roles=DELEGATE",
+              uri = s"$url/external/institutions/$externalId/relationships?roles=DELEGATE",
               method = HttpMethods.GET
             )
           )
@@ -3148,7 +3193,7 @@ class PartyProcessSpec
         surname = "surname2",
         taxCode = "taxCode2",
         certification = Certification.NONE,
-        institutionContacts = Map(institutionId -> Seq(Contact(email = "email2@mail.com"))),
+        institutionContacts = Map(externalId -> Seq(Contact(email = "email2@mail.com"))),
         role = PartyRole.DELEGATE,
         product = defaultProductInfo,
         state = RelationshipState.PENDING,
@@ -3161,12 +3206,12 @@ class PartyProcessSpec
       val adminIdentifier = uid
       val userId3         = UUID.randomUUID()
       val userId4         = UUID.randomUUID()
-      val institutionId   = UUID.randomUUID().toString
+      val externalId   = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
-        institutionId = institutionId,
+        externalId = externalId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -3239,7 +3284,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -3330,7 +3375,7 @@ class PartyProcessSpec
           .singleRequest(
             HttpRequest(
               uri =
-                s"$url/external/institutions/$institutionId/relationships?productRoles=security,api&products=Interop&roles=OPERATOR&states=ACTIVE",
+                s"$url/external/institutions/$externalId/relationships?productRoles=security,api&products=Interop&roles=OPERATOR&states=ACTIVE",
               method = HttpMethods.GET
             )
           )
@@ -3347,7 +3392,7 @@ class PartyProcessSpec
           surname = "surname3",
           taxCode = "taxCode3",
           certification = Certification.NONE,
-          institutionContacts = Map(institutionId -> Seq(Contact(email = "email3@mail.com"))),
+          institutionContacts = Map(externalId -> Seq(Contact(email = "email3@mail.com"))),
           role = PartyRole.OPERATOR,
           product = defaultProductInfo.copy(id = "Interop", role = "security"),
           state = RelationshipState.ACTIVE,
@@ -3362,7 +3407,7 @@ class PartyProcessSpec
           surname = "surname4",
           taxCode = "taxCode4",
           certification = Certification.NONE,
-          institutionContacts = Map(institutionId -> Seq(Contact(email = "email4@mail.com"))),
+          institutionContacts = Map(externalId -> Seq(Contact(email = "email4@mail.com"))),
           role = PartyRole.OPERATOR,
           product = defaultProductInfo.copy(id = "Interop", role = "api"),
           state = RelationshipState.ACTIVE,
@@ -3374,12 +3419,12 @@ class PartyProcessSpec
 
     "retrieve all the relationships of a specific institution with all filter when no intersection occurs" in {
       val adminIdentifier = uid
-      val institutionId   = UUID.randomUUID().toString
+      val externalId   = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
-        institutionId = institutionId,
+        externalId = externalId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -3409,7 +3454,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -3464,7 +3509,7 @@ class PartyProcessSpec
           .singleRequest(
             HttpRequest(
               uri =
-                s"$url/external/institutions/$institutionId/relationships?productRoles=security,api&products=Interop,Interop&roles=OPERATOR&states=PENDING",
+                s"$url/external/institutions/$externalId/relationships?productRoles=security,api&products=Interop,Interop&roles=OPERATOR&states=PENDING",
               method = HttpMethods.GET
             )
           )
@@ -3693,12 +3738,12 @@ class PartyProcessSpec
     "create delegate with a manager active" in {
       val taxCode1      = "managerTaxCode"
       val taxCode2      = "delegateTaxCode"
-      val institutionId = UUID.randomUUID().toString
+      val externalId = UUID.randomUUID().toString
       val orgPartyId    = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
-        institutionId = institutionId,
+        externalId = externalId,
         description = "org1",
         digitalAddress = "digitalAddress1",
         attributes = Seq.empty,
@@ -3826,7 +3871,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -3978,7 +4023,7 @@ class PartyProcessSpec
 
       val req = OnboardingRequest(
         users = Seq(manager, delegate),
-        institutionId = institutionId,
+        externalId = externalId,
         contract = Some(OnboardingContract("a", "b"))
       )
 
@@ -3994,7 +4039,7 @@ class PartyProcessSpec
 
       val req = OnboardingRequest(
         users = users,
-        institutionId = UUID.randomUUID().toString,
+        externalId = UUID.randomUUID().toString,
         contract = Some(OnboardingContract("a", "b"))
       )
 
@@ -4010,7 +4055,7 @@ class PartyProcessSpec
 
       val req = OnboardingRequest(
         users = users,
-        institutionId = UUID.randomUUID().toString,
+        externalId = UUID.randomUUID().toString,
         contract = Some(OnboardingContract("a", "b"))
       )
 
@@ -4026,7 +4071,7 @@ class PartyProcessSpec
 
       val req = OnboardingRequest(
         users = users,
-        institutionId = UUID.randomUUID().toString,
+        externalId = UUID.randomUUID().toString,
         contract = Some(OnboardingContract("a", "b"))
       )
 
@@ -4042,7 +4087,7 @@ class PartyProcessSpec
 
       val req = OnboardingRequest(
         users = users,
-        institutionId = UUID.randomUUID().toString,
+        externalId = UUID.randomUUID().toString,
         contract = Some(OnboardingContract("a", "b"))
       )
 
@@ -4055,19 +4100,20 @@ class PartyProcessSpec
 
     def createInvalidManagerTest(managerState: PartyManagementDependency.RelationshipState): Seq[User] = {
       val taxCode       = UUID.randomUUID().toString
-      val institutionId = UUID.randomUUID().toString
+      val externalId = UUID.randomUUID().toString
+      val origin = "IPA"
       val orgPartyId    = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
-        institutionId = institutionId,
+        externalId = externalId,
         description = "org1",
         digitalAddress = "digitalAddress1",
         attributes = Seq.empty,
         taxCode = "123",
         address = "address",
         zipCode = "zipCode",
-        origin = "IPA",
+        origin = origin,
         institutionType = "PA"
       )
 
@@ -4155,19 +4201,20 @@ class PartyProcessSpec
     "not create legals when no active manager exist for a relationship" in {
       val taxCode1      = "managerTaxCode"
       val taxCode2      = "delegateTaxCode"
-      val institutionId = UUID.randomUUID().toString
+      val externalId = UUID.randomUUID().toString
+      val origin = "IPA"
       val orgPartyId    = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
-        institutionId = institutionId,
+        externalId = externalId,
         description = "org1",
         digitalAddress = "digitalAddress1",
         attributes = Seq.empty,
         taxCode = "123",
         address = "address",
         zipCode = "zipCode",
-        origin = "IPA",
+        origin = origin,
         institutionType = "PA"
       )
 
@@ -4248,7 +4295,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -4267,7 +4314,7 @@ class PartyProcessSpec
 
       val req = OnboardingRequest(
         users = Seq(manager, delegate),
-        institutionId = institutionId,
+        externalId = externalId,
         contract = Some(OnboardingContract("a", "b"))
       )
 
@@ -4281,12 +4328,12 @@ class PartyProcessSpec
   "Institution products retrieval" must {
 
     "retrieve products" in {
-      val institutionId     = UUID.randomUUID().toString
-      val institutionIdUUID = UUID.randomUUID()
+      val externalId     = UUID.randomUUID().toString
+      val externalIdUUID = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
-        id = institutionIdUUID,
-        institutionId = institutionId,
+        id = externalIdUUID,
+        externalId = externalId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -4394,7 +4441,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -4427,7 +4474,7 @@ class PartyProcessSpec
       val response =
         Http()
           .singleRequest(
-            HttpRequest(uri = s"$url/external/institutions/$institutionId/products", method = HttpMethods.GET)
+            HttpRequest(uri = s"$url/external/institutions/$externalId/products", method = HttpMethods.GET)
           )
           .futureValue
 
@@ -4443,12 +4490,12 @@ class PartyProcessSpec
     }
 
     "retrieve products asking PENDING" in {
-      val institutionId     = UUID.randomUUID().toString
-      val institutionIdUUID = UUID.randomUUID()
+      val externalId     = UUID.randomUUID().toString
+      val externalIdUUID = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
-        id = institutionIdUUID,
-        institutionId = institutionId,
+        id = externalIdUUID,
+        externalId = externalId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -4584,7 +4631,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -4618,7 +4665,7 @@ class PartyProcessSpec
         Http()
           .singleRequest(
             HttpRequest(
-              uri = s"$url/external/institutions/$institutionId/products?states=PENDING",
+              uri = s"$url/external/institutions/$externalId/products?states=PENDING",
               method = HttpMethods.GET
             )
           )
@@ -4632,12 +4679,12 @@ class PartyProcessSpec
     }
 
     "retrieve products asking ACTIVE" in {
-      val institutionId     = UUID.randomUUID().toString
-      val institutionIdUUID = UUID.randomUUID()
+      val externalId     = UUID.randomUUID().toString
+      val externalIdUUID = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
-        id = institutionIdUUID,
-        institutionId = institutionId,
+        id = externalIdUUID,
+        externalId = externalId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -4800,7 +4847,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -4834,7 +4881,7 @@ class PartyProcessSpec
         Http()
           .singleRequest(
             HttpRequest(
-              uri = s"$url/external/institutions/$institutionId/products?states=ACTIVE",
+              uri = s"$url/external/institutions/$externalId/products?states=ACTIVE",
               method = HttpMethods.GET
             )
           )
@@ -4852,12 +4899,12 @@ class PartyProcessSpec
     }
 
     "retrieve products asking ACTIVE/PENDING" in {
-      val institutionId     = UUID.randomUUID().toString
-      val institutionIdUUID = UUID.randomUUID()
+      val externalId     = UUID.randomUUID().toString
+      val externalIdUUID = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
-        id = institutionIdUUID,
-        institutionId = institutionId,
+        id = externalIdUUID,
+        externalId = externalId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -4993,7 +5040,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -5027,7 +5074,7 @@ class PartyProcessSpec
         Http()
           .singleRequest(
             HttpRequest(
-              uri = s"$url/external/institutions/$institutionId/products?states=ACTIVE,PENDING",
+              uri = s"$url/external/institutions/$externalId/products?states=ACTIVE,PENDING",
               method = HttpMethods.GET
             )
           )
@@ -5045,12 +5092,12 @@ class PartyProcessSpec
     }
 
     "retrieve products asking ACTIVE/PENDING even when there are only PENDING products" in {
-      val institutionId     = UUID.randomUUID().toString
-      val institutionIdUUID = UUID.randomUUID()
+      val externalId     = UUID.randomUUID().toString
+      val externalIdUUID = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
-        id = institutionIdUUID,
-        institutionId = institutionId,
+        id = externalIdUUID,
+        externalId = externalId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -5130,7 +5177,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -5164,7 +5211,7 @@ class PartyProcessSpec
         Http()
           .singleRequest(
             HttpRequest(
-              uri = s"$url/external/institutions/$institutionId/products?states=ACTIVE,PENDING",
+              uri = s"$url/external/institutions/$externalId/products?states=ACTIVE,PENDING",
               method = HttpMethods.GET
             )
           )
@@ -5178,12 +5225,12 @@ class PartyProcessSpec
     }
 
     "retrieve products asking ACTIVE/PENDING even when there are only ACTIVE products" in {
-      val institutionId     = UUID.randomUUID().toString
-      val institutionIdUUID = UUID.randomUUID()
+      val externalId     = UUID.randomUUID().toString
+      val externalIdUUID = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
-        id = institutionIdUUID,
-        institutionId = institutionId,
+        id = externalIdUUID,
+        externalId = externalId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -5263,7 +5310,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -5297,7 +5344,7 @@ class PartyProcessSpec
         Http()
           .singleRequest(
             HttpRequest(
-              uri = s"$url/external/institutions/$institutionId/products?states=ACTIVE,PENDING",
+              uri = s"$url/external/institutions/$externalId/products?states=ACTIVE,PENDING",
               method = HttpMethods.GET
             )
           )
@@ -5311,12 +5358,12 @@ class PartyProcessSpec
     }
 
     "retrieve no products" in {
-      val institutionId     = UUID.randomUUID().toString
-      val institutionIdUUID = UUID.randomUUID()
+      val externalId     = UUID.randomUUID().toString
+      val externalIdUUID = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
-        id = institutionIdUUID,
-        institutionId = institutionId,
+        id = externalIdUUID,
+        externalId = externalId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -5329,7 +5376,7 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(institutionId, *)
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -5369,7 +5416,7 @@ class PartyProcessSpec
         Http()
           .singleRequest(
             HttpRequest(
-              uri = s"$url/external/institutions/$institutionId/products?states=ACTIVE",
+              uri = s"$url/external/institutions/$externalId/products?states=ACTIVE",
               method = HttpMethods.GET
             )
           )

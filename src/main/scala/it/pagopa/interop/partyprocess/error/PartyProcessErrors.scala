@@ -16,11 +16,11 @@ object PartyProcessErrors {
         s"Error trying to parse content type $contentType, reason:\n${errors.map(_.formatPretty).mkString("\n")}"
       )
 
-  final case class ContractNotFound(institutionId: String)
-      extends ComponentError("0003", s"Contract not found for institution $institutionId")
+  final case class ContractNotFound(externalId: String)
+      extends ComponentError("0003", s"Contract not found for institution having externalId $externalId")
 
-  final case class InstitutionNotOnboarded(institutionId: String, productId: String)
-      extends ComponentError("0004", s"InstitutionId $institutionId is not onboarded for product $productId")
+  final case class InstitutionNotOnboarded(externalId: String, productId: String)
+      extends ComponentError("0004", s"Institution having externalId $externalId is not onboarded for product $productId")
 
   final case class InvalidSignature(signatureValidationErrors: List[SignatureValidationError])
       extends ComponentError("0005", s"Signature not valid ${signatureValidationErrors.mkString("\n")}")
@@ -74,8 +74,8 @@ object PartyProcessErrors {
   final case object GetRelationshipError        extends ComponentError("0028", "Error while getting relationship")
   final case object DeleteRelationshipError     extends ComponentError("0029", "Error while deleting relationship")
 
-  final case class ProductsNotFoundError(institutionId: String)
-      extends ComponentError("0030", s"Products not found for institution $institutionId")
+  final case class ProductsNotFoundError(externalId: String)
+      extends ComponentError("0030", s"Products not found for institution having externalId $externalId")
 
   final case object GetProductsError extends ComponentError("0031", "Error while getting products")
 
