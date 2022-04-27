@@ -55,5 +55,6 @@ object ApplicationConfiguration {
 
   lazy val storageContainer: String = config.getString("party-process.storage.container")
 
-  lazy val jwtAudience: Set[String] = config.getStringList("party-process.jwt.audience").asScala.toSet
+  lazy val jwtAudience: Set[String] = config.getString("party-process.jwt.audience").split(",").toSet.filter(_.nonEmpty)
+
 }
