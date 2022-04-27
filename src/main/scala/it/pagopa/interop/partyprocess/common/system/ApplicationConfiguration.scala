@@ -2,7 +2,6 @@ package it.pagopa.interop.partyprocess.common.system
 
 import com.typesafe.config.{Config, ConfigFactory}
 
-import scala.jdk.CollectionConverters.ListHasAsScala
 import scala.util.Try
 
 object ApplicationConfiguration {
