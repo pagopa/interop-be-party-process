@@ -6,12 +6,12 @@ import scala.jdk.CollectionConverters.ListHasAsScala
 import scala.util.Try
 
 object ApplicationConfiguration {
-  lazy val config: Config = ConfigFactory.load()
+  val config: Config = ConfigFactory.load()
 
-  lazy val serverPort: Int               = config.getInt("party-process.port")
-  lazy val getPartyManagementUrl: String = config.getString("party-process.services.party-management")
-  lazy val getPartyProxyUrl: String      = config.getString("party-process.services.party-proxy")
-  lazy val getUserRegistryURL: String    = config.getString("party-process.services.user-registry-management")
+  val serverPort: Int               = config.getInt("party-process.port")
+  val getPartyManagementUrl: String = config.getString("party-process.services.party-management")
+  val getPartyProxyUrl: String      = config.getString("party-process.services.party-proxy")
+  val getUserRegistryURL: String    = config.getString("party-process.services.user-registry-management")
 
   /*
      _________  ________  ________  ________
@@ -24,19 +24,19 @@ object ApplicationConfiguration {
       TODO THIS IS A TEMPORARY SOLUTION!
       TODO MOVE TO PARTY REGISTRY MOCK
    */
-  lazy val destinationMails: Option[Seq[String]] =
+  val destinationMails: Option[Seq[String]] =
     Try(config.getString("party-process.destination-mails")).toOption.map(_.split(",").toSeq)
 
-  lazy val signatureValidationEnabled: Boolean =
+  val signatureValidationEnabled: Boolean =
     config.getBoolean("party-process.signature-validation-enabled")
 
-  lazy val euListOfTrustedListsURL: String = config.getString("party-process.eu_list_of_trusted_lists_url")
-  lazy val euOfficialJournalUrl: String    = config.getString("party-process.eu_official_journal_url")
+  val euListOfTrustedListsURL: String = config.getString("party-process.eu_list_of_trusted_lists_url")
+  val euOfficialJournalUrl: String    = config.getString("party-process.eu_official_journal_url")
 
-  lazy val mailTemplatePath: String   = config.getString("party-process.mail-template.path")
-  lazy val userRegistryApiKey: String = config.getString("party-process.user-registry-api-key")
+  val mailTemplatePath: String   = config.getString("party-process.mail-template.path")
+  val userRegistryApiKey: String = config.getString("party-process.user-registry-api-key")
 
-  lazy val onboardingMailPlaceholdersReplacement: Map[String, String] = {
+  val onboardingMailPlaceholdersReplacement: Map[String, String] = {
     Map(
       config.getString("party-process.mail-template.onboarding-mail-placeholders.confirm-token.name") -> config
         .getString("party-process.mail-template.onboarding-mail-placeholders.confirm-token.placeholder"),
@@ -44,17 +44,17 @@ object ApplicationConfiguration {
         .getString("party-process.mail-template.onboarding-mail-placeholders.reject-token.placeholder")
     )
   }
-  lazy val onboardingMailUserNamePlaceholder: String                  =
+  val onboardingMailUserNamePlaceholder: String                  =
     config.getString("party-process.mail-template.onboarding-mail-placeholders.userName")
-  lazy val onboardingMailUserSurnamePlaceholder: String               =
+  val onboardingMailUserSurnamePlaceholder: String               =
     config.getString("party-process.mail-template.onboarding-mail-placeholders.userSurname")
-  lazy val onboardingMailTaxCodePlaceholder: String                   =
+  val onboardingMailTaxCodePlaceholder: String                   =
     config.getString("party-process.mail-template.onboarding-mail-placeholders.userTaxCode")
-  lazy val onboardingMailProductPlaceholder: String                   =
+  val onboardingMailProductPlaceholder: String                   =
     config.getString("party-process.mail-template.onboarding-mail-placeholders.product")
 
-  lazy val storageContainer: String = config.getString("party-process.storage.container")
+  val storageContainer: String = config.getString("party-process.storage.container")
 
-  lazy val jwtAudience: Set[String] = config.getString("party-process.jwt.audience").split(",").toSet.filter(_.nonEmpty)
+  val jwtAudience: Set[String] = config.getString("party-process.jwt.audience").split(",").toSet.filter(_.nonEmpty)
 
 }
