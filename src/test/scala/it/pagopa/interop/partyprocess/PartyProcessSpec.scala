@@ -187,7 +187,7 @@ class PartyProcessSpec
       address = "address",
       zipCode = "zipCode",
       origin = origin,
-      institutionType = "PA"
+      institutionType = Option("PA")
     )
 
     val manager =
@@ -338,7 +338,7 @@ class PartyProcessSpec
       address = "address",
       zipCode = "zipCode",
       origin = origin,
-      institutionType = "PA"
+      institutionType = Option("PA")
     )
 
     val file = new File("src/test/resources/fake.file")
@@ -617,7 +617,7 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = origin,
-        institutionType = "PA"
+        institutionType = Option("PA")
       )
 
       val relationship =
@@ -708,7 +708,7 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = origin,
-        institutionType = "PA"
+        institutionType = Option("PA")
       )
 
       (mockPartyManagementService
@@ -836,7 +836,7 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = "PA"
+        institutionType = Option("PA")
       )
       val institution2 = PartyManagementDependency.Institution(
         id = orgPartyId2,
@@ -853,7 +853,7 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = "PA"
+        institutionType = Option("PA")
       )
 
       val expected = OnboardingInfo(
@@ -1023,7 +1023,7 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = "PA"
+        institutionType = Option("PA")
       )
 
       val expected = OnboardingInfo(
@@ -1171,7 +1171,7 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = "PA"
+        institutionType = Option("PA")
       )
       (mockUserRegistryService
         .getUserById(_: UUID))
@@ -1375,7 +1375,7 @@ class PartyProcessSpec
               address = "address",
               zipCode = "zipCode",
               origin = origin,
-              institutionType = "PA"
+              institutionType = Option("PA")
             )
           )
         )
@@ -1427,7 +1427,7 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = "PA"
+        institutionType = Option("PA")
       )
 
       val relationships =
@@ -1637,7 +1637,7 @@ class PartyProcessSpec
               address = "address",
               zipCode = "zipCode",
               origin = origin,
-              institutionType = "PA"
+              institutionType = Option("PA")
             )
           )
         )
@@ -1687,7 +1687,7 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = "PA"
+        institutionType = Option("PA")
       )
 
       val relationships =
@@ -2083,7 +2083,7 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = ""
+        institutionType = Option.empty
       )
 
       val adminRelationship =
@@ -2370,7 +2370,7 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = ""
+        institutionType = Option.empty
       )
 
       val adminRelationship =
@@ -2558,7 +2558,7 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = ""
+        institutionType = Option.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -2740,7 +2740,7 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = ""
+        institutionType = Option.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -2884,7 +2884,7 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = ""
+        institutionType = Option.empty
       )
 
       val relationshipId1 = UUID.randomUUID()
@@ -3050,7 +3050,7 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = ""
+        institutionType = Option.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -3215,7 +3215,7 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = ""
+        institutionType = Option.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -3428,7 +3428,7 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = ""
+        institutionType = Option.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -3747,7 +3747,7 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = "",
-        institutionType = ""
+        institutionType = Option.empty
       )
 
       val file = new File("src/test/resources/fake.file")
@@ -4110,7 +4110,7 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = "PA"
+        institutionType = Option("PA")
       )
 
       val managerId = UUID.randomUUID()
@@ -4211,7 +4211,7 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = "PA"
+        institutionType = Option("PA")
       )
 
       val managerId = UUID.randomUUID()
@@ -4337,7 +4337,7 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = ""
+        institutionType = Option.empty
       )
 
       val managerId        = UUID.randomUUID()
@@ -4499,7 +4499,7 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = ""
+        institutionType = Option.empty
       )
 
       val managerId        = UUID.randomUUID()
@@ -4688,7 +4688,7 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = ""
+        institutionType = Option.empty
       )
 
       val managerId        = UUID.randomUUID()
@@ -4908,7 +4908,7 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = ""
+        institutionType = Option.empty
       )
 
       val managerId        = UUID.randomUUID()
@@ -5101,7 +5101,7 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = ""
+        institutionType = Option.empty
       )
 
       val managerId       = UUID.randomUUID()
@@ -5234,7 +5234,7 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = ""
+        institutionType = Option.empty
       )
 
       val managerId      = UUID.randomUUID()
@@ -5367,7 +5367,7 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = ""
+        institutionType = Option.empty
       )
 
       (mockPartyManagementService

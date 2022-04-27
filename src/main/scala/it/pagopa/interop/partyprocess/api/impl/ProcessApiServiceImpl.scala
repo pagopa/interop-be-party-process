@@ -690,7 +690,7 @@ class ProcessApiServiceImpl(
         products = Set.empty,
         address = institution.address,
         zipCode = institution.zipCode,
-        institutionType = "TBD",
+        institutionType = Option.empty,
         origin = institution.origin
       )
       institution <- partyManagementService.createInstitution(seed)(bearer)
