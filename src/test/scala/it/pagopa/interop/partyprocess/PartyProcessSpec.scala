@@ -162,8 +162,8 @@ class PartyProcessSpec
     val orgPartyId = UUID.randomUUID()
 
     val institutionFromProxy = PartyProxyDependencies.Institution(
-      id = originId,
-      externalId = externalId,
+      id = externalId,
+      originId = originId,
       o = Some(originId),
       ou = None,
       aoo = None,
@@ -292,7 +292,8 @@ class PartyProcessSpec
     val req = OnboardingRequest(
       users = Seq(manager, delegate),
       externalId = externalId,
-      origin = origin contract = Some(OnboardingContract("a", "b"))
+      origin = origin,
+      contract = Some(OnboardingContract("a", "b"))
     )
 
     val data = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
@@ -313,8 +314,8 @@ class PartyProcessSpec
 
     val institutionFromProxy =
       PartyProxyDependencies.Institution(
-        id = originId,
-        externalId = externalId,
+        id = externalId,
+        originId = originId,
         o = Some(originId),
         ou = None,
         aoo = None,
@@ -575,7 +576,6 @@ class PartyProcessSpec
     val req = OnboardingRequest(
       users = Seq(manager, delegate),
       externalId = externalId,
-      originId = originId,
       origin = origin,
       contract = Some(OnboardingContract("a", "b")),
       pricingPlan = Option("pricingPlan"),
@@ -1585,6 +1585,7 @@ class PartyProcessSpec
       val req = OnboardingRequest(
         users = Seq(operator1, operator2),
         externalId = externalId,
+        origin = origin,
         contract = Some(OnboardingContract("a", "b"))
       )
 
@@ -1599,6 +1600,7 @@ class PartyProcessSpec
 
       val orgPartyID = UUID.randomUUID()
       val externalId = UUID.randomUUID().toString
+      val originId   = UUID.randomUUID().toString
       val origin     = "IPA"
       val taxCode1   = "subdelegate1TaxCode"
       val taxCode2   = "subdelegate2TaxCode"
@@ -1630,6 +1632,7 @@ class PartyProcessSpec
             PartyManagementDependency.Institution(
               id = orgPartyID,
               externalId = externalId,
+              originId = originId,
               description = "test",
               digitalAddress = "big@fish.it",
               attributes = Seq.empty,
@@ -1658,6 +1661,7 @@ class PartyProcessSpec
       val req = OnboardingRequest(
         users = Seq(subdelegate1, subdelegate2),
         externalId = externalId,
+        origin = origin,
         contract = Some(OnboardingContract("a", "b"))
       )
 
@@ -1673,6 +1677,7 @@ class PartyProcessSpec
       val taxCode1       = "subdelegate1TaxCode"
       val taxCode2       = "subdelegate2TaxCode"
       val externalId     = UUID.randomUUID().toString
+      val originId       = UUID.randomUUID().toString
       val origin         = "IPA"
       val orgPartyId     = UUID.randomUUID()
       val personPartyId1 = "bf80fac0-2775-4646-8fcf-28e083751900"
@@ -1680,6 +1685,7 @@ class PartyProcessSpec
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
         externalId = externalId,
+        originId = originId,
         description = "org1",
         digitalAddress = "digitalAddress1",
         attributes = Seq.empty,
@@ -1845,6 +1851,7 @@ class PartyProcessSpec
       val req = OnboardingRequest(
         users = Seq(subdelegate1, subdelegate2),
         externalId = externalId,
+        origin = origin,
         contract = Some(OnboardingContract("a", "b"))
       )
 
@@ -2066,6 +2073,7 @@ class PartyProcessSpec
       val userId2    = UUID.randomUUID()
       val userId3    = UUID.randomUUID()
       val externalId = UUID.randomUUID().toString
+      val originId   = UUID.randomUUID().toString
       val orgPartyId = UUID.randomUUID()
 
       val adminRelationshipId = UUID.randomUUID()
@@ -2076,6 +2084,7 @@ class PartyProcessSpec
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
         externalId = externalId,
+        originId = originId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -2354,6 +2363,7 @@ class PartyProcessSpec
       val userId1    = UUID.randomUUID()
       val userId2    = UUID.randomUUID()
       val externalId = UUID.randomUUID().toString
+      val originId   = UUID.randomUUID().toString
       val orgPartyId = UUID.randomUUID()
 
       val adminRelationshipId = UUID.randomUUID()
@@ -2363,6 +2373,7 @@ class PartyProcessSpec
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
         externalId = externalId,
+        originId = originId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -2546,11 +2557,13 @@ class PartyProcessSpec
       val userId2         = uid
       val userId3         = UUID.randomUUID()
       val externalId      = UUID.randomUUID().toString
+      val originId        = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
         externalId = externalId,
+        originId = originId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -2728,11 +2741,13 @@ class PartyProcessSpec
       val adminIdentifier = UUID.randomUUID()
       val userId1         = uid
       val externalId      = UUID.randomUUID().toString
+      val originId        = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
         externalId = externalId,
+        originId = originId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -2872,11 +2887,13 @@ class PartyProcessSpec
     "retrieve all the relationships of a specific institution with filter by states requested by admin" in {
       val adminIdentifier = uid
       val externalId      = UUID.randomUUID().toString
+      val originId        = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
         externalId = externalId,
+        originId = originId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -3038,11 +3055,13 @@ class PartyProcessSpec
       val adminIdentifier = uid
       val userId2         = UUID.randomUUID()
       val externalId      = UUID.randomUUID().toString
+      val originId        = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
         externalId = externalId,
+        originId = originId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -3203,11 +3222,13 @@ class PartyProcessSpec
       val userId3         = UUID.randomUUID()
       val userId4         = UUID.randomUUID()
       val externalId      = UUID.randomUUID().toString
+      val originId        = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
         externalId = externalId,
+        originId = originId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -3416,11 +3437,13 @@ class PartyProcessSpec
     "retrieve all the relationships of a specific institution with all filter when no intersection occurs" in {
       val adminIdentifier = uid
       val externalId      = UUID.randomUUID().toString
+      val originId        = UUID.randomUUID().toString
       val orgPartyId      = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
         externalId = externalId,
+        originId = originId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -3735,18 +3758,21 @@ class PartyProcessSpec
       val taxCode1   = "managerTaxCode"
       val taxCode2   = "delegateTaxCode"
       val externalId = UUID.randomUUID().toString
+      val originId   = UUID.randomUUID().toString
+      val origin     = "IPA"
       val orgPartyId = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
         externalId = externalId,
+        originId = originId,
         description = "org1",
         digitalAddress = "digitalAddress1",
         attributes = Seq.empty,
         taxCode = "123",
         address = "address",
         zipCode = "zipCode",
-        origin = "",
+        origin = origin,
         institutionType = Option.empty
       )
 
@@ -4020,6 +4046,7 @@ class PartyProcessSpec
       val req = OnboardingRequest(
         users = Seq(manager, delegate),
         externalId = externalId,
+        origin = origin,
         contract = Some(OnboardingContract("a", "b"))
       )
 
@@ -4036,6 +4063,7 @@ class PartyProcessSpec
       val req = OnboardingRequest(
         users = users,
         externalId = UUID.randomUUID().toString,
+        origin = "IPA",
         contract = Some(OnboardingContract("a", "b"))
       )
 
@@ -4052,6 +4080,7 @@ class PartyProcessSpec
       val req = OnboardingRequest(
         users = users,
         externalId = UUID.randomUUID().toString,
+        origin = "IPA",
         contract = Some(OnboardingContract("a", "b"))
       )
 
@@ -4068,6 +4097,7 @@ class PartyProcessSpec
       val req = OnboardingRequest(
         users = users,
         externalId = UUID.randomUUID().toString,
+        origin = "IPA",
         contract = Some(OnboardingContract("a", "b"))
       )
 
@@ -4084,6 +4114,7 @@ class PartyProcessSpec
       val req = OnboardingRequest(
         users = users,
         externalId = UUID.randomUUID().toString,
+        origin = "IPA",
         contract = Some(OnboardingContract("a", "b"))
       )
 
@@ -4097,12 +4128,14 @@ class PartyProcessSpec
     def createInvalidManagerTest(managerState: PartyManagementDependency.RelationshipState): Seq[User] = {
       val taxCode    = UUID.randomUUID().toString
       val externalId = UUID.randomUUID().toString
+      val originId   = UUID.randomUUID().toString
       val origin     = "IPA"
       val orgPartyId = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
         externalId = externalId,
+        originId = originId,
         description = "org1",
         digitalAddress = "digitalAddress1",
         attributes = Seq.empty,
@@ -4198,12 +4231,14 @@ class PartyProcessSpec
       val taxCode1   = "managerTaxCode"
       val taxCode2   = "delegateTaxCode"
       val externalId = UUID.randomUUID().toString
+      val originId   = UUID.randomUUID().toString
       val origin     = "IPA"
       val orgPartyId = UUID.randomUUID()
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
         externalId = externalId,
+        originId = originId,
         description = "org1",
         digitalAddress = "digitalAddress1",
         attributes = Seq.empty,
@@ -4311,6 +4346,7 @@ class PartyProcessSpec
       val req = OnboardingRequest(
         users = Seq(manager, delegate),
         externalId = externalId,
+        origin = origin,
         contract = Some(OnboardingContract("a", "b"))
       )
 
@@ -4324,12 +4360,14 @@ class PartyProcessSpec
   "Institution products retrieval" must {
 
     "retrieve products" in {
-      val externalId     = UUID.randomUUID().toString
-      val externalIdUUID = UUID.randomUUID()
+      val institutionIdUUID = UUID.randomUUID()
+      val externalId        = UUID.randomUUID().toString
+      val originId          = UUID.randomUUID().toString
 
       val institution = PartyManagementDependency.Institution(
-        id = externalIdUUID,
+        id = institutionIdUUID,
         externalId = externalId,
+        originId = originId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -4486,12 +4524,14 @@ class PartyProcessSpec
     }
 
     "retrieve products asking PENDING" in {
-      val externalId     = UUID.randomUUID().toString
-      val externalIdUUID = UUID.randomUUID()
+      val institutionIdUUID = UUID.randomUUID()
+      val externalId        = UUID.randomUUID().toString
+      val originId          = UUID.randomUUID().toString
 
       val institution = PartyManagementDependency.Institution(
-        id = externalIdUUID,
+        id = institutionIdUUID,
         externalId = externalId,
+        originId = originId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -4675,12 +4715,14 @@ class PartyProcessSpec
     }
 
     "retrieve products asking ACTIVE" in {
-      val externalId     = UUID.randomUUID().toString
-      val externalIdUUID = UUID.randomUUID()
+      val institutionIdUUID = UUID.randomUUID()
+      val externalId        = UUID.randomUUID().toString
+      val originId          = UUID.randomUUID().toString
 
       val institution = PartyManagementDependency.Institution(
-        id = externalIdUUID,
+        id = institutionIdUUID,
         externalId = externalId,
+        originId = originId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -4895,12 +4937,14 @@ class PartyProcessSpec
     }
 
     "retrieve products asking ACTIVE/PENDING" in {
-      val externalId     = UUID.randomUUID().toString
-      val externalIdUUID = UUID.randomUUID()
+      val institutionIdUUID = UUID.randomUUID()
+      val externalId        = UUID.randomUUID().toString
+      val originId          = UUID.randomUUID().toString
 
       val institution = PartyManagementDependency.Institution(
-        id = externalIdUUID,
+        id = institutionIdUUID,
         externalId = externalId,
+        originId = originId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -5088,12 +5132,14 @@ class PartyProcessSpec
     }
 
     "retrieve products asking ACTIVE/PENDING even when there are only PENDING products" in {
-      val externalId     = UUID.randomUUID().toString
-      val externalIdUUID = UUID.randomUUID()
+      val institutionIdUUID = UUID.randomUUID()
+      val externalId        = UUID.randomUUID().toString
+      val originId          = UUID.randomUUID().toString
 
       val institution = PartyManagementDependency.Institution(
-        id = externalIdUUID,
+        id = institutionIdUUID,
         externalId = externalId,
+        originId = originId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -5221,12 +5267,14 @@ class PartyProcessSpec
     }
 
     "retrieve products asking ACTIVE/PENDING even when there are only ACTIVE products" in {
-      val externalId     = UUID.randomUUID().toString
-      val externalIdUUID = UUID.randomUUID()
+      val institutionIdUUID = UUID.randomUUID()
+      val externalId        = UUID.randomUUID().toString
+      val originId          = UUID.randomUUID().toString
 
       val institution = PartyManagementDependency.Institution(
-        id = externalIdUUID,
+        id = institutionIdUUID,
         externalId = externalId,
+        originId = originId,
         description = "",
         digitalAddress = "",
         taxCode = "",
@@ -5354,12 +5402,14 @@ class PartyProcessSpec
     }
 
     "retrieve no products" in {
-      val externalId     = UUID.randomUUID().toString
-      val externalIdUUID = UUID.randomUUID()
+      val institutionIdUUID = UUID.randomUUID()
+      val externalId        = UUID.randomUUID().toString
+      val originId          = UUID.randomUUID().toString
 
       val institution = PartyManagementDependency.Institution(
-        id = externalIdUUID,
+        id = institutionIdUUID,
         externalId = externalId,
+        originId = originId,
         description = "",
         digitalAddress = "",
         taxCode = "",

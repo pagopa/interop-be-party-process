@@ -682,7 +682,7 @@ class ProcessApiServiceImpl(
       _    = logger.info("getInstitution {}", institution.id)
       seed = PartyManagementDependency.InstitutionSeed(
         externalId = externalId,
-        originId = institution.id,
+        originId = institution.originId,
         description = institution.description,
         digitalAddress = institution.digitalAddress,
         taxCode = institution.taxCode,
