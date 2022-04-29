@@ -303,7 +303,7 @@ paths:
         - external
       summary: returns the relationships related to the institution
       description: Return ok
-      operationId: getUserInstitutionRelationships
+      operationId: getUserInstitutionRelationshipsByExternalId
       parameters:
         - name: externalId
           in: path
@@ -409,7 +409,7 @@ paths:
         - external
       summary: institution products retrieval
       description: retrieves the products this institution is related to.
-      operationId: retrieveInstitutionProducts
+      operationId: retrieveInstitutionProductsByExternalId
       parameters:
         - name: externalId
           in: path
