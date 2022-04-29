@@ -159,7 +159,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/OnboardingUsersRequest'
+              $ref: '#/components/schemas/OnboardingLegalUsersRequest'
       responses:
         '204':
           description: successful operation
@@ -784,8 +784,26 @@ components:
       required:
         - users
         - institutionExternalId
-        - origin
         - billing
+        - contract
+    OnboardingLegalUsersRequest:
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        institutionId:
+          type: string
+          description: institution id
+          format: uuid
+          example: 97c0f418-bcb3-48d4-825a-fe8b29ae68e5
+        institutionExternalId:
+          type: string
+        contract:
+          $ref: '#/components/schemas/OnboardingContract'
+      additionalProperties: false
+      required:
+        - users
         - contract
     OnboardingUsersRequest:
       properties:

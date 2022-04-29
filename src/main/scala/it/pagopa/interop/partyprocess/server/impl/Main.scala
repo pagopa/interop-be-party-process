@@ -121,6 +121,13 @@ object Main
     val signatureService: SignatureService = SignatureServiceImpl
     val mailer: MailEngine                 = new PartyProcessMailer with DefaultInteropMailer with CourierMailer
 
+    val relationshipService: RelationshipService = new RelationshipServiceImpl(
+      partyManagementService = partyManagementService,
+      userRegistryManagementService = userRegistryManagementService
+    )
+
+    val productService: ProductService = new ProductServiceImpl(partyManagementService = partyManagementService)
+
     val processApi: ProcessApi = new ProcessApi(
       new ProcessApiServiceImpl(
         partyManagementService = partyManagementService,
@@ -130,7 +137,9 @@ object Main
         fileManager = fileManager,
         signatureService = signatureService,
         mailer = mailer,
-        mailTemplate = mailTemplate
+        mailTemplate = mailTemplate,
+        relationshipService,
+        productService
       ),
       ProcessApiMarshallerImpl,
       jwtReader.OAuth2JWTValidatorAsContexts
@@ -139,7 +148,8 @@ object Main
     val externalApi: ExternalApi = new ExternalApi(
       new ExternalApiServiceImpl(
         partyManagementService = partyManagementService,
-        userRegistryManagementService = userRegistryManagementService
+        relationshipService = relationshipService,
+        productService = productService
       ),
       ExternalApiMarshallerImpl,
       jwtReader.OAuth2JWTValidatorAsContexts

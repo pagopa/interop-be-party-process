@@ -93,4 +93,9 @@ object PartyProcessErrors {
 
   final case class InvalidCategoryError(category: String) extends ComponentError("0035", s"Invalid category $category")
 
+  final case class InstitutionNotFound(institutionId: Option[String], externalInstitutionId: Option[String])
+      extends ComponentError(
+        "0036",
+        s"Cannot find Institution using institutionId $institutionId and externalInstitutionId $externalInstitutionId"
+      )
 }

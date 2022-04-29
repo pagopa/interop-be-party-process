@@ -15,17 +15,24 @@ package object impl extends DefaultJsonProtocol {
   implicit val problemFormat: RootJsonFormat[Problem]                       = jsonFormat5(Problem)
   implicit val userFormat: RootJsonFormat[User]                             = jsonFormat7(User)
   implicit val onboardingContractFormat: RootJsonFormat[OnboardingContract] = jsonFormat2(OnboardingContract)
-  implicit val onboardingRequestFormat: RootJsonFormat[OnboardingRequest]   = jsonFormat7(OnboardingRequest)
-  implicit val contactFormat: RootJsonFormat[Contact]                       = jsonFormat1(Contact)
-  implicit val personInfoFormat: RootJsonFormat[PersonInfo]                 = jsonFormat5(PersonInfo)
-  implicit val attributeDataFormat: RootJsonFormat[Attribute]               = jsonFormat3(Attribute)
-  implicit val institutionFormat: RootJsonFormat[Institution]               = jsonFormat11(Institution)
-  implicit val productInfoDataFormat: RootJsonFormat[ProductInfo]           = jsonFormat3(ProductInfo)
-  implicit val onboardingDataFormat: RootJsonFormat[OnboardingData]         = jsonFormat16(OnboardingData)
-  implicit val onboardingInfoFormat: RootJsonFormat[OnboardingInfo]         = jsonFormat2(OnboardingInfo)
-  implicit val relationshipInfoFormat: RootJsonFormat[RelationshipInfo]     = jsonFormat16(RelationshipInfo)
-  implicit val productFormat: RootJsonFormat[Product]                       = jsonFormat2(Product)
-  implicit val productsFormat: RootJsonFormat[Products]                     = jsonFormat1(Products)
+
+  implicit val onboardingInstitutionRequestFormat: RootJsonFormat[OnboardingInstitutionRequest] =
+    jsonFormat6(OnboardingInstitutionRequest)
+  implicit val onboardingLegalUsersRequestFormat: RootJsonFormat[OnboardingLegalUsersRequest]   =
+    jsonFormat4(OnboardingLegalUsersRequest)
+  implicit val onboardingUsersRequestFormat: RootJsonFormat[OnboardingUsersRequest]             =
+    jsonFormat2(OnboardingUsersRequest)
+
+  implicit val contactFormat: RootJsonFormat[Contact]                   = jsonFormat1(Contact)
+  implicit val personInfoFormat: RootJsonFormat[PersonInfo]             = jsonFormat5(PersonInfo)
+  implicit val attributeDataFormat: RootJsonFormat[Attribute]           = jsonFormat3(Attribute)
+  implicit val institutionFormat: RootJsonFormat[Institution]           = jsonFormat11(Institution)
+  implicit val productInfoDataFormat: RootJsonFormat[ProductInfo]       = jsonFormat3(ProductInfo)
+  implicit val onboardingDataFormat: RootJsonFormat[OnboardingData]     = jsonFormat16(OnboardingData)
+  implicit val onboardingInfoFormat: RootJsonFormat[OnboardingInfo]     = jsonFormat2(OnboardingInfo)
+  implicit val relationshipInfoFormat: RootJsonFormat[RelationshipInfo] = jsonFormat16(RelationshipInfo)
+  implicit val productFormat: RootJsonFormat[Product]                   = jsonFormat2(Product)
+  implicit val productsFormat: RootJsonFormat[Products]                 = jsonFormat1(Products)
 
   final val serviceErrorCodePrefix: String = "002"
   final val defaultProblemType: String     = "about:blank"
