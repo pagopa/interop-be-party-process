@@ -45,13 +45,13 @@ paths:
       description: Return ok
       operationId: getOnboardingInfo
       parameters:
-        - name: id
+        - name: institutionId
           description: The internal identifier of the institution
           in: query
           schema:
             type: string
             format: uuid
-        - name: externalId
+        - name: institutionExternalId
           description: The external Id of an institution you can filter the retrieval with
           in: query
           schema:
@@ -230,7 +230,7 @@ paths:
   /institutions/{id}/relationships:
     get:
       tags:
-        - external
+        - process
       summary: returns the relationships related to the institution
       description: Return ok
       operationId: getUserInstitutionRelationships
@@ -369,7 +369,7 @@ paths:
   /institutions/{id}/products:
     get:
       tags:
-        - external
+        - process
       summary: institution products retrieval
       description: retrieves the products this institution is related to.
       operationId: retrieveInstitutionProducts
@@ -769,7 +769,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/User'
-        externalId:
+        institutionExternalId:
           type: string
         institutionUpdate:
           $ref: '#/components/schemas/InstitutionUpdate'
@@ -783,7 +783,7 @@ components:
       additionalProperties: false
       required:
         - users
-        - externalId
+        - institutionExternalId
         - origin
         - billing
         - contract
@@ -793,7 +793,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/User'
-        id:
+        institutionId:
           type: string
           description: institution id
           format: uuid
@@ -801,7 +801,7 @@ components:
       additionalProperties: false
       required:
         - users
-        - id
+        - institutionId
     OnboardingContract:
       properties:
         version:
