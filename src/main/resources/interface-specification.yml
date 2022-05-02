@@ -1014,7 +1014,6 @@ components:
         - taxCode
         - attributes
         - origin
-        - institutionType
       additionalProperties: false
     Problem:
       properties:

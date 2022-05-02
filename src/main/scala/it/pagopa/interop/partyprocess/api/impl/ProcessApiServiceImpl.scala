@@ -329,17 +329,30 @@ class ProcessApiServiceImpl(
       validManager     <- getValidManager(activeManager, validUsers)
       personsWithRoles <- Future.traverse(validUsers)(addUser)
       relationships    <- Future.traverse(personsWithRoles) { case (person, role, product, productRole) =>
-        val isManager = role == PartyRole.MANAGER
-        createOrGetRelationship(
-          person.id,
-          institution.id,
-          roleToDependency(role),
-          product,
-          productRole,
-          if (isManager) onboardingRequest.pricingPlan else Option.empty,
-          if (isManager) onboardingRequest.institutionUpdate else Option.empty,
-          if (isManager) onboardingRequest.billing else Option.empty
-        )(bearer)
+        role match {
+          case PartyRole.MANAGER =>
+            createOrGetRelationship(
+              person.id,
+              institution.id,
+              roleToDependency(role),
+              product,
+              productRole,
+              onboardingRequest.pricingPlan,
+              onboardingRequest.institutionUpdate,
+              onboardingRequest.billing
+            )(bearer)
+          case _                 =>
+            createOrGetRelationship(
+              person.id,
+              institution.id,
+              roleToDependency(role),
+              product,
+              productRole,
+              None,
+              None,
+              None
+            )(bearer)
+        }
       }
       contract         <- onboardingRequest.contract.toFuture(ContractNotFound(onboardingRequest.institutionId))
       contractTemplate <- getFileAsString(contract.path)
@@ -377,44 +390,30 @@ class ProcessApiServiceImpl(
       ApplicationConfiguration.onboardingMailTaxCodePlaceholder     -> currentUser.externalId
     )
 
-    val institutionInfoParameters: scala.collection.mutable.Map[String, String] = scala.collection.mutable.Map()
-    if (onboardingRequest.institutionUpdate != null) {
-      onboardingRequest.institutionUpdate.map(i => {
-        i.institutionType.map(o =>
-          institutionInfoParameters.put(
-            ApplicationConfiguration.onboardingMailInstitutionInfoInstitutionTypePlaceholder,
-            o
-          )
-        )
-        i.description.map(o =>
-          institutionInfoParameters.put(ApplicationConfiguration.onboardingMailInstitutionInfoDescriptionPlaceholder, o)
-        )
-        i.digitalAddress.map(o =>
-          institutionInfoParameters.put(
-            ApplicationConfiguration.onboardingMailInstitutionInfoDigitalAddressPlaceholder,
-            o
-          )
-        )
-        i.address.map(o =>
-          institutionInfoParameters.put(ApplicationConfiguration.onboardingMailInstitutionInfoAddressPlaceholder, o)
-        )
-        i.taxCode.map(o =>
-          institutionInfoParameters.put(ApplicationConfiguration.onboardingMailInstitutionInfoTaxCodePlaceholder, o)
-        )
-      })
+    val institutionInfoParameters: Map[String, String] = {
+      onboardingRequest.institutionUpdate.fold(Map.empty[String, String]) { iu =>
+        Seq(
+          ApplicationConfiguration.onboardingMailInstitutionInfoInstitutionTypePlaceholder.some.zip(iu.institutionType),
+          ApplicationConfiguration.onboardingMailInstitutionInfoDescriptionPlaceholder.some.zip(iu.description),
+          ApplicationConfiguration.onboardingMailInstitutionInfoDigitalAddressPlaceholder.some.zip(iu.digitalAddress),
+          ApplicationConfiguration.onboardingMailInstitutionInfoAddressPlaceholder.some.zip(iu.address),
+          ApplicationConfiguration.onboardingMailInstitutionInfoTaxCodePlaceholder.some.zip(iu.taxCode)
+        ).flatten.toMap
+      }
     }
 
-    val billingParameters: scala.collection.mutable.Map[String, String] = scala.collection.mutable.Map()
-    if (onboardingRequest.pricingPlan != null) {
-      onboardingRequest.pricingPlan.map(o =>
-        billingParameters.put(ApplicationConfiguration.onboardingMailBillingPricingPlanPlaceholder, o)
-      )
-    }
-    if (onboardingRequest.billing != null) {
-      onboardingRequest.billing.map(b => {
-        billingParameters.put(ApplicationConfiguration.onboardingMailBillingVatNumberPlaceholder, b.vatNumber)
-        billingParameters.put(ApplicationConfiguration.onboardingMailBillingRecipientCodePlaceholder, b.recipientCode)
-      })
+    val billingParameters: Map[String, String] = {
+      Seq(
+        onboardingRequest.pricingPlan.fold(Map.empty[String, String])(o =>
+          Map(ApplicationConfiguration.onboardingMailBillingPricingPlanPlaceholder -> o)
+        ),
+        onboardingRequest.billing.fold(Map.empty[String, String])(b =>
+          Map(
+            ApplicationConfiguration.onboardingMailBillingVatNumberPlaceholder     -> b.vatNumber,
+            ApplicationConfiguration.onboardingMailBillingRecipientCodePlaceholder -> b.recipientCode
+          )
+        )
+      ).flatten.toMap
     }
 
     val bodyParameters: Map[String, String] =
@@ -688,7 +687,7 @@ class ProcessApiServiceImpl(
         products = Set.empty,
         address = institution.address,
         zipCode = institution.zipCode,
-        institutionType = "TBD",
+        institutionType = Option.empty,
         origin = institution.origin
       )
       institution <- partyManagementService.createInstitution(seed)(bearer)
