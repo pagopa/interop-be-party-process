@@ -52,6 +52,24 @@ object ApplicationConfiguration {
   val onboardingMailProductPlaceholder: String                   =
     config.getString("party-process.mail-template.onboarding-mail-placeholders.product")
 
+  val onboardingMailInstitutionInfoInstitutionTypePlaceholder: String =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.institution-info.institutionType")
+  val onboardingMailInstitutionInfoDescriptionPlaceholder: String     =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.institution-info.description")
+  val onboardingMailInstitutionInfoDigitalAddressPlaceholder: String  =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.institution-info.digitalAddress")
+  val onboardingMailInstitutionInfoAddressPlaceholder: String         =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.institution-info.address")
+  val onboardingMailInstitutionInfoTaxCodePlaceholder: String         =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.institution-info.taxCode")
+
+  val onboardingMailBillingPricingPlanPlaceholder: String   =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.billing.pricingPlan")
+  val onboardingMailBillingVatNumberPlaceholder: String     =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.billing.vatNumber")
+  val onboardingMailBillingRecipientCodePlaceholder: String =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.billing.recipientCode")
+
   val storageContainer: String = config.getString("party-process.storage.container")
 
   val jwtAudience: Set[String] = config.getString("party-process.jwt.audience").split(",").toSet.filter(_.nonEmpty)

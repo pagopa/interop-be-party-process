@@ -30,7 +30,7 @@ import it.pagopa.interop.partyprocess.error.SignatureValidationError
 import it.pagopa.interop.partyprocess.model.Certification.NONE
 import it.pagopa.interop.partyprocess.model.PartyRole.{DELEGATE, MANAGER, OPERATOR, SUB_DELEGATE}
 import it.pagopa.interop.partyprocess.model.RelationshipState.ACTIVE
-import it.pagopa.interop.partyprocess.model._
+import it.pagopa.interop.partyprocess.model.{InstitutionUpdate, Billing, _}
 import it.pagopa.interop.partyprocess.server.Controller
 import it.pagopa.interop.partyregistryproxy.client.{model => PartyProxyDependencies}
 import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.Certification.{
@@ -181,7 +181,9 @@ class PartyProcessSpec
       attributes = Seq.empty,
       taxCode = "123",
       address = "address",
-      zipCode = "zipCode"
+      zipCode = "zipCode",
+      origin = "IPA",
+      institutionType = Option("PA")
     )
 
     val manager =
@@ -218,7 +220,21 @@ class PartyProcessSpec
         PartyManagementDependency.RelationshipProduct(id = "product", role = "admin", createdAt = OffsetDateTime.now()),
       state = state,
       createdAt = OffsetDateTime.now(),
-      updatedAt = None
+      updatedAt = None,
+      pricingPlan = Option("pricingPlan"),
+      institutionUpdate = Option(
+        PartyManagementDependency.InstitutionUpdate(
+          institutionType = Option("OVERRIDE_institutionType"),
+          description = Option("OVERRIDE_description"),
+          digitalAddress = Option("OVERRIDE_digitalAddress"),
+          address = Option("OVERRIDE_address"),
+          taxCode = Option("OVERRIDE_taxCode")
+        )
+      ),
+      billing = Option(
+        PartyManagementDependency
+          .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+      )
     )
 
     (mockUserRegistryService
@@ -312,7 +328,9 @@ class PartyProcessSpec
       attributes = Seq.empty,
       taxCode = "123",
       address = "address",
-      zipCode = "zipCode"
+      zipCode = "zipCode",
+      origin = "IPA",
+      institutionType = Option("PA")
     )
 
     val file = new File("src/test/resources/fake.file")
@@ -355,7 +373,21 @@ class PartyProcessSpec
               .RelationshipProduct(id = pr, role = "admin", createdAt = OffsetDateTime.now()),
             state = st,
             createdAt = OffsetDateTime.now(),
-            updatedAt = None
+            updatedAt = None,
+            pricingPlan = Option("pricingPlan"),
+            institutionUpdate = Option(
+              PartyManagementDependency.InstitutionUpdate(
+                institutionType = Option("OVERRIDE_institutionType"),
+                description = Option("OVERRIDE_description"),
+                digitalAddress = Option("OVERRIDE_digitalAddress"),
+                address = Option("OVERRIDE_address"),
+                taxCode = Option("OVERRIDE_taxCode")
+              )
+            ),
+            billing = Option(
+              PartyManagementDependency
+                .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+            )
           )
         )
       case (Some(st), None)     =>
@@ -372,7 +404,21 @@ class PartyProcessSpec
               .RelationshipProduct(id = "product", role = "admin", createdAt = OffsetDateTime.now()),
             state = st,
             createdAt = OffsetDateTime.now(),
-            updatedAt = None
+            updatedAt = None,
+            pricingPlan = Option("pricingPlan"),
+            institutionUpdate = Option(
+              PartyManagementDependency.InstitutionUpdate(
+                institutionType = Option("OVERRIDE_institutionType"),
+                description = Option("OVERRIDE_description"),
+                digitalAddress = Option("OVERRIDE_digitalAddress"),
+                address = Option("OVERRIDE_address"),
+                taxCode = Option("OVERRIDE_taxCode")
+              )
+            ),
+            billing = Option(
+              PartyManagementDependency
+                .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+            )
           )
         )
       case _                    => Seq.empty
@@ -521,7 +567,18 @@ class PartyProcessSpec
     val req = OnboardingRequest(
       users = Seq(manager, delegate),
       institutionId = institutionId,
-      contract = Some(OnboardingContract("a", "b"))
+      contract = Some(OnboardingContract("a", "b")),
+      pricingPlan = Option("pricingPlan"),
+      institutionUpdate = Option(
+        InstitutionUpdate(
+          institutionType = Option("OVERRIDE_institutionType"),
+          description = Option("OVERRIDE_description"),
+          digitalAddress = Option("OVERRIDE_digitalAddress"),
+          address = Option("OVERRIDE_address"),
+          taxCode = Option("OVERRIDE_taxCode")
+        )
+      ),
+      billing = Option(Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true)))
     )
 
     val data = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
@@ -545,7 +602,9 @@ class PartyProcessSpec
         attributes = Seq.empty,
         taxCode = "",
         address = "",
-        zipCode = ""
+        zipCode = "",
+        origin = "IPA",
+        institutionType = Option("PA")
       )
 
       val relationship =
@@ -557,7 +616,21 @@ class PartyProcessSpec
           product = defaultProduct,
           state = PartyManagementDependency.RelationshipState.ACTIVE,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         )
 
       (mockPartyManagementService
@@ -617,7 +690,9 @@ class PartyProcessSpec
         attributes = Seq.empty,
         taxCode = "",
         address = "",
-        zipCode = ""
+        zipCode = "",
+        origin = "IPA",
+        institutionType = Option("PA")
       )
 
       (mockPartyManagementService
@@ -697,7 +772,21 @@ class PartyProcessSpec
           product = defaultProduct,
           state = PartyManagementDependency.RelationshipState.ACTIVE,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         )
       val relationship2 =
         PartyManagementDependency.Relationship(
@@ -725,7 +814,9 @@ class PartyProcessSpec
         ),
         taxCode = "123",
         address = "address",
-        zipCode = "zipCode"
+        zipCode = "zipCode",
+        origin = "IPA",
+        institutionType = Option("PA")
       )
       val institution2 = PartyManagementDependency.Institution(
         id = orgPartyId2,
@@ -739,7 +830,9 @@ class PartyProcessSpec
         ),
         taxCode = "123",
         address = "address",
-        zipCode = "zipCode"
+        zipCode = "zipCode",
+        origin = "IPA",
+        institutionType = Option("PA")
       )
 
       val expected = OnboardingInfo(
@@ -869,7 +962,21 @@ class PartyProcessSpec
           product = defaultProduct,
           state = PartyManagementDependency.RelationshipState.ACTIVE,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         )
 
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship1))
@@ -886,7 +993,9 @@ class PartyProcessSpec
         ),
         taxCode = "123",
         address = "address",
-        zipCode = "zipCode"
+        zipCode = "zipCode",
+        origin = "IPA",
+        institutionType = Option("PA")
       )
 
       val expected = OnboardingInfo(
@@ -1002,7 +1111,21 @@ class PartyProcessSpec
           product = defaultProduct,
           state = PartyManagementDependency.RelationshipState.SUSPENDED,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         )
 
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship))
@@ -1015,7 +1138,9 @@ class PartyProcessSpec
         attributes = Seq(attribute1, attribute2, attribute3),
         taxCode = "123",
         address = "address",
-        zipCode = "zipCode"
+        zipCode = "zipCode",
+        origin = "IPA",
+        institutionType = Option("PA")
       )
       (mockUserRegistryService
         .getUserById(_: UUID))
@@ -1212,7 +1337,9 @@ class PartyProcessSpec
               attributes = Seq.empty,
               taxCode = "123",
               address = "address",
-              zipCode = "zipCode"
+              zipCode = "zipCode",
+              origin = "IPA",
+              institutionType = Option("PA")
             )
           )
         )
@@ -1258,7 +1385,9 @@ class PartyProcessSpec
         attributes = Seq.empty,
         taxCode = "123",
         address = "address",
-        zipCode = "zipCode"
+        zipCode = "zipCode",
+        origin = "IPA",
+        institutionType = Option("PA")
       )
 
       val relationships =
@@ -1272,7 +1401,21 @@ class PartyProcessSpec
               product = defaultProduct,
               state = PartyManagementDependency.RelationshipState.ACTIVE,
               createdAt = defaultRelationshipTimestamp,
-              updatedAt = None
+              updatedAt = None,
+              pricingPlan = Option("pricingPlan"),
+              institutionUpdate = Option(
+                PartyManagementDependency.InstitutionUpdate(
+                  institutionType = Option("OVERRIDE_institutionType"),
+                  description = Option("OVERRIDE_description"),
+                  digitalAddress = Option("OVERRIDE_digitalAddress"),
+                  address = Option("OVERRIDE_address"),
+                  taxCode = Option("OVERRIDE_taxCode")
+                )
+              ),
+              billing = Option(
+                PartyManagementDependency
+                  .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+              )
             )
           )
         )
@@ -1451,7 +1594,9 @@ class PartyProcessSpec
               attributes = Seq.empty,
               taxCode = "123",
               address = "address",
-              zipCode = "zipCode"
+              zipCode = "zipCode",
+              origin = "IPA",
+              institutionType = Option("PA")
             )
           )
         )
@@ -1498,7 +1643,9 @@ class PartyProcessSpec
         attributes = Seq.empty,
         taxCode = "123",
         address = "address",
-        zipCode = "zipCode"
+        zipCode = "zipCode",
+        origin = "IPA",
+        institutionType = Option("PA")
       )
 
       val relationships =
@@ -1512,7 +1659,21 @@ class PartyProcessSpec
               product = defaultProduct,
               state = PartyManagementDependency.RelationshipState.ACTIVE,
               createdAt = defaultRelationshipTimestamp,
-              updatedAt = None
+              updatedAt = None,
+              pricingPlan = Option("pricingPlan"),
+              institutionUpdate = Option(
+                PartyManagementDependency.InstitutionUpdate(
+                  institutionType = Option("OVERRIDE_institutionType"),
+                  description = Option("OVERRIDE_description"),
+                  digitalAddress = Option("OVERRIDE_digitalAddress"),
+                  address = Option("OVERRIDE_address"),
+                  taxCode = Option("OVERRIDE_taxCode")
+                )
+              ),
+              billing = Option(
+                PartyManagementDependency
+                  .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+              )
             )
           )
         )
@@ -1878,7 +2039,9 @@ class PartyProcessSpec
         taxCode = "",
         attributes = Seq.empty,
         address = "",
-        zipCode = ""
+        zipCode = "",
+        origin = "",
+        institutionType = Option.empty
       )
 
       val adminRelationship =
@@ -1911,7 +2074,21 @@ class PartyProcessSpec
           product = defaultProduct,
           state = PartyManagementDependency.RelationshipState.ACTIVE,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         )
 
       val userRegistryUser1 = UserRegistryUser(
@@ -2083,7 +2260,19 @@ class PartyProcessSpec
           product = defaultProductInfo,
           state = RelationshipState.ACTIVE,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing =
+            Option(Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true)))
         ),
         RelationshipInfo(
           id = relationshipId2,
@@ -2137,7 +2326,9 @@ class PartyProcessSpec
         taxCode = "",
         attributes = Seq.empty,
         address = "",
-        zipCode = ""
+        zipCode = "",
+        origin = "",
+        institutionType = Option.empty
       )
 
       val adminRelationship =
@@ -2323,7 +2514,9 @@ class PartyProcessSpec
         taxCode = "",
         attributes = Seq.empty,
         address = "",
-        zipCode = ""
+        zipCode = "",
+        origin = "",
+        institutionType = Option.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -2351,7 +2544,21 @@ class PartyProcessSpec
           product = defaultProduct,
           state = PartyManagementDependency.RelationshipState.ACTIVE,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         )
 
       val relationship2 =
@@ -2489,7 +2696,9 @@ class PartyProcessSpec
         taxCode = "",
         attributes = Seq.empty,
         address = "",
-        zipCode = ""
+        zipCode = "",
+        origin = "",
+        institutionType = Option.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -2632,7 +2841,9 @@ class PartyProcessSpec
         taxCode = "",
         attributes = Seq.empty,
         address = "",
-        zipCode = ""
+        zipCode = "",
+        origin = "",
+        institutionType = Option.empty
       )
 
       val relationshipId1 = UUID.randomUUID()
@@ -2646,7 +2857,21 @@ class PartyProcessSpec
           product = defaultProduct,
           state = PartyManagementDependency.RelationshipState.ACTIVE,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         )
 
       val adminRelationships =
@@ -2752,7 +2977,19 @@ class PartyProcessSpec
         product = defaultProductInfo,
         state = RelationshipState.ACTIVE,
         createdAt = defaultRelationshipTimestamp,
-        updatedAt = None
+        updatedAt = None,
+        pricingPlan = Option("pricingPlan"),
+        institutionUpdate = Option(
+          InstitutionUpdate(
+            institutionType = Option("OVERRIDE_institutionType"),
+            description = Option("OVERRIDE_description"),
+            digitalAddress = Option("OVERRIDE_digitalAddress"),
+            address = Option("OVERRIDE_address"),
+            taxCode = Option("OVERRIDE_taxCode")
+          )
+        ),
+        billing =
+          Option(Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true)))
       )
     }
 
@@ -2770,7 +3007,9 @@ class PartyProcessSpec
         taxCode = "",
         attributes = Seq.empty,
         address = "",
-        zipCode = ""
+        zipCode = "",
+        origin = "",
+        institutionType = Option.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -2785,7 +3024,21 @@ class PartyProcessSpec
           product = defaultProduct,
           state = PartyManagementDependency.RelationshipState.ACTIVE,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         )
       val relationship2     =
         PartyManagementDependency.Relationship(
@@ -2919,7 +3172,9 @@ class PartyProcessSpec
         taxCode = "",
         attributes = Seq.empty,
         address = "",
-        zipCode = ""
+        zipCode = "",
+        origin = "",
+        institutionType = Option.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -2935,7 +3190,21 @@ class PartyProcessSpec
           product = defaultProduct,
           state = PartyManagementDependency.RelationshipState.ACTIVE,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         )
 
       val relationship3 =
@@ -3116,7 +3385,9 @@ class PartyProcessSpec
         taxCode = "",
         attributes = Seq.empty,
         address = "",
-        zipCode = ""
+        zipCode = "",
+        origin = "",
+        institutionType = Option.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -3433,7 +3704,9 @@ class PartyProcessSpec
         attributes = Seq.empty,
         taxCode = "123",
         address = "address",
-        zipCode = "zipCode"
+        zipCode = "zipCode",
+        origin = "",
+        institutionType = Option.empty
       )
 
       val file = new File("src/test/resources/fake.file")
@@ -3473,7 +3746,21 @@ class PartyProcessSpec
           product = defaultProduct,
           state = PartyManagementDependency.RelationshipState.ACTIVE,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         )
 
       val delegateRelationship =
@@ -3779,7 +4066,9 @@ class PartyProcessSpec
         attributes = Seq.empty,
         taxCode = "123",
         address = "address",
-        zipCode = "zipCode"
+        zipCode = "zipCode",
+        origin = "IPA",
+        institutionType = Option("PA")
       )
 
       val managerId = UUID.randomUUID()
@@ -3807,7 +4096,21 @@ class PartyProcessSpec
           product = defaultProduct,
           state = managerState,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         )
 
       (mockUserRegistryService
@@ -3863,7 +4166,9 @@ class PartyProcessSpec
         attributes = Seq.empty,
         taxCode = "123",
         address = "address",
-        zipCode = "zipCode"
+        zipCode = "zipCode",
+        origin = "IPA",
+        institutionType = Option("PA")
       )
 
       val managerId = UUID.randomUUID()
@@ -3901,7 +4206,21 @@ class PartyProcessSpec
             .RelationshipProduct(id = "product", role = "admin", createdAt = defaultProductTimestamp),
           state = PartyManagementDependency.RelationshipState.PENDING,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         )
 
 //      (mockJWTReader
@@ -3973,7 +4292,9 @@ class PartyProcessSpec
         taxCode = "",
         attributes = Seq.empty,
         address = "",
-        zipCode = ""
+        zipCode = "",
+        origin = "",
+        institutionType = Option.empty
       )
 
       val managerId        = UUID.randomUUID()
@@ -3993,7 +4314,21 @@ class PartyProcessSpec
           product = defaultProduct.copy(id = activeProduct),
           state = PartyManagementDependency.RelationshipState.ACTIVE,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         ),
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
@@ -4006,7 +4341,21 @@ class PartyProcessSpec
           product = defaultProduct.copy(id = pendingProduct),
           state = PartyManagementDependency.RelationshipState.PENDING,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         ),
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
@@ -4019,7 +4368,21 @@ class PartyProcessSpec
           product = defaultProduct.copy(id = suspendedProduct),
           state = PartyManagementDependency.RelationshipState.SUSPENDED,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         )
       )
 
@@ -4091,7 +4454,9 @@ class PartyProcessSpec
         taxCode = "",
         attributes = Seq.empty,
         address = "",
-        zipCode = ""
+        zipCode = "",
+        origin = "",
+        institutionType = Option.empty
       )
 
       val managerId        = UUID.randomUUID()
@@ -4112,7 +4477,21 @@ class PartyProcessSpec
           product = defaultProduct.copy(id = pendingProduct),
           state = PartyManagementDependency.RelationshipState.PENDING,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         ),
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
@@ -4125,7 +4504,21 @@ class PartyProcessSpec
           product = defaultProduct.copy(id = activeProduct),
           state = PartyManagementDependency.RelationshipState.ACTIVE,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         ),
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
@@ -4138,7 +4531,21 @@ class PartyProcessSpec
           product = defaultProduct.copy(id = suspendedProduct),
           state = PartyManagementDependency.RelationshipState.SUSPENDED,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         ),
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
@@ -4151,7 +4558,21 @@ class PartyProcessSpec
           product = defaultProduct.copy(id = deletedProduct),
           state = PartyManagementDependency.RelationshipState.DELETED,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         )
       )
 
@@ -4222,7 +4643,9 @@ class PartyProcessSpec
         taxCode = "",
         attributes = Seq.empty,
         address = "",
-        zipCode = ""
+        zipCode = "",
+        origin = "",
+        institutionType = Option.empty
       )
 
       val managerId        = UUID.randomUUID()
@@ -4243,7 +4666,21 @@ class PartyProcessSpec
           product = defaultProduct.copy(id = pendingProduct),
           state = PartyManagementDependency.RelationshipState.PENDING,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         ),
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
@@ -4256,7 +4693,21 @@ class PartyProcessSpec
           product = defaultProduct.copy(id = activeProduct),
           state = PartyManagementDependency.RelationshipState.ACTIVE,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         ),
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
@@ -4269,7 +4720,21 @@ class PartyProcessSpec
           product = defaultProduct.copy(id = suspendedProduct),
           state = PartyManagementDependency.RelationshipState.SUSPENDED,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         ),
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
@@ -4282,7 +4747,21 @@ class PartyProcessSpec
           product = defaultProduct.copy(id = deletedProduct),
           state = PartyManagementDependency.RelationshipState.DELETED,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         ),
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
@@ -4295,7 +4774,21 @@ class PartyProcessSpec
           product = defaultProduct.copy(id = deletedProduct),
           state = PartyManagementDependency.RelationshipState.PENDING,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         )
       )
 //
@@ -4370,7 +4863,9 @@ class PartyProcessSpec
         taxCode = "",
         attributes = Seq.empty,
         address = "",
-        zipCode = ""
+        zipCode = "",
+        origin = "",
+        institutionType = Option.empty
       )
 
       val managerId        = UUID.randomUUID()
@@ -4391,7 +4886,21 @@ class PartyProcessSpec
           product = defaultProduct.copy(id = pendingProduct),
           state = PartyManagementDependency.RelationshipState.PENDING,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         ),
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
@@ -4404,7 +4913,21 @@ class PartyProcessSpec
           product = defaultProduct.copy(id = activeProduct),
           state = PartyManagementDependency.RelationshipState.ACTIVE,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         ),
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
@@ -4417,7 +4940,21 @@ class PartyProcessSpec
           product = defaultProduct.copy(id = suspendedProduct),
           state = PartyManagementDependency.RelationshipState.SUSPENDED,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         ),
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
@@ -4430,7 +4967,21 @@ class PartyProcessSpec
           product = defaultProduct.copy(id = deletedProduct),
           state = PartyManagementDependency.RelationshipState.DELETED,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         )
       )
 
@@ -4505,7 +5056,9 @@ class PartyProcessSpec
         taxCode = "",
         attributes = Seq.empty,
         address = "",
-        zipCode = ""
+        zipCode = "",
+        origin = "",
+        institutionType = Option.empty
       )
 
       val managerId       = UUID.randomUUID()
@@ -4524,7 +5077,21 @@ class PartyProcessSpec
           product = defaultProduct.copy(id = pendingProduct1),
           state = PartyManagementDependency.RelationshipState.PENDING,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         ),
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
@@ -4537,7 +5104,21 @@ class PartyProcessSpec
           product = defaultProduct.copy(id = pendingProduct2),
           state = PartyManagementDependency.RelationshipState.PENDING,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         )
       )
 
@@ -4608,7 +5189,9 @@ class PartyProcessSpec
         taxCode = "",
         attributes = Seq.empty,
         address = "",
-        zipCode = ""
+        zipCode = "",
+        origin = "",
+        institutionType = Option.empty
       )
 
       val managerId      = UUID.randomUUID()
@@ -4627,7 +5210,21 @@ class PartyProcessSpec
           product = defaultProduct.copy(id = activeProduct1),
           state = PartyManagementDependency.RelationshipState.ACTIVE,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         ),
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
@@ -4640,7 +5237,21 @@ class PartyProcessSpec
           product = defaultProduct.copy(id = activeProduct2),
           state = PartyManagementDependency.RelationshipState.ACTIVE,
           createdAt = defaultRelationshipTimestamp,
-          updatedAt = None
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType"),
+              description = Option("OVERRIDE_description"),
+              digitalAddress = Option("OVERRIDE_digitalAddress"),
+              address = Option("OVERRIDE_address"),
+              taxCode = Option("OVERRIDE_taxCode")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+          )
         )
       )
 
@@ -4711,7 +5322,9 @@ class PartyProcessSpec
         taxCode = "",
         attributes = Seq.empty,
         address = "",
-        zipCode = ""
+        zipCode = "",
+        origin = "",
+        institutionType = Option.empty
       )
 
       (mockPartyManagementService

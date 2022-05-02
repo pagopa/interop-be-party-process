@@ -658,6 +658,17 @@ components:
             $ref: '#/components/schemas/User'
         institutionId:
           type: string
+        origin:
+          type: string
+          description: The origin form which the institution has been retrieved
+          example: IPA
+        institutionUpdate:
+          $ref: '#/components/schemas/InstitutionUpdate'
+        pricingPlan:
+          type: string
+          description: pricing plan
+        billing:
+          $ref: '#/components/schemas/Billing'
         contract:
           $ref: '#/components/schemas/OnboardingContract'
       additionalProperties: false
@@ -702,6 +713,13 @@ components:
           $ref: '#/components/schemas/ProductInfo'
         state:
           $ref: '#/components/schemas/RelationshipState'
+        pricingPlan:
+          type: string
+          description: pricing plan
+        institutionUpdate:
+          $ref: '#/components/schemas/InstitutionUpdate'
+        billing:
+          $ref: '#/components/schemas/Billing'
         createdAt:
           type: string
           format: date-time
@@ -823,6 +841,19 @@ components:
           $ref: '#/components/schemas/PartyRole'
         productInfo:
           $ref: '#/components/schemas/ProductInfo'
+        institutionType:
+          type: string
+          description: institution type
+          example: PA
+        pricingPlan:
+          type: string
+          description: pricing plan
+        billing:
+          $ref: '#/components/schemas/Billing'
+        origin:
+          type: string
+          description: The origin form which the institution has been retrieved
+          example: IPA
         attributes:
           type: array
           description: certified attributes bound to this institution
@@ -963,6 +994,14 @@ components:
         taxCode:
           description: institution tax code
           type: string
+        origin:
+          type: string
+          description: The origin form which the institution has been retrieved
+          example: IPA
+        institutionType:
+          type: string
+          description: institution type
+          example: PA
         attributes:
           $ref: '#/components/schemas/Attributes'
       required:
@@ -974,6 +1013,7 @@ components:
         - zipCode
         - taxCode
         - attributes
+        - origin
       additionalProperties: false
     Problem:
       properties:
@@ -1029,6 +1069,42 @@ components:
       required:
         - code
         - detail
+    InstitutionUpdate:
+      type: object
+      properties:
+        institutionType:
+          type: string
+          example: PA
+          description: The type of the institution
+        description:
+          type: string
+          example: AGENCY X
+        digitalAddress:
+          example: email@pec.mail.org
+          format: email
+          type: string
+        address:
+          example: via del campo
+          type: string
+        taxCode:
+          description: institution tax code
+          type: string
+    Billing:
+      type: object
+      properties:
+        vatNumber:
+          description: institution vat number
+          type: string
+        recipientCode:
+          description: institution recipient code
+          type: string
+        publicServices:
+          description: institution recipient code
+          type: boolean
+      required:
+        - vatNumber
+        - recipientCode
+      additionalProperties: false
   securitySchemes:
     bearerAuth:
       type: http
