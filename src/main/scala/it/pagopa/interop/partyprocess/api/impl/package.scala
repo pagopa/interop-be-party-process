@@ -4,6 +4,8 @@ import akka.http.scaladsl.model.StatusCode
 import it.pagopa.interop.commons.utils.SprayCommonFormats.{offsetDateTimeFormat, uuidFormat}
 import it.pagopa.interop.commons.utils.errors.ComponentError
 import it.pagopa.interop.partyprocess.model._
+import it.pagopa.userreg.client.model.CertifiableFieldResourceOfstring
+import it.pagopa.userreg.client.model.CertifiableFieldResourceOfstringEnums.Certification.{NONE => CertificationEnumsNone}
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
 package object impl extends DefaultJsonProtocol {
@@ -50,4 +52,7 @@ package object impl extends DefaultJsonProtocol {
         )
       )
     )
+
+  def notCertifiedString(value: String): CertifiableFieldResourceOfstring =
+    CertifiableFieldResourceOfstring(value = value, certification =  CertificationEnumsNone)
 }

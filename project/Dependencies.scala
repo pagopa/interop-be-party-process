@@ -30,9 +30,6 @@ object Dependencies {
     lazy val partyProxyClient =
       namespace %% "interop-be-party-registry-proxy-client" % partyProxyVersion
 
-    lazy val userRegistryManagementClient =
-      namespace %% "pdnd-interop-uservice-user-registry-management-client" % userRegistryManagementVersion
-
     lazy val commons     = namespace %% "interop-commons-utils"        % commonsVersion
     lazy val commonsMail = namespace %% "interop-commons-mail-manager" % commonsVersion
     lazy val commonsFile = namespace %% "interop-commons-file-manager" % commonsVersion
@@ -121,7 +118,6 @@ object Dependencies {
       pagopa.commonsMail                  % Compile,
       pagopa.partyManagementClient        % Compile,
       pagopa.partyProxyClient             % Compile,
-      pagopa.userRegistryManagementClient % Compile,
       akka.testkit                        % Test,
       scalatest.core                      % Test,
       scalamock.core                      % Test

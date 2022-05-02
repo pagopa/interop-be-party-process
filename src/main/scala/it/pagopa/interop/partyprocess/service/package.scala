@@ -1,8 +1,8 @@
 package it.pagopa.interop.partyprocess
 
 import akka.actor.ActorSystem
+import it.pagopa._
 import it.pagopa.interop._
-import it.pagopa.pdnd.interop.uservice._
 
 package object service {
 
@@ -10,7 +10,7 @@ package object service {
 
   type PartyProxyInvoker             = partyregistryproxy.client.invoker.ApiInvoker
   type PartyManagementInvoker        = partymanagement.client.invoker.ApiInvoker
-  type UserRegistryManagementInvoker = userregistrymanagement.client.invoker.ApiInvoker
+  type UserRegistryManagementInvoker = userreg.client.invoker.ApiInvoker
 
   object PartyProxyInvoker {
     def apply()(implicit actorSystem: ActorSystem): PartyProxyInvoker = partyregistryproxy.client.invoker.ApiInvoker()
@@ -23,6 +23,6 @@ package object service {
 
   object UserRegistryManagementInvoker {
     def apply()(implicit actorSystem: ActorSystem): UserRegistryManagementInvoker =
-      userregistrymanagement.client.invoker.ApiInvoker(userregistrymanagement.client.api.EnumsSerializers.all)
+      userreg.client.invoker.ApiInvoker(userreg.client.api.EnumsSerializers.all)
   }
 }
