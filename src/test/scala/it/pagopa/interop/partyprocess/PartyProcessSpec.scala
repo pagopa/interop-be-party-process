@@ -957,7 +957,7 @@ class PartyProcessSpec
           Some(orgPartyId1),
           Seq(PartyManagementDependency.PartyRole.MANAGER),
           Seq(PartyManagementDependency.RelationshipState.ACTIVE),
-          Seq.empty,
+          Seq(defaultProduct.id),
           Seq.empty,
           *
         )
@@ -978,7 +978,7 @@ class PartyProcessSpec
           Some(orgPartyId2),
           Seq(PartyManagementDependency.PartyRole.MANAGER),
           Seq(PartyManagementDependency.RelationshipState.ACTIVE),
-          Seq.empty,
+          Seq(defaultProduct.id),
           Seq.empty,
           *
         )
@@ -1155,7 +1155,7 @@ class PartyProcessSpec
           Some(orgPartyId),
           Seq(PartyManagementDependency.PartyRole.MANAGER),
           Seq(PartyManagementDependency.RelationshipState.ACTIVE),
-          Seq.empty,
+          Seq(defaultProduct.id),
           Seq.empty,
           *
         )
@@ -1307,7 +1307,7 @@ class PartyProcessSpec
           Some(orgPartyId),
           Seq(PartyManagementDependency.PartyRole.MANAGER),
           Seq(PartyManagementDependency.RelationshipState.ACTIVE),
-          Seq.empty,
+          Seq(defaultProduct.id),
           Seq.empty,
           *
         )

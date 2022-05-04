@@ -172,7 +172,7 @@ class ProcessApiServiceImpl(
           to = Some(institution.id),
           roles = Seq(PartyManagementDependency.PartyRole.MANAGER),
           states = Seq(PartyManagementDependency.RelationshipState.ACTIVE),
-          products = Seq.empty,
+          products = Seq(relationship.product.id),
           productRoles = Seq.empty
         )(bearer)
         activeManager <- extractActiveManager(managers, relationship.product.id).toFuture(ManagerNotFoundError)
