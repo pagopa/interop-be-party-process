@@ -209,12 +209,13 @@ class ProcessApiServiceImpl(
         )(bearer)
         activeManager <- extractActiveManager(managers, relationship.product.id).toFuture(ManagerNotFoundError)
       } yield (
-        user.extras.email.map(email => institution.externalId -> Seq(Contact(email = email))),
+        user.extras.email.map(email => institution.id.toString -> Seq(Contact(email = email))),
         OnboardingData(
           id = institution.id,
           externalId = institution.externalId,
           originId = institution.originId,
           origin = institution.origin,
+          institutionType = institution.institutionType,
           taxCode = institution.taxCode,
           description = institution.description,
           digitalAddress = institution.digitalAddress,
