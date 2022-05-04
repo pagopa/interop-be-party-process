@@ -13,6 +13,7 @@ import it.pagopa.interop.commons.utils.AkkaUtils.{getFutureBearer, getUidFuture}
 import it.pagopa.interop.commons.utils.OpenapiUtils._
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.{ResourceConflictError, ResourceNotFoundError}
+import it.pagopa.interop.partymanagement.client.model.{Relationship, Relationships}
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess.api.ProcessApiService
 import it.pagopa.interop.partyprocess.api.converters.partymanagement.InstitutionConverter
@@ -166,16 +167,16 @@ class ProcessApiServiceImpl(
   ): PartyManagementDependency.Relationship => Future[(Option[(String, Seq[Contact])], OnboardingData)] =
     relationship => {
       for {
-        institution   <- partyManagementService.retrieveInstitution(relationship.to)(bearer)
-        managers      <- partyManagementService.retrieveRelationships(
+        institution            <- partyManagementService.retrieveInstitution(relationship.to)(bearer)
+        managers               <- partyManagementService.retrieveRelationships(
           from = None,
           to = Some(institution.id),
           roles = Seq(PartyManagementDependency.PartyRole.MANAGER),
-          states = Seq(PartyManagementDependency.RelationshipState.ACTIVE),
+          states = Seq.empty,
           products = Seq(relationship.product.id),
           productRoles = Seq.empty
         )(bearer)
-        activeManager <- extractActiveManager(managers, relationship.product.id).toFuture(ManagerNotFoundError)
+        managerWithBillingData <- locateManagerWithBillingData(relationship, institution, managers)
       } yield (
         user.extras.email.map(email => institution.institutionId -> Seq(Contact(email = email))),
         OnboardingData(
@@ -189,14 +190,30 @@ class ProcessApiServiceImpl(
           state = relationshipStateToApi(relationship.state),
           role = roleToApi(relationship.role),
           productInfo = relationshipProductToApi(relationship.product),
-          billing = activeManager.billing.map(billingToApi),
-          pricingPlan = activeManager.pricingPlan,
+          billing = managerWithBillingData.billing.map(billingToApi),
+          pricingPlan = managerWithBillingData.pricingPlan,
           attributes =
             institution.attributes.map(attribute => Attribute(attribute.origin, attribute.code, attribute.description))
         )
       )
 
     }
+
+  private def locateManagerWithBillingData(
+    relationship: Relationship,
+    institution: PartyManagementDependency.Institution,
+    managers: Relationships
+  ) = {
+    managers.items
+      .sortWith((b1, b2) =>
+        // active as first
+        (b1.state != b2.state && b1.state == PartyManagementDependency.RelationshipState.ACTIVE)
+        // or last updated
+          || (b2.updatedAt.getOrElse(b2.createdAt).isBefore(b1.updatedAt.getOrElse(b1.createdAt)))
+      )
+      .find(m => m.state != PartyManagementDependency.RelationshipState.PENDING && m.billing.isDefined)
+      .toFuture(ManagerNotFoundError(Seq(institution.id.toString), relationship.product.id))
+  }
 
   /** Code: 204, Message: successful operation
     * Code: 404, Message: Not found, DataType: Problem
@@ -622,7 +639,11 @@ class ProcessApiServiceImpl(
     product: String
   ): Future[Unit] = Future.fromTry {
     Either
-      .cond(relationships.items.exists(isAnOnboardedManager(product)), (), ManagerNotFoundError)
+      .cond(
+        relationships.items.exists(isAnOnboardedManager(product)),
+        (),
+        ManagerNotFoundError(relationships.items.map(r => r.to.toString), product)
+      )
       .toTry
   }
 
