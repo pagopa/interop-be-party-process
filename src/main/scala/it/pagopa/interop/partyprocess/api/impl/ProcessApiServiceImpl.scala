@@ -166,7 +166,16 @@ class ProcessApiServiceImpl(
   ): PartyManagementDependency.Relationship => Future[(Option[(String, Seq[Contact])], OnboardingData)] =
     relationship => {
       for {
-        institution <- partyManagementService.retrieveInstitution(relationship.to)(bearer)
+        institution   <- partyManagementService.retrieveInstitution(relationship.to)(bearer)
+        managers      <- partyManagementService.retrieveRelationships(
+          from = None,
+          to = Some(institution.id),
+          roles = Seq(PartyManagementDependency.PartyRole.MANAGER),
+          states = Seq(PartyManagementDependency.RelationshipState.ACTIVE),
+          products = Seq.empty,
+          productRoles = Seq.empty
+        )(bearer)
+        activeManager <- extractActiveManager(managers, relationship.product.id).toFuture(ManagerNotFoundError)
       } yield (
         user.extras.email.map(email => institution.institutionId -> Seq(Contact(email = email))),
         OnboardingData(
@@ -180,6 +189,8 @@ class ProcessApiServiceImpl(
           state = relationshipStateToApi(relationship.state),
           role = roleToApi(relationship.role),
           productInfo = relationshipProductToApi(relationship.product),
+          billing = activeManager.billing.map(billingToApi),
+          pricingPlan = activeManager.pricingPlan,
           attributes =
             institution.attributes.map(attribute => Attribute(attribute.origin, attribute.code, attribute.description))
         )
