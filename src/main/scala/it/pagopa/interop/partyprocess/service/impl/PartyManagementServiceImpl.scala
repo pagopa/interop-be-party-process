@@ -74,8 +74,8 @@ final case class PartyManagementServiceImpl(
     val request: ApiRequest[Institution] = partyApi.createInstitution(institution)(BearerToken(bearerToken))
     invoke(
       request,
-      s"Institution creation with institution id ${institution.institutionId}",
-      Some(institution.institutionId)
+      s"Institution creation with external institution id ${institution.externalId}",
+      Some(institution.externalId)
     )
   }
 

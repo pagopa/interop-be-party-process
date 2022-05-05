@@ -7,7 +7,8 @@ object InstitutionConverter {
   def dependencyToApi(institution: DependencyInstitution): Institution = {
     Institution(
       id = institution.id,
-      institutionId = institution.institutionId,
+      externalId = institution.externalId,
+      originId = institution.originId,
       description = institution.description,
       digitalAddress = institution.digitalAddress,
       address = institution.address,
