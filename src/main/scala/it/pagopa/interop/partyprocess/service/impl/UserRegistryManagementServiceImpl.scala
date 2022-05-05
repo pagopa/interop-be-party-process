@@ -2,7 +2,11 @@ package it.pagopa.interop.partyprocess.service.impl
 
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.ResourceConflictError
 import it.pagopa.interop.partyprocess.model.UserRegistryUser
-import it.pagopa.interop.partyprocess.service.{UserRegistryManagementInvoker, UserRegistryManagementService, replacementEntityId}
+import it.pagopa.interop.partyprocess.service.{
+  UserRegistryManagementInvoker,
+  UserRegistryManagementService,
+  replacementEntityId
+}
 import it.pagopa.userreg.client.api.UserApi
 import it.pagopa.userreg.client.invoker.{ApiError, ApiKeyValue, ApiRequest}
 import it.pagopa.userreg.client.model.{SaveUserDto, UserId, UserResource, UserSearchDto}
@@ -17,33 +21,29 @@ final case class UserRegistryManagementServiceImpl(invoker: UserRegistryManageme
 ) extends UserRegistryManagementService {
   implicit val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  implicit val userFields2fetch: Seq[String] = Seq("name", "familyName", "fiscalCode", "email", "workContacts")
+  implicit val userFields2fetch: Seq[String] = Seq("name", "familyName", "fiscalCode")
 
   override def getUserById(userId: UUID): Future[UserRegistryUser] = {
     val request: ApiRequest[UserResource] = api.findByIdUsingGET(userId, userFields2fetch)
     invokeAPI(request, "Retrieve User By ID", Some(userId.toString))
-      .map(u=>UserRegistryUser.fromUserResource(u))
+      .map(u => UserRegistryUser.fromUserResource(u))
   }
 
   override def getUserByExternalId(externalId: String): Future[UserRegistryUser] = {
-    val request: ApiRequest[UserResource] = api.searchUsingPOST(userFields2fetch, Option(UserSearchDto(fiscalCode = externalId)))
+    val request: ApiRequest[UserResource] =
+      api.searchUsingPOST(userFields2fetch, Option(UserSearchDto(fiscalCode = externalId)))
     invokeAPI(request, "Retrieve User By External ID", Some(externalId))
-      .map(u=>UserRegistryUser.fromUserResource(u))
+      .map(u => UserRegistryUser.fromUserResource(u))
   }
-  override def getUserIdByExternalId(externalId: String): Future[UserId] = {
+  override def getUserIdByExternalId(externalId: String): Future[UserId]         = {
     val request: ApiRequest[UserResource] = api.searchUsingPOST(Seq(), Option(UserSearchDto(fiscalCode = externalId)))
     invokeAPI(request, "Retrieve User By External ID", Some(externalId))
-      .map(u=>UserId(u.id))
+      .map(u => UserId(u.id))
   }
 
   override def createUser(seed: SaveUserDto): Future[UserId] = {
     val request: ApiRequest[UserId] = api.saveUsingPATCH(Option(seed))
     invokeAPI(request, "Create User", None)
-  }
-
-  override def updateUser(seed: SaveUserDto): Future[UserId] = {
-    val request: ApiRequest[UserId] = api.saveUsingPATCH(Option(seed))
-    invokeAPI(request, "Update User", None)
   }
 
   private def invokeAPI[T](request: ApiRequest[T], logMessage: String, entityId: Option[String])(implicit

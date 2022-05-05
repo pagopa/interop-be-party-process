@@ -38,8 +38,8 @@ import it.pagopa.interop.partyprocess.server.Controller
 import it.pagopa.interop.partyprocess.service._
 import it.pagopa.interop.partyprocess.service.impl._
 import it.pagopa.interop.partyregistryproxy.client.{api => partyregistryproxyApi}
-import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.invoker.ApiKeyValue
-import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.{api => userregistrymanagement}
+import it.pagopa.userreg.client.invoker.ApiKeyValue
+import it.pagopa.userreg.client.{api => userregistrymanagement}
 import kamon.Kamon
 
 import scala.concurrent.Future
@@ -122,8 +122,7 @@ object Main
     val mailer: MailEngine                 = new PartyProcessMailer with DefaultInteropMailer with CourierMailer
 
     val relationshipService: RelationshipService = new RelationshipServiceImpl(
-      partyManagementService = partyManagementService,
-      userRegistryManagementService = userRegistryManagementService
+      partyManagementService = partyManagementService
     )
 
     val productService: ProductService = new ProductServiceImpl(partyManagementService = partyManagementService)

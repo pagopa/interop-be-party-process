@@ -12,10 +12,7 @@ import it.pagopa.interop.partyprocess.service._
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
-class RelationshipServiceImpl(
-  partyManagementService: PartyManagementService,
-  userRegistryManagementService: UserRegistryManagementService
-)(implicit ec: ExecutionContext)
+class RelationshipServiceImpl(partyManagementService: PartyManagementService)(implicit ec: ExecutionContext)
     extends RelationshipService {
   private final val adminPartyRoles: Set[PartyRole] = Set(PartyRole.MANAGER, PartyRole.DELEGATE, PartyRole.SUB_DELEGATE)
 
@@ -52,12 +49,7 @@ class RelationshipServiceImpl(
         userAdminRelationships,
         institutionIdRelationships
       )
-      relationships <- filteredRelationships.items.traverse(rl =>
-        Conversions.relationshipToRelationshipsResponse(userRegistryManagementService, partyManagementService)(
-          rl,
-          bearer
-        )
-      )
+      relationships         = filteredRelationships.items.map(rl => Conversions.relationshipToRelationshipsResponse(rl))
     } yield relationships
   }
 

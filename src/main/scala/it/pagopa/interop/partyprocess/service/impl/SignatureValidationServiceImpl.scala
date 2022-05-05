@@ -8,8 +8,8 @@ import eu.europa.esig.dss.validation.reports.Reports
 import eu.europa.esig.dss.validation.{AdvancedSignature, SignedDocumentValidator}
 import it.pagopa.interop.partyprocess.error.SignatureValidationError
 import it.pagopa.interop.partyprocess.error.ValidationErrors._
+import it.pagopa.interop.partyprocess.model.UserRegistryUser
 import it.pagopa.interop.partyprocess.service.SignatureValidationService
-import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{User => UserRegistryUser}
 
 import scala.jdk.CollectionConverters.IterableHasAsScala
 import scala.util.matching.Regex
@@ -88,11 +88,7 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
     val validation: Either[SignatureValidationError, Unit] = for {
       reports          <- validateDocument(documentValidator)
       signatureTaxCode <- extractTaxCode(reports)
-      validated        <- Either.cond(
-        legals.exists(legal => legal.externalId == signatureTaxCode),
-        (),
-        InvalidSignatureTaxCode
-      )
+      validated <- Either.cond(legals.exists(legal => legal.taxCode == signatureTaxCode), (), InvalidSignatureTaxCode)
     } yield validated
 
     validation match {

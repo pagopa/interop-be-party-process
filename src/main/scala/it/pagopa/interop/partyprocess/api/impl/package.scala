@@ -5,7 +5,9 @@ import it.pagopa.interop.commons.utils.SprayCommonFormats.{offsetDateTimeFormat,
 import it.pagopa.interop.commons.utils.errors.ComponentError
 import it.pagopa.interop.partyprocess.model._
 import it.pagopa.userreg.client.model.CertifiableFieldResourceOfstring
-import it.pagopa.userreg.client.model.CertifiableFieldResourceOfstringEnums.Certification.{NONE => CertificationEnumsNone}
+import it.pagopa.userreg.client.model.CertifiableFieldResourceOfstringEnums.Certification.{
+  NONE => CertificationEnumsNone
+}
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
 package object impl extends DefaultJsonProtocol {
@@ -25,14 +27,12 @@ package object impl extends DefaultJsonProtocol {
   implicit val onboardingUsersRequestFormat: RootJsonFormat[OnboardingUsersRequest]             =
     jsonFormat2(OnboardingUsersRequest)
 
-  implicit val contactFormat: RootJsonFormat[Contact]                   = jsonFormat1(Contact)
-  implicit val personInfoFormat: RootJsonFormat[PersonInfo]             = jsonFormat5(PersonInfo)
   implicit val attributeDataFormat: RootJsonFormat[Attribute]           = jsonFormat3(Attribute)
   implicit val institutionFormat: RootJsonFormat[Institution]           = jsonFormat11(Institution)
   implicit val productInfoDataFormat: RootJsonFormat[ProductInfo]       = jsonFormat3(ProductInfo)
   implicit val onboardingDataFormat: RootJsonFormat[OnboardingData]     = jsonFormat16(OnboardingData)
   implicit val onboardingInfoFormat: RootJsonFormat[OnboardingInfo]     = jsonFormat2(OnboardingInfo)
-  implicit val relationshipInfoFormat: RootJsonFormat[RelationshipInfo] = jsonFormat16(RelationshipInfo)
+  implicit val relationshipInfoFormat: RootJsonFormat[RelationshipInfo] = jsonFormat11(RelationshipInfo)
   implicit val productFormat: RootJsonFormat[Product]                   = jsonFormat2(Product)
   implicit val productsFormat: RootJsonFormat[Products]                 = jsonFormat1(Products)
 
@@ -54,5 +54,5 @@ package object impl extends DefaultJsonProtocol {
     )
 
   def notCertifiedString(value: String): CertifiableFieldResourceOfstring =
-    CertifiableFieldResourceOfstring(value = value, certification =  CertificationEnumsNone)
+    CertifiableFieldResourceOfstring(value = value, certification = CertificationEnumsNone)
 }

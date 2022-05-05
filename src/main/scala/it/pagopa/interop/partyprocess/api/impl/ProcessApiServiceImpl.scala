@@ -125,7 +125,7 @@ class ProcessApiServiceImpl(
         .traverse(PartyManagementDependency.RelationshipState.fromValue)
         .toFuture
       statesArray = if (statesParamArray.isEmpty) defaultStates else statesParamArray
-      relationships         <- partyManagementService.retrieveRelationships(
+      relationships  <- partyManagementService.retrieveRelationships(
         from = Some(userId),
         to = institution.map(_.id),
         roles = Seq.empty,
@@ -176,27 +176,28 @@ class ProcessApiServiceImpl(
     }
   }
 
-  private def getOnboardingDataDetails(bearer: String)
-  : PartyManagementDependency.Relationship => Future[OnboardingData] =
+  private def getOnboardingDataDetails(
+    bearer: String
+  ): PartyManagementDependency.Relationship => Future[OnboardingData] =
     relationship => {
       for {
         institution <- partyManagementService.retrieveInstitution(relationship.to)(bearer)
       } yield OnboardingData(
-          id = institution.id,
-          externalId = institution.externalId,
-          originId = institution.originId,
-          origin = institution.origin,
-          taxCode = institution.taxCode,
-          description = institution.description,
-          digitalAddress = institution.digitalAddress,
-          address = institution.address,
-          zipCode = institution.zipCode,
-          state = relationshipStateToApi(relationship.state),
-          role = roleToApi(relationship.role),
-          productInfo = relationshipProductToApi(relationship.product),
-          attributes =
-            institution.attributes.map(attribute => Attribute(attribute.origin, attribute.code, attribute.description))
-        )
+        id = institution.id,
+        externalId = institution.externalId,
+        originId = institution.originId,
+        origin = institution.origin,
+        taxCode = institution.taxCode,
+        description = institution.description,
+        digitalAddress = institution.digitalAddress,
+        address = institution.address,
+        zipCode = institution.zipCode,
+        state = relationshipStateToApi(relationship.state),
+        role = roleToApi(relationship.role),
+        productInfo = relationshipProductToApi(relationship.product),
+        attributes =
+          institution.attributes.map(attribute => Attribute(attribute.origin, attribute.code, attribute.description))
+      )
 
     }
 
@@ -360,10 +361,10 @@ class ProcessApiServiceImpl(
     currentUser: UserRegistryUser
   )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Unit] = {
     for {
-      validUsers       <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
-      validManager     <- getValidManager(activeManager, validUsers)
-      personIdsWithRoles <- Future.traverse(validUsers)(addUser)
-      relationships    <- Future.traverse(personIdsWithRoles) { case (personId, role, product, productRole) =>
+      validUsers         <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
+      validManager       <- getValidManager(activeManager, validUsers)
+      personIdsWithRoles <- Future.traverse(validUsers)(addUser(_, institution))
+      relationships      <- Future.traverse(personIdsWithRoles) { case (personId, role, product, productRole) =>
         role match {
           case PartyRole.MANAGER =>
             createOrGetRelationship(
@@ -389,10 +390,10 @@ class ProcessApiServiceImpl(
             )(bearer)
         }
       }
-      contractTemplate <- getFileAsString(onboardingRequest.contract.path)
-      pdf              <- pdfCreator.createContract(contractTemplate, validManager, validUsers, institution)
-      digest           <- signatureService.createDigest(pdf)
-      token            <- partyManagementService.createToken(
+      contractTemplate   <- getFileAsString(onboardingRequest.contract.path)
+      pdf                <- pdfCreator.createContract(contractTemplate, validManager, validUsers, institution)
+      digest             <- signatureService.createDigest(pdf)
+      token              <- partyManagementService.createToken(
         PartyManagementDependency.Relationships(relationships),
         digest,
         onboardingRequest.contract.version,
@@ -611,7 +612,7 @@ class ProcessApiServiceImpl(
   )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Seq[RelationshipInfo]] = {
     for {
       validUsers    <- verifyUsersByRoles(onboardingRequest.users, rolesToCheck)
-      userIds         <- Future.traverse(validUsers)(user => addUser(user))
+      userIds       <- Future.traverse(validUsers)(user => addUser(user, institution))
       relationships <- Future.traverse(userIds) { case (userId, role, product, productRole) =>
         val relationshipSeed: PartyManagementDependency.RelationshipSeed =
           PartyManagementDependency.RelationshipSeed(
@@ -622,9 +623,9 @@ class ProcessApiServiceImpl(
           )
         partyManagementService
           .createRelationship(relationshipSeed)(bearer)
-          .flatMap(rl =>
+          .map(rl =>
             Conversions
-              .relationshipToRelationshipsResponse(userRegistryManagementService, partyManagementService)(rl, bearer)
+              .relationshipToRelationshipsResponse(rl)
           )
       }
       _ = logger.info(s"Users created ${userIds.map(_.toString).mkString(",")}")
@@ -674,11 +675,12 @@ class ProcessApiServiceImpl(
   private def isNotAnOnboardedManager(product: String): PartyManagementDependency.Relationship => Boolean =
     relationship => !isAnOnboardedManager(product)(relationship)
 
-  private def addUser(
-    user: User
-  )(implicit bearer: String, contexts: Seq[(String, String)]): Future[(UserId, PartyRole, String, String)] = {
+  private def addUser(user: User, institution: PartyManagementDependency.Institution)(implicit
+    bearer: String,
+    contexts: Seq[(String, String)]
+  ): Future[(UserId, PartyRole, String, String)] = {
     logger.info("Adding user {}", user.toString)
-    createPerson(user)(bearer)
+    createPerson(user, institution)(bearer)
       .recoverWith {
         case _: ResourceConflictError => userRegistryManagementService.getUserIdByExternalId(user.taxCode)
         case ex                       => Future.failed(ex)
@@ -686,7 +688,9 @@ class ProcessApiServiceImpl(
       .map((_, user.role, user.product, user.productRole))
   }
 
-  private def createPerson(user: User)(bearer: String): Future[UserId] =
+  private def createPerson(user: User, institution: PartyManagementDependency.Institution)(
+    bearer: String
+  ): Future[UserId] =
     for {
       userId <- userRegistryManagementService
         .createUser(
@@ -694,14 +698,16 @@ class ProcessApiServiceImpl(
             fiscalCode = user.taxCode,
             name = Option(notCertifiedString(user.name)),
             familyName = Option(notCertifiedString(user.surname)),
-            workContacts = user.email.map(email => Map("TODO" -> WorkContactResource(email = Option(notCertifiedString(email)))))
+            workContacts = user.email.map(email =>
+              Map(institution.id.toString -> WorkContactResource(email = Option(notCertifiedString(email))))
+            )
           )
         )
         .recoverWith {
           case _: ResourceConflictError => userRegistryManagementService.getUserIdByExternalId(user.taxCode)
           case ex                       => Future.failed(ex)
         }
-      _    <- partyManagementService.createPerson(PartyManagementDependency.PersonSeed(userId.id))(bearer)
+      _      <- partyManagementService.createPerson(PartyManagementDependency.PersonSeed(userId.id))(bearer)
     } yield userId
 
   private def createInstitution(
@@ -872,10 +878,7 @@ class ProcessApiServiceImpl(
       bearer           <- getFutureBearer(contexts)
       relationshipUUID <- relationshipId.toFutureUUID
       relationship     <- partyManagementService.getRelationshipById(relationshipUUID)(bearer)
-      relationshipInfo <- Conversions.relationshipToRelationshipsResponse(
-        userRegistryManagementService,
-        partyManagementService
-      )(relationship, bearer)
+      relationshipInfo = Conversions.relationshipToRelationshipsResponse(relationship)
     } yield relationshipInfo
 
     onComplete(result) {
