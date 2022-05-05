@@ -167,7 +167,7 @@ class ProcessApiServiceImpl(
     }
   }
 
-  private def getInstitutionByOptionIdAndOptionExternalId(
+    private def getInstitutionByOptionIdAndOptionExternalId(
     institutionId: Option[String],
     institutionExternalId: Option[String]
   )(bearer: String): Future[Option[PartyManagementDependency.Institution]] = {
@@ -179,20 +179,12 @@ class ProcessApiServiceImpl(
       partyManagementService
         .retrieveInstitution(UUID.fromString(institutionId))(bearer)
         .map(institution =>
-          institutionExternalId.fold {
-            Option(institution)
-          } { externalId =>
-            {
-              if (institution.externalId === externalId)
-                Option(institution)
-              else
-                Option.empty[PartyManagementDependency.Institution]
-            }
-          }
+          institutionExternalId
+            .flatMap(externalId => Option.when(institution.externalId === externalId)(institution))
+            .orElse(Option(institution))
         )
     }
   }
-
   private def getOnboardingDataDetails(bearer: String)(
     user: UserRegistryUser
   ): PartyManagementDependency.Relationship => Future[(Option[(String, Seq[Contact])], OnboardingData)] =
