@@ -87,7 +87,7 @@ object Conversions {
       taxCode = user.externalId,
       certification = certificationToApi(user.certification),
       institutionContacts =
-        user.extras.email.map(email => institution.institutionId -> Seq(Contact(email = email))).toMap,
+        user.extras.email.map(email => institution.id.toString -> Seq(Contact(email = email))).toMap,
       role = roleToApi(relationship.role),
       product = relationshipProductToApi(relationship.product),
       state = relationshipStateToApi(relationship.state),

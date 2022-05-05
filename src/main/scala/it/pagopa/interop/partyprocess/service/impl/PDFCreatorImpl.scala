@@ -50,7 +50,7 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
     } yield Map(
       "institutionName"    -> institution.description,
       "institutionTaxCode" -> institution.taxCode,
-      "institutionId"      -> institution.institutionId,
+      "originId"           -> institution.originId,
       "institutionMail"    -> institution.digitalAddress,
       "managerName"        -> manager.name,
       "managerSurname"     -> manager.surname,

@@ -8,6 +8,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
+import it.pagopa.interop.commons.utils.SprayCommonFormats.uuidFormat
 import it.pagopa.interop.partyprocess.api.impl._
 import it.pagopa.interop.partyprocess.model._
 import spray.json.RootJsonFormat
@@ -30,10 +31,22 @@ package object partyprocess extends SprayJsonSupport {
 
   implicit val userFormat: RootJsonFormat[User]                             = jsonFormat7(User)
   implicit val onboardingContractFormat: RootJsonFormat[OnboardingContract] = jsonFormat2(OnboardingContract)
-  implicit val onboardingRequestFormat: RootJsonFormat[OnboardingRequest]   = jsonFormat7(OnboardingRequest)
 
-  implicit def fromEntityUnmarshallerOnboardingRequest: ToEntityMarshaller[OnboardingRequest] =
-    sprayJsonMarshaller[OnboardingRequest]
+  implicit val onboardingInstitutionRequestFormat: RootJsonFormat[OnboardingInstitutionRequest] =
+    jsonFormat6(OnboardingInstitutionRequest)
+  implicit val onboardingLegalUsersRequestFormat: RootJsonFormat[OnboardingLegalUsersRequest]   =
+    jsonFormat4(OnboardingLegalUsersRequest)
+  implicit val onboardingUsersRequestFormat: RootJsonFormat[OnboardingUsersRequest]             =
+    jsonFormat2(OnboardingUsersRequest)
+
+  implicit def fromEntityUnmarshallerOnboardingInstitutionRequest: ToEntityMarshaller[OnboardingInstitutionRequest] =
+    sprayJsonMarshaller[OnboardingInstitutionRequest]
+
+  implicit def fromEntityUnmarshallerLegalUsersOnboardingRequest: ToEntityMarshaller[OnboardingLegalUsersRequest] =
+    sprayJsonMarshaller[OnboardingLegalUsersRequest]
+
+  implicit def fromEntityUnmarshallerOnboardingUsersRequest: ToEntityMarshaller[OnboardingUsersRequest] =
+    sprayJsonMarshaller[OnboardingUsersRequest]
 
   def request(data: Source[ByteString, Any], path: String, verb: HttpMethod)(implicit
     system: ClassicActorSystemProvider
