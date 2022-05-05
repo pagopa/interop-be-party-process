@@ -836,7 +836,7 @@ class PartyProcessSpec
           to = orgPartyId2,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = defaultProduct,
-          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          state = PartyManagementDependency.RelationshipState.PENDING,
           createdAt = defaultRelationshipTimestamp,
           updatedAt = None,
           pricingPlan = Option("pricingPlan2"),
@@ -938,8 +938,8 @@ class PartyProcessSpec
               partyprocess.model.Attribute(attribute5.origin, attribute5.code, attribute5.description),
               partyprocess.model.Attribute(attribute6.origin, attribute6.code, attribute6.description)
             ),
-            billing = managerInstitution2.billing.map(billingToApi),
-            pricingPlan = managerInstitution2.pricingPlan
+            billing = Option.empty,
+            pricingPlan = Option.empty
           )
         )
       )
@@ -992,7 +992,7 @@ class PartyProcessSpec
           None,
           Some(orgPartyId1),
           Seq(PartyManagementDependency.PartyRole.MANAGER),
-          Seq(PartyManagementDependency.RelationshipState.ACTIVE),
+          Seq.empty,
           Seq(defaultProduct.id),
           Seq.empty,
           *
@@ -1013,7 +1013,7 @@ class PartyProcessSpec
           None,
           Some(orgPartyId2),
           Seq(PartyManagementDependency.PartyRole.MANAGER),
-          Seq(PartyManagementDependency.RelationshipState.ACTIVE),
+          Seq.empty,
           Seq(defaultProduct.id),
           Seq.empty,
           *
@@ -1170,7 +1170,7 @@ class PartyProcessSpec
           None,
           Some(institution.id),
           Seq(PartyManagementDependency.PartyRole.MANAGER),
-          Seq(PartyManagementDependency.RelationshipState.ACTIVE),
+          Seq.empty,
           Seq(defaultProduct.id),
           Seq.empty,
           *
@@ -1353,6 +1353,62 @@ class PartyProcessSpec
           )
         )
 
+      val oldManagerInstitution1 =
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = user.id,
+          to = orgPartyId,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = defaultProduct,
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = defaultRelationshipTimestamp.minusDays(1),
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan_OLD"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType_OLD"),
+              description = Option("OVERRIDE_description_OLD"),
+              digitalAddress = Option("OVERRIDE_digitalAddress_OLD"),
+              address = Option("OVERRIDE_address_OLD"),
+              taxCode = Option("OVERRIDE_taxCode_OLD")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER_OLD", recipientCode = "RECIPIENTCODE_OLD", publicServices = Option(false))
+          )
+        )
+
+      val newButRejectedManagerInstitution1 =
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = user.id,
+          to = orgPartyId,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = defaultProduct,
+          state = PartyManagementDependency.RelationshipState.REJECTED,
+          createdAt = defaultRelationshipTimestamp.plusDays(1),
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan_NEWBUTREJECTED"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType_NEWBUTREJECTED"),
+              description = Option("OVERRIDE_description_NEWBUTREJECTED"),
+              digitalAddress = Option("OVERRIDE_digitalAddress_NEWBUTREJECTED"),
+              address = Option("OVERRIDE_address_NEWBUTREJECTED"),
+              taxCode = Option("OVERRIDE_taxCode_NEWBUTREJECTED")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(
+                vatNumber = "VATNUMBER_NEWBUTREJECTED",
+                recipientCode = "RECIPIENTCODE_NEWBUTREJECTED",
+                publicServices = Option(false)
+              )
+          )
+        )
+
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
         externalId = externalId,
@@ -1406,12 +1462,26 @@ class PartyProcessSpec
           None,
           Some(orgPartyId),
           Seq(PartyManagementDependency.PartyRole.MANAGER),
-          Seq(PartyManagementDependency.RelationshipState.ACTIVE),
+          Seq.empty,
           Seq(defaultProduct.id),
           Seq.empty,
           *
         )
-        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(managerInstitution1))))
+        .returning(
+          Future.successful(
+            PartyManagementDependency
+              .Relationships(items =
+                Seq(
+                  relationship,
+                  oldManagerInstitution1,
+                  newButRejectedManagerInstitution1,
+                  managerInstitution1,
+                  oldManagerInstitution1,
+                  newButRejectedManagerInstitution1
+                )
+              )
+          )
+        )
         .once()
 
       (mockPartyManagementService

@@ -82,8 +82,12 @@ object PartyProcessErrors {
 
   final case object GetProductsError extends ComponentError("0031", "Error while getting products")
 
-  final case object ManagerFoundError    extends ComponentError("0032", "Onboarded managers found for this institution")
-  final case object ManagerNotFoundError extends ComponentError("0033", "No onboarded managers for this institution")
+  final case object ManagerFoundError extends ComponentError("0032", "Onboarded managers found for this institution")
+  final case class ManagerNotFoundError(institutionIds: Seq[String], product: String)
+      extends ComponentError(
+        "0033",
+        s"No onboarded managers for at least one of the institutions $institutionIds and product $product"
+      )
 
   final case class RolesNotAdmittedError(users: Seq[User], roles: Set[PartyRole])
       extends ComponentError(
