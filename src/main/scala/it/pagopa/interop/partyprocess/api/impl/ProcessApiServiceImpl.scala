@@ -168,7 +168,7 @@ class ProcessApiServiceImpl(
     }
   }
 
-    private def getInstitutionByOptionIdAndOptionExternalId(
+  private def getInstitutionByOptionIdAndOptionExternalId(
     institutionId: Option[String],
     institutionExternalId: Option[String]
   )(bearer: String): Future[Option[PartyManagementDependency.Institution]] = {
