@@ -808,7 +808,7 @@ class PartyProcessSpec
           to = orgPartyId2,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = defaultProduct,
-          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          state = PartyManagementDependency.RelationshipState.PENDING,
           createdAt = defaultRelationshipTimestamp,
           updatedAt = None,
           pricingPlan = Option("pricingPlan2"),
@@ -902,8 +902,8 @@ class PartyProcessSpec
               partyprocess.model.Attribute(attribute5.origin, attribute5.code, attribute5.description),
               partyprocess.model.Attribute(attribute6.origin, attribute6.code, attribute6.description)
             ),
-            billing = managerInstitution2.billing.map(billingToApi),
-            pricingPlan = managerInstitution2.pricingPlan
+            billing = Option.empty,
+            pricingPlan = Option.empty
           )
         )
       )
