@@ -168,7 +168,7 @@ class ProcessApiServiceImpl(
     }
   }
 
-    private def getInstitutionByOptionIdAndOptionExternalId(
+  private def getInstitutionByOptionIdAndOptionExternalId(
     institutionId: Option[String],
     institutionExternalId: Option[String]
   )(bearer: String): Future[Option[PartyManagementDependency.Institution]] = {
@@ -1059,11 +1059,12 @@ class ProcessApiServiceImpl(
 
     logger.info("Retrieving products for institution {}", institutionId)
     val result = for {
-      bearer       <- getFutureBearer(contexts)
-      _            <- getUidFuture(contexts)
-      statesFilter <- parseArrayParameters(states).traverse(par => ProductState.fromValue(par)).toFuture
-      institution  <- partyManagementService.retrieveInstitutionByExternalId(institutionId)(bearer)
-      products     <- productService.retrieveInstitutionProducts(institution, statesFilter)(bearer)
+      bearer         <- getFutureBearer(contexts)
+      _              <- getUidFuture(contexts)
+      statesFilter   <- parseArrayParameters(states).traverse(par => ProductState.fromValue(par)).toFuture
+      institutionUid <- institutionId.toFutureUUID
+      institution    <- partyManagementService.retrieveInstitution(institutionUid)(bearer)
+      products       <- productService.retrieveInstitutionProducts(institution, statesFilter)(bearer)
     } yield products
 
     onComplete(result) {
