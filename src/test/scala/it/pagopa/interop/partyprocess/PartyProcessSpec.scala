@@ -36,8 +36,8 @@ import it.pagopa.interop.partyprocess.model.PartyRole.{DELEGATE, MANAGER, OPERAT
 import it.pagopa.interop.partyprocess.model.RelationshipState.ACTIVE
 import it.pagopa.interop.partyprocess.model.{Billing, InstitutionUpdate, Attribute, _}
 import it.pagopa.interop.partyprocess.server.Controller
-import it.pagopa.interop.partyprocess.service.impl.{ProductServiceImpl, RelationshipServiceImpl}
 import it.pagopa.interop.partyprocess.service.{ProductService, RelationshipService}
+import it.pagopa.interop.partyprocess.service.impl.{ProductServiceImpl, RelationshipServiceImpl}
 import it.pagopa.interop.partyregistryproxy.client.{model => PartyProxyDependencies}
 import it.pagopa.userreg.client.model.{SaveUserDto, UserId, WorkContactResource}
 import org.scalamock.scalatest.MockFactory
@@ -774,6 +774,33 @@ class PartyProcessSpec
           updatedAt = None
         )
 
+      val managerInstitution1 = relationship1
+      val managerInstitution2 =
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = UUID.randomUUID(),
+          to = orgPartyId2,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = defaultProduct,
+          state = PartyManagementDependency.RelationshipState.PENDING,
+          createdAt = defaultRelationshipTimestamp,
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan2"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType2"),
+              description = Option("OVERRIDE_description2"),
+              digitalAddress = Option("OVERRIDE_digitalAddress2"),
+              address = Option("OVERRIDE_address2"),
+              taxCode = Option("OVERRIDE_taxCode2")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER2", recipientCode = "RECIPIENTCODE2", publicServices = Option.empty)
+          )
+        )
+
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2))
 
       val institution1 = PartyManagementDependency.Institution(
@@ -819,6 +846,7 @@ class PartyProcessSpec
             externalId = institution1.externalId,
             originId = institution1.originId,
             origin = origin,
+            institutionType = institution1.institutionType,
             description = institution1.description,
             taxCode = institution1.taxCode,
             digitalAddress = institution1.digitalAddress,
@@ -827,13 +855,16 @@ class PartyProcessSpec
             state = relationshipStateToApi(relationship1.state),
             role = roleToApi(relationship1.role),
             productInfo = defaultProductInfo,
-            attributes = Seq(attribute1, attribute2, attribute3)
+            attributes = Seq(attribute1, attribute2, attribute3),
+            billing = managerInstitution1.billing.map(billingToApi),
+            pricingPlan = managerInstitution1.pricingPlan
           ),
           OnboardingData(
             id = institution2.id,
             externalId = institution2.externalId,
             originId = institution2.originId,
             origin = institution2.origin,
+            institutionType = institution2.institutionType,
             description = institution2.description,
             taxCode = institution2.taxCode,
             digitalAddress = institution2.digitalAddress,
@@ -846,7 +877,9 @@ class PartyProcessSpec
               partyprocess.model.Attribute(attribute4.origin, attribute4.code, attribute4.description),
               partyprocess.model.Attribute(attribute5.origin, attribute5.code, attribute5.description),
               partyprocess.model.Attribute(attribute6.origin, attribute6.code, attribute6.description)
-            )
+            ),
+            billing = Option.empty,
+            pricingPlan = Option.empty
           )
         )
       )
@@ -884,6 +917,48 @@ class PartyProcessSpec
           *
         )
         .returning(Future.successful(relationships))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          None,
+          Some(orgPartyId1),
+          Seq(PartyManagementDependency.PartyRole.MANAGER),
+          Seq.empty,
+          Seq(defaultProduct.id),
+          Seq.empty,
+          *
+        )
+        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(managerInstitution1))))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          None,
+          Some(orgPartyId2),
+          Seq(PartyManagementDependency.PartyRole.MANAGER),
+          Seq.empty,
+          Seq(defaultProduct.id),
+          Seq.empty,
+          *
+        )
+        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(managerInstitution2))))
         .once()
 
       (mockPartyManagementService
@@ -948,6 +1023,8 @@ class PartyProcessSpec
 
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship1))
 
+      val managerInstitution1 = relationship1
+
       val expected = OnboardingInfo(
         userId = Option(user.id),
         institutions = Seq(
@@ -956,6 +1033,7 @@ class PartyProcessSpec
             externalId = institution.externalId,
             originId = institution.originId,
             origin = institution.origin,
+            institutionType = institution.institutionType,
             description = institution.description,
             taxCode = institution.taxCode,
             digitalAddress = institution.digitalAddress,
@@ -964,7 +1042,9 @@ class PartyProcessSpec
             state = relationshipStateToApi(relationship1.state),
             role = roleToApi(relationship1.role),
             productInfo = defaultProductInfo,
-            attributes = Seq(attribute1, attribute2, attribute3)
+            attributes = Seq(attribute1, attribute2, attribute3),
+            billing = managerInstitution1.billing.map(billingToApi),
+            pricingPlan = managerInstitution1.pricingPlan
           )
         )
       )
@@ -1002,6 +1082,27 @@ class PartyProcessSpec
           *
         )
         .returning(Future.successful(relationships))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          None,
+          Some(institution.id),
+          Seq(PartyManagementDependency.PartyRole.MANAGER),
+          Seq.empty,
+          Seq(defaultProduct.id),
+          Seq.empty,
+          *
+        )
+        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(managerInstitution1))))
         .once()
 
       (mockPartyManagementService
@@ -1043,7 +1144,89 @@ class PartyProcessSpec
 
       (mockPartyManagementService
         .retrieveInstitution(_: UUID)(_: String))
+        .expects(institution.id, *)
+        .returning(Future.successful(institution))
+        .once()
+
+      expected
+    }
+
+    "retrieve an onboarding info with institutionId filter" in {
+      val externalId = UUID.randomUUID().toString
+      val originId   = UUID.randomUUID().toString
+      val origin     = "IPA"
+      val orgPartyId = UUID.randomUUID()
+      val attribute1 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1", "origin")
+      val attribute2 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2", "origin")
+      val attribute3 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3", "origin")
+
+      val institution = PartyManagementDependency.Institution(
+        id = orgPartyId,
+        externalId = externalId,
+        originId = originId,
+        description = "org1",
+        digitalAddress = "digitalAddress1",
+        attributes = Seq(
+          PartyManagementDependency.Attribute(attribute1.origin, attribute1.code, attribute1.description),
+          PartyManagementDependency.Attribute(attribute2.origin, attribute2.code, attribute2.description),
+          PartyManagementDependency.Attribute(attribute3.origin, attribute3.code, attribute3.description)
+        ),
+        taxCode = "123",
+        address = "address",
+        zipCode = "zipCode",
+        origin = origin,
+        institutionType = Option("PA")
+      )
+      val expected    = configureOnboardingInfoTest(institution, attribute1, attribute2, attribute3)
+
+      (mockPartyManagementService
+        .retrieveInstitution(_: UUID)(_: String))
         .expects(orgPartyId, *)
+        .returning(Future.successful(institution))
+        .once()
+
+      val response =
+        Http()
+          .singleRequest(HttpRequest(uri = s"$url/onboarding/info?institutionId=$orgPartyId", method = HttpMethods.GET))
+          .futureValue
+
+      val body = Unmarshal(response.entity).to[OnboardingInfo].futureValue
+
+      response.status mustBe StatusCodes.OK
+      body mustBe expected
+    }
+
+    "retrieve an onboarding info with institution externalId filter" in {
+      val externalId = UUID.randomUUID().toString
+      val originId   = UUID.randomUUID().toString
+      val origin     = "IPA"
+      val orgPartyId = UUID.randomUUID()
+      val attribute1 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1", "origin")
+      val attribute2 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2", "origin")
+      val attribute3 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3", "origin")
+
+      val institution = PartyManagementDependency.Institution(
+        id = orgPartyId,
+        externalId = externalId,
+        originId = originId,
+        description = "org1",
+        digitalAddress = "digitalAddress1",
+        attributes = Seq(
+          PartyManagementDependency.Attribute(attribute1.origin, attribute1.code, attribute1.description),
+          PartyManagementDependency.Attribute(attribute2.origin, attribute2.code, attribute2.description),
+          PartyManagementDependency.Attribute(attribute3.origin, attribute3.code, attribute3.description)
+        ),
+        taxCode = "123",
+        address = "address",
+        zipCode = "zipCode",
+        origin = origin,
+        institutionType = Option("PA")
+      )
+      val expected    = configureOnboardingInfoTest(institution, attribute1, attribute2, attribute3)
+
+      (mockPartyManagementService
+        .retrieveInstitutionByExternalId(_: String)(_: String))
+        .expects(externalId, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -1146,6 +1329,88 @@ class PartyProcessSpec
 
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship))
 
+      val managerInstitution1 =
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = user.id,
+          to = orgPartyId,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = defaultProduct,
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = defaultRelationshipTimestamp,
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan2"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType2"),
+              description = Option("OVERRIDE_description2"),
+              digitalAddress = Option("OVERRIDE_digitalAddress2"),
+              address = Option("OVERRIDE_address2"),
+              taxCode = Option("OVERRIDE_taxCode2")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER2", recipientCode = "RECIPIENTCODE2", publicServices = Option(false))
+          )
+        )
+
+      val oldManagerInstitution1 =
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = user.id,
+          to = orgPartyId,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = defaultProduct,
+          state = PartyManagementDependency.RelationshipState.ACTIVE,
+          createdAt = defaultRelationshipTimestamp.minusDays(1),
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan_OLD"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType_OLD"),
+              description = Option("OVERRIDE_description_OLD"),
+              digitalAddress = Option("OVERRIDE_digitalAddress_OLD"),
+              address = Option("OVERRIDE_address_OLD"),
+              taxCode = Option("OVERRIDE_taxCode_OLD")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER_OLD", recipientCode = "RECIPIENTCODE_OLD", publicServices = Option(false))
+          )
+        )
+
+      val newButRejectedManagerInstitution1 =
+        PartyManagementDependency.Relationship(
+          id = UUID.randomUUID(),
+          from = user.id,
+          to = orgPartyId,
+          role = PartyManagementDependency.PartyRole.MANAGER,
+          product = defaultProduct,
+          state = PartyManagementDependency.RelationshipState.REJECTED,
+          createdAt = defaultRelationshipTimestamp.plusDays(1),
+          updatedAt = None,
+          pricingPlan = Option("pricingPlan_NEWBUTREJECTED"),
+          institutionUpdate = Option(
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = Option("OVERRIDE_institutionType_NEWBUTREJECTED"),
+              description = Option("OVERRIDE_description_NEWBUTREJECTED"),
+              digitalAddress = Option("OVERRIDE_digitalAddress_NEWBUTREJECTED"),
+              address = Option("OVERRIDE_address_NEWBUTREJECTED"),
+              taxCode = Option("OVERRIDE_taxCode_NEWBUTREJECTED")
+            )
+          ),
+          billing = Option(
+            PartyManagementDependency
+              .Billing(
+                vatNumber = "VATNUMBER_NEWBUTREJECTED",
+                recipientCode = "RECIPIENTCODE_NEWBUTREJECTED",
+                publicServices = Option(false)
+              )
+          )
+        )
+
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
         externalId = externalId,
@@ -1187,6 +1452,41 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String))
+        .expects(
+          None,
+          Some(orgPartyId),
+          Seq(PartyManagementDependency.PartyRole.MANAGER),
+          Seq.empty,
+          Seq(defaultProduct.id),
+          Seq.empty,
+          *
+        )
+        .returning(
+          Future.successful(
+            PartyManagementDependency
+              .Relationships(items =
+                Seq(
+                  relationship,
+                  oldManagerInstitution1,
+                  newButRejectedManagerInstitution1,
+                  managerInstitution1,
+                  oldManagerInstitution1,
+                  newButRejectedManagerInstitution1
+                )
+              )
+          )
+        )
+        .once()
+
+      (mockPartyManagementService
         .retrieveInstitution(_: UUID)(_: String))
         .expects(orgPartyId, *)
         .returning(Future.successful(institution))
@@ -1200,6 +1500,7 @@ class PartyProcessSpec
             externalId = institution.externalId,
             originId = institution.originId,
             origin = institution.origin,
+            institutionType = institution.institutionType,
             description = institution.description,
             taxCode = institution.taxCode,
             digitalAddress = institution.digitalAddress,
@@ -1212,7 +1513,9 @@ class PartyProcessSpec
               partyprocess.model.Attribute(attribute1.origin, attribute1.code, attribute1.description),
               partyprocess.model.Attribute(attribute2.origin, attribute2.code, attribute2.description),
               partyprocess.model.Attribute(attribute3.origin, attribute3.code, attribute3.description)
-            )
+            ),
+            billing = managerInstitution1.billing.map(billingToApi),
+            pricingPlan = managerInstitution1.pricingPlan
           )
         )
       )

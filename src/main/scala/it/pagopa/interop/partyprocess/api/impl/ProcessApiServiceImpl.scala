@@ -13,6 +13,7 @@ import it.pagopa.interop.commons.utils.AkkaUtils.{getFutureBearer, getUidFuture}
 import it.pagopa.interop.commons.utils.OpenapiUtils._
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.{ResourceConflictError, ResourceNotFoundError}
+import it.pagopa.interop.partymanagement.client.model.Relationships
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess.api.ProcessApiService
 import it.pagopa.interop.partyprocess.api.converters.partymanagement.InstitutionConverter
@@ -150,7 +151,7 @@ class ProcessApiServiceImpl(
     }
   }
 
-  private def getInstitutionByOptionIdAndOptionExternalId(
+    private def getInstitutionByOptionIdAndOptionExternalId(
     institutionId: Option[String],
     institutionExternalId: Option[String]
   )(bearer: String): Future[Option[PartyManagementDependency.Institution]] = {
@@ -162,44 +163,59 @@ class ProcessApiServiceImpl(
       partyManagementService
         .retrieveInstitution(UUID.fromString(institutionId))(bearer)
         .map(institution =>
-          institutionExternalId.fold {
-            Option(institution)
-          } { externalId =>
-            {
-              if (institution.externalId === externalId)
-                Option(institution)
-              else
-                Option.empty[PartyManagementDependency.Institution]
-            }
-          }
+          institutionExternalId
+            .flatMap(externalId => Option.when(institution.externalId === externalId)(institution))
+            .orElse(Option(institution))
         )
     }
   }
-
-  private def getOnboardingDataDetails(
-    bearer: String
-  ): PartyManagementDependency.Relationship => Future[OnboardingData] =
+  private def getOnboardingDataDetails(bearer: String)(
+    user: UserRegistryUser
+  ): PartyManagementDependency.Relationship => Future[(Option[(String, Seq[Contact])], OnboardingData)] =
     relationship => {
       for {
         institution <- partyManagementService.retrieveInstitution(relationship.to)(bearer)
+        managers    <- partyManagementService.retrieveRelationships(
+          from = None,
+          to = Some(institution.id),
+          roles = Seq(PartyManagementDependency.PartyRole.MANAGER),
+          states = Seq.empty,
+          products = Seq(relationship.product.id),
+          productRoles = Seq.empty
+        )(bearer)
+        managerWithBillingData = locateManagerWithBillingData(managers)
       } yield OnboardingData(
-        id = institution.id,
-        externalId = institution.externalId,
-        originId = institution.originId,
-        origin = institution.origin,
-        taxCode = institution.taxCode,
-        description = institution.description,
-        digitalAddress = institution.digitalAddress,
-        address = institution.address,
-        zipCode = institution.zipCode,
-        state = relationshipStateToApi(relationship.state),
-        role = roleToApi(relationship.role),
-        productInfo = relationshipProductToApi(relationship.product),
-        attributes =
-          institution.attributes.map(attribute => Attribute(attribute.origin, attribute.code, attribute.description))
-      )
+          id = institution.id,
+          externalId = institution.externalId,
+          originId = institution.originId,
+          origin = institution.origin,
+          institutionType = institution.institutionType,
+          taxCode = institution.taxCode,
+          description = institution.description,
+          digitalAddress = institution.digitalAddress,
+          address = institution.address,
+          zipCode = institution.zipCode,
+          state = relationshipStateToApi(relationship.state),
+          role = roleToApi(relationship.role),
+          productInfo = relationshipProductToApi(relationship.product),
+          billing = managerWithBillingData.fold(Option.empty[Billing])(m => m.billing.map(billingToApi)),
+          pricingPlan = managerWithBillingData.fold(Option.empty[String])(m => m.pricingPlan),
+          attributes =
+            institution.attributes.map(attribute => Attribute(attribute.origin, attribute.code, attribute.description))
+        )
 
     }
+
+  private def locateManagerWithBillingData(managers: Relationships) = {
+    managers.items
+      .sortWith((b1, b2) =>
+        // active as first
+        (b1.state != b2.state && b1.state == PartyManagementDependency.RelationshipState.ACTIVE)
+        // or last updated
+          || b2.updatedAt.getOrElse(b2.createdAt).isBefore(b1.updatedAt.getOrElse(b1.createdAt))
+      )
+      .find(m => m.state != PartyManagementDependency.RelationshipState.PENDING && m.billing.isDefined)
+  }
 
   /** Code: 204, Message: successful operation
     * Code: 404, Message: Not found, DataType: Problem
@@ -390,10 +406,10 @@ class ProcessApiServiceImpl(
             )(bearer)
         }
       }
-      contractTemplate   <- getFileAsString(onboardingRequest.contract.path)
-      pdf                <- pdfCreator.createContract(contractTemplate, validManager, validUsers, institution)
-      digest             <- signatureService.createDigest(pdf)
-      token              <- partyManagementService.createToken(
+      contractTemplate <- getFileAsString(onboardingRequest.contract.path)
+      pdf              <- pdfCreator.createContract(contractTemplate, validManager, validUsers, institution)
+      digest           <- signatureService.createDigest(pdf)
+      token            <- partyManagementService.createToken(
         PartyManagementDependency.Relationships(relationships),
         digest,
         onboardingRequest.contract.version,
@@ -646,7 +662,11 @@ class ProcessApiServiceImpl(
     product: String
   ): Future[Unit] = Future.fromTry {
     Either
-      .cond(relationships.items.exists(isAnOnboardedManager(product)), (), ManagerNotFoundError)
+      .cond(
+        relationships.items.exists(isAnOnboardedManager(product)),
+        (),
+        ManagerNotFoundError(relationships.items.map(r => r.to.toString), product)
+      )
       .toTry
   }
 
