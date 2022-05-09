@@ -8,8 +8,8 @@ import eu.europa.esig.dss.validation.reports.Reports
 import eu.europa.esig.dss.validation.{AdvancedSignature, SignedDocumentValidator}
 import it.pagopa.interop.partyprocess.error.SignatureValidationError
 import it.pagopa.interop.partyprocess.error.ValidationErrors._
-import it.pagopa.interop.partyprocess.model.UserRegistryUser
 import it.pagopa.interop.partyprocess.service.SignatureValidationService
+import it.pagopa.interop.partyprocess.model.UserRegistryUser
 
 import scala.jdk.CollectionConverters.IterableHasAsScala
 import scala.util.matching.Regex

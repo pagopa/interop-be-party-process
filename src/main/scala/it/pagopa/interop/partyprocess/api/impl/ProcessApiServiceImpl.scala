@@ -151,7 +151,7 @@ class ProcessApiServiceImpl(
     }
   }
 
-    private def getInstitutionByOptionIdAndOptionExternalId(
+  private def getInstitutionByOptionIdAndOptionExternalId(
     institutionId: Option[String],
     institutionExternalId: Option[String]
   )(bearer: String): Future[Option[PartyManagementDependency.Institution]] = {
@@ -169,9 +169,10 @@ class ProcessApiServiceImpl(
         )
     }
   }
-  private def getOnboardingDataDetails(bearer: String)(
-    user: UserRegistryUser
-  ): PartyManagementDependency.Relationship => Future[(Option[(String, Seq[Contact])], OnboardingData)] =
+
+  private def getOnboardingDataDetails(
+    bearer: String
+  ): PartyManagementDependency.Relationship => Future[OnboardingData] =
     relationship => {
       for {
         institution <- partyManagementService.retrieveInstitution(relationship.to)(bearer)
@@ -406,10 +407,10 @@ class ProcessApiServiceImpl(
             )(bearer)
         }
       }
-      contractTemplate <- getFileAsString(onboardingRequest.contract.path)
-      pdf              <- pdfCreator.createContract(contractTemplate, validManager, validUsers, institution)
-      digest           <- signatureService.createDigest(pdf)
-      token            <- partyManagementService.createToken(
+      contractTemplate   <- getFileAsString(onboardingRequest.contract.path)
+      pdf                <- pdfCreator.createContract(contractTemplate, validManager, validUsers, institution)
+      digest             <- signatureService.createDigest(pdf)
+      token              <- partyManagementService.createToken(
         PartyManagementDependency.Relationships(relationships),
         digest,
         onboardingRequest.contract.version,
@@ -695,7 +696,10 @@ class ProcessApiServiceImpl(
   private def isNotAnOnboardedManager(product: String): PartyManagementDependency.Relationship => Boolean =
     relationship => !isAnOnboardedManager(product)(relationship)
 
-  private def addUser(user: User, institution: PartyManagementDependency.Institution)(implicit
+  private def addUser(
+    user: User,
+    institution: PartyManagementDependency.Institution
+  )(implicit
     bearer: String,
     contexts: Seq[(String, String)]
   ): Future[(UserId, PartyRole, String, String)] = {

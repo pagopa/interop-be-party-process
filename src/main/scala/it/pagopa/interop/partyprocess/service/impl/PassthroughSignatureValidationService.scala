@@ -3,8 +3,8 @@ package it.pagopa.interop.partyprocess.service.impl
 import cats.data.{Validated, ValidatedNel}
 import eu.europa.esig.dss.validation.SignedDocumentValidator
 import it.pagopa.interop.partyprocess.error.SignatureValidationError
-import it.pagopa.interop.partyprocess.model.UserRegistryUser
 import it.pagopa.interop.partyprocess.service.SignatureValidationService
+import it.pagopa.interop.partyprocess.model.UserRegistryUser
 
 case object PassthroughSignatureValidationService extends SignatureValidationService {
 

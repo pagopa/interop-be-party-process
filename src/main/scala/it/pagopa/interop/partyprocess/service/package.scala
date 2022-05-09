@@ -1,8 +1,8 @@
 package it.pagopa.interop.partyprocess
 
 import akka.actor.ActorSystem
-import it.pagopa._
 import it.pagopa.interop._
+import it.pagopa._
 
 package object service {
 
