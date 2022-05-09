@@ -15,8 +15,8 @@ import it.pagopa.interop.commons.utils.OpenapiUtils._
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.{ResourceConflictError, ResourceNotFoundError}
 import it.pagopa.interop.partymanagement.client.model.{
-  Organization,
-  OrganizationSeed,
+  Institution,
+  InstitutionSeed,
   PersonSeed,
   Relationship,
   RelationshipProductSeed,
@@ -266,7 +266,7 @@ class ProcessApiServiceImpl(
 
   private def createOrGetOrganization(
     onboardingRequest: OnboardingRequest
-  )(bearer: String, contexts: Seq[(String, String)]): Future[Organization] =
+  )(bearer: String, contexts: Seq[(String, String)]): Future[Institution] =
     createOrganization(onboardingRequest.institutionId)(bearer, contexts).recoverWith {
       case _: ResourceConflictError =>
         partyManagementService.retrieveOrganizationByExternalId(onboardingRequest.institutionId)(bearer)
@@ -345,7 +345,7 @@ class ProcessApiServiceImpl(
   private def performOnboardingWithSignature(
     onboardingRequest: OnboardingRequest,
     activeManager: Option[Relationship],
-    organization: Organization,
+    organization: Institution,
     currentUser: UserRegistryUser
   )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Unit] = {
     for {
@@ -527,7 +527,7 @@ class ProcessApiServiceImpl(
   private def performOnboardingWithoutSignature(
     onboardingRequest: OnboardingRequest,
     rolesToCheck: Set[PartyRole],
-    organization: Organization
+    organization: Institution
   )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Seq[RelationshipInfo]] = {
     for {
       validUsers    <- verifyUsersByRoles(onboardingRequest.users, rolesToCheck)
@@ -617,12 +617,12 @@ class ProcessApiServiceImpl(
 
   private def createOrganization(
     institutionId: String
-  )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Organization] =
+  )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Institution] =
     for {
       institution <- partyRegistryService.getInstitution(institutionId)(bearer)
       category    <- partyRegistryService.getCategory(institution.origin, institution.category)(bearer)
       _    = logger.info("getInstitution {}", institution.id)
-      seed = OrganizationSeed(
+      seed = InstitutionSeed(
         institutionId = institution.id,
         description = institution.description,
         digitalAddress = institution.digitalAddress,

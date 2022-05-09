@@ -13,7 +13,7 @@ import eu.europa.esig.dss.validation.SignedDocumentValidator
 import it.pagopa.interop.commons.utils.AkkaUtils.Authenticator
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.ResourceConflictError
 import it.pagopa.interop.partymanagement.client.model.{
-  OrganizationSeed,
+  InstitutionSeed,
   RelationshipBinding,
   RelationshipProduct,
   TokenInfo,
@@ -160,7 +160,7 @@ class PartyProcessSpec
         zipCode = "zipCode"
       )
 
-    val organization1 = PartyManagementDependency.Organization(
+    val organization1 = PartyManagementDependency.Institution(
       institutionId = institutionId1,
       description = "org1",
       digitalAddress = "digitalAddress1",
@@ -244,7 +244,7 @@ class PartyProcessSpec
       .once()
 
     (mockPartyManagementService
-      .createOrganization(_: OrganizationSeed)(_: String))
+      .createOrganization(_: InstitutionSeed)(_: String))
       .expects(*, *)
       .returning(Future.successful(organization1))
       .once()
@@ -296,7 +296,7 @@ class PartyProcessSpec
         zipCode = "zipCode"
       )
 
-    val organization1 = PartyManagementDependency.Organization(
+    val organization1 = PartyManagementDependency.Institution(
       institutionId = institutionId1,
       description = "org1",
       digitalAddress = "digitalAddress1",
@@ -412,7 +412,7 @@ class PartyProcessSpec
       .once()
 
     (mockPartyManagementService
-      .createOrganization(_: OrganizationSeed)(_: String))
+      .createOrganization(_: InstitutionSeed)(_: String))
       .expects(*, *)
       .returning(Future.successful(organization1))
       .once()
@@ -529,7 +529,7 @@ class PartyProcessSpec
       val orgPartyId    = UUID.randomUUID()
       val personPartyId = UUID.randomUUID()
 
-      val organization = PartyManagementDependency.Organization(
+      val organization = PartyManagementDependency.Institution(
         institutionId = institutionId,
         description = "",
         digitalAddress = "",
@@ -605,7 +605,7 @@ class PartyProcessSpec
       val mockUidUUID   = UUID.randomUUID()
       val orgPartyId    = UUID.randomUUID()
 
-      val organization = PartyManagementDependency.Organization(
+      val organization = PartyManagementDependency.Institution(
         institutionId = institutionId,
         description = "",
         digitalAddress = "",
@@ -713,7 +713,7 @@ class PartyProcessSpec
 
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2))
 
-      val organization1 = PartyManagementDependency.Organization(
+      val organization1 = PartyManagementDependency.Institution(
         institutionId = institutionId1.toString,
         description = "org1",
         digitalAddress = "digitalAddress1",
@@ -727,7 +727,7 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode"
       )
-      val organization2 = PartyManagementDependency.Organization(
+      val organization2 = PartyManagementDependency.Institution(
         institutionId = institutionId2.toString,
         description = "org2",
         digitalAddress = "digitalAddress2",
@@ -879,7 +879,7 @@ class PartyProcessSpec
 
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship1))
 
-      val organization1 = PartyManagementDependency.Organization(
+      val organization1 = PartyManagementDependency.Institution(
         institutionId = institutionId1,
         description = "org1",
         digitalAddress = "digitalAddress1",
@@ -1018,7 +1018,7 @@ class PartyProcessSpec
 
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship1))
 
-      val organization1 = PartyManagementDependency.Organization(
+      val organization1 = PartyManagementDependency.Institution(
         institutionId = institutionId1.toString,
         description = "org1",
         digitalAddress = "digitalAddress1",
@@ -1236,7 +1236,7 @@ class PartyProcessSpec
         .expects(*, *)
         .returning(
           Future.successful(
-            PartyManagementDependency.Organization(
+            PartyManagementDependency.Institution(
               id = UUID.randomUUID(),
               institutionId = "d4r3",
               description = "test",
@@ -1281,7 +1281,7 @@ class PartyProcessSpec
       val personPartyId1 = "bf80fac0-2775-4646-8fcf-28e083751900"
       val orgPartyId1    = "bf80fac0-2775-4646-8fcf-28e083751901"
 
-      val organization1 = PartyManagementDependency.Organization(
+      val organization1 = PartyManagementDependency.Institution(
         institutionId = institutionId1.toString,
         description = "org1",
         digitalAddress = "digitalAddress1",
@@ -1457,7 +1457,7 @@ class PartyProcessSpec
         .expects(*, *)
         .returning(
           Future.successful(
-            PartyManagementDependency.Organization(
+            PartyManagementDependency.Institution(
               id = UUID.randomUUID(),
               institutionId = "d4r3",
               description = "test",
@@ -1502,7 +1502,7 @@ class PartyProcessSpec
       val personPartyId1 = "bf80fac0-2775-4646-8fcf-28e083751900"
       val orgPartyId1    = "bf80fac0-2775-4646-8fcf-28e083751901"
 
-      val organization1 = PartyManagementDependency.Organization(
+      val organization1 = PartyManagementDependency.Institution(
         institutionId = institutionId1.toString,
         description = "org1",
         digitalAddress = "digitalAddress1",
@@ -1877,7 +1877,7 @@ class PartyProcessSpec
       val relationshipId2     = UUID.randomUUID()
       val relationshipId3     = UUID.randomUUID()
 
-      val organization = Organization(
+      val organization = PartyManagementDependency.Institution(
         id = institutionIdUUID,
         institutionId = institutionId,
         description = "",
@@ -2138,7 +2138,7 @@ class PartyProcessSpec
       val relationshipId1     = UUID.randomUUID()
       val relationshipId2     = UUID.randomUUID()
 
-      val organization = Organization(
+      val organization = PartyManagementDependency.Institution(
         id = institutionIdUUID,
         institutionId = institutionId,
         description = "",
@@ -2332,7 +2332,7 @@ class PartyProcessSpec
       val institutionId     = "institutionId"
       val institutionIdUUID = UUID.randomUUID()
 
-      val organization = Organization(
+      val organization = PartyManagementDependency.Institution(
         id = institutionIdUUID,
         institutionId = institutionId,
         description = "",
@@ -2503,7 +2503,7 @@ class PartyProcessSpec
       val institutionId     = "institutionId"
       val institutionIdUUID = UUID.randomUUID()
 
-      val organization = Organization(
+      val organization = PartyManagementDependency.Institution(
         id = institutionIdUUID,
         institutionId = institutionId,
         description = "",
@@ -2646,7 +2646,7 @@ class PartyProcessSpec
       val institutionId     = "institutionId"
       val institutionIdUUID = UUID.randomUUID()
 
-      val organization = Organization(
+      val organization = PartyManagementDependency.Institution(
         id = institutionIdUUID,
         institutionId = institutionId,
         description = "",
@@ -2785,7 +2785,7 @@ class PartyProcessSpec
       val institutionId     = "institutionId"
       val institutionIdUUID = UUID.randomUUID()
 
-      val organization = Organization(
+      val organization = PartyManagementDependency.Institution(
         id = institutionIdUUID,
         institutionId = institutionId,
         description = "",
@@ -2937,7 +2937,7 @@ class PartyProcessSpec
       val institutionId     = "institutionId"
       val institutionIdUUID = UUID.randomUUID()
 
-      val organization = Organization(
+      val organization = PartyManagementDependency.Institution(
         id = institutionIdUUID,
         institutionId = institutionId,
         description = "",
@@ -3134,7 +3134,7 @@ class PartyProcessSpec
       val institutionId     = "institutionId"
       val institutionIdUUID = UUID.randomUUID()
 
-      val organization = Organization(
+      val organization = PartyManagementDependency.Institution(
         id = institutionIdUUID,
         institutionId = institutionId,
         description = "",
@@ -3493,7 +3493,7 @@ class PartyProcessSpec
       val institutionId1 = "IST2"
       val orgPartyId1    = "bf80fac0-2775-4646-8fcf-28e083751901"
 
-      val organization1 = PartyManagementDependency.Organization(
+      val organization1 = PartyManagementDependency.Institution(
         institutionId = institutionId1,
         description = "org1",
         digitalAddress = "digitalAddress1",
@@ -3839,7 +3839,7 @@ class PartyProcessSpec
       val institutionId1 = "IST2"
       val orgPartyId1    = "bf80fac0-2775-4646-8fcf-28e083751901"
 
-      val organization1 = PartyManagementDependency.Organization(
+      val organization1 = PartyManagementDependency.Institution(
         institutionId = institutionId1,
         description = "org1",
         digitalAddress = "digitalAddress1",
@@ -3929,7 +3929,7 @@ class PartyProcessSpec
       val institutionId1 = "IST2"
       val orgPartyId1    = "bf80fac0-2775-4646-8fcf-28e083751901"
 
-      val organization1 = PartyManagementDependency.Organization(
+      val organization1 = PartyManagementDependency.Institution(
         institutionId = institutionId1,
         description = "org1",
         digitalAddress = "digitalAddress1",
@@ -4041,7 +4041,7 @@ class PartyProcessSpec
       val institutionId     = "institutionId"
       val institutionIdUUID = UUID.randomUUID()
 
-      val organization = Organization(
+      val organization = PartyManagementDependency.Institution(
         id = institutionIdUUID,
         institutionId = institutionId,
         description = "",
@@ -4167,7 +4167,7 @@ class PartyProcessSpec
       val institutionId     = "institutionId"
       val institutionIdUUID = UUID.randomUUID()
 
-      val organization = Organization(
+      val organization = PartyManagementDependency.Institution(
         id = institutionIdUUID,
         institutionId = institutionId,
         description = "",
@@ -4303,7 +4303,7 @@ class PartyProcessSpec
       val institutionId     = "institutionId"
       val institutionIdUUID = UUID.randomUUID()
 
-      val organization = Organization(
+      val organization = PartyManagementDependency.Institution(
         id = institutionIdUUID,
         institutionId = institutionId,
         description = "",
@@ -4456,7 +4456,7 @@ class PartyProcessSpec
       val institutionId     = "institutionId"
       val institutionIdUUID = UUID.randomUUID()
 
-      val organization = Organization(
+      val organization = PartyManagementDependency.Institution(
         id = institutionIdUUID,
         institutionId = institutionId,
         description = "",
@@ -4596,7 +4596,7 @@ class PartyProcessSpec
       val institutionId     = "institutionId"
       val institutionIdUUID = UUID.randomUUID()
 
-      val organization = Organization(
+      val organization = PartyManagementDependency.Institution(
         id = institutionIdUUID,
         institutionId = institutionId,
         description = "",
@@ -4704,7 +4704,7 @@ class PartyProcessSpec
       val institutionId     = "institutionId"
       val institutionIdUUID = UUID.randomUUID()
 
-      val organization = Organization(
+      val organization = PartyManagementDependency.Institution(
         id = institutionIdUUID,
         institutionId = institutionId,
         description = "",
@@ -4811,7 +4811,7 @@ class PartyProcessSpec
       val institutionId     = "institutionId"
       val institutionIdUUID = UUID.randomUUID()
 
-      val organization = Organization(
+      val organization = PartyManagementDependency.Institution(
         id = institutionIdUUID,
         institutionId = institutionId,
         description = "",

@@ -10,12 +10,12 @@ import scala.concurrent.Future
 trait PartyManagementService {
   def deleteRelationshipById(relationshipUUID: UUID)(bearerToken: String): Future[Unit]
 
-  def retrieveOrganization(organizationId: UUID)(bearerToken: String): Future[Organization]
-  def retrieveOrganizationByExternalId(externalOrganizationId: String)(bearerToken: String): Future[Organization]
+  def retrieveOrganization(organizationId: UUID)(bearerToken: String): Future[Institution]
+  def retrieveOrganizationByExternalId(externalOrganizationId: String)(bearerToken: String): Future[Institution]
 
   def createPerson(person: PersonSeed)(bearerToken: String): Future[Person]
 
-  def createOrganization(organization: OrganizationSeed)(bearerToken: String): Future[Organization]
+  def createOrganization(organization: InstitutionSeed)(bearerToken: String): Future[Institution]
 
   def createRelationship(relationshipSeed: RelationshipSeed)(bearerToken: String): Future[Relationship]
 

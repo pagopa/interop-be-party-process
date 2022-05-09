@@ -49,9 +49,10 @@ case object StartupErrorShutdown extends CoordinatedShutdown.Reason
 trait PartyManagementDependency {
   final val partyManagementService: PartyManagementService =
     PartyManagementServiceImpl(
-      PartyManagementInvoker(),
-      partyManagementApi.PartyApi(ApplicationConfiguration.getPartyManagementUrl),
-      partyManagementApi.PublicApi(ApplicationConfiguration.getPartyManagementUrl)
+      invoker = PartyManagementInvoker(),
+      api = partyManagementApi.PartyApi(ApplicationConfiguration.getPartyManagementUrl),
+      externalApi = partyManagementApi.ExternalApi(ApplicationConfiguration.getPartyManagementUrl),
+      publicApi = partyManagementApi.PublicApi(ApplicationConfiguration.getPartyManagementUrl)
     )
 }
 

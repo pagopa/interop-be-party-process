@@ -3,7 +3,7 @@ package it.pagopa.interop.partyprocess.service.impl
 import com.openhtmltopdf.util.XRLog
 import it.pagopa.interop.commons.files.service.PDFManager
 import it.pagopa.interop.commons.utils.TypeConversions.OptionOps
-import it.pagopa.interop.partymanagement.client.model.Organization
+import it.pagopa.interop.partymanagement.client.model.Institution
 import it.pagopa.interop.partyprocess.model.{PartyRole, User}
 import it.pagopa.interop.partyprocess.service.PDFCreator
 
@@ -26,7 +26,7 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
     contractTemplate: String,
     manager: User,
     users: Seq[User],
-    organization: Organization
+    organization: Institution
   ): Future[File] =
     Future.fromTry {
       for {
@@ -44,7 +44,7 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
     }
   }
 
-  private def setupData(manager: User, users: Seq[User], organization: Organization): Try[Map[String, String]] = {
+  private def setupData(manager: User, users: Seq[User], organization: Institution): Try[Map[String, String]] = {
     for {
       managerEmail <- manager.email.toTry("Manager email not found")
     } yield Map(
