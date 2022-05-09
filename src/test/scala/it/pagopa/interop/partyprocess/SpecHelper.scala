@@ -68,7 +68,7 @@ trait SpecHelper { self: MockFactory =>
     System.setProperty("MAIL_REJECT_PLACEHOLDER_NAME", "testRejectName")
     System.setProperty("MAIL_ONBOARDING_REJECTION_LINK", "reject-value")
     System.setProperty("WELL_KNOWN_URL", "http://localhost/.well-known/jwks.json")
-    System.setProperty("MAIN_AUDIENCE", "audience")
+    System.setProperty("ACCEPTED_AUDIENCES", "audience")
   }
 
 }
