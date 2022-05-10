@@ -345,20 +345,20 @@ class PartyProcessSpec
     val manager    =
       User(
         name = "manager",
-        surname = "manager",
+        surname = "managerSurname",
         taxCode = taxCode1,
         role = PartyRole.MANAGER,
-        email = None,
+        email = Option("manager@email.it"),
         product = "product",
         productRole = "admin"
       )
     val delegate   =
       User(
         name = "delegate",
-        surname = "delegate",
+        surname = "delegateSurname",
         taxCode = taxCode2,
         role = PartyRole.DELEGATE,
-        email = None,
+        email = Option("delegate@email.it"),
         product = "product",
         productRole = "admin"
       )
@@ -719,7 +719,6 @@ class PartyProcessSpec
     }
 
     "retrieve a onboarding info" in {
-      val taxCode1    = "CF1"
       val externalId1 = UUID.randomUUID().toString
       val originId1   = UUID.randomUUID().toString
       val externalId2 = UUID.randomUUID().toString
@@ -735,12 +734,10 @@ class PartyProcessSpec
       val attribute5 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name5", origin)
       val attribute6 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name6", origin)
 
-      val user = UserRegistryUser(id = uid, taxCode = taxCode1, name = "Mario", surname = "Rossi")
-
       val relationship1 =
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
-          from = user.id,
+          from = uid,
           to = orgPartyId1,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = defaultProduct,
@@ -765,7 +762,7 @@ class PartyProcessSpec
       val relationship2 =
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
-          from = user.id,
+          from = uid,
           to = orgPartyId2,
           role = PartyManagementDependency.PartyRole.DELEGATE,
           product = defaultProduct,
@@ -839,7 +836,7 @@ class PartyProcessSpec
       )
 
       val expected = OnboardingInfo(
-        userId = Option(user.id),
+        userId = Option(uid),
         institutions = Seq(
           OnboardingData(
             id = institution1.id,
@@ -891,12 +888,6 @@ class PartyProcessSpec
 //        .expects(*)
 //        .returning(mockUid(mockUidUUID))
 //        .once()
-
-      (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(uid)
-        .returning(Future.successful(user))
-        .once()
 
       (mockPartyManagementService
         .retrieveRelationships(
@@ -991,14 +982,10 @@ class PartyProcessSpec
       attribute2: Attribute,
       attribute3: Attribute
     ): OnboardingInfo = {
-      val taxCode1 = "CF1"
-
-      val user = UserRegistryUser(id = uid, taxCode = taxCode1, name = "Mario", surname = "Rossi")
-
       val relationship1 =
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
-          from = user.id,
+          from = uid,
           to = institution.id,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = defaultProduct,
@@ -1026,7 +1013,7 @@ class PartyProcessSpec
       val managerInstitution1 = relationship1
 
       val expected = OnboardingInfo(
-        userId = Option(user.id),
+        userId = Option(uid),
         institutions = Seq(
           OnboardingData(
             id = institution.id,
@@ -1056,12 +1043,6 @@ class PartyProcessSpec
       //        .expects(*)
       //        .returning(mockUid(mockUidUUID))
       //        .once()
-
-      (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(uid)
-        .returning(Future.successful(user))
-        .once()
 
       (mockPartyManagementService
         .retrieveRelationships(
@@ -1207,7 +1188,6 @@ class PartyProcessSpec
     }
 
     "retrieve an onboarding info with states filter" in {
-      val taxCode1   = "CF1"
       val externalId = UUID.randomUUID().toString
       val originId   = UUID.randomUUID().toString
       val origin     = "IPA"
@@ -1216,13 +1196,10 @@ class PartyProcessSpec
       val attribute2 = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name2", "origin")
       val attribute3 = PartyManagementDependency.Attribute(UUID.randomUUID().toString, "name3", "origin")
 
-      val user =
-        UserRegistryUser(id = uid, taxCode = taxCode1, name = "Mario", surname = "Rossi")
-
       val relationship =
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
-          from = user.id,
+          from = uid,
           to = orgPartyId,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = defaultProduct,
@@ -1250,7 +1227,7 @@ class PartyProcessSpec
       val managerInstitution1 =
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
-          from = user.id,
+          from = uid,
           to = orgPartyId,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = defaultProduct,
@@ -1276,7 +1253,7 @@ class PartyProcessSpec
       val oldManagerInstitution1 =
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
-          from = user.id,
+          from = uid,
           to = orgPartyId,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = defaultProduct,
@@ -1302,7 +1279,7 @@ class PartyProcessSpec
       val newButRejectedManagerInstitution1 =
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
-          from = user.id,
+          from = uid,
           to = orgPartyId,
           role = PartyManagementDependency.PartyRole.MANAGER,
           product = defaultProduct,
@@ -1342,11 +1319,6 @@ class PartyProcessSpec
         origin = origin,
         institutionType = Option("PA")
       )
-      (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(uid)
-        .returning(Future.successful(user))
-        .once()
 
       (mockPartyManagementService
         .retrieveRelationships(
@@ -1411,7 +1383,7 @@ class PartyProcessSpec
         .once()
 
       val expected = OnboardingInfo(
-        userId = Option(user.id),
+        userId = Option(uid),
         institutions = Seq(
           OnboardingData(
             id = institution.id,
@@ -1673,7 +1645,7 @@ class PartyProcessSpec
         surname = "operator2",
         taxCode = taxCode2,
         role = PartyRole.OPERATOR,
-        email = None,
+        email = Some("operator2@email.it"),
         product = "product",
         productRole = "security"
       )
@@ -1756,24 +1728,6 @@ class PartyProcessSpec
         .createRelationship(_: RelationshipSeed)(_: String))
         .expects(*, *)
         .returning(Future.successful(relationship))
-        .repeat(2)
-
-      (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(*)
-        .returning(Future.successful(user1))
-        .once()
-
-      (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(*)
-        .returning(Future.successful(user2))
-        .once()
-
-      (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(*, *)
-        .returning(Future.successful(institution))
         .repeat(2)
 
       val req = OnboardingUsersRequest(users = Seq(operator1, operator2), institutionId = orgPartyId)
@@ -1927,7 +1881,7 @@ class PartyProcessSpec
         surname = "subdelegate2",
         taxCode = taxCode2,
         role = PartyRole.SUB_DELEGATE,
-        email = None,
+        email = Some("subdelegate2@email.it"),
         product = "product",
         productRole = "admin"
       )
@@ -2010,24 +1964,6 @@ class PartyProcessSpec
         .createRelationship(_: RelationshipSeed)(_: String))
         .expects(*, *)
         .returning(Future.successful(relationship))
-        .repeat(2)
-
-      (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(*)
-        .returning(Future.successful(user1))
-        .once()
-
-      (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(*)
-        .returning(Future.successful(user2))
-        .once()
-
-      (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(*, *)
-        .returning(Future.successful(institution))
         .repeat(2)
 
       val req = OnboardingUsersRequest(users = Seq(subdelegate1, subdelegate2), institutionId = orgPartyId)
@@ -2266,8 +2202,6 @@ class PartyProcessSpec
           updatedAt = None
         )
 
-      val userRegistryUser = UserRegistryUser(id = uid, taxCode = "taxCode", name = "name", surname = "surname")
-
       val relationship1 =
         PartyManagementDependency.Relationship(
           id = relationshipId1,
@@ -2294,8 +2228,6 @@ class PartyProcessSpec
           )
         )
 
-      val userRegistryUser1 = UserRegistryUser(id = userId1, taxCode = "taxCode1", name = "name1", surname = "surname1")
-
       val relationship2 =
         PartyManagementDependency.Relationship(
           id = relationshipId2,
@@ -2308,8 +2240,6 @@ class PartyProcessSpec
           updatedAt = None
         )
 
-      val userRegistryUser2 = UserRegistryUser(id = userId2, taxCode = "taxCode2", name = "name2", surname = "surname2")
-
       val relationship3 =
         PartyManagementDependency.Relationship(
           id = relationshipId3,
@@ -2321,8 +2251,6 @@ class PartyProcessSpec
           createdAt = defaultRelationshipTimestamp,
           updatedAt = None
         )
-
-      val userRegistryUser3 = UserRegistryUser(id = userId3, taxCode = "taxCode3", name = "name3", surname = "surname3")
 
       val adminRelationships = PartyManagementDependency.Relationships(items = Seq(adminRelationship))
 
@@ -2373,36 +2301,6 @@ class PartyProcessSpec
         .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
         .returning(Future.successful(relationships))
         .once()
-
-      (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(uid)
-        .returning(Future.successful(userRegistryUser))
-        .once()
-
-      (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(userId1)
-        .returning(Future.successful(userRegistryUser1))
-        .once()
-
-      (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(userId2)
-        .returning(Future.successful(userRegistryUser2))
-        .once()
-
-      (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(userId3)
-        .returning(Future.successful(userRegistryUser3))
-        .once()
-
-      (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(orgPartyId, *)
-        .returning(Future.successful(institution))
-        .repeat(4)
 
       val response =
         Http()
@@ -2581,28 +2479,6 @@ class PartyProcessSpec
         .returning(Future.successful(relationships))
         .once()
 
-      val userRegistryUser2 = UserRegistryUser(id = userId1, taxCode = "taxCode2", name = "name2", surname = "surname2")
-
-      (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(userId1)
-        .returning(Future.successful(userRegistryUser2))
-        .once()
-
-      val userRegistryUser3 = UserRegistryUser(id = userId2, taxCode = "taxCode3", name = "name3", surname = "surname3")
-
-      (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(userId2)
-        .returning(Future.successful(userRegistryUser3))
-        .once()
-
-      (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(orgPartyId, *)
-        .returning(Future.successful(institution))
-        .repeat(2)
-
       val response =
         Http()
           .singleRequest(
@@ -2776,20 +2652,6 @@ class PartyProcessSpec
         .returning(Future.successful(relationships))
         .once()
 
-      val userRegistryUser2 = UserRegistryUser(id = userId2, taxCode = "taxCode2", name = "name2", surname = "surname2")
-
-      (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(userId2)
-        .returning(Future.successful(userRegistryUser2))
-        .once()
-
-      (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(orgPartyId, *)
-        .returning(Future.successful(institution))
-        .once()
-
       val response =
         Http()
           .singleRequest(
@@ -2907,20 +2769,6 @@ class PartyProcessSpec
         )(_: String))
         .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq("Interop"), Seq("security", "api"), *)
         .returning(Future.successful(relationships))
-        .once()
-
-      val userRegistryUser2 = UserRegistryUser(id = userId1, taxCode = "taxCode2", name = "name2", surname = "surname2")
-
-      (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(userId1)
-        .returning(Future.successful(userRegistryUser2))
-        .once()
-
-      (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(orgPartyId, *)
-        .returning(Future.successful(institution))
         .once()
 
       val response =
@@ -3050,21 +2898,6 @@ class PartyProcessSpec
           *
         )
         .returning(Future.successful(relationships))
-        .once()
-
-      val userRegistryUser =
-        UserRegistryUser(id = adminIdentifier, taxCode = "taxCode1", name = "name1", surname = "surname1")
-
-      (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(adminIdentifier)
-        .returning(Future.successful(userRegistryUser))
-        .once()
-
-      (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(orgPartyId, *)
-        .returning(Future.successful(institution))
         .once()
 
       val response =
@@ -3217,20 +3050,6 @@ class PartyProcessSpec
           *
         )
         .returning(Future.successful(relationships))
-        .once()
-
-      val userRegistryUser2 = UserRegistryUser(id = userId2, taxCode = "taxCode2", name = "name2", surname = "surname2")
-
-      (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(userId2)
-        .returning(Future.successful(userRegistryUser2))
-        .once()
-
-      (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(orgPartyId, *)
-        .returning(Future.successful(institution))
         .once()
 
       val response =
@@ -3390,28 +3209,6 @@ class PartyProcessSpec
         )
         .returning(Future.successful(relationships))
         .once()
-
-      val userRegistryUser3 = UserRegistryUser(id = userId3, taxCode = "taxCode3", name = "name3", surname = "surname3")
-
-      (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(userId3)
-        .returning(Future.successful(userRegistryUser3))
-        .once()
-
-      val userRegistryUser4 = UserRegistryUser(id = userId4, taxCode = "taxCode4", name = "name4", surname = "surname4")
-
-      (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(userId4)
-        .returning(Future.successful(userRegistryUser4))
-        .once()
-
-      (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(orgPartyId, *)
-        .returning(Future.successful(institution))
-        .repeat(2)
 
       val response =
         Http()
@@ -3873,13 +3670,9 @@ class PartyProcessSpec
         .once()
 
       (mockUserRegistryService
-        .getUserByExternalId(_: String))
+        .getUserIdByExternalId(_: String))
         .expects(manager.taxCode)
-        .returning(
-          Future.successful(
-            UserRegistryUser(id = managerId, taxCode = manager.taxCode, name = manager.name, surname = manager.surname)
-          )
-        )
+        .returning(Future.successful(UserId(id = managerId)))
         .once()
 
       (mockPartyManagementService
@@ -4001,22 +3794,22 @@ class PartyProcessSpec
       val manager    =
         User(
           name = "manager",
-          surname = "manager",
+          surname = "managerSurname",
           taxCode = taxCode1,
           role = PartyRole.MANAGER,
           product = "product",
           productRole = "admin",
-          email = None
+          email = Option("manager@email.it")
         )
       val delegate   =
         User(
           name = "delegate",
-          surname = "delegate",
+          surname = "delegateSurname",
           taxCode = taxCode2,
           role = PartyRole.DELEGATE,
           product = "product",
           productRole = "admin",
-          email = None
+          email = Option("delegate@email.it")
         )
 
       configureCreateLegalTest(orgPartyId, managerId, manager, delegateId, delegate)
@@ -4070,7 +3863,7 @@ class PartyProcessSpec
           role = PartyRole.MANAGER,
           product = "product",
           productRole = "admin",
-          email = None
+          email = Option("manager@email.it")
         )
       val delegate   =
         User(
@@ -4080,7 +3873,7 @@ class PartyProcessSpec
           role = PartyRole.DELEGATE,
           product = "product",
           productRole = "admin",
-          email = None
+          email = Option("delegate@email.it")
         )
 
       configureCreateLegalTest(orgPartyId, managerId, manager, delegateId, delegate)

@@ -186,24 +186,24 @@ class ProcessApiServiceImpl(
         )(bearer)
         managerWithBillingData = locateManagerWithBillingData(managers)
       } yield OnboardingData(
-          id = institution.id,
-          externalId = institution.externalId,
-          originId = institution.originId,
-          origin = institution.origin,
-          institutionType = institution.institutionType,
-          taxCode = institution.taxCode,
-          description = institution.description,
-          digitalAddress = institution.digitalAddress,
-          address = institution.address,
-          zipCode = institution.zipCode,
-          state = relationshipStateToApi(relationship.state),
-          role = roleToApi(relationship.role),
-          productInfo = relationshipProductToApi(relationship.product),
-          billing = managerWithBillingData.fold(Option.empty[Billing])(m => m.billing.map(billingToApi)),
-          pricingPlan = managerWithBillingData.fold(Option.empty[String])(m => m.pricingPlan),
-          attributes =
-            institution.attributes.map(attribute => Attribute(attribute.origin, attribute.code, attribute.description))
-        )
+        id = institution.id,
+        externalId = institution.externalId,
+        originId = institution.originId,
+        origin = institution.origin,
+        institutionType = institution.institutionType,
+        taxCode = institution.taxCode,
+        description = institution.description,
+        digitalAddress = institution.digitalAddress,
+        address = institution.address,
+        zipCode = institution.zipCode,
+        state = relationshipStateToApi(relationship.state),
+        role = roleToApi(relationship.role),
+        productInfo = relationshipProductToApi(relationship.product),
+        billing = managerWithBillingData.fold(Option.empty[Billing])(m => m.billing.map(billingToApi)),
+        pricingPlan = managerWithBillingData.fold(Option.empty[String])(m => m.pricingPlan),
+        attributes =
+          institution.attributes.map(attribute => Attribute(attribute.origin, attribute.code, attribute.description))
+      )
 
     }
 
@@ -696,10 +696,7 @@ class ProcessApiServiceImpl(
   private def isNotAnOnboardedManager(product: String): PartyManagementDependency.Relationship => Boolean =
     relationship => !isAnOnboardedManager(product)(relationship)
 
-  private def addUser(
-    user: User,
-    institution: PartyManagementDependency.Institution
-  )(implicit
+  private def addUser(user: User, institution: PartyManagementDependency.Institution)(implicit
     bearer: String,
     contexts: Seq[(String, String)]
   ): Future[(UserId, PartyRole, String, String)] = {
