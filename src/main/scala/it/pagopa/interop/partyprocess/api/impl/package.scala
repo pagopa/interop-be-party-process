@@ -17,7 +17,7 @@ package object impl extends DefaultJsonProtocol {
   implicit val tokenChecksumFormat: RootJsonFormat[TokenChecksum]           = jsonFormat1(TokenChecksum)
   implicit val problemErrorFormat: RootJsonFormat[ProblemError]             = jsonFormat2(ProblemError)
   implicit val problemFormat: RootJsonFormat[Problem]                       = jsonFormat5(Problem)
-  implicit val userFormat: RootJsonFormat[User]                             = jsonFormat7(User)
+  implicit val userFormat: RootJsonFormat[User]                             = jsonFormat8(User)
   implicit val onboardingContractFormat: RootJsonFormat[OnboardingContract] = jsonFormat2(OnboardingContract)
 
   implicit val onboardingInstitutionRequestFormat: RootJsonFormat[OnboardingInstitutionRequest] =

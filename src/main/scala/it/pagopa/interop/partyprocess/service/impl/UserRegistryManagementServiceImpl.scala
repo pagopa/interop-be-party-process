@@ -9,7 +9,7 @@ import it.pagopa.interop.partyprocess.service.{
 }
 import it.pagopa.userreg.client.api.UserApi
 import it.pagopa.userreg.client.invoker.{ApiError, ApiKeyValue, ApiRequest}
-import it.pagopa.userreg.client.model.{SaveUserDto, UserId, UserResource, UserSearchDto}
+import it.pagopa.userreg.client.model.{UserId, UserResource, UserSearchDto}
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.util.UUID
@@ -39,11 +39,6 @@ final case class UserRegistryManagementServiceImpl(invoker: UserRegistryManageme
     val request: ApiRequest[UserResource] = api.searchUsingPOST(Seq(), Option(UserSearchDto(fiscalCode = externalId)))
     invokeAPI(request, "Retrieve User By External ID", Some(externalId))
       .map(u => UserId(u.id))
-  }
-
-  override def createUser(seed: SaveUserDto): Future[UserId] = {
-    val request: ApiRequest[UserId] = api.saveUsingPATCH(Option(seed))
-    invokeAPI(request, "Create User", None)
   }
 
   private def invokeAPI[T](request: ApiRequest[T], logMessage: String, entityId: Option[String])(implicit

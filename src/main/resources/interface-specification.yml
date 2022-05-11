@@ -876,25 +876,30 @@ components:
         $ref: '#/components/schemas/RelationshipInfo'
     User:
       properties:
+        id:
+          type: string
+          description: User internal id
+          format: uuid
+        taxCode:
+          type: string
         name:
           type: string
         surname:
           type: string
-        taxCode:
+        email:
           type: string
         role:
           $ref: '#/components/schemas/PartyRole'
-        email:
-          type: string
         product:
           type: string
         productRole:
           type: string
       additionalProperties: false
       required:
+        - id
+        - taxCode
         - name
         - surname
-        - taxCode
         - role
         - product
         - productRole

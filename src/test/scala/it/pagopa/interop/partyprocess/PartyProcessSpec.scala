@@ -23,12 +23,7 @@ import it.pagopa.interop.partymanagement.client.model.{
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess
 import it.pagopa.interop.partyprocess.api.impl.Conversions._
-import it.pagopa.interop.partyprocess.api.impl.{
-  ExternalApiServiceImpl,
-  ProcessApiServiceImpl,
-  PublicApiServiceImpl,
-  notCertifiedString
-}
+import it.pagopa.interop.partyprocess.api.impl.{ExternalApiServiceImpl, ProcessApiServiceImpl, PublicApiServiceImpl}
 import it.pagopa.interop.partyprocess.api.{ExternalApi, ProcessApi, PublicApi}
 import it.pagopa.interop.partyprocess.common.system.{classicActorSystem, executionContext}
 import it.pagopa.interop.partyprocess.error.SignatureValidationError
@@ -36,10 +31,9 @@ import it.pagopa.interop.partyprocess.model.PartyRole.{DELEGATE, MANAGER, OPERAT
 import it.pagopa.interop.partyprocess.model.RelationshipState.ACTIVE
 import it.pagopa.interop.partyprocess.model.{Billing, InstitutionUpdate, Attribute, _}
 import it.pagopa.interop.partyprocess.server.Controller
-import it.pagopa.interop.partyprocess.service.{ProductService, RelationshipService}
 import it.pagopa.interop.partyprocess.service.impl.{ProductServiceImpl, RelationshipServiceImpl}
+import it.pagopa.interop.partyprocess.service.{ProductService, RelationshipService}
 import it.pagopa.interop.partyregistryproxy.client.{model => PartyProxyDependencies}
-import it.pagopa.userreg.client.model.{SaveUserDto, UserId, WorkContactResource}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
@@ -197,8 +191,10 @@ class PartyProcessSpec
       institutionType = Option("PA")
     )
 
-    val manager =
+    val managerId = UUID.randomUUID()
+    val manager   =
       User(
+        id = managerId,
         name = "manager",
         surname = "manager",
         taxCode = taxCode1,
@@ -208,8 +204,10 @@ class PartyProcessSpec
         productRole = "admin"
       )
 
-    val delegate =
+    val delegateId = UUID.randomUUID()
+    val delegate   =
       User(
+        id = delegateId,
         name = "delegate",
         surname = "delegate",
         taxCode = taxCode2,
@@ -221,7 +219,7 @@ class PartyProcessSpec
 
     val managerRelationship = PartyManagementDependency.Relationship(
       id = UUID.randomUUID(),
-      from = UUID.randomUUID(),
+      from = managerId,
       to = UUID.randomUUID(),
       filePath = None,
       fileName = None,
@@ -344,6 +342,7 @@ class PartyProcessSpec
     val delegateId = UUID.randomUUID()
     val manager    =
       User(
+        id = managerId,
         name = "manager",
         surname = "managerSurname",
         taxCode = taxCode1,
@@ -354,6 +353,7 @@ class PartyProcessSpec
       )
     val delegate   =
       User(
+        id = delegateId,
         name = "delegate",
         surname = "delegateSurname",
         taxCode = taxCode2,
@@ -478,38 +478,10 @@ class PartyProcessSpec
       .returning(Future.successful(PartyManagementDependency.Relationships(relationships)))
       .once()
 
-    (mockUserRegistryService
-      .createUser(_: SaveUserDto))
-      .expects(
-        SaveUserDto(
-          fiscalCode = manager.taxCode,
-          name = Option(notCertifiedString(manager.name)),
-          familyName = Option(notCertifiedString(manager.surname)),
-          workContacts =
-            Option(Map(institution1.id.toString -> WorkContactResource(email = manager.email.map(notCertifiedString))))
-        )
-      )
-      .returning(Future.successful(UserId(managerId)))
-      .once()
-
     (mockPartyManagementService
       .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
       .expects(PartyManagementDependency.PersonSeed(managerId), *)
       .returning(Future.successful(PartyManagementDependency.Person(managerId)))
-      .once()
-
-    (mockUserRegistryService
-      .createUser(_: SaveUserDto))
-      .expects(
-        SaveUserDto(
-          fiscalCode = delegate.taxCode,
-          name = Option(notCertifiedString(delegate.name)),
-          familyName = Option(notCertifiedString(delegate.surname)),
-          workContacts =
-            Option(Map(institution1.id.toString -> WorkContactResource(email = delegate.email.map(notCertifiedString))))
-        )
-      )
-      .returning(Future.successful(UserId(delegateId)))
       .once()
 
     (mockPartyManagementService
@@ -1506,14 +1478,17 @@ class PartyProcessSpec
     }
 
     "not create operators if does not exists any active legal for a given institution" in {
-      val orgPartyId = UUID.randomUUID()
-      val externalId = UUID.randomUUID().toString
-      val originId   = UUID.randomUUID().toString
-      val origin     = "IPA"
-      val taxCode1   = "operator1TaxCode"
-      val taxCode2   = "operator2TaxCode"
+      val orgPartyId  = UUID.randomUUID()
+      val externalId  = UUID.randomUUID().toString
+      val originId    = UUID.randomUUID().toString
+      val origin      = "IPA"
+      val taxCode1    = "operator1TaxCode"
+      val taxCode2    = "operator2TaxCode"
+      val operatorId1 = UUID.randomUUID()
+      val operatorId2 = UUID.randomUUID()
 
       val operator1 = User(
+        id = operatorId1,
         name = "operator1",
         surname = "operator1",
         taxCode = taxCode1,
@@ -1523,6 +1498,7 @@ class PartyProcessSpec
         productRole = "admin"
       )
       val operator2 = User(
+        id = operatorId2,
         name = "operator2",
         surname = "operator2",
         taxCode = taxCode2,
@@ -1632,6 +1608,7 @@ class PartyProcessSpec
       val operatorId2 = UUID.randomUUID()
 
       val operator1 = User(
+        id = operatorId1,
         name = "operator1",
         surname = "operator1",
         taxCode = taxCode1,
@@ -1641,6 +1618,7 @@ class PartyProcessSpec
         productRole = "security"
       )
       val operator2 = User(
+        id = operatorId2,
         name = "operator2",
         surname = "operator2",
         taxCode = taxCode2,
@@ -1648,20 +1626,6 @@ class PartyProcessSpec
         email = Some("operator2@email.it"),
         product = "product",
         productRole = "security"
-      )
-
-      val user1 = UserRegistryUser(
-        id = operatorId1,
-        taxCode = operator1.taxCode,
-        name = operator1.name,
-        surname = operator1.surname
-      )
-
-      val user2 = UserRegistryUser(
-        id = operatorId2,
-        taxCode = operator2.taxCode,
-        name = operator2.name,
-        surname = operator2.surname
       )
 
       (mockPartyManagementService
@@ -1682,40 +1646,10 @@ class PartyProcessSpec
         .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
         .returning(Future.successful(relationships))
 
-      (mockUserRegistryService
-        .createUser(_: SaveUserDto))
-        .expects(
-          SaveUserDto(
-            fiscalCode = operator1.taxCode,
-            name = Option(notCertifiedString(operator1.name)),
-            familyName = Option(notCertifiedString(operator1.surname)),
-            workContacts = Option(
-              Map(institution.id.toString -> WorkContactResource(email = operator1.email.map(notCertifiedString)))
-            )
-          )
-        )
-        .returning(Future.successful(UserId(user1.id)))
-        .once()
-
       (mockPartyManagementService
         .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
         .expects(PartyManagementDependency.PersonSeed(operatorId1), *)
         .returning(Future.successful(PartyManagementDependency.Person(operatorId1)))
-        .once()
-
-      (mockUserRegistryService
-        .createUser(_: SaveUserDto))
-        .expects(
-          SaveUserDto(
-            fiscalCode = operator2.taxCode,
-            name = Option(notCertifiedString(operator2.name)),
-            familyName = Option(notCertifiedString(operator2.surname)),
-            workContacts = Option(
-              Map(institution.id.toString -> WorkContactResource(email = operator2.email.map(notCertifiedString)))
-            )
-          )
-        )
-        .returning(Future.successful(UserId(user2.id)))
         .once()
 
       (mockPartyManagementService
@@ -1741,14 +1675,17 @@ class PartyProcessSpec
 
     "not create subdelegates if does not exists any active legal for a given institution" in {
 
-      val orgPartyID = UUID.randomUUID()
-      val externalId = UUID.randomUUID().toString
-      val originId   = UUID.randomUUID().toString
-      val origin     = "IPA"
-      val taxCode1   = "subdelegate1TaxCode"
-      val taxCode2   = "subdelegate2TaxCode"
+      val orgPartyID  = UUID.randomUUID()
+      val externalId  = UUID.randomUUID().toString
+      val originId    = UUID.randomUUID().toString
+      val origin      = "IPA"
+      val taxCode1    = "subdelegate1TaxCode"
+      val taxCode2    = "subdelegate2TaxCode"
+      val operatorId1 = UUID.randomUUID()
+      val operatorId2 = UUID.randomUUID()
 
       val subdelegate1 = User(
+        id = operatorId1,
         name = "subdelegate1",
         surname = "subdelegate1",
         taxCode = taxCode1,
@@ -1758,6 +1695,7 @@ class PartyProcessSpec
         productRole = "admin"
       )
       val subdelegate2 = User(
+        id = operatorId2,
         name = "subdelegate2",
         surname = "subdelegate2",
         taxCode = taxCode2,
@@ -1868,6 +1806,7 @@ class PartyProcessSpec
       val subdelegateId2 = UUID.randomUUID()
 
       val subdelegate1 = User(
+        id = subdelegateId1,
         name = "subdelegate1",
         surname = "subdelegate1",
         taxCode = taxCode1,
@@ -1877,6 +1816,7 @@ class PartyProcessSpec
         productRole = "admin"
       )
       val subdelegate2 = User(
+        id = subdelegateId2,
         name = "subdelegate2",
         surname = "subdelegate2",
         taxCode = taxCode2,
@@ -1884,20 +1824,6 @@ class PartyProcessSpec
         email = Some("subdelegate2@email.it"),
         product = "product",
         productRole = "admin"
-      )
-
-      val user1 = UserRegistryUser(
-        id = subdelegateId1,
-        taxCode = subdelegate1.taxCode,
-        name = subdelegate1.name,
-        surname = subdelegate1.surname
-      )
-
-      val user2 = UserRegistryUser(
-        id = subdelegateId2,
-        taxCode = subdelegate2.taxCode,
-        name = subdelegate2.name,
-        surname = subdelegate2.surname
       )
 
       (mockPartyManagementService
@@ -1918,40 +1844,10 @@ class PartyProcessSpec
         .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
         .returning(Future.successful(relationships))
 
-      (mockUserRegistryService
-        .createUser(_: SaveUserDto))
-        .expects(
-          SaveUserDto(
-            fiscalCode = subdelegate1.taxCode,
-            name = Option(notCertifiedString(subdelegate1.name)),
-            familyName = Option(notCertifiedString(subdelegate1.surname)),
-            workContacts = Option(
-              Map(institution.id.toString -> WorkContactResource(email = subdelegate1.email.map(notCertifiedString)))
-            )
-          )
-        )
-        .returning(Future.successful(UserId(user1.id)))
-        .once()
-
       (mockPartyManagementService
         .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
         .expects(PartyManagementDependency.PersonSeed(subdelegateId1), *)
         .returning(Future.successful(PartyManagementDependency.Person(subdelegateId1)))
-        .once()
-
-      (mockUserRegistryService
-        .createUser(_: SaveUserDto))
-        .expects(
-          SaveUserDto(
-            fiscalCode = subdelegate2.taxCode,
-            name = Option(notCertifiedString(subdelegate2.name)),
-            familyName = Option(notCertifiedString(subdelegate2.surname)),
-            workContacts = Option(
-              Map(institution.id.toString -> WorkContactResource(email = subdelegate2.email.map(notCertifiedString)))
-            )
-          )
-        )
-        .returning(Future.successful(UserId(user2.id)))
         .once()
 
       (mockPartyManagementService
@@ -3567,13 +3463,13 @@ class PartyProcessSpec
   }
 
   "Users creation" must {
-    def configureCreateLegalTest(orgPartyId: UUID, managerId: UUID, manager: User, delegateId: UUID, delegate: User) = {
+    def configureCreateLegalTest(orgPartyId: UUID, manager: User, delegate: User) = {
       val file = new File("src/test/resources/fake.file")
 
       val managerRelationship =
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
-          from = managerId,
+          from = manager.id,
           to = orgPartyId,
           filePath = None,
           fileName = None,
@@ -3602,7 +3498,7 @@ class PartyProcessSpec
       val delegateRelationship =
         PartyManagementDependency.Relationship(
           id = UUID.randomUUID(),
-          from = delegateId,
+          from = delegate.id,
           to = orgPartyId,
           filePath = None,
           fileName = None,
@@ -3628,10 +3524,10 @@ class PartyProcessSpec
 
       (mockUserRegistryService
         .getUserById(_: UUID))
-        .expects(managerId)
+        .expects(manager.id)
         .returning(
           Future.successful(
-            UserRegistryUser(id = managerId, taxCode = manager.taxCode, name = manager.name, surname = manager.surname)
+            UserRegistryUser(id = manager.id, taxCode = manager.taxCode, name = manager.name, surname = manager.surname)
           )
         )
         .once()
@@ -3655,30 +3551,10 @@ class PartyProcessSpec
         .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(managerRelationship))))
         .once()
 
-      (mockUserRegistryService
-        .createUser(_: SaveUserDto))
-        .expects(
-          SaveUserDto(
-            fiscalCode = manager.taxCode,
-            name = Option(notCertifiedString(manager.name)),
-            familyName = Option(notCertifiedString(manager.surname)),
-            workContacts =
-              Option(Map(orgPartyId.toString -> WorkContactResource(manager.email.map(notCertifiedString))))
-          )
-        )
-        .returning(Future.failed(ResourceConflictError(manager.taxCode)))
-        .once()
-
-      (mockUserRegistryService
-        .getUserIdByExternalId(_: String))
-        .expects(manager.taxCode)
-        .returning(Future.successful(UserId(id = managerId)))
-        .once()
-
       (mockPartyManagementService
         .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
-        .expects(PartyManagementDependency.PersonSeed(managerId), *)
-        .returning(Future.successful(PartyManagementDependency.Person(managerId)))
+        .expects(PartyManagementDependency.PersonSeed(manager.id), *)
+        .returning(Future.successful(PartyManagementDependency.Person(manager.id)))
         .once()
 
       (mockPartyManagementService
@@ -3717,24 +3593,10 @@ class PartyProcessSpec
         .returning(Future.successful(Relationships(Seq(managerRelationship))))
         .once()
 
-      (mockUserRegistryService
-        .createUser(_: SaveUserDto))
-        .expects(
-          SaveUserDto(
-            fiscalCode = delegate.taxCode,
-            name = Option(notCertifiedString(delegate.name)),
-            familyName = Option(notCertifiedString(delegate.surname)),
-            workContacts =
-              Option(Map(orgPartyId.toString -> WorkContactResource(email = delegate.email.map(notCertifiedString))))
-          )
-        )
-        .returning(Future.successful(UserId(delegateId)))
-        .once()
-
       (mockPartyManagementService
         .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
-        .expects(PartyManagementDependency.PersonSeed(delegateId), *)
-        .returning(Future.successful(PartyManagementDependency.Person(delegateId)))
+        .expects(PartyManagementDependency.PersonSeed(delegate.id), *)
+        .returning(Future.successful(PartyManagementDependency.Person(delegate.id)))
         .once()
 
       (mockPartyManagementService
@@ -3793,6 +3655,7 @@ class PartyProcessSpec
       val delegateId = UUID.randomUUID()
       val manager    =
         User(
+          id = managerId,
           name = "manager",
           surname = "managerSurname",
           taxCode = taxCode1,
@@ -3803,6 +3666,7 @@ class PartyProcessSpec
         )
       val delegate   =
         User(
+          id = delegateId,
           name = "delegate",
           surname = "delegateSurname",
           taxCode = taxCode2,
@@ -3812,7 +3676,7 @@ class PartyProcessSpec
           email = Option("delegate@email.it")
         )
 
-      configureCreateLegalTest(orgPartyId, managerId, manager, delegateId, delegate)
+      configureCreateLegalTest(orgPartyId, manager, delegate)
 
       (mockPartyManagementService
         .retrieveInstitution(_: UUID)(_: String))
@@ -3857,6 +3721,7 @@ class PartyProcessSpec
       val delegateId = UUID.randomUUID()
       val manager    =
         User(
+          id = managerId,
           name = "manager",
           surname = "manager",
           taxCode = taxCode1,
@@ -3867,6 +3732,7 @@ class PartyProcessSpec
         )
       val delegate   =
         User(
+          id = delegateId,
           name = "delegate",
           surname = "delegate",
           taxCode = taxCode2,
@@ -3876,7 +3742,7 @@ class PartyProcessSpec
           email = Option("delegate@email.it")
         )
 
-      configureCreateLegalTest(orgPartyId, managerId, manager, delegateId, delegate)
+      configureCreateLegalTest(orgPartyId, manager, delegate)
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
@@ -3985,6 +3851,7 @@ class PartyProcessSpec
 
       val delegate =
         User(
+          id = UUID.randomUUID(),
           name = "delegate",
           surname = "delegate",
           taxCode = taxCode,
@@ -4076,6 +3943,7 @@ class PartyProcessSpec
       val managerId = UUID.randomUUID()
       val manager   =
         User(
+          id = managerId,
           name = "manager",
           surname = "manager",
           taxCode = taxCode1,
@@ -4086,6 +3954,7 @@ class PartyProcessSpec
         )
       val delegate  =
         User(
+          id = UUID.randomUUID(),
           name = "delegate",
           surname = "delegate",
           taxCode = taxCode2,

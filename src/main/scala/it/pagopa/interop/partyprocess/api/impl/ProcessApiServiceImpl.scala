@@ -22,7 +22,7 @@ import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.partyprocess.error.PartyProcessErrors._
 import it.pagopa.interop.partyprocess.model._
 import it.pagopa.interop.partyprocess.service._
-import it.pagopa.userreg.client.model.{SaveUserDto, UserId, WorkContactResource}
+import it.pagopa.userreg.client.model.UserId
 import org.slf4j.LoggerFactory
 
 import java.io.{File, FileOutputStream}
@@ -361,6 +361,7 @@ class ProcessApiServiceImpl(
       .getUserById(relationship.from)
       .map(user =>
         User(
+          id = user.id,
           name = user.name,
           surname = user.surname,
           taxCode = user.taxCode,
@@ -380,7 +381,7 @@ class ProcessApiServiceImpl(
     for {
       validUsers         <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
       validManager       <- getValidManager(activeManager, validUsers)
-      personIdsWithRoles <- Future.traverse(validUsers)(addUser(_, institution))
+      personIdsWithRoles <- Future.traverse(validUsers)(addUser)
       relationships      <- Future.traverse(personIdsWithRoles) { case (personId, role, product, productRole) =>
         role match {
           case PartyRole.MANAGER =>
@@ -629,7 +630,7 @@ class ProcessApiServiceImpl(
   )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Seq[RelationshipInfo]] = {
     for {
       validUsers    <- verifyUsersByRoles(onboardingRequest.users, rolesToCheck)
-      userIds       <- Future.traverse(validUsers)(user => addUser(user, institution))
+      userIds       <- Future.traverse(validUsers)(addUser)
       relationships <- Future.traverse(userIds) { case (userId, role, product, productRole) =>
         val relationshipSeed: PartyManagementDependency.RelationshipSeed =
           PartyManagementDependency.RelationshipSeed(
@@ -696,40 +697,22 @@ class ProcessApiServiceImpl(
   private def isNotAnOnboardedManager(product: String): PartyManagementDependency.Relationship => Boolean =
     relationship => !isAnOnboardedManager(product)(relationship)
 
-  private def addUser(user: User, institution: PartyManagementDependency.Institution)(implicit
-    bearer: String,
-    contexts: Seq[(String, String)]
-  ): Future[(UserId, PartyRole, String, String)] = {
+  private def addUser(
+    user: User
+  )(implicit bearer: String, contexts: Seq[(String, String)]): Future[(UserId, PartyRole, String, String)] = {
     logger.info("Adding user {}", user.toString)
-    createPerson(user, institution)(bearer)
+    createPerson(user)(bearer)
       .recoverWith {
-        case _: ResourceConflictError => userRegistryManagementService.getUserIdByExternalId(user.taxCode)
+        case _: ResourceConflictError => Future.successful(UserId(user.id))
         case ex                       => Future.failed(ex)
       }
       .map((_, user.role, user.product, user.productRole))
   }
 
-  private def createPerson(user: User, institution: PartyManagementDependency.Institution)(
-    bearer: String
-  ): Future[UserId] =
+  private def createPerson(user: User)(bearer: String): Future[UserId] =
     for {
-      userId <- userRegistryManagementService
-        .createUser(
-          SaveUserDto(
-            fiscalCode = user.taxCode,
-            name = Option(notCertifiedString(user.name)),
-            familyName = Option(notCertifiedString(user.surname)),
-            workContacts = user.email.map(email =>
-              Map(institution.id.toString -> WorkContactResource(email = Option(notCertifiedString(email))))
-            )
-          )
-        )
-        .recoverWith {
-          case _: ResourceConflictError => userRegistryManagementService.getUserIdByExternalId(user.taxCode)
-          case ex                       => Future.failed(ex)
-        }
-      _      <- partyManagementService.createPerson(PartyManagementDependency.PersonSeed(userId.id))(bearer)
-    } yield userId
+      _ <- partyManagementService.createPerson(PartyManagementDependency.PersonSeed(user.id))(bearer)
+    } yield UserId(user.id)
 
   private def createInstitution(
     externalId: String
