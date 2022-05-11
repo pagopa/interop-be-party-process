@@ -24,3 +24,4 @@
 build.sbt
 pom.xml
 README.md
+project/build.properties
