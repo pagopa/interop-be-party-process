@@ -253,14 +253,14 @@ class PartyProcessSpec
       .once()
 
     (mockPartyRegistryService
-      .getInstitution(_: String)(_: String))
-      .expects(*, *)
+      .getInstitution(_: String)(_: String)(_: Seq[(String, String)]))
+      .expects(*, *, *)
       .returning(Future.successful(institutionFromProxy))
       .once()
 
     (mockPartyRegistryService
-      .getCategory(_: String, _: String)(_: String))
-      .expects(*, *, *)
+      .getCategory(_: String, _: String)(_: String)(_: Seq[(String, String)]))
+      .expects(*, *, *, *)
       .returning(Future.successful(PartyProxyDependencies.Category("C17", "attrs", "test", origin)))
       .once()
 
@@ -448,14 +448,14 @@ class PartyProcessSpec
       .once()
 
     (mockPartyRegistryService
-      .getInstitution(_: String)(_: String))
-      .expects(*, *)
+      .getInstitution(_: String)(_: String)(_: Seq[(String, String)]))
+      .expects(*, *, *)
       .returning(Future.successful(institutionFromProxy))
       .once()
 
     (mockPartyRegistryService
-      .getCategory(_: String, _: String)(_: String))
-      .expects(*, *, *)
+      .getCategory(_: String, _: String)(_: String)(_: Seq[(String, String)]))
+      .expects(*, *, *, *)
       .returning(Future.successful(PartyProxyDependencies.Category("C17", "attrs", "test", origin)))
       .once()
 
