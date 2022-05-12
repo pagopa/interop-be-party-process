@@ -842,16 +842,6 @@ components:
         to:
           type: string
           format: uuid
-        name:
-          type: string
-        surname:
-          type: string
-        taxCode:
-          type: string
-        certification:
-          $ref: '#/components/schemas/Certification'
-        institutionContacts:
-          $ref: '#/components/schemas/Contacts'
         role:
           $ref: '#/components/schemas/PartyRole'
         product:
@@ -876,11 +866,6 @@ components:
         - id
         - from
         - to
-        - name
-        - surname
-        - taxCode
-        - certification
-        - institutionContacts
         - role
         - product
         - state
@@ -891,64 +876,33 @@ components:
         $ref: '#/components/schemas/RelationshipInfo'
     User:
       properties:
+        id:
+          type: string
+          description: User internal id
+          format: uuid
+        taxCode:
+          type: string
         name:
           type: string
         surname:
           type: string
-        taxCode:
+        email:
           type: string
         role:
           $ref: '#/components/schemas/PartyRole'
-        email:
-          type: string
         product:
           type: string
         productRole:
           type: string
       additionalProperties: false
       required:
+        - id
+        - taxCode
         - name
         - surname
-        - taxCode
         - role
         - product
         - productRole
-    Certification:
-      type: string
-      enum:
-        - SPID
-        - NONE
-    Contact:
-      properties:
-        email:
-          type: string
-      additionalProperties: false
-      required:
-        - email
-    Contacts:
-      additionalProperties:
-        type: array
-        items:
-          $ref: '#/components/schemas/Contact'
-    PersonInfo:
-      properties:
-        name:
-          type: string
-        surname:
-          type: string
-        taxCode:
-          type: string
-        certification:
-          $ref: '#/components/schemas/Certification'
-        institutionContacts:
-          $ref: '#/components/schemas/Contacts'
-      additionalProperties: false
-      required:
-        - name
-        - surname
-        - taxCode
-        - certification
-        - institutionContacts
     ProductInfo:
       type: object
       properties:
@@ -1040,8 +994,10 @@ components:
         $ref: '#/components/schemas/Attribute'
     OnboardingInfo:
       properties:
-        person:
-          $ref: '#/components/schemas/PersonInfo'
+        userId:
+          type: string
+          description: User internal id
+          format: uuid
         institutions:
           type: array
           items:

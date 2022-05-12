@@ -4,7 +4,7 @@ import cats.data.{Validated, ValidatedNel}
 import eu.europa.esig.dss.validation.SignedDocumentValidator
 import it.pagopa.interop.partyprocess.error.SignatureValidationError
 import it.pagopa.interop.partyprocess.service.SignatureValidationService
-import it.pagopa.pdnd.interop.uservice.userregistrymanagement.client.model.{User => UserRegistryUser}
+import it.pagopa.interop.partyprocess.model.UserRegistryUser
 
 case object PassthroughSignatureValidationService extends SignatureValidationService {
 

@@ -59,6 +59,16 @@ generateCode := {
              |                               -p dateLibrary=java8
              |                               -o client""".stripMargin).!!
 
+  Process(s"""$openApiCommand generate -t template/scala-akka-http-client
+             |                               -i userreg/api-docs.json
+             |                               -g scala-akka
+             |                               -p projectName=userreg
+             |                               -p invokerPackage=it.pagopa.userreg.client.invoker
+             |                               -p modelPackage=it.pagopa.userreg.client.model
+             |                               -p apiPackage=it.pagopa.userreg.client.api
+             |                               -p dateLibrary=java8
+             |                               -o userreg""".stripMargin).!!
+
 }
 
 (Compile / compile) := ((Compile / compile) dependsOn generateCode).value
@@ -71,6 +81,10 @@ cleanFiles += baseDirectory.value / "generated" / "target"
 cleanFiles += baseDirectory.value / "client" / "src"
 
 cleanFiles += baseDirectory.value / "client" / "target"
+
+cleanFiles += baseDirectory.value / "userreg" / "src"
+
+cleanFiles += baseDirectory.value / "userreg" / "target"
 
 ThisBuild / credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
 
@@ -98,6 +112,16 @@ lazy val client = project
     }
   )
 
+lazy val userreg = project
+  .in(file("userreg"))
+  .settings(
+    name                := "userreg",
+    scalacOptions       := Seq(),
+    scalafmtOnCompile   := true,
+    libraryDependencies := Dependencies.Jars.client,
+    updateOptions       := updateOptions.value.withGigahorse(false)
+  )
+
 lazy val root = (project in file("."))
   .settings(
     name                        := "interop-be-party-process",
@@ -115,6 +139,7 @@ lazy val root = (project in file("."))
   )
   .aggregate(client)
   .dependsOn(generated)
+  .dependsOn(userreg)
   .enablePlugins(JavaAppPackaging, JavaAgent)
   .setupBuildInfo
 
