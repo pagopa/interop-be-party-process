@@ -60,6 +60,8 @@ object ApplicationConfiguration {
     config.getString("party-process.mail-template.onboarding-mail-placeholders.institution-info.digitalAddress")
   val onboardingMailInstitutionInfoAddressPlaceholder: String         =
     config.getString("party-process.mail-template.onboarding-mail-placeholders.institution-info.address")
+  val onboardingMailInstitutionInfoZipCodePlaceholder: String         =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.institution-info.zipCode")
   val onboardingMailInstitutionInfoTaxCodePlaceholder: String         =
     config.getString("party-process.mail-template.onboarding-mail-placeholders.institution-info.taxCode")
 

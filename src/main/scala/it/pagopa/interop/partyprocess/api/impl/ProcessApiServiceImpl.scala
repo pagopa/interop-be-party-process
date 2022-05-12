@@ -13,7 +13,6 @@ import it.pagopa.interop.commons.utils.AkkaUtils.{getFutureBearer, getUidFuture}
 import it.pagopa.interop.commons.utils.OpenapiUtils._
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.{ResourceConflictError, ResourceNotFoundError}
-import it.pagopa.interop.partymanagement.client.model.Relationships
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess.api.ProcessApiService
 import it.pagopa.interop.partyprocess.api.converters.partymanagement.InstitutionConverter
@@ -176,15 +175,6 @@ class ProcessApiServiceImpl(
     relationship => {
       for {
         institution <- partyManagementService.retrieveInstitution(relationship.to)(bearer)
-        managers    <- partyManagementService.retrieveRelationships(
-          from = None,
-          to = Some(institution.id),
-          roles = Seq(PartyManagementDependency.PartyRole.MANAGER),
-          states = Seq.empty,
-          products = Seq(relationship.product.id),
-          productRoles = Seq.empty
-        )(bearer)
-        managerWithBillingData = locateManagerWithBillingData(managers)
       } yield OnboardingData(
         id = institution.id,
         externalId = institution.externalId,
@@ -199,24 +189,15 @@ class ProcessApiServiceImpl(
         state = relationshipStateToApi(relationship.state),
         role = roleToApi(relationship.role),
         productInfo = relationshipProductToApi(relationship.product),
-        billing = managerWithBillingData.fold(Option.empty[Billing])(m => m.billing.map(billingToApi)),
-        pricingPlan = managerWithBillingData.fold(Option.empty[String])(m => m.pricingPlan),
+        billing = institution.products
+          .get(relationship.product.id)
+          .fold(Option.empty[Billing])(m => Option(billingToApi(m.billing))),
+        pricingPlan = institution.products.get(relationship.product.id).fold(Option.empty[String])(m => m.pricingPlan),
         attributes =
           institution.attributes.map(attribute => Attribute(attribute.origin, attribute.code, attribute.description))
       )
 
     }
-
-  private def locateManagerWithBillingData(managers: Relationships) = {
-    managers.items
-      .sortWith((b1, b2) =>
-        // active as first
-        (b1.state != b2.state && b1.state == PartyManagementDependency.RelationshipState.ACTIVE)
-        // or last updated
-          || b2.updatedAt.getOrElse(b2.createdAt).isBefore(b1.updatedAt.getOrElse(b1.createdAt))
-      )
-      .find(m => m.state != PartyManagementDependency.RelationshipState.PENDING && m.billing.isDefined)
-  }
 
   /** Code: 204, Message: successful operation
     * Code: 404, Message: Not found, DataType: Problem
@@ -450,6 +431,7 @@ class ProcessApiServiceImpl(
           ApplicationConfiguration.onboardingMailInstitutionInfoDescriptionPlaceholder.some.zip(iu.description),
           ApplicationConfiguration.onboardingMailInstitutionInfoDigitalAddressPlaceholder.some.zip(iu.digitalAddress),
           ApplicationConfiguration.onboardingMailInstitutionInfoAddressPlaceholder.some.zip(iu.address),
+          ApplicationConfiguration.onboardingMailInstitutionInfoZipCodePlaceholder.some.zip(iu.zipCode),
           ApplicationConfiguration.onboardingMailInstitutionInfoTaxCodePlaceholder.some.zip(iu.taxCode)
         ).flatten.toMap
       }
@@ -507,6 +489,7 @@ class ProcessApiServiceImpl(
             description = i.description,
             digitalAddress = i.digitalAddress,
             address = i.address,
+            zipCode = i.zipCode,
             taxCode = i.taxCode
           )
         ),
@@ -728,7 +711,6 @@ class ProcessApiServiceImpl(
         digitalAddress = institution.digitalAddress,
         taxCode = institution.taxCode,
         attributes = Seq(PartyManagementDependency.Attribute(category.origin, category.code, category.name)),
-        products = Set.empty,
         address = institution.address,
         zipCode = institution.zipCode,
         institutionType = Option.empty,

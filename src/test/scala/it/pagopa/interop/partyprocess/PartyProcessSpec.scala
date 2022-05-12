@@ -188,7 +188,8 @@ class PartyProcessSpec
       address = "address",
       zipCode = "zipCode",
       origin = origin,
-      institutionType = Option("PA")
+      institutionType = Option("PA"),
+      products = Map.empty
     )
 
     val managerId = UUID.randomUUID()
@@ -237,6 +238,7 @@ class PartyProcessSpec
           description = Option("OVERRIDE_description"),
           digitalAddress = Option("OVERRIDE_digitalAddress"),
           address = Option("OVERRIDE_address"),
+          zipCode = Option("OVERRIDE_zipCode"),
           taxCode = Option("OVERRIDE_taxCode")
         )
       ),
@@ -333,7 +335,8 @@ class PartyProcessSpec
       address = "address",
       zipCode = "zipCode",
       origin = origin,
-      institutionType = Option("PA")
+      institutionType = Option("PA"),
+      products = Map.empty
     )
 
     val file = new File("src/test/resources/fake.file")
@@ -386,6 +389,7 @@ class PartyProcessSpec
                 description = Option("OVERRIDE_description"),
                 digitalAddress = Option("OVERRIDE_digitalAddress"),
                 address = Option("OVERRIDE_address"),
+                zipCode = Option("OVERRIDE_zipCode"),
                 taxCode = Option("OVERRIDE_taxCode")
               )
             ),
@@ -417,6 +421,7 @@ class PartyProcessSpec
                 description = Option("OVERRIDE_description"),
                 digitalAddress = Option("OVERRIDE_digitalAddress"),
                 address = Option("OVERRIDE_address"),
+                zipCode = Option("OVERRIDE_zipCode"),
                 taxCode = Option("OVERRIDE_taxCode")
               )
             ),
@@ -519,6 +524,7 @@ class PartyProcessSpec
           description = Option("OVERRIDE_description"),
           digitalAddress = Option("OVERRIDE_digitalAddress"),
           address = Option("OVERRIDE_address"),
+          zipCode = Option("OVERRIDE_zipCode"),
           taxCode = Option("OVERRIDE_taxCode")
         )
       ),
@@ -551,7 +557,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map.empty
       )
 
       val relationship =
@@ -571,6 +578,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -642,7 +650,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map.empty
       )
 
       (mockPartyManagementService
@@ -723,6 +732,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -743,33 +753,6 @@ class PartyProcessSpec
           updatedAt = None
         )
 
-      val managerInstitution1 = relationship1
-      val managerInstitution2 =
-        PartyManagementDependency.Relationship(
-          id = UUID.randomUUID(),
-          from = UUID.randomUUID(),
-          to = orgPartyId2,
-          role = PartyManagementDependency.PartyRole.MANAGER,
-          product = defaultProduct,
-          state = PartyManagementDependency.RelationshipState.PENDING,
-          createdAt = defaultRelationshipTimestamp,
-          updatedAt = None,
-          pricingPlan = Option("pricingPlan2"),
-          institutionUpdate = Option(
-            PartyManagementDependency.InstitutionUpdate(
-              institutionType = Option("OVERRIDE_institutionType2"),
-              description = Option("OVERRIDE_description2"),
-              digitalAddress = Option("OVERRIDE_digitalAddress2"),
-              address = Option("OVERRIDE_address2"),
-              taxCode = Option("OVERRIDE_taxCode2")
-            )
-          ),
-          billing = Option(
-            PartyManagementDependency
-              .Billing(vatNumber = "VATNUMBER2", recipientCode = "RECIPIENTCODE2", publicServices = Option.empty)
-          )
-        )
-
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2))
 
       val institution1 = PartyManagementDependency.Institution(
@@ -787,7 +770,8 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map.empty
       )
       val institution2 = PartyManagementDependency.Institution(
         id = orgPartyId2,
@@ -804,7 +788,27 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map(
+          defaultProduct.id -> InstitutionProduct(
+            product = defaultProduct.id,
+            pricingPlan = Option("INSTITUTIONSAVED_pricingPlan"),
+            billing = PartyManagementDependency.Billing(
+              vatNumber = "INSTITUTIONSAVED_VATNUMBER",
+              recipientCode = "INSTITUTIONSAVED_RECIPIENTCODE",
+              publicServices = Option(true)
+            )
+          ),
+          "p2"              -> InstitutionProduct(
+            product = "p2",
+            pricingPlan = Option("pricingPlan"),
+            billing = PartyManagementDependency.Billing(
+              vatNumber = "VATNUMBER",
+              recipientCode = "RECIPIENTCODE",
+              publicServices = Option(true)
+            )
+          )
+        )
       )
 
       val expected = OnboardingInfo(
@@ -825,8 +829,8 @@ class PartyProcessSpec
             role = roleToApi(relationship1.role),
             productInfo = defaultProductInfo,
             attributes = Seq(attribute1, attribute2, attribute3),
-            billing = managerInstitution1.billing.map(billingToApi),
-            pricingPlan = managerInstitution1.pricingPlan
+            billing = Option.empty,
+            pricingPlan = Option.empty
           ),
           OnboardingData(
             id = institution2.id,
@@ -847,8 +851,14 @@ class PartyProcessSpec
               partyprocess.model.Attribute(attribute5.origin, attribute5.code, attribute5.description),
               partyprocess.model.Attribute(attribute6.origin, attribute6.code, attribute6.description)
             ),
-            billing = Option.empty,
-            pricingPlan = Option.empty
+            billing = Option(
+              Billing(
+                vatNumber = "INSTITUTIONSAVED_VATNUMBER",
+                recipientCode = "INSTITUTIONSAVED_RECIPIENTCODE",
+                publicServices = Option(true)
+              )
+            ),
+            pricingPlan = Option("INSTITUTIONSAVED_pricingPlan")
           )
         )
       )
@@ -883,48 +893,6 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService
-        .retrieveRelationships(
-          _: Option[UUID],
-          _: Option[UUID],
-          _: Seq[PartyManagementDependency.PartyRole],
-          _: Seq[PartyManagementDependency.RelationshipState],
-          _: Seq[String],
-          _: Seq[String]
-        )(_: String))
-        .expects(
-          None,
-          Some(orgPartyId1),
-          Seq(PartyManagementDependency.PartyRole.MANAGER),
-          Seq.empty,
-          Seq(defaultProduct.id),
-          Seq.empty,
-          *
-        )
-        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(managerInstitution1))))
-        .once()
-
-      (mockPartyManagementService
-        .retrieveRelationships(
-          _: Option[UUID],
-          _: Option[UUID],
-          _: Seq[PartyManagementDependency.PartyRole],
-          _: Seq[PartyManagementDependency.RelationshipState],
-          _: Seq[String],
-          _: Seq[String]
-        )(_: String))
-        .expects(
-          None,
-          Some(orgPartyId2),
-          Seq(PartyManagementDependency.PartyRole.MANAGER),
-          Seq.empty,
-          Seq(defaultProduct.id),
-          Seq.empty,
-          *
-        )
-        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(managerInstitution2))))
-        .once()
-
-      (mockPartyManagementService
         .retrieveInstitution(_: UUID)(_: String))
         .expects(orgPartyId1, *)
         .returning(Future.successful(institution1))
@@ -952,7 +920,9 @@ class PartyProcessSpec
       institution: PartyManagementDependency.Institution,
       attribute1: Attribute,
       attribute2: Attribute,
-      attribute3: Attribute
+      attribute3: Attribute,
+      pricingPlan: Option[String],
+      billing: Option[Billing]
     ): OnboardingInfo = {
       val relationship1 =
         PartyManagementDependency.Relationship(
@@ -971,6 +941,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -981,8 +952,6 @@ class PartyProcessSpec
         )
 
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship1))
-
-      val managerInstitution1 = relationship1
 
       val expected = OnboardingInfo(
         userId = Option(uid),
@@ -1002,8 +971,8 @@ class PartyProcessSpec
             role = roleToApi(relationship1.role),
             productInfo = defaultProductInfo,
             attributes = Seq(attribute1, attribute2, attribute3),
-            billing = managerInstitution1.billing.map(billingToApi),
-            pricingPlan = managerInstitution1.pricingPlan
+            billing = billing,
+            pricingPlan = pricingPlan
           )
         )
       )
@@ -1038,27 +1007,6 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService
-        .retrieveRelationships(
-          _: Option[UUID],
-          _: Option[UUID],
-          _: Seq[PartyManagementDependency.PartyRole],
-          _: Seq[PartyManagementDependency.RelationshipState],
-          _: Seq[String],
-          _: Seq[String]
-        )(_: String))
-        .expects(
-          None,
-          Some(institution.id),
-          Seq(PartyManagementDependency.PartyRole.MANAGER),
-          Seq.empty,
-          Seq(defaultProduct.id),
-          Seq.empty,
-          *
-        )
-        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(managerInstitution1))))
-        .once()
-
-      (mockPartyManagementService
         .retrieveInstitution(_: UUID)(_: String))
         .expects(institution.id, *)
         .returning(Future.successful(institution))
@@ -1076,6 +1024,13 @@ class PartyProcessSpec
       val attribute2 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2", "origin")
       val attribute3 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3", "origin")
 
+      val pricingPlan = Option("INSTITUTIONSAVED_pricingPlan")
+      val billing     = Billing(
+        vatNumber = "INSTITUTIONSAVED_VATNUMBER",
+        recipientCode = "INSTITUTIONSAVED_RECIPIENTCODE",
+        publicServices = Option(true)
+      )
+
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
         externalId = externalId,
@@ -1091,9 +1046,21 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map(
+          defaultProduct.id -> InstitutionProduct(
+            product = defaultProduct.id,
+            pricingPlan = pricingPlan,
+            billing = PartyManagementDependency.Billing(
+              vatNumber = billing.vatNumber,
+              recipientCode = billing.recipientCode,
+              publicServices = billing.publicServices
+            )
+          )
+        )
       )
-      val expected    = configureOnboardingInfoTest(institution, attribute1, attribute2, attribute3)
+      val expected    =
+        configureOnboardingInfoTest(institution, attribute1, attribute2, attribute3, pricingPlan, Option(billing))
 
       (mockPartyManagementService
         .retrieveInstitution(_: UUID)(_: String))
@@ -1136,9 +1103,17 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map(
+          "P2" -> InstitutionProduct(
+            product = "P2",
+            pricingPlan = Option("PricingPlan"),
+            billing = PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(false))
+          )
+        )
       )
-      val expected    = configureOnboardingInfoTest(institution, attribute1, attribute2, attribute3)
+      val expected    = configureOnboardingInfoTest(institution, attribute1, attribute2, attribute3, None, None)
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String))
@@ -1185,6 +1160,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -1195,88 +1171,6 @@ class PartyProcessSpec
         )
 
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship))
-
-      val managerInstitution1 =
-        PartyManagementDependency.Relationship(
-          id = UUID.randomUUID(),
-          from = uid,
-          to = orgPartyId,
-          role = PartyManagementDependency.PartyRole.MANAGER,
-          product = defaultProduct,
-          state = PartyManagementDependency.RelationshipState.ACTIVE,
-          createdAt = defaultRelationshipTimestamp,
-          updatedAt = None,
-          pricingPlan = Option("pricingPlan2"),
-          institutionUpdate = Option(
-            PartyManagementDependency.InstitutionUpdate(
-              institutionType = Option("OVERRIDE_institutionType2"),
-              description = Option("OVERRIDE_description2"),
-              digitalAddress = Option("OVERRIDE_digitalAddress2"),
-              address = Option("OVERRIDE_address2"),
-              taxCode = Option("OVERRIDE_taxCode2")
-            )
-          ),
-          billing = Option(
-            PartyManagementDependency
-              .Billing(vatNumber = "VATNUMBER2", recipientCode = "RECIPIENTCODE2", publicServices = Option(false))
-          )
-        )
-
-      val oldManagerInstitution1 =
-        PartyManagementDependency.Relationship(
-          id = UUID.randomUUID(),
-          from = uid,
-          to = orgPartyId,
-          role = PartyManagementDependency.PartyRole.MANAGER,
-          product = defaultProduct,
-          state = PartyManagementDependency.RelationshipState.ACTIVE,
-          createdAt = defaultRelationshipTimestamp.minusDays(1),
-          updatedAt = None,
-          pricingPlan = Option("pricingPlan_OLD"),
-          institutionUpdate = Option(
-            PartyManagementDependency.InstitutionUpdate(
-              institutionType = Option("OVERRIDE_institutionType_OLD"),
-              description = Option("OVERRIDE_description_OLD"),
-              digitalAddress = Option("OVERRIDE_digitalAddress_OLD"),
-              address = Option("OVERRIDE_address_OLD"),
-              taxCode = Option("OVERRIDE_taxCode_OLD")
-            )
-          ),
-          billing = Option(
-            PartyManagementDependency
-              .Billing(vatNumber = "VATNUMBER_OLD", recipientCode = "RECIPIENTCODE_OLD", publicServices = Option(false))
-          )
-        )
-
-      val newButRejectedManagerInstitution1 =
-        PartyManagementDependency.Relationship(
-          id = UUID.randomUUID(),
-          from = uid,
-          to = orgPartyId,
-          role = PartyManagementDependency.PartyRole.MANAGER,
-          product = defaultProduct,
-          state = PartyManagementDependency.RelationshipState.REJECTED,
-          createdAt = defaultRelationshipTimestamp.plusDays(1),
-          updatedAt = None,
-          pricingPlan = Option("pricingPlan_NEWBUTREJECTED"),
-          institutionUpdate = Option(
-            PartyManagementDependency.InstitutionUpdate(
-              institutionType = Option("OVERRIDE_institutionType_NEWBUTREJECTED"),
-              description = Option("OVERRIDE_description_NEWBUTREJECTED"),
-              digitalAddress = Option("OVERRIDE_digitalAddress_NEWBUTREJECTED"),
-              address = Option("OVERRIDE_address_NEWBUTREJECTED"),
-              taxCode = Option("OVERRIDE_taxCode_NEWBUTREJECTED")
-            )
-          ),
-          billing = Option(
-            PartyManagementDependency
-              .Billing(
-                vatNumber = "VATNUMBER_NEWBUTREJECTED",
-                recipientCode = "RECIPIENTCODE_NEWBUTREJECTED",
-                publicServices = Option(false)
-              )
-          )
-        )
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
@@ -1289,7 +1183,8 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map.empty
       )
 
       (mockPartyManagementService
@@ -1311,41 +1206,6 @@ class PartyProcessSpec
           *
         )
         .returning(Future.successful(relationships))
-        .once()
-
-      (mockPartyManagementService
-        .retrieveRelationships(
-          _: Option[UUID],
-          _: Option[UUID],
-          _: Seq[PartyManagementDependency.PartyRole],
-          _: Seq[PartyManagementDependency.RelationshipState],
-          _: Seq[String],
-          _: Seq[String]
-        )(_: String))
-        .expects(
-          None,
-          Some(orgPartyId),
-          Seq(PartyManagementDependency.PartyRole.MANAGER),
-          Seq.empty,
-          Seq(defaultProduct.id),
-          Seq.empty,
-          *
-        )
-        .returning(
-          Future.successful(
-            PartyManagementDependency
-              .Relationships(items =
-                Seq(
-                  relationship,
-                  oldManagerInstitution1,
-                  newButRejectedManagerInstitution1,
-                  managerInstitution1,
-                  oldManagerInstitution1,
-                  newButRejectedManagerInstitution1
-                )
-              )
-          )
-        )
         .once()
 
       (mockPartyManagementService
@@ -1376,8 +1236,8 @@ class PartyProcessSpec
               partyprocess.model.Attribute(attribute2.origin, attribute2.code, attribute2.description),
               partyprocess.model.Attribute(attribute3.origin, attribute3.code, attribute3.description)
             ),
-            billing = managerInstitution1.billing.map(billingToApi),
-            pricingPlan = managerInstitution1.pricingPlan
+            billing = None,
+            pricingPlan = None
           )
         )
       )
@@ -1524,7 +1384,8 @@ class PartyProcessSpec
               address = "address",
               zipCode = "zipCode",
               origin = origin,
-              institutionType = Option("PA")
+              institutionType = Option("PA"),
+              products = Map.empty
             )
           )
         )
@@ -1571,7 +1432,8 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map.empty
       )
 
       val relationships =
@@ -1593,6 +1455,7 @@ class PartyProcessSpec
                   description = Option("OVERRIDE_description"),
                   digitalAddress = Option("OVERRIDE_digitalAddress"),
                   address = Option("OVERRIDE_address"),
+                  zipCode = Option("OVERRIDE_zipCode"),
                   taxCode = Option("OVERRIDE_taxCode")
                 )
               ),
@@ -1721,7 +1584,8 @@ class PartyProcessSpec
               address = "address",
               zipCode = "zipCode",
               origin = origin,
-              institutionType = Option("PA")
+              institutionType = Option("PA"),
+              products = Map.empty
             )
           )
         )
@@ -1769,7 +1633,8 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map.empty
       )
 
       val relationships =
@@ -1791,6 +1656,7 @@ class PartyProcessSpec
                   description = Option("OVERRIDE_description"),
                   digitalAddress = Option("OVERRIDE_digitalAddress"),
                   address = Option("OVERRIDE_address"),
+                  zipCode = Option("OVERRIDE_zipCode"),
                   taxCode = Option("OVERRIDE_taxCode")
                 )
               ),
@@ -2083,7 +1949,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val adminRelationship =
@@ -2115,6 +1982,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -2234,6 +2102,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -2286,7 +2155,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val adminRelationship =
@@ -2430,7 +2300,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -2466,6 +2337,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -2588,7 +2460,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -2708,7 +2581,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val relationshipId1 = UUID.randomUUID()
@@ -2730,6 +2604,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -2824,6 +2699,7 @@ class PartyProcessSpec
             description = Option("OVERRIDE_description"),
             digitalAddress = Option("OVERRIDE_digitalAddress"),
             address = Option("OVERRIDE_address"),
+            zipCode = Option("OVERRIDE_zipCode"),
             taxCode = Option("OVERRIDE_taxCode")
           )
         ),
@@ -2850,7 +2726,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -2873,6 +2750,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -2991,7 +2869,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -3015,6 +2894,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -3160,7 +3040,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -3486,6 +3367,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -3648,7 +3530,8 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val managerId  = UUID.randomUUID()
@@ -3714,7 +3597,8 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val managerId  = UUID.randomUUID()
@@ -3844,7 +3728,8 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map.empty
       )
 
       val managerId = UUID.randomUUID()
@@ -3881,6 +3766,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -3937,7 +3823,8 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map.empty
       )
 
       val managerId = UUID.randomUUID()
@@ -3985,6 +3872,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -4056,7 +3944,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val managerId        = UUID.randomUUID()
@@ -4084,6 +3973,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -4111,6 +4001,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -4138,6 +4029,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -4220,7 +4112,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val managerId        = UUID.randomUUID()
@@ -4249,6 +4142,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -4276,6 +4170,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -4303,6 +4198,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -4330,6 +4226,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -4411,7 +4308,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val managerId        = UUID.randomUUID()
@@ -4440,6 +4338,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -4633,7 +4532,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val managerId        = UUID.randomUUID()
@@ -4828,7 +4728,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val managerId       = UUID.randomUUID()
@@ -4963,7 +4864,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val managerId      = UUID.randomUUID()
@@ -5098,7 +5000,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       (mockPartyManagementService
