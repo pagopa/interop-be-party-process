@@ -189,10 +189,8 @@ class ProcessApiServiceImpl(
         state = relationshipStateToApi(relationship.state),
         role = roleToApi(relationship.role),
         productInfo = relationshipProductToApi(relationship.product),
-        billing = institution.products
-          .get(relationship.product.id)
-          .fold(Option.empty[Billing])(m => Option(billingToApi(m.billing))),
-        pricingPlan = institution.products.get(relationship.product.id).fold(Option.empty[String])(m => m.pricingPlan),
+        billing = institution.products.get(relationship.product.id).map(m => billingToApi(m.billing)),
+        pricingPlan = institution.products.get(relationship.product.id).map(m => m.pricingPlan),
         attributes =
           institution.attributes.map(attribute => Attribute(attribute.origin, attribute.code, attribute.description))
       )
