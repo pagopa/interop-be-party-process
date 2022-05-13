@@ -1196,6 +1196,9 @@ components:
         address:
           example: via del campo
           type: string
+        zipCode:
+          example: 20100
+          type: string
         taxCode:
           description: institution tax code
           type: string

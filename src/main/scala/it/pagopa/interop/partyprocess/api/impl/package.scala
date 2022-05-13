@@ -12,7 +12,7 @@ import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
 package object impl extends DefaultJsonProtocol {
 
-  implicit val institutionUpdateFormat: RootJsonFormat[InstitutionUpdate]   = jsonFormat5(InstitutionUpdate)
+  implicit val institutionUpdateFormat: RootJsonFormat[InstitutionUpdate]   = jsonFormat6(InstitutionUpdate)
   implicit val billingFormat: RootJsonFormat[Billing]                       = jsonFormat3(Billing)
   implicit val tokenChecksumFormat: RootJsonFormat[TokenChecksum]           = jsonFormat1(TokenChecksum)
   implicit val problemErrorFormat: RootJsonFormat[ProblemError]             = jsonFormat2(ProblemError)

@@ -188,7 +188,8 @@ class PartyProcessSpec
       address = "address",
       zipCode = "zipCode",
       origin = origin,
-      institutionType = Option("PA")
+      institutionType = Option("PA"),
+      products = Map.empty
     )
 
     val managerId = UUID.randomUUID()
@@ -237,6 +238,7 @@ class PartyProcessSpec
           description = Option("OVERRIDE_description"),
           digitalAddress = Option("OVERRIDE_digitalAddress"),
           address = Option("OVERRIDE_address"),
+          zipCode = Option("OVERRIDE_zipCode"),
           taxCode = Option("OVERRIDE_taxCode")
         )
       ),
@@ -265,8 +267,8 @@ class PartyProcessSpec
       .once()
 
     (mockPartyManagementService
-      .createInstitution(_: InstitutionSeed)(_: String))
-      .expects(*, *)
+      .createInstitution(_: InstitutionSeed)(_: String)(_: Seq[(String, String)]))
+      .expects(*, *, *)
       .returning(Future.successful(institution1))
       .once()
 
@@ -278,8 +280,8 @@ class PartyProcessSpec
         _: Seq[PartyManagementDependency.RelationshipState],
         _: Seq[String],
         _: Seq[String]
-      )(_: String))
-      .expects(None, Some(institution1.id), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
+      )(_: String)(_: Seq[(String, String)]))
+      .expects(None, Some(institution1.id), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *, *)
       .returning(Future.successful(PartyManagementDependency.Relationships(Seq(managerRelationship))))
       .once()
 
@@ -333,7 +335,8 @@ class PartyProcessSpec
       address = "address",
       zipCode = "zipCode",
       origin = origin,
-      institutionType = Option("PA")
+      institutionType = Option("PA"),
+      products = Map.empty
     )
 
     val file = new File("src/test/resources/fake.file")
@@ -386,6 +389,7 @@ class PartyProcessSpec
                 description = Option("OVERRIDE_description"),
                 digitalAddress = Option("OVERRIDE_digitalAddress"),
                 address = Option("OVERRIDE_address"),
+                zipCode = Option("OVERRIDE_zipCode"),
                 taxCode = Option("OVERRIDE_taxCode")
               )
             ),
@@ -417,6 +421,7 @@ class PartyProcessSpec
                 description = Option("OVERRIDE_description"),
                 digitalAddress = Option("OVERRIDE_digitalAddress"),
                 address = Option("OVERRIDE_address"),
+                zipCode = Option("OVERRIDE_zipCode"),
                 taxCode = Option("OVERRIDE_taxCode")
               )
             ),
@@ -460,8 +465,8 @@ class PartyProcessSpec
       .once()
 
     (mockPartyManagementService
-      .createInstitution(_: InstitutionSeed)(_: String))
-      .expects(*, *)
+      .createInstitution(_: InstitutionSeed)(_: String)(_: Seq[(String, String)]))
+      .expects(*, *, *)
       .returning(Future.successful(institution1))
       .once()
 
@@ -473,26 +478,26 @@ class PartyProcessSpec
         _: Seq[PartyManagementDependency.RelationshipState],
         _: Seq[String],
         _: Seq[String]
-      )(_: String))
-      .expects(None, Some(institution1.id), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
+      )(_: String)(_: Seq[(String, String)]))
+      .expects(None, Some(institution1.id), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *, *)
       .returning(Future.successful(PartyManagementDependency.Relationships(relationships)))
       .once()
 
     (mockPartyManagementService
-      .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
-      .expects(PartyManagementDependency.PersonSeed(managerId), *)
+      .createPerson(_: PartyManagementDependency.PersonSeed)(_: String)(_: Seq[(String, String)]))
+      .expects(PartyManagementDependency.PersonSeed(managerId), *, *)
       .returning(Future.successful(PartyManagementDependency.Person(managerId)))
       .once()
 
     (mockPartyManagementService
-      .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
-      .expects(PartyManagementDependency.PersonSeed(delegateId), *)
+      .createPerson(_: PartyManagementDependency.PersonSeed)(_: String)(_: Seq[(String, String)]))
+      .expects(PartyManagementDependency.PersonSeed(delegateId), *, *)
       .returning(Future.successful(PartyManagementDependency.Person(delegateId)))
       .once()
 
     (mockPartyManagementService
-      .createRelationship(_: RelationshipSeed)(_: String))
-      .expects(*, *)
+      .createRelationship(_: RelationshipSeed)(_: String)(_: Seq[(String, String)]))
+      .expects(*, *, *)
       .returning(Future.successful(relationship))
       .repeat(2)
 
@@ -503,8 +508,10 @@ class PartyProcessSpec
       .once()
     (mockPdfCreator.createContract _).expects(*, *, *, *).returning(Future.successful(file)).once()
     (mockPartyManagementService
-      .createToken(_: PartyManagementDependency.Relationships, _: String, _: String, _: String)(_: String))
-      .expects(*, *, *, *, *)
+      .createToken(_: PartyManagementDependency.Relationships, _: String, _: String, _: String)(_: String)(
+        _: Seq[(String, String)]
+      ))
+      .expects(*, *, *, *, *, *)
       .returning(Future.successful(PartyManagementDependency.TokenText("token")))
       .once()
 
@@ -519,6 +526,7 @@ class PartyProcessSpec
           description = Option("OVERRIDE_description"),
           digitalAddress = Option("OVERRIDE_digitalAddress"),
           address = Option("OVERRIDE_address"),
+          zipCode = Option("OVERRIDE_zipCode"),
           taxCode = Option("OVERRIDE_taxCode")
         )
       ),
@@ -551,7 +559,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map.empty
       )
 
       val relationship =
@@ -571,6 +580,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -588,7 +598,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           None,
           Some(orgPartyId),
@@ -600,14 +610,15 @@ class PartyProcessSpec
           ),
           Seq(defaultProduct.id),
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(Relationships(Seq(relationship))))
         .once()
 
       (mockPartyManagementService
-        .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(externalId, *)
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -642,12 +653,13 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map.empty
       )
 
       (mockPartyManagementService
-        .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(externalId, *)
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -659,7 +671,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           None,
           Some(orgPartyId),
@@ -671,6 +683,7 @@ class PartyProcessSpec
           ),
           Seq(defaultProduct.id),
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(Relationships(Seq.empty)))
@@ -723,6 +736,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -743,33 +757,6 @@ class PartyProcessSpec
           updatedAt = None
         )
 
-      val managerInstitution1 = relationship1
-      val managerInstitution2 =
-        PartyManagementDependency.Relationship(
-          id = UUID.randomUUID(),
-          from = UUID.randomUUID(),
-          to = orgPartyId2,
-          role = PartyManagementDependency.PartyRole.MANAGER,
-          product = defaultProduct,
-          state = PartyManagementDependency.RelationshipState.PENDING,
-          createdAt = defaultRelationshipTimestamp,
-          updatedAt = None,
-          pricingPlan = Option("pricingPlan2"),
-          institutionUpdate = Option(
-            PartyManagementDependency.InstitutionUpdate(
-              institutionType = Option("OVERRIDE_institutionType2"),
-              description = Option("OVERRIDE_description2"),
-              digitalAddress = Option("OVERRIDE_digitalAddress2"),
-              address = Option("OVERRIDE_address2"),
-              taxCode = Option("OVERRIDE_taxCode2")
-            )
-          ),
-          billing = Option(
-            PartyManagementDependency
-              .Billing(vatNumber = "VATNUMBER2", recipientCode = "RECIPIENTCODE2", publicServices = Option.empty)
-          )
-        )
-
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2))
 
       val institution1 = PartyManagementDependency.Institution(
@@ -787,7 +774,8 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map.empty
       )
       val institution2 = PartyManagementDependency.Institution(
         id = orgPartyId2,
@@ -804,7 +792,27 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map(
+          defaultProduct.id -> InstitutionProduct(
+            product = defaultProduct.id,
+            pricingPlan = Option("INSTITUTIONSAVED_pricingPlan"),
+            billing = PartyManagementDependency.Billing(
+              vatNumber = "INSTITUTIONSAVED_VATNUMBER",
+              recipientCode = "INSTITUTIONSAVED_RECIPIENTCODE",
+              publicServices = Option(true)
+            )
+          ),
+          "p2"              -> InstitutionProduct(
+            product = "p2",
+            pricingPlan = Option("pricingPlan"),
+            billing = PartyManagementDependency.Billing(
+              vatNumber = "VATNUMBER",
+              recipientCode = "RECIPIENTCODE",
+              publicServices = Option(true)
+            )
+          )
+        )
       )
 
       val expected = OnboardingInfo(
@@ -825,8 +833,8 @@ class PartyProcessSpec
             role = roleToApi(relationship1.role),
             productInfo = defaultProductInfo,
             attributes = Seq(attribute1, attribute2, attribute3),
-            billing = managerInstitution1.billing.map(billingToApi),
-            pricingPlan = managerInstitution1.pricingPlan
+            billing = Option.empty,
+            pricingPlan = Option.empty
           ),
           OnboardingData(
             id = institution2.id,
@@ -847,8 +855,14 @@ class PartyProcessSpec
               partyprocess.model.Attribute(attribute5.origin, attribute5.code, attribute5.description),
               partyprocess.model.Attribute(attribute6.origin, attribute6.code, attribute6.description)
             ),
-            billing = Option.empty,
-            pricingPlan = Option.empty
+            billing = Option(
+              Billing(
+                vatNumber = "INSTITUTIONSAVED_VATNUMBER",
+                recipientCode = "INSTITUTIONSAVED_RECIPIENTCODE",
+                publicServices = Option(true)
+              )
+            ),
+            pricingPlan = Option("INSTITUTIONSAVED_pricingPlan")
           )
         )
       )
@@ -869,7 +883,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           Some(uid),
           None,
@@ -877,62 +891,21 @@ class PartyProcessSpec
           Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
           Seq.empty,
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(relationships))
         .once()
 
       (mockPartyManagementService
-        .retrieveRelationships(
-          _: Option[UUID],
-          _: Option[UUID],
-          _: Seq[PartyManagementDependency.PartyRole],
-          _: Seq[PartyManagementDependency.RelationshipState],
-          _: Seq[String],
-          _: Seq[String]
-        )(_: String))
-        .expects(
-          None,
-          Some(orgPartyId1),
-          Seq(PartyManagementDependency.PartyRole.MANAGER),
-          Seq.empty,
-          Seq(defaultProduct.id),
-          Seq.empty,
-          *
-        )
-        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(managerInstitution1))))
-        .once()
-
-      (mockPartyManagementService
-        .retrieveRelationships(
-          _: Option[UUID],
-          _: Option[UUID],
-          _: Seq[PartyManagementDependency.PartyRole],
-          _: Seq[PartyManagementDependency.RelationshipState],
-          _: Seq[String],
-          _: Seq[String]
-        )(_: String))
-        .expects(
-          None,
-          Some(orgPartyId2),
-          Seq(PartyManagementDependency.PartyRole.MANAGER),
-          Seq.empty,
-          Seq(defaultProduct.id),
-          Seq.empty,
-          *
-        )
-        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(managerInstitution2))))
-        .once()
-
-      (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(orgPartyId1, *)
+        .retrieveInstitution(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(orgPartyId1, *, *)
         .returning(Future.successful(institution1))
         .once()
 
       (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(orgPartyId2, *)
+        .retrieveInstitution(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(orgPartyId2, *, *)
         .returning(Future.successful(institution2))
         .once()
 
@@ -952,7 +925,9 @@ class PartyProcessSpec
       institution: PartyManagementDependency.Institution,
       attribute1: Attribute,
       attribute2: Attribute,
-      attribute3: Attribute
+      attribute3: Attribute,
+      pricingPlan: Option[String],
+      billing: Option[Billing]
     ): OnboardingInfo = {
       val relationship1 =
         PartyManagementDependency.Relationship(
@@ -971,6 +946,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -981,8 +957,6 @@ class PartyProcessSpec
         )
 
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship1))
-
-      val managerInstitution1 = relationship1
 
       val expected = OnboardingInfo(
         userId = Option(uid),
@@ -1002,8 +976,8 @@ class PartyProcessSpec
             role = roleToApi(relationship1.role),
             productInfo = defaultProductInfo,
             attributes = Seq(attribute1, attribute2, attribute3),
-            billing = managerInstitution1.billing.map(billingToApi),
-            pricingPlan = managerInstitution1.pricingPlan
+            billing = billing,
+            pricingPlan = pricingPlan
           )
         )
       )
@@ -1024,7 +998,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           Some(uid),
           Some(institution.id),
@@ -1032,35 +1006,15 @@ class PartyProcessSpec
           Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
           Seq.empty,
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(relationships))
         .once()
 
       (mockPartyManagementService
-        .retrieveRelationships(
-          _: Option[UUID],
-          _: Option[UUID],
-          _: Seq[PartyManagementDependency.PartyRole],
-          _: Seq[PartyManagementDependency.RelationshipState],
-          _: Seq[String],
-          _: Seq[String]
-        )(_: String))
-        .expects(
-          None,
-          Some(institution.id),
-          Seq(PartyManagementDependency.PartyRole.MANAGER),
-          Seq.empty,
-          Seq(defaultProduct.id),
-          Seq.empty,
-          *
-        )
-        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(managerInstitution1))))
-        .once()
-
-      (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(institution.id, *)
+        .retrieveInstitution(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(institution.id, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -1075,6 +1029,13 @@ class PartyProcessSpec
       val attribute1 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1", "origin")
       val attribute2 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2", "origin")
       val attribute3 = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3", "origin")
+
+      val pricingPlan = Option("INSTITUTIONSAVED_pricingPlan")
+      val billing     = Billing(
+        vatNumber = "INSTITUTIONSAVED_VATNUMBER",
+        recipientCode = "INSTITUTIONSAVED_RECIPIENTCODE",
+        publicServices = Option(true)
+      )
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
@@ -1091,13 +1052,25 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map(
+          defaultProduct.id -> InstitutionProduct(
+            product = defaultProduct.id,
+            pricingPlan = pricingPlan,
+            billing = PartyManagementDependency.Billing(
+              vatNumber = billing.vatNumber,
+              recipientCode = billing.recipientCode,
+              publicServices = billing.publicServices
+            )
+          )
+        )
       )
-      val expected    = configureOnboardingInfoTest(institution, attribute1, attribute2, attribute3)
+      val expected    =
+        configureOnboardingInfoTest(institution, attribute1, attribute2, attribute3, pricingPlan, Option(billing))
 
       (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(orgPartyId, *)
+        .retrieveInstitution(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(orgPartyId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -1136,13 +1109,21 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map(
+          "P2" -> InstitutionProduct(
+            product = "P2",
+            pricingPlan = Option("PricingPlan"),
+            billing = PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(false))
+          )
+        )
       )
-      val expected    = configureOnboardingInfoTest(institution, attribute1, attribute2, attribute3)
+      val expected    = configureOnboardingInfoTest(institution, attribute1, attribute2, attribute3, None, None)
 
       (mockPartyManagementService
-        .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(externalId, *)
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -1185,6 +1166,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -1195,88 +1177,6 @@ class PartyProcessSpec
         )
 
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship))
-
-      val managerInstitution1 =
-        PartyManagementDependency.Relationship(
-          id = UUID.randomUUID(),
-          from = uid,
-          to = orgPartyId,
-          role = PartyManagementDependency.PartyRole.MANAGER,
-          product = defaultProduct,
-          state = PartyManagementDependency.RelationshipState.ACTIVE,
-          createdAt = defaultRelationshipTimestamp,
-          updatedAt = None,
-          pricingPlan = Option("pricingPlan2"),
-          institutionUpdate = Option(
-            PartyManagementDependency.InstitutionUpdate(
-              institutionType = Option("OVERRIDE_institutionType2"),
-              description = Option("OVERRIDE_description2"),
-              digitalAddress = Option("OVERRIDE_digitalAddress2"),
-              address = Option("OVERRIDE_address2"),
-              taxCode = Option("OVERRIDE_taxCode2")
-            )
-          ),
-          billing = Option(
-            PartyManagementDependency
-              .Billing(vatNumber = "VATNUMBER2", recipientCode = "RECIPIENTCODE2", publicServices = Option(false))
-          )
-        )
-
-      val oldManagerInstitution1 =
-        PartyManagementDependency.Relationship(
-          id = UUID.randomUUID(),
-          from = uid,
-          to = orgPartyId,
-          role = PartyManagementDependency.PartyRole.MANAGER,
-          product = defaultProduct,
-          state = PartyManagementDependency.RelationshipState.ACTIVE,
-          createdAt = defaultRelationshipTimestamp.minusDays(1),
-          updatedAt = None,
-          pricingPlan = Option("pricingPlan_OLD"),
-          institutionUpdate = Option(
-            PartyManagementDependency.InstitutionUpdate(
-              institutionType = Option("OVERRIDE_institutionType_OLD"),
-              description = Option("OVERRIDE_description_OLD"),
-              digitalAddress = Option("OVERRIDE_digitalAddress_OLD"),
-              address = Option("OVERRIDE_address_OLD"),
-              taxCode = Option("OVERRIDE_taxCode_OLD")
-            )
-          ),
-          billing = Option(
-            PartyManagementDependency
-              .Billing(vatNumber = "VATNUMBER_OLD", recipientCode = "RECIPIENTCODE_OLD", publicServices = Option(false))
-          )
-        )
-
-      val newButRejectedManagerInstitution1 =
-        PartyManagementDependency.Relationship(
-          id = UUID.randomUUID(),
-          from = uid,
-          to = orgPartyId,
-          role = PartyManagementDependency.PartyRole.MANAGER,
-          product = defaultProduct,
-          state = PartyManagementDependency.RelationshipState.REJECTED,
-          createdAt = defaultRelationshipTimestamp.plusDays(1),
-          updatedAt = None,
-          pricingPlan = Option("pricingPlan_NEWBUTREJECTED"),
-          institutionUpdate = Option(
-            PartyManagementDependency.InstitutionUpdate(
-              institutionType = Option("OVERRIDE_institutionType_NEWBUTREJECTED"),
-              description = Option("OVERRIDE_description_NEWBUTREJECTED"),
-              digitalAddress = Option("OVERRIDE_digitalAddress_NEWBUTREJECTED"),
-              address = Option("OVERRIDE_address_NEWBUTREJECTED"),
-              taxCode = Option("OVERRIDE_taxCode_NEWBUTREJECTED")
-            )
-          ),
-          billing = Option(
-            PartyManagementDependency
-              .Billing(
-                vatNumber = "VATNUMBER_NEWBUTREJECTED",
-                recipientCode = "RECIPIENTCODE_NEWBUTREJECTED",
-                publicServices = Option(false)
-              )
-          )
-        )
 
       val institution = PartyManagementDependency.Institution(
         id = orgPartyId,
@@ -1289,7 +1189,8 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map.empty
       )
 
       (mockPartyManagementService
@@ -1300,7 +1201,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           Some(uid),
           None,
@@ -1308,49 +1209,15 @@ class PartyProcessSpec
           Seq(PartyManagementDependency.RelationshipState.SUSPENDED),
           Seq.empty,
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(relationships))
         .once()
 
       (mockPartyManagementService
-        .retrieveRelationships(
-          _: Option[UUID],
-          _: Option[UUID],
-          _: Seq[PartyManagementDependency.PartyRole],
-          _: Seq[PartyManagementDependency.RelationshipState],
-          _: Seq[String],
-          _: Seq[String]
-        )(_: String))
-        .expects(
-          None,
-          Some(orgPartyId),
-          Seq(PartyManagementDependency.PartyRole.MANAGER),
-          Seq.empty,
-          Seq(defaultProduct.id),
-          Seq.empty,
-          *
-        )
-        .returning(
-          Future.successful(
-            PartyManagementDependency
-              .Relationships(items =
-                Seq(
-                  relationship,
-                  oldManagerInstitution1,
-                  newButRejectedManagerInstitution1,
-                  managerInstitution1,
-                  oldManagerInstitution1,
-                  newButRejectedManagerInstitution1
-                )
-              )
-          )
-        )
-        .once()
-
-      (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(orgPartyId, *)
+        .retrieveInstitution(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(orgPartyId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -1376,8 +1243,8 @@ class PartyProcessSpec
               partyprocess.model.Attribute(attribute2.origin, attribute2.code, attribute2.description),
               partyprocess.model.Attribute(attribute3.origin, attribute3.code, attribute3.description)
             ),
-            billing = managerInstitution1.billing.map(billingToApi),
-            pricingPlan = managerInstitution1.pricingPlan
+            billing = None,
+            pricingPlan = None
           )
         )
       )
@@ -1509,8 +1376,8 @@ class PartyProcessSpec
       )
 
       (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(orgPartyId, *)
+        .retrieveInstitution(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(orgPartyId, *, *)
         .returning(
           Future.successful(
             PartyManagementDependency.Institution(
@@ -1524,7 +1391,8 @@ class PartyProcessSpec
               address = "address",
               zipCode = "zipCode",
               origin = origin,
-              institutionType = Option("PA")
+              institutionType = Option("PA"),
+              products = Map.empty
             )
           )
         )
@@ -1538,8 +1406,8 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
-        .expects(*, *, *, *, *, *, *)
+        )(_: String)(_: Seq[(String, String)]))
+        .expects(*, *, *, *, *, *, *, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(Seq.empty)))
 
       val req = OnboardingUsersRequest(users = Seq(operator1, operator2), institutionId = orgPartyId)
@@ -1571,7 +1439,8 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map.empty
       )
 
       val relationships =
@@ -1593,6 +1462,7 @@ class PartyProcessSpec
                   description = Option("OVERRIDE_description"),
                   digitalAddress = Option("OVERRIDE_digitalAddress"),
                   address = Option("OVERRIDE_address"),
+                  zipCode = Option("OVERRIDE_zipCode"),
                   taxCode = Option("OVERRIDE_taxCode")
                 )
               ),
@@ -1629,8 +1499,8 @@ class PartyProcessSpec
       )
 
       (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(orgPartyId, *)
+        .retrieveInstitution(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(orgPartyId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -1642,25 +1512,25 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
-        .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
+        )(_: String)(_: Seq[(String, String)]))
+        .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *, *)
         .returning(Future.successful(relationships))
 
       (mockPartyManagementService
-        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
-        .expects(PartyManagementDependency.PersonSeed(operatorId1), *)
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(PartyManagementDependency.PersonSeed(operatorId1), *, *)
         .returning(Future.successful(PartyManagementDependency.Person(operatorId1)))
         .once()
 
       (mockPartyManagementService
-        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
-        .expects(PartyManagementDependency.PersonSeed(operatorId2), *)
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(PartyManagementDependency.PersonSeed(operatorId2), *, *)
         .returning(Future.successful(PartyManagementDependency.Person(operatorId2)))
         .once()
 
       (mockPartyManagementService
-        .createRelationship(_: RelationshipSeed)(_: String))
-        .expects(*, *)
+        .createRelationship(_: RelationshipSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(*, *, *)
         .returning(Future.successful(relationship))
         .repeat(2)
 
@@ -1706,8 +1576,8 @@ class PartyProcessSpec
       )
 
       (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(orgPartyID, *)
+        .retrieveInstitution(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(orgPartyID, *, *)
         .returning(
           Future.successful(
             PartyManagementDependency.Institution(
@@ -1721,7 +1591,8 @@ class PartyProcessSpec
               address = "address",
               zipCode = "zipCode",
               origin = origin,
-              institutionType = Option("PA")
+              institutionType = Option("PA"),
+              products = Map.empty
             )
           )
         )
@@ -1735,8 +1606,8 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
-        .expects(*, *, *, *, *, *, *)
+        )(_: String)(_: Seq[(String, String)]))
+        .expects(*, *, *, *, *, *, *, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(Seq.empty)))
 
       val req = OnboardingUsersRequest(users = Seq(subdelegate1, subdelegate2), institutionId = orgPartyID)
@@ -1769,7 +1640,8 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map.empty
       )
 
       val relationships =
@@ -1791,6 +1663,7 @@ class PartyProcessSpec
                   description = Option("OVERRIDE_description"),
                   digitalAddress = Option("OVERRIDE_digitalAddress"),
                   address = Option("OVERRIDE_address"),
+                  zipCode = Option("OVERRIDE_zipCode"),
                   taxCode = Option("OVERRIDE_taxCode")
                 )
               ),
@@ -1827,8 +1700,8 @@ class PartyProcessSpec
       )
 
       (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(orgPartyId, *)
+        .retrieveInstitution(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(orgPartyId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -1840,25 +1713,25 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
-        .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
+        )(_: String)(_: Seq[(String, String)]))
+        .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *, *)
         .returning(Future.successful(relationships))
 
       (mockPartyManagementService
-        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
-        .expects(PartyManagementDependency.PersonSeed(subdelegateId1), *)
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(PartyManagementDependency.PersonSeed(subdelegateId1), *, *)
         .returning(Future.successful(PartyManagementDependency.Person(subdelegateId1)))
         .once()
 
       (mockPartyManagementService
-        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
-        .expects(PartyManagementDependency.PersonSeed(subdelegateId2), *)
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(PartyManagementDependency.PersonSeed(subdelegateId2), *, *)
         .returning(Future.successful(PartyManagementDependency.Person(subdelegateId2)))
         .once()
 
       (mockPartyManagementService
-        .createRelationship(_: RelationshipSeed)(_: String))
-        .expects(*, *)
+        .createRelationship(_: RelationshipSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(*, *, *)
         .returning(Future.successful(relationship))
         .repeat(2)
 
@@ -1929,8 +1802,8 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService
-        .verifyToken(_: UUID))
-        .expects(tokenId)
+        .verifyToken(_: UUID)(_: Seq[(String, String)]))
+        .expects(tokenId, *)
         .returning(Future.successful(token))
 
       (mockUserRegistryService
@@ -1948,8 +1821,8 @@ class PartyProcessSpec
         )
 
       (mockPartyManagementService
-        .consumeToken(_: UUID, _: (FileInfo, File)))
-        .expects(tokenId, *)
+        .consumeToken(_: UUID, _: (FileInfo, File))(_: Seq[(String, String)]))
+        .expects(tokenId, *, *)
         .returning(Future.successful(()))
 
       val formData =
@@ -1977,8 +1850,8 @@ class PartyProcessSpec
       val path = Paths.get("src/test/resources/contract-test-01.pdf")
 
       (mockPartyManagementService
-        .verifyToken(_: UUID))
-        .expects(tokenId)
+        .verifyToken(_: UUID)(_: Seq[(String, String)]))
+        .expects(tokenId, *)
         .returning(Future.failed(ResourceConflictError(tokenId.toString)))
 
       val formData =
@@ -2018,13 +1891,13 @@ class PartyProcessSpec
         )
 
       (mockPartyManagementService
-        .verifyToken(_: UUID))
-        .expects(tokenId)
+        .verifyToken(_: UUID)(_: Seq[(String, String)]))
+        .expects(tokenId, *)
         .returning(Future.successful(token))
 
       (mockPartyManagementService
-        .invalidateToken(_: UUID))
-        .expects(tokenId)
+        .invalidateToken(_: UUID)(_: Seq[(String, String)]))
+        .expects(tokenId, *)
         .returning(Future.successful(()))
 
       val response =
@@ -2043,8 +1916,8 @@ class PartyProcessSpec
       val tokenId: UUID = UUID.randomUUID()
 
       (mockPartyManagementService
-        .verifyToken(_: UUID))
-        .expects(tokenId)
+        .verifyToken(_: UUID)(_: Seq[(String, String)]))
+        .expects(tokenId, *)
         .returning(Future.failed(ResourceConflictError(tokenId.toString)))
 
       val response =
@@ -2083,7 +1956,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val adminRelationship =
@@ -2115,6 +1989,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -2156,8 +2031,8 @@ class PartyProcessSpec
         )
 
       (mockPartyManagementService
-        .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(externalId, *)
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
         .returning(Future.successful(institution))
 
       (mockPartyManagementService
@@ -2168,7 +2043,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           Some(uid),
           Some(orgPartyId),
@@ -2180,6 +2055,7 @@ class PartyProcessSpec
           Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
           Seq.empty,
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(adminRelationships))
@@ -2193,8 +2069,8 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
-        .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
+        )(_: String)(_: Seq[(String, String)]))
+        .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *, *)
         .returning(Future.successful(relationships))
         .once()
 
@@ -2234,6 +2110,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -2286,7 +2163,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val adminRelationship =
@@ -2332,8 +2210,8 @@ class PartyProcessSpec
         PartyManagementDependency.Relationships(items = Seq(relationship1, relationship2))
 
       (mockPartyManagementService
-        .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(externalId, *)
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -2345,7 +2223,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           Some(uid),
           Some(orgPartyId),
@@ -2357,6 +2235,7 @@ class PartyProcessSpec
           Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
           Seq.empty,
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(adminRelationships))
@@ -2370,8 +2249,8 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
-        .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq.empty, Seq("security", "api"), *)
+        )(_: String)(_: Seq[(String, String)]))
+        .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq.empty, Seq("security", "api"), *, *)
         .returning(Future.successful(relationships))
         .once()
 
@@ -2430,7 +2309,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -2466,6 +2346,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -2505,8 +2386,8 @@ class PartyProcessSpec
         )
 
       (mockPartyManagementService
-        .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(externalId, *)
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -2518,7 +2399,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           Some(userId2),
           Some(orgPartyId),
@@ -2530,6 +2411,7 @@ class PartyProcessSpec
           Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
           Seq.empty,
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq.empty)))
@@ -2543,8 +2425,8 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
-        .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
+        )(_: String)(_: Seq[(String, String)]))
+        .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *, *)
         .returning(Future.successful(relationships))
         .once()
 
@@ -2588,7 +2470,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -2624,8 +2507,8 @@ class PartyProcessSpec
       val adminRelationships = PartyManagementDependency.Relationships(items = Seq(adminRelationship))
 
       (mockPartyManagementService
-        .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(externalId, *)
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -2637,7 +2520,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           Some(userId1),
           Some(orgPartyId),
@@ -2649,6 +2532,7 @@ class PartyProcessSpec
           Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
           Seq.empty,
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(adminRelationships))
@@ -2662,8 +2546,8 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
-        .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq("Interop"), Seq("security", "api"), *)
+        )(_: String)(_: Seq[(String, String)]))
+        .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq("Interop"), Seq("security", "api"), *, *)
         .returning(Future.successful(relationships))
         .once()
 
@@ -2708,7 +2592,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val relationshipId1 = UUID.randomUUID()
@@ -2730,6 +2615,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -2745,8 +2631,8 @@ class PartyProcessSpec
         PartyManagementDependency.Relationships(items = Seq(adminRelationship))
 
       (mockPartyManagementService
-        .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(externalId, *)
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -2758,7 +2644,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           Some(adminIdentifier),
           Some(orgPartyId),
@@ -2770,6 +2656,7 @@ class PartyProcessSpec
           Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
           Seq.empty,
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(adminRelationships))
@@ -2783,7 +2670,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           None,
           Some(orgPartyId),
@@ -2791,6 +2678,7 @@ class PartyProcessSpec
           Seq(PartyManagementDependency.RelationshipState.ACTIVE),
           Seq.empty,
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(relationships))
@@ -2824,6 +2712,7 @@ class PartyProcessSpec
             description = Option("OVERRIDE_description"),
             digitalAddress = Option("OVERRIDE_digitalAddress"),
             address = Option("OVERRIDE_address"),
+            zipCode = Option("OVERRIDE_zipCode"),
             taxCode = Option("OVERRIDE_taxCode")
           )
         ),
@@ -2850,7 +2739,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -2873,6 +2763,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -2897,8 +2788,8 @@ class PartyProcessSpec
       val relationships      = PartyManagementDependency.Relationships(items = Seq(relationship2))
 
       (mockPartyManagementService
-        .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(externalId, *)
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -2910,7 +2801,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           Some(adminIdentifier),
           Some(orgPartyId),
@@ -2922,6 +2813,7 @@ class PartyProcessSpec
           Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
           Seq.empty,
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(adminRelationships))
@@ -2935,7 +2827,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           None,
           Some(orgPartyId),
@@ -2943,6 +2835,7 @@ class PartyProcessSpec
           Seq.empty,
           Seq.empty,
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(relationships))
@@ -2991,7 +2884,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -3015,6 +2909,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -3055,8 +2950,8 @@ class PartyProcessSpec
         PartyManagementDependency.Relationships(items = Seq(relationship3, relationship4))
 
       (mockPartyManagementService
-        .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(externalId, *)
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -3068,7 +2963,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           Some(adminIdentifier),
           Some(orgPartyId),
@@ -3080,6 +2975,7 @@ class PartyProcessSpec
           Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
           Seq.empty,
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(adminRelationships))
@@ -3093,7 +2989,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           None,
           Some(orgPartyId),
@@ -3101,6 +2997,7 @@ class PartyProcessSpec
           Seq(PartyManagementDependency.RelationshipState.ACTIVE),
           Seq("Interop"),
           Seq("security", "api"),
+          *,
           *
         )
         .returning(Future.successful(relationships))
@@ -3160,7 +3057,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -3181,8 +3079,8 @@ class PartyProcessSpec
       val relationships      = PartyManagementDependency.Relationships(items = Seq())
 
       (mockPartyManagementService
-        .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(externalId, *)
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -3194,7 +3092,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           Some(adminIdentifier),
           Some(orgPartyId),
@@ -3206,6 +3104,7 @@ class PartyProcessSpec
           Seq(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING),
           Seq.empty,
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(adminRelationships))
@@ -3219,7 +3118,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           None,
           Some(orgPartyId),
@@ -3227,6 +3126,7 @@ class PartyProcessSpec
           Seq(PartyManagementDependency.RelationshipState.PENDING),
           Seq("Interop", "Interop"),
           Seq("security", "api"),
+          *,
           *
         )
         .returning(Future.successful(relationships))
@@ -3275,13 +3175,13 @@ class PartyProcessSpec
         )
 
       (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String))
-        .expects(relationshipId, *)
+        .getRelationshipById(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(relationshipId, *, *)
         .returning(Future.successful(relationship))
 
       (mockPartyManagementService
-        .activateRelationship(_: UUID)(_: String))
-        .expects(relationshipId, *)
+        .activateRelationship(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(relationshipId, *, *)
         .returning(Future.successful(()))
 
       val response =
@@ -3317,8 +3217,8 @@ class PartyProcessSpec
         )
 
       (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String))
-        .expects(relationshipId, *)
+        .getRelationshipById(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(relationshipId, *, *)
         .returning(Future.successful(relationships))
 
       val response =
@@ -3357,13 +3257,13 @@ class PartyProcessSpec
         )
 
       (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String))
-        .expects(relationshipId, *)
+        .getRelationshipById(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(relationshipId, *, *)
         .returning(Future.successful(relationship))
 
       (mockPartyManagementService
-        .suspendRelationship(_: UUID)(_: String))
-        .expects(relationshipId, *)
+        .suspendRelationship(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(relationshipId, *, *)
         .returning(Future.successful(()))
 
       val response =
@@ -3399,8 +3299,8 @@ class PartyProcessSpec
         )
 
       (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String))
-        .expects(relationshipId, *)
+        .getRelationshipById(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(relationshipId, *, *)
         .returning(Future.successful(relationship))
 
       val response =
@@ -3425,8 +3325,8 @@ class PartyProcessSpec
 //        .once()
 
       (mockPartyManagementService
-        .deleteRelationshipById(_: UUID)(_: String))
-        .expects(relationshipId, *)
+        .deleteRelationshipById(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(relationshipId, *, *)
         .returning(Future.successful(()))
 
       val response = Await.result(
@@ -3448,8 +3348,8 @@ class PartyProcessSpec
 //        .once()
 
       (mockPartyManagementService
-        .deleteRelationshipById(_: UUID)(_: String))
-        .expects(relationshipId, *)
+        .deleteRelationshipById(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(relationshipId, *, *)
         .returning(Future.failed(new RuntimeException("Party Management Error")))
 
       val response = Await.result(
@@ -3486,6 +3386,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -3546,19 +3447,19 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
-        .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
+        )(_: String)(_: Seq[(String, String)]))
+        .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(managerRelationship))))
         .once()
 
       (mockPartyManagementService
-        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
-        .expects(PartyManagementDependency.PersonSeed(manager.id), *)
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(PartyManagementDependency.PersonSeed(manager.id), *, *)
         .returning(Future.successful(PartyManagementDependency.Person(manager.id)))
         .once()
 
       (mockPartyManagementService
-        .createRelationship(_: RelationshipSeed)(_: String))
+        .createRelationship(_: RelationshipSeed)(_: String)(_: Seq[(String, String)]))
         .expects(
           RelationshipSeed(
             from = managerRelationship.from,
@@ -3567,6 +3468,7 @@ class PartyProcessSpec
             product =
               RelationshipProductSeed(id = managerRelationship.product.id, role = managerRelationship.product.role)
           ),
+          *,
           *
         )
         .returning(Future.failed(ResourceConflictError(managerRelationship.id.toString)))
@@ -3580,7 +3482,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           Some(managerRelationship.from),
           Some(managerRelationship.to),
@@ -3588,19 +3490,20 @@ class PartyProcessSpec
           Seq.empty,
           Seq(managerRelationship.product.id),
           Seq(managerRelationship.product.role),
+          *,
           *
         )
         .returning(Future.successful(Relationships(Seq(managerRelationship))))
         .once()
 
       (mockPartyManagementService
-        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String))
-        .expects(PartyManagementDependency.PersonSeed(delegate.id), *)
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(PartyManagementDependency.PersonSeed(delegate.id), *, *)
         .returning(Future.successful(PartyManagementDependency.Person(delegate.id)))
         .once()
 
       (mockPartyManagementService
-        .createRelationship(_: RelationshipSeed)(_: String))
+        .createRelationship(_: RelationshipSeed)(_: String)(_: Seq[(String, String)]))
         .expects(
           RelationshipSeed(
             from = delegateRelationship.from,
@@ -3609,6 +3512,7 @@ class PartyProcessSpec
             product =
               RelationshipProductSeed(id = delegateRelationship.product.id, role = delegateRelationship.product.role)
           ),
+          *,
           *
         )
         .returning(Future.successful(delegateRelationship))
@@ -3623,8 +3527,10 @@ class PartyProcessSpec
       (mockPdfCreator.createContract _).expects(*, *, *, *).returning(Future.successful(file)).once()
 
       (mockPartyManagementService
-        .createToken(_: PartyManagementDependency.Relationships, _: String, _: String, _: String)(_: String))
-        .expects(*, *, *, *, *)
+        .createToken(_: PartyManagementDependency.Relationships, _: String, _: String, _: String)(_: String)(
+          _: Seq[(String, String)]
+        ))
+        .expects(*, *, *, *, *, *)
         .returning(Future.successful(PartyManagementDependency.TokenText("token")))
         .once()
     }
@@ -3648,7 +3554,8 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val managerId  = UUID.randomUUID()
@@ -3679,8 +3586,8 @@ class PartyProcessSpec
       configureCreateLegalTest(orgPartyId, manager, delegate)
 
       (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(orgPartyId, *)
+        .retrieveInstitution(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(orgPartyId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -3714,7 +3621,8 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val managerId  = UUID.randomUUID()
@@ -3745,8 +3653,8 @@ class PartyProcessSpec
       configureCreateLegalTest(orgPartyId, manager, delegate)
 
       (mockPartyManagementService
-        .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(externalId, *)
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -3844,7 +3752,8 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map.empty
       )
 
       val managerId = UUID.randomUUID()
@@ -3881,6 +3790,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -3897,8 +3807,8 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(*, *)
+        .retrieveInstitution(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(*, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -3910,8 +3820,8 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
-        .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
+        )(_: String)(_: Seq[(String, String)]))
+        .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(managerRelationship))))
         .once()
 
@@ -3937,7 +3847,8 @@ class PartyProcessSpec
         address = "address",
         zipCode = "zipCode",
         origin = origin,
-        institutionType = Option("PA")
+        institutionType = Option("PA"),
+        products = Map.empty
       )
 
       val managerId = UUID.randomUUID()
@@ -3985,6 +3896,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -4007,8 +3919,8 @@ class PartyProcessSpec
         .once()
 
       (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String))
-        .expects(orgPartyId, *)
+        .retrieveInstitution(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(orgPartyId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -4020,8 +3932,8 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
-        .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *)
+        )(_: String)(_: Seq[(String, String)]))
+        .expects(None, Some(orgPartyId), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq(relationship))))
         .once()
 
@@ -4056,7 +3968,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val managerId        = UUID.randomUUID()
@@ -4084,6 +3997,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -4111,6 +4025,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -4138,6 +4053,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -4155,8 +4071,8 @@ class PartyProcessSpec
 //        .once()
 
       (mockPartyManagementService
-        .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(externalId, *)
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -4168,7 +4084,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           None,
           Some(institution.id),
@@ -4181,6 +4097,7 @@ class PartyProcessSpec
           ),
           Seq.empty,
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(PartyManagementDependency.Relationships(items = relationships)))
@@ -4220,7 +4137,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val managerId        = UUID.randomUUID()
@@ -4249,6 +4167,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -4276,6 +4195,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -4303,6 +4223,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -4330,6 +4251,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -4347,8 +4269,8 @@ class PartyProcessSpec
 //        .once()
 
       (mockPartyManagementService
-        .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(externalId, *)
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -4360,7 +4282,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           None,
           Some(institution.id),
@@ -4373,6 +4295,7 @@ class PartyProcessSpec
           ),
           Seq.empty,
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(PartyManagementDependency.Relationships(items = relationships)))
@@ -4411,7 +4334,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val managerId        = UUID.randomUUID()
@@ -4440,6 +4364,7 @@ class PartyProcessSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
+              zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode")
             )
           ),
@@ -4565,8 +4490,8 @@ class PartyProcessSpec
 //        .once()
 
       (mockPartyManagementService
-        .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(externalId, *)
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -4578,7 +4503,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           None,
           Some(institution.id),
@@ -4591,6 +4516,7 @@ class PartyProcessSpec
           ),
           Seq.empty,
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(PartyManagementDependency.Relationships(items = relationships)))
@@ -4633,7 +4559,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val managerId        = UUID.randomUUID()
@@ -4760,8 +4687,8 @@ class PartyProcessSpec
 //        .once()
 
       (mockPartyManagementService
-        .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(externalId, *)
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -4773,7 +4700,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           None,
           Some(institution.id),
@@ -4786,6 +4713,7 @@ class PartyProcessSpec
           ),
           Seq.empty,
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(PartyManagementDependency.Relationships(items = relationships)))
@@ -4828,7 +4756,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val managerId       = UUID.randomUUID()
@@ -4899,8 +4828,8 @@ class PartyProcessSpec
 //        .once()
 
       (mockPartyManagementService
-        .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(externalId, *)
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -4912,7 +4841,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           None,
           Some(institution.id),
@@ -4925,6 +4854,7 @@ class PartyProcessSpec
           ),
           Seq.empty,
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(PartyManagementDependency.Relationships(items = relationships)))
@@ -4963,7 +4893,8 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       val managerId      = UUID.randomUUID()
@@ -5034,8 +4965,8 @@ class PartyProcessSpec
 //        .once()
 
       (mockPartyManagementService
-        .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(externalId, *)
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -5047,7 +4978,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           None,
           Some(institution.id),
@@ -5060,6 +4991,7 @@ class PartyProcessSpec
           ),
           Seq.empty,
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(PartyManagementDependency.Relationships(items = relationships)))
@@ -5098,12 +5030,13 @@ class PartyProcessSpec
         address = "",
         zipCode = "",
         origin = "",
-        institutionType = Option.empty
+        institutionType = Option.empty,
+        products = Map.empty
       )
 
       (mockPartyManagementService
-        .retrieveInstitutionByExternalId(_: String)(_: String))
-        .expects(externalId, *)
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -5121,7 +5054,7 @@ class PartyProcessSpec
           _: Seq[PartyManagementDependency.RelationshipState],
           _: Seq[String],
           _: Seq[String]
-        )(_: String))
+        )(_: String)(_: Seq[(String, String)]))
         .expects(
           None,
           Some(institution.id),
@@ -5134,6 +5067,7 @@ class PartyProcessSpec
           ),
           Seq.empty,
           Seq.empty,
+          *,
           *
         )
         .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq.empty)))

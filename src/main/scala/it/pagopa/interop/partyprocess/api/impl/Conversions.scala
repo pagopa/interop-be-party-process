@@ -44,6 +44,7 @@ object Conversions {
       description = institutionUpdate.description,
       digitalAddress = institutionUpdate.digitalAddress,
       address = institutionUpdate.address,
+      zipCode = institutionUpdate.zipCode,
       taxCode = institutionUpdate.taxCode
     )
   }

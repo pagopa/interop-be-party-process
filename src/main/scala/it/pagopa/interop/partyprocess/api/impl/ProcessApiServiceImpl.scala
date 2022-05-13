@@ -13,7 +13,6 @@ import it.pagopa.interop.commons.utils.AkkaUtils.{getFutureBearer, getUidFuture}
 import it.pagopa.interop.commons.utils.OpenapiUtils._
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.{ResourceConflictError, ResourceNotFoundError}
-import it.pagopa.interop.partymanagement.client.model.Relationships
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess.api.ProcessApiService
 import it.pagopa.interop.partyprocess.api.converters.partymanagement.InstitutionConverter
@@ -154,7 +153,7 @@ class ProcessApiServiceImpl(
   private def getInstitutionByOptionIdAndOptionExternalId(
     institutionId: Option[String],
     institutionExternalId: Option[String]
-  )(bearer: String): Future[Option[PartyManagementDependency.Institution]] = {
+  )(bearer: String)(implicit contexts: Seq[(String, String)]): Future[Option[PartyManagementDependency.Institution]] = {
     institutionId.fold {
       institutionExternalId.traverse(externalId =>
         partyManagementService.retrieveInstitutionByExternalId(externalId)(bearer)
@@ -172,19 +171,10 @@ class ProcessApiServiceImpl(
 
   private def getOnboardingDataDetails(
     bearer: String
-  ): PartyManagementDependency.Relationship => Future[OnboardingData] =
+  )(implicit contexts: Seq[(String, String)]): PartyManagementDependency.Relationship => Future[OnboardingData] =
     relationship => {
       for {
         institution <- partyManagementService.retrieveInstitution(relationship.to)(bearer)
-        managers    <- partyManagementService.retrieveRelationships(
-          from = None,
-          to = Some(institution.id),
-          roles = Seq(PartyManagementDependency.PartyRole.MANAGER),
-          states = Seq.empty,
-          products = Seq(relationship.product.id),
-          productRoles = Seq.empty
-        )(bearer)
-        managerWithBillingData = locateManagerWithBillingData(managers)
       } yield OnboardingData(
         id = institution.id,
         externalId = institution.externalId,
@@ -199,24 +189,13 @@ class ProcessApiServiceImpl(
         state = relationshipStateToApi(relationship.state),
         role = roleToApi(relationship.role),
         productInfo = relationshipProductToApi(relationship.product),
-        billing = managerWithBillingData.fold(Option.empty[Billing])(m => m.billing.map(billingToApi)),
-        pricingPlan = managerWithBillingData.fold(Option.empty[String])(m => m.pricingPlan),
+        billing = institution.products.get(relationship.product.id).map(m => billingToApi(m.billing)),
+        pricingPlan = institution.products.get(relationship.product.id).flatMap(m => m.pricingPlan),
         attributes =
           institution.attributes.map(attribute => Attribute(attribute.origin, attribute.code, attribute.description))
       )
 
     }
-
-  private def locateManagerWithBillingData(managers: Relationships) = {
-    managers.items
-      .sortWith((b1, b2) =>
-        // active as first
-        (b1.state != b2.state && b1.state == PartyManagementDependency.RelationshipState.ACTIVE)
-        // or last updated
-          || b2.updatedAt.getOrElse(b2.createdAt).isBefore(b1.updatedAt.getOrElse(b1.createdAt))
-      )
-      .find(m => m.state != PartyManagementDependency.RelationshipState.PENDING && m.billing.isDefined)
-  }
 
   /** Code: 204, Message: successful operation
     * Code: 404, Message: Not found, DataType: Problem
@@ -278,7 +257,9 @@ class ProcessApiServiceImpl(
   )(bearer: String, contexts: Seq[(String, String)]): Future[PartyManagementDependency.Institution] =
     createInstitution(onboardingRequest.institutionExternalId)(bearer, contexts).recoverWith {
       case _: ResourceConflictError =>
-        partyManagementService.retrieveInstitutionByExternalId(onboardingRequest.institutionExternalId)(bearer)
+        partyManagementService.retrieveInstitutionByExternalId(onboardingRequest.institutionExternalId)(bearer)(
+          contexts
+        )
       case ex                       =>
         Future.failed(ex)
     }
@@ -450,6 +431,7 @@ class ProcessApiServiceImpl(
           ApplicationConfiguration.onboardingMailInstitutionInfoDescriptionPlaceholder.some.zip(iu.description),
           ApplicationConfiguration.onboardingMailInstitutionInfoDigitalAddressPlaceholder.some.zip(iu.digitalAddress),
           ApplicationConfiguration.onboardingMailInstitutionInfoAddressPlaceholder.some.zip(iu.address),
+          ApplicationConfiguration.onboardingMailInstitutionInfoZipCodePlaceholder.some.zip(iu.zipCode),
           ApplicationConfiguration.onboardingMailInstitutionInfoTaxCodePlaceholder.some.zip(iu.taxCode)
         ).flatten.toMap
       }
@@ -493,7 +475,7 @@ class ProcessApiServiceImpl(
     pricingPlan: Option[String],
     institutionUpdate: Option[InstitutionUpdate],
     billing: Option[Billing]
-  )(bearer: String): Future[PartyManagementDependency.Relationship] = {
+  )(bearer: String)(implicit contexts: Seq[(String, String)]): Future[PartyManagementDependency.Relationship] = {
     val relationshipSeed: PartyManagementDependency.RelationshipSeed =
       PartyManagementDependency.RelationshipSeed(
         from = personId,
@@ -507,6 +489,7 @@ class ProcessApiServiceImpl(
             description = i.description,
             digitalAddress = i.digitalAddress,
             address = i.address,
+            zipCode = i.zipCode,
             taxCode = i.taxCode
           )
         ),
@@ -709,7 +692,7 @@ class ProcessApiServiceImpl(
       .map((_, user.role, user.product, user.productRole))
   }
 
-  private def createPerson(user: User)(bearer: String): Future[UserId] =
+  private def createPerson(user: User)(bearer: String)(implicit contexts: Seq[(String, String)]): Future[UserId] =
     for {
       _ <- partyManagementService.createPerson(PartyManagementDependency.PersonSeed(user.id))(bearer)
     } yield UserId(user.id)
@@ -728,7 +711,6 @@ class ProcessApiServiceImpl(
         digitalAddress = institution.digitalAddress,
         taxCode = institution.taxCode,
         attributes = Seq(PartyManagementDependency.Attribute(category.origin, category.code, category.name)),
-        products = Set.empty,
         address = institution.address,
         zipCode = institution.zipCode,
         institutionType = Option.empty,

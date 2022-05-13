@@ -13,5 +13,7 @@ trait RelationshipService {
     productRolesArray: List[String],
     rolesArray: List[String],
     statesArray: List[String]
-  )(personId: Option[String], userId: UUID, bearer: String): Future[Seq[RelationshipInfo]]
+  )(personId: Option[String], userId: UUID, bearer: String)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[Seq[RelationshipInfo]]
 }
