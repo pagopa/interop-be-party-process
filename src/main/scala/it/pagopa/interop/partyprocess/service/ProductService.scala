@@ -6,7 +6,7 @@ import it.pagopa.interop.partyprocess.model.{ProductState, Products}
 import scala.concurrent.Future
 
 trait ProductService {
-  def retrieveInstitutionProducts(institution: Institution, statesFilter: List[ProductState])(
-    bearer: String
+  def retrieveInstitutionProducts(institution: Institution, statesFilter: List[ProductState])(bearer: String)(implicit
+    contexts: Seq[(String, String)]
   ): Future[Products]
 }

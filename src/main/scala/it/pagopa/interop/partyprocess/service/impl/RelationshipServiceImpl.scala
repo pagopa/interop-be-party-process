@@ -22,7 +22,9 @@ class RelationshipServiceImpl(partyManagementService: PartyManagementService)(im
     productRolesArray: List[String],
     rolesArray: List[String],
     statesArray: List[String]
-  )(personId: Option[String], userId: UUID, bearer: String): Future[Seq[RelationshipInfo]] = {
+  )(personId: Option[String], userId: UUID, bearer: String)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[Seq[RelationshipInfo]] = {
     for {
       rolesEnumArray             <- rolesArray.traverse(PartyManagementDependency.PartyRole.fromValue).toFuture
       statesEnumArray            <- statesArray.traverse(PartyManagementDependency.RelationshipState.fromValue).toFuture

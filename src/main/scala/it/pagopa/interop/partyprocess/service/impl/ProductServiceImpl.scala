@@ -29,7 +29,7 @@ class ProductServiceImpl(partyManagementService: PartyManagementService)(implici
 
   override def retrieveInstitutionProducts(institution: Institution, statesFilter: List[ProductState])(
     bearer: String
-  ): Future[Products] = {
+  )(implicit contexts: Seq[(String, String)]): Future[Products] = {
     for {
       institutionRelationships <- partyManagementService.retrieveRelationships(
         from = None,

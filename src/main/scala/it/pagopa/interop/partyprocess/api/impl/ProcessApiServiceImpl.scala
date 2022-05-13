@@ -153,7 +153,7 @@ class ProcessApiServiceImpl(
   private def getInstitutionByOptionIdAndOptionExternalId(
     institutionId: Option[String],
     institutionExternalId: Option[String]
-  )(bearer: String): Future[Option[PartyManagementDependency.Institution]] = {
+  )(bearer: String)(implicit contexts: Seq[(String, String)]): Future[Option[PartyManagementDependency.Institution]] = {
     institutionId.fold {
       institutionExternalId.traverse(externalId =>
         partyManagementService.retrieveInstitutionByExternalId(externalId)(bearer)
@@ -171,7 +171,7 @@ class ProcessApiServiceImpl(
 
   private def getOnboardingDataDetails(
     bearer: String
-  ): PartyManagementDependency.Relationship => Future[OnboardingData] =
+  )(implicit contexts: Seq[(String, String)]): PartyManagementDependency.Relationship => Future[OnboardingData] =
     relationship => {
       for {
         institution <- partyManagementService.retrieveInstitution(relationship.to)(bearer)
@@ -190,7 +190,7 @@ class ProcessApiServiceImpl(
         role = roleToApi(relationship.role),
         productInfo = relationshipProductToApi(relationship.product),
         billing = institution.products.get(relationship.product.id).map(m => billingToApi(m.billing)),
-        pricingPlan = institution.products.get(relationship.product.id).map(m => m.pricingPlan),
+        pricingPlan = institution.products.get(relationship.product.id).flatMap(m => m.pricingPlan),
         attributes =
           institution.attributes.map(attribute => Attribute(attribute.origin, attribute.code, attribute.description))
       )
@@ -257,7 +257,9 @@ class ProcessApiServiceImpl(
   )(bearer: String, contexts: Seq[(String, String)]): Future[PartyManagementDependency.Institution] =
     createInstitution(onboardingRequest.institutionExternalId)(bearer, contexts).recoverWith {
       case _: ResourceConflictError =>
-        partyManagementService.retrieveInstitutionByExternalId(onboardingRequest.institutionExternalId)(bearer)
+        partyManagementService.retrieveInstitutionByExternalId(onboardingRequest.institutionExternalId)(bearer)(
+          contexts
+        )
       case ex                       =>
         Future.failed(ex)
     }
@@ -473,7 +475,7 @@ class ProcessApiServiceImpl(
     pricingPlan: Option[String],
     institutionUpdate: Option[InstitutionUpdate],
     billing: Option[Billing]
-  )(bearer: String): Future[PartyManagementDependency.Relationship] = {
+  )(bearer: String)(implicit contexts: Seq[(String, String)]): Future[PartyManagementDependency.Relationship] = {
     val relationshipSeed: PartyManagementDependency.RelationshipSeed =
       PartyManagementDependency.RelationshipSeed(
         from = personId,
@@ -690,7 +692,7 @@ class ProcessApiServiceImpl(
       .map((_, user.role, user.product, user.productRole))
   }
 
-  private def createPerson(user: User)(bearer: String): Future[UserId] =
+  private def createPerson(user: User)(bearer: String)(implicit contexts: Seq[(String, String)]): Future[UserId] =
     for {
       _ <- partyManagementService.createPerson(PartyManagementDependency.PersonSeed(user.id))(bearer)
     } yield UserId(user.id)
