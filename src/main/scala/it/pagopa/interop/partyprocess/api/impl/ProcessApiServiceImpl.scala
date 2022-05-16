@@ -58,8 +58,8 @@ class ProcessApiServiceImpl(
     addresses: Seq[String],
     file: File,
     onboardingMailParameters: Map[String, String]
-  ): Future[Unit] = {
-    mailer.sendMail(mailTemplate)(addresses, file, onboardingMailParameters)
+  )(implicit contexts: Seq[(String, String)]): Future[Unit] = {
+    mailer.sendMail(mailTemplate)(addresses, file, onboardingMailParameters)("onboarding-contract-email")
   }
 
   /** Code: 204, Message: successful operation

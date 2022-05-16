@@ -8,5 +8,7 @@ import scala.concurrent.Future
 trait MailEngine {
   def sendMail(
     mailTemplate: PersistedTemplate
-  )(addresses: Seq[String], file: File, bodyParameters: Map[String, String]): Future[Unit]
+  )(addresses: Seq[String], file: File, bodyParameters: Map[String, String])
+  (emailPurpose: String)
+  (implicit contexts: Seq[(String, String)]): Future[Unit]
 }
