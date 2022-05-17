@@ -54,11 +54,9 @@ class ProcessApiServiceImpl(
       PartyManagementDependency.RelationshipState.SUSPENDED
     )
 
-  private def sendOnboardingMail(
-    addresses: Seq[String],
-    file: File,
-    onboardingMailParameters: Map[String, String]
-  )(implicit contexts: Seq[(String, String)]): Future[Unit] = {
+  private def sendOnboardingMail(addresses: Seq[String], file: File, onboardingMailParameters: Map[String, String])(
+    implicit contexts: Seq[(String, String)]
+  ): Future[Unit] = {
     mailer.sendMail(mailTemplate)(addresses, file, onboardingMailParameters)("onboarding-contract-email")
   }
 
