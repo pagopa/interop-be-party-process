@@ -102,4 +102,9 @@ object PartyProcessErrors {
         "0036",
         s"Cannot find Institution using institutionId $institutionId and externalInstitutionId $externalInstitutionId"
       )
+
+  final case object CreateInstitutionError extends ComponentError("0037", "Error while creating requested institution")
+  final case object CreateInstitutionConflict extends ComponentError("0038", "Institution already exists")
+  final case object CreateInstitutionNotFound
+      extends ComponentError("0039", "Institution doesn't exist in party-registry")
 }

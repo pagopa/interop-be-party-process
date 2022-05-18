@@ -48,6 +48,9 @@ package object partyprocess extends SprayJsonSupport {
   implicit def fromEntityUnmarshallerOnboardingUsersRequest: ToEntityMarshaller[OnboardingUsersRequest] =
     sprayJsonMarshaller[OnboardingUsersRequest]
 
+  implicit val fromEntityUnmarshallerInstitution: FromEntityUnmarshaller[Institution] =
+    sprayJsonUnmarshaller[Institution]
+
   def request(data: Source[ByteString, Any], path: String, verb: HttpMethod)(implicit
     system: ClassicActorSystemProvider
   ): HttpResponse = {

@@ -255,7 +255,7 @@ class ProcessApiServiceImpl(
   private def createOrGetInstitution(
     onboardingRequest: OnboardingInstitutionRequest
   )(bearer: String, contexts: Seq[(String, String)]): Future[PartyManagementDependency.Institution] =
-    createInstitution(onboardingRequest.institutionExternalId)(bearer, contexts).recoverWith {
+    createInstitutionInner(onboardingRequest.institutionExternalId)(bearer, contexts).recoverWith {
       case _: ResourceConflictError =>
         partyManagementService.retrieveInstitutionByExternalId(onboardingRequest.institutionExternalId)(bearer)(
           contexts
@@ -697,7 +697,7 @@ class ProcessApiServiceImpl(
       _ <- partyManagementService.createPerson(PartyManagementDependency.PersonSeed(user.id))(bearer)
     } yield UserId(user.id)
 
-  private def createInstitution(
+  private def createInstitutionInner(
     externalId: String
   )(implicit bearer: String, contexts: Seq[(String, String)]): Future[PartyManagementDependency.Institution] =
     for {
@@ -939,6 +939,40 @@ class ProcessApiServiceImpl(
       case Failure(ex)                     =>
         logger.error(s"Error while retrieving institution for id $id - ${ex.getMessage}")
         val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, GetProductsError)
+        complete(errorResponse.status, errorResponse)
+    }
+  }
+
+  /**
+   * Code: 201, Message: successful operation, DataType: Institution
+   * Code: 404, Message: Invalid externalId supplied, DataType: Problem
+   * Code: 409, Message: institution having externalId already exists, DataType: Problem
+   */
+  override def createInstitution(externalId: String)(implicit
+    toEntityMarshallerInstitution: ToEntityMarshaller[Institution],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    contexts: Seq[(String, String)]
+  ): Route = {
+    logger.info(s"Creating institution having external id $externalId")
+    val result = for {
+      bearer      <- getFutureBearer(contexts)
+      _           <- getUidFuture(contexts)
+      institution <- createInstitutionInner(externalId)(bearer, contexts)
+    } yield institution
+
+    onComplete(result) {
+      case Success(institution)               => createInstitution201(InstitutionConverter.dependencyToApi(institution))
+      case Failure(ex: ResourceNotFoundError) =>
+        logger.error(s"Institution having externalId $externalId not exists in registry", ex)
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, CreateInstitutionNotFound)
+        complete(errorResponse.status, errorResponse)
+      case Failure(ex: ResourceConflictError) =>
+        logger.error(s"Institution having externalId $externalId already exists", ex)
+        val errorResponse: Problem = problemOf(StatusCodes.Conflict, CreateInstitutionConflict)
+        complete(errorResponse.status, errorResponse)
+      case Failure(ex)                        =>
+        logger.error(s"Error while creating institution having external id $externalId - ${ex.getMessage}")
+        val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, CreateInstitutionError)
         complete(errorResponse.status, errorResponse)
     }
   }
