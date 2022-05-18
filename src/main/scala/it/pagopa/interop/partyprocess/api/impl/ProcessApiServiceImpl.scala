@@ -154,19 +154,24 @@ class ProcessApiServiceImpl(
     institutionId: Option[String],
     institutionExternalId: Option[String]
   )(bearer: String)(implicit contexts: Seq[(String, String)]): Future[Option[PartyManagementDependency.Institution]] = {
-    institutionId.fold {
-      institutionExternalId.traverse(externalId =>
-        partyManagementService.retrieveInstitutionByExternalId(externalId)(bearer)
-      )
-    } { institutionId =>
-      partyManagementService
-        .retrieveInstitution(UUID.fromString(institutionId))(bearer)
-        .map(institution =>
-          institutionExternalId
-            .flatMap(externalId => Option.when(institution.externalId === externalId)(institution))
-            .orElse(Option(institution))
+    institutionId
+      .fold {
+        institutionExternalId.traverse(externalId =>
+          partyManagementService.retrieveInstitutionByExternalId(externalId)(bearer)
         )
-    }
+      } { institutionId =>
+        partyManagementService
+          .retrieveInstitution(UUID.fromString(institutionId))(bearer)
+          .map(institution =>
+            institutionExternalId
+              .flatMap(externalId => Option.when(institution.externalId === externalId)(institution))
+              .orElse(Option(institution))
+          )
+      }
+      .recover {
+        case _: ResourceNotFoundError => None
+        case ex                       => throw ex
+      }
   }
 
   private def getOnboardingDataDetails(
@@ -210,7 +215,13 @@ class ProcessApiServiceImpl(
       uid                      <- getUidFuture(contexts)
       userId                   <- uid.toFutureUUID
       currentUser              <- userRegistryManagementService.getUserById(userId)
-      institution              <- createOrGetInstitution(onboardingRequest)(bearer, contexts)
+      institutionOption        <- getInstitutionByOptionIdAndOptionExternalId(
+        None,
+        Option(onboardingRequest.institutionExternalId)
+      )(bearer)
+      institution              <- institutionOption.toFuture(
+        InstitutionNotFound(None, Option(onboardingRequest.institutionExternalId))
+      )
       institutionRelationships <- partyManagementService.retrieveRelationships(
         from = None,
         to = Some(institution.id),
@@ -231,8 +242,8 @@ class ProcessApiServiceImpl(
     } yield response
 
     onComplete(result) {
-      case Success(_)                    => onboardingInstitution204
-      case Failure(ex: ContractNotFound) =>
+      case Success(_)                       => onboardingInstitution204
+      case Failure(ex: ContractNotFound)    =>
         logger.info(
           "Error while onboarding institution {}, reason: {}",
           onboardingRequest.institutionExternalId,
@@ -240,7 +251,15 @@ class ProcessApiServiceImpl(
         )
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         onboardingInstitution404(errorResponse)
-      case Failure(ex)                   =>
+      case Failure(ex: InstitutionNotFound) =>
+        logger.error(
+          "Institution having externalId {} not found, reason: {}",
+          onboardingRequest.institutionExternalId,
+          ex.getMessage
+        )
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
+        onboardingInstitution404(errorResponse)
+      case Failure(ex)                      =>
         logger.error(
           "Error while onboarding institution {}, reason: {}",
           onboardingRequest.institutionExternalId,
@@ -251,18 +270,6 @@ class ProcessApiServiceImpl(
     }
 
   }
-
-  private def createOrGetInstitution(
-    onboardingRequest: OnboardingInstitutionRequest
-  )(bearer: String, contexts: Seq[(String, String)]): Future[PartyManagementDependency.Institution] =
-    createInstitutionInner(onboardingRequest.institutionExternalId)(bearer, contexts).recoverWith {
-      case _: ResourceConflictError =>
-        partyManagementService.retrieveInstitutionByExternalId(onboardingRequest.institutionExternalId)(bearer)(
-          contexts
-        )
-      case ex                       =>
-        Future.failed(ex)
-    }
 
   /** Code: 204, Message: successful operation
     * Code: 404, Message: Not found, DataType: Problem
@@ -311,8 +318,17 @@ class ProcessApiServiceImpl(
     } yield response
 
     onComplete(result) {
-      case Success(_)  => onboardingLegalsOnInstitution204
-      case Failure(ex) =>
+      case Success(_)                       => onboardingLegalsOnInstitution204
+      case Failure(ex: InstitutionNotFound) =>
+        logger.error(
+          "Error while onboarding Legals of institution {} and/or externalId {} caused by not existent institution, reason: {}",
+          onboardingRequest.institutionId,
+          onboardingRequest.institutionExternalId,
+          ex.getMessage
+        )
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
+        onboardingLegalsOnInstitution404(errorResponse)
+      case Failure(ex)                      =>
         logger.error(
           "Error while onboarding Legals of institution {} and/or externalId {}, reason: {}",
           onboardingRequest.institutionId,

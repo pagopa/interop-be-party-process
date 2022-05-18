@@ -162,21 +162,6 @@ class PartyProcessSpec
     val externalId = UUID.randomUUID().toString
     val orgPartyId = UUID.randomUUID()
 
-    val institutionFromProxy = PartyProxyDependencies.Institution(
-      id = externalId,
-      originId = originId,
-      o = Some(originId),
-      ou = None,
-      aoo = None,
-      taxCode = "taxCode",
-      category = "C17",
-      description = "description",
-      digitalAddress = "digitalAddress",
-      origin = origin,
-      address = "address",
-      zipCode = "zipCode"
-    )
-
     val institution1 = PartyManagementDependency.Institution(
       id = orgPartyId,
       externalId = externalId,
@@ -254,21 +239,9 @@ class PartyProcessSpec
       .returning(Future.successful(UserRegistryUser(id = UUID.randomUUID(), taxCode = "", name = "", surname = "")))
       .once()
 
-    (mockPartyRegistryService
-      .getInstitution(_: String)(_: String)(_: Seq[(String, String)]))
-      .expects(*, *, *)
-      .returning(Future.successful(institutionFromProxy))
-      .once()
-
-    (mockPartyRegistryService
-      .getCategory(_: String, _: String)(_: String)(_: Seq[(String, String)]))
-      .expects(*, *, *, *)
-      .returning(Future.successful(PartyProxyDependencies.Category("C17", "attrs", "test", origin)))
-      .once()
-
     (mockPartyManagementService
-      .createInstitution(_: InstitutionSeed)(_: String)(_: Seq[(String, String)]))
-      .expects(*, *, *)
+      .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+      .expects(externalId, *, *)
       .returning(Future.successful(institution1))
       .once()
 
@@ -307,22 +280,6 @@ class PartyProcessSpec
     val externalId = UUID.randomUUID().toString
     val origin     = "ORIGIN"
     val orgPartyId = UUID.randomUUID()
-
-    val institutionFromProxy =
-      PartyProxyDependencies.Institution(
-        id = externalId,
-        originId = originId,
-        o = Some(originId),
-        ou = None,
-        aoo = None,
-        taxCode = "taxCode",
-        category = "C17",
-        description = "description",
-        digitalAddress = "digitalAddress",
-        origin = origin,
-        address = "address",
-        zipCode = "zipCode"
-      )
 
     val institution1 = PartyManagementDependency.Institution(
       id = orgPartyId,
@@ -452,21 +409,9 @@ class PartyProcessSpec
       .returning(Future.successful("hash"))
       .once()
 
-    (mockPartyRegistryService
-      .getInstitution(_: String)(_: String)(_: Seq[(String, String)]))
-      .expects(*, *, *)
-      .returning(Future.successful(institutionFromProxy))
-      .once()
-
-    (mockPartyRegistryService
-      .getCategory(_: String, _: String)(_: String)(_: Seq[(String, String)]))
-      .expects(*, *, *, *)
-      .returning(Future.successful(PartyProxyDependencies.Category("C17", "attrs", "test", origin)))
-      .once()
-
     (mockPartyManagementService
-      .createInstitution(_: InstitutionSeed)(_: String)(_: Seq[(String, String)]))
-      .expects(*, *, *)
+      .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+      .expects(externalId, *, *)
       .returning(Future.successful(institution1))
       .once()
 
@@ -1271,6 +1216,35 @@ class PartyProcessSpec
           .futureValue
 
       response.status mustBe StatusCodes.BadRequest
+
+    }
+
+    "not onboard an institution if it doesn't exists" in {
+      val externalId = UUID.randomUUID.toString
+      (mockUserRegistryService
+        .getUserById(_: UUID))
+        .expects(*)
+        .returning(Future.successful(UserRegistryUser(id = UUID.randomUUID(), taxCode = "", name = "", surname = "")))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
+        .returning(Future.failed(ResourceNotFoundError(externalId)))
+        .once()
+
+      val req = OnboardingInstitutionRequest(
+        users = Seq.empty,
+        institutionExternalId = externalId,
+        contract = OnboardingContract("a", "b"),
+        billing = Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE")
+      )
+
+      val data = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
+
+      val response = request(data, "onboarding/institution", HttpMethods.POST)
+
+      response.status mustBe StatusCodes.NotFound
 
     }
 
