@@ -5191,4 +5191,74 @@ class PartyProcessSpec
     }
   }
 
+  "Get institution" must {
+    val orgPartyId = UUID.randomUUID()
+    val originId   = UUID.randomUUID().toString
+    val externalId = UUID.randomUUID().toString
+    val origin     = "ORIGIN"
+
+    val institution = PartyManagementDependency.Institution(
+      id = orgPartyId,
+      externalId = externalId,
+      originId = originId,
+      description = "description",
+      digitalAddress = "digitalAddress",
+      attributes = Seq(PartyManagementDependency.Attribute(origin, "C17", "attrs")),
+      taxCode = "taxCode",
+      origin = origin,
+      address = "address",
+      zipCode = "zipCode",
+      products = Map.empty
+    )
+
+    val expected = Institution(
+      id = institution.id,
+      externalId = institution.externalId,
+      originId = institution.originId,
+      description = institution.description,
+      digitalAddress = institution.digitalAddress,
+      address = institution.address,
+      zipCode = institution.zipCode,
+      taxCode = institution.taxCode,
+      origin = institution.origin,
+      institutionType = institution.institutionType,
+      attributes = Seq(Attribute(origin, "C17", "attrs"))
+    )
+
+    def mockPartyManagement(success: Boolean) = {
+      (mockPartyManagementService
+        .retrieveInstitution(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(orgPartyId, *, *)
+        .returning(if (success) Future.successful(institution) else Future.failed(ResourceNotFoundError(externalId)))
+        .once()
+    }
+
+    "succeed when exists" in {
+      mockPartyManagement(true)
+
+      val response =
+        Http()
+          .singleRequest(HttpRequest(uri = s"$url/institutions/$orgPartyId", method = HttpMethods.GET))
+          .futureValue
+
+      val body = Unmarshal(response.entity).to[Institution].futureValue
+
+      body equals expected
+
+      response.status mustBe StatusCodes.OK
+    }
+
+    "NotFoundError when not exists" in {
+      mockPartyManagement(false)
+
+      val response =
+        Http()
+          .singleRequest(HttpRequest(uri = s"$url/institutions/$orgPartyId", method = HttpMethods.GET))
+          .futureValue
+
+      response.status mustBe StatusCodes.NotFound
+    }
+
+  }
+
 }
