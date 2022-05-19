@@ -599,7 +599,6 @@ paths:
                 $ref: '#/components/schemas/Problem'
   '/institutions/{externalId}':
     post:
-      security: [ { } ]
       tags:
         - process
       summary: Create an institution using external institution id fetching data from user-registry
