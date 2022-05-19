@@ -120,7 +120,7 @@ class ProcessApiServiceImpl(
       bearer <- getFutureBearer(contexts)
       uid    <- getUidFuture(contexts)
       userId <- uid.toFutureUUID
-      institutionUuid = institutionId.map(UUID.fromString)
+      institutionUuid <- institutionId.traverse(_.toFutureUUID)
       institution      <- getInstitutionByOptionIdAndOptionExternalId(institutionUuid, institutionExternalId)(bearer)
       statesParamArray <- parseArrayParameters(states)
         .traverse(PartyManagementDependency.RelationshipState.fromValue)
