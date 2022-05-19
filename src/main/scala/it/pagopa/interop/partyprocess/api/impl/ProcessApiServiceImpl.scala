@@ -117,10 +117,11 @@ class ProcessApiServiceImpl(
       List(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING)
 
     val result: Future[OnboardingInfo] = for {
-      bearer           <- getFutureBearer(contexts)
-      uid              <- getUidFuture(contexts)
-      userId           <- uid.toFutureUUID
-      institution      <- getInstitutionByOptionIdAndOptionExternalId(institutionId, institutionExternalId)(bearer)
+      bearer <- getFutureBearer(contexts)
+      uid    <- getUidFuture(contexts)
+      userId <- uid.toFutureUUID
+      institutionUuid = institutionId.map(UUID.fromString)
+      institution      <- getInstitutionByOptionIdAndOptionExternalId(institutionUuid, institutionExternalId)(bearer)
       statesParamArray <- parseArrayParameters(states)
         .traverse(PartyManagementDependency.RelationshipState.fromValue)
         .toFuture
@@ -151,7 +152,7 @@ class ProcessApiServiceImpl(
   }
 
   private def getInstitutionByOptionIdAndOptionExternalId(
-    institutionId: Option[String],
+    institutionId: Option[UUID],
     institutionExternalId: Option[String]
   )(bearer: String)(implicit contexts: Seq[(String, String)]): Future[Option[PartyManagementDependency.Institution]] = {
     institutionId
@@ -161,7 +162,7 @@ class ProcessApiServiceImpl(
         )
       } { institutionId =>
         partyManagementService
-          .retrieveInstitution(UUID.fromString(institutionId))(bearer)
+          .retrieveInstitution(institutionId)(bearer)
           .map(institution =>
             institutionExternalId
               .flatMap(externalId => Option.when(institution.externalId === externalId)(institution))
@@ -289,7 +290,7 @@ class ProcessApiServiceImpl(
       userId                   <- uid.toFutureUUID
       currentUser              <- userRegistryManagementService.getUserById(userId)
       institutionOption        <- getInstitutionByOptionIdAndOptionExternalId(
-        onboardingRequest.institutionId.map(i => i.toString),
+        onboardingRequest.institutionId,
         onboardingRequest.institutionExternalId
       )(bearer)
       institution              <- institutionOption.toFuture(
