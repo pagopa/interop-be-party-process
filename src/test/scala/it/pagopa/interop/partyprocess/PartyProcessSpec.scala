@@ -9,7 +9,7 @@ import akka.http.scaladsl.server.directives.{AuthenticationDirective, Credential
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import cats.implicits.catsSyntaxValidatedId
 import eu.europa.esig.dss.validation.SignedDocumentValidator
-import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.ResourceConflictError
+import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.{ResourceConflictError, ResourceNotFoundError}
 import it.pagopa.interop.commons.utils.{BEARER, UID}
 import it.pagopa.interop.partymanagement.client.model.{
   InstitutionSeed,
@@ -29,7 +29,7 @@ import it.pagopa.interop.partyprocess.common.system.{classicActorSystem, executi
 import it.pagopa.interop.partyprocess.error.SignatureValidationError
 import it.pagopa.interop.partyprocess.model.PartyRole.{DELEGATE, MANAGER, OPERATOR, SUB_DELEGATE}
 import it.pagopa.interop.partyprocess.model.RelationshipState.ACTIVE
-import it.pagopa.interop.partyprocess.model.{Billing, InstitutionUpdate, Attribute, _}
+import it.pagopa.interop.partyprocess.model.{Attribute, Billing, Institution, InstitutionUpdate, _}
 import it.pagopa.interop.partyprocess.server.Controller
 import it.pagopa.interop.partyprocess.service.impl.{ProductServiceImpl, RelationshipServiceImpl}
 import it.pagopa.interop.partyprocess.service.{ProductService, RelationshipService}
@@ -162,21 +162,6 @@ class PartyProcessSpec
     val externalId = UUID.randomUUID().toString
     val orgPartyId = UUID.randomUUID()
 
-    val institutionFromProxy = PartyProxyDependencies.Institution(
-      id = externalId,
-      originId = originId,
-      o = Some(originId),
-      ou = None,
-      aoo = None,
-      taxCode = "taxCode",
-      category = "C17",
-      description = "description",
-      digitalAddress = "digitalAddress",
-      origin = origin,
-      address = "address",
-      zipCode = "zipCode"
-    )
-
     val institution1 = PartyManagementDependency.Institution(
       id = orgPartyId,
       externalId = externalId,
@@ -254,21 +239,9 @@ class PartyProcessSpec
       .returning(Future.successful(UserRegistryUser(id = UUID.randomUUID(), taxCode = "", name = "", surname = "")))
       .once()
 
-    (mockPartyRegistryService
-      .getInstitution(_: String)(_: String)(_: Seq[(String, String)]))
-      .expects(*, *, *)
-      .returning(Future.successful(institutionFromProxy))
-      .once()
-
-    (mockPartyRegistryService
-      .getCategory(_: String, _: String)(_: String)(_: Seq[(String, String)]))
-      .expects(*, *, *, *)
-      .returning(Future.successful(PartyProxyDependencies.Category("C17", "attrs", "test", origin)))
-      .once()
-
     (mockPartyManagementService
-      .createInstitution(_: InstitutionSeed)(_: String)(_: Seq[(String, String)]))
-      .expects(*, *, *)
+      .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+      .expects(externalId, *, *)
       .returning(Future.successful(institution1))
       .once()
 
@@ -307,22 +280,6 @@ class PartyProcessSpec
     val externalId = UUID.randomUUID().toString
     val origin     = "ORIGIN"
     val orgPartyId = UUID.randomUUID()
-
-    val institutionFromProxy =
-      PartyProxyDependencies.Institution(
-        id = externalId,
-        originId = originId,
-        o = Some(originId),
-        ou = None,
-        aoo = None,
-        taxCode = "taxCode",
-        category = "C17",
-        description = "description",
-        digitalAddress = "digitalAddress",
-        origin = origin,
-        address = "address",
-        zipCode = "zipCode"
-      )
 
     val institution1 = PartyManagementDependency.Institution(
       id = orgPartyId,
@@ -452,21 +409,9 @@ class PartyProcessSpec
       .returning(Future.successful("hash"))
       .once()
 
-    (mockPartyRegistryService
-      .getInstitution(_: String)(_: String)(_: Seq[(String, String)]))
-      .expects(*, *, *)
-      .returning(Future.successful(institutionFromProxy))
-      .once()
-
-    (mockPartyRegistryService
-      .getCategory(_: String, _: String)(_: String)(_: Seq[(String, String)]))
-      .expects(*, *, *, *)
-      .returning(Future.successful(PartyProxyDependencies.Category("C17", "attrs", "test", origin)))
-      .once()
-
     (mockPartyManagementService
-      .createInstitution(_: InstitutionSeed)(_: String)(_: Seq[(String, String)]))
-      .expects(*, *, *)
+      .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+      .expects(externalId, *, *)
       .returning(Future.successful(institution1))
       .once()
 
@@ -1271,6 +1216,35 @@ class PartyProcessSpec
           .futureValue
 
       response.status mustBe StatusCodes.BadRequest
+
+    }
+
+    "not onboard an institution if it doesn't exists" in {
+      val externalId = UUID.randomUUID.toString
+      (mockUserRegistryService
+        .getUserById(_: UUID))
+        .expects(*)
+        .returning(Future.successful(UserRegistryUser(id = UUID.randomUUID(), taxCode = "", name = "", surname = "")))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
+        .returning(Future.failed(ResourceNotFoundError(externalId)))
+        .once()
+
+      val req = OnboardingInstitutionRequest(
+        users = Seq.empty,
+        institutionExternalId = externalId,
+        contract = OnboardingContract("a", "b"),
+        billing = Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE")
+      )
+
+      val data = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
+
+      val response = request(data, "onboarding/institution", HttpMethods.POST)
+
+      response.status mustBe StatusCodes.NotFound
 
     }
 
@@ -5086,6 +5060,135 @@ class PartyProcessSpec
       response.status mustBe StatusCodes.NotFound
     }
 
+  }
+
+  "Create institution" must {
+    val originId   = UUID.randomUUID().toString
+    val externalId = UUID.randomUUID().toString
+    val origin     = "ORIGIN"
+
+    val orgPartyId = UUID.randomUUID()
+
+    val institutionFromProxy =
+      PartyProxyDependencies.Institution(
+        id = externalId,
+        originId = originId,
+        o = Some(originId),
+        ou = None,
+        aoo = None,
+        taxCode = "taxCode",
+        category = "C17",
+        description = "description",
+        digitalAddress = "digitalAddress",
+        origin = origin,
+        address = "address",
+        zipCode = "zipCode"
+      )
+
+    val institutionSeed = PartyManagementDependency.InstitutionSeed(
+      externalId = institutionFromProxy.id,
+      originId = institutionFromProxy.originId,
+      description = institutionFromProxy.description,
+      digitalAddress = institutionFromProxy.digitalAddress,
+      attributes = Seq(PartyManagementDependency.Attribute(origin, "C17", "attrs")),
+      taxCode = institutionFromProxy.taxCode,
+      address = institutionFromProxy.address,
+      zipCode = institutionFromProxy.zipCode,
+      origin = institutionFromProxy.origin
+    )
+
+    val institution = PartyManagementDependency.Institution(
+      id = orgPartyId,
+      externalId = institutionSeed.externalId,
+      originId = institutionSeed.originId,
+      description = institutionSeed.description,
+      digitalAddress = institutionSeed.digitalAddress,
+      attributes = institutionSeed.attributes,
+      taxCode = institutionSeed.taxCode,
+      address = institutionSeed.address,
+      zipCode = institutionSeed.zipCode,
+      origin = institutionSeed.origin,
+      institutionType = institutionSeed.institutionType,
+      products = Map.empty
+    )
+
+    val expected = Institution(
+      id = institution.id,
+      externalId = institution.externalId,
+      originId = institution.originId,
+      description = institution.description,
+      digitalAddress = institution.digitalAddress,
+      address = institution.address,
+      zipCode = institution.zipCode,
+      taxCode = institution.taxCode,
+      origin = institution.origin,
+      institutionType = institution.institutionType,
+      attributes = Seq(Attribute(origin, "C17", "attrs"))
+    )
+
+    def mockPartyRegistry(success: Boolean) = {
+      (mockPartyRegistryService
+        .getInstitution(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
+        .returning(
+          if (success) Future.successful(institutionFromProxy)
+          else Future.failed(ResourceNotFoundError(externalId))
+        )
+        .once()
+
+      if (success)(mockPartyRegistryService
+        .getCategory(_: String, _: String)(_: String)(_: Seq[(String, String)]))
+        .expects(origin, *, *, *)
+        .returning(Future.successful(PartyProxyDependencies.Category("C17", "attrs", "test", origin)))
+        .once()
+    }
+
+    def mockPartyManagement(success: Boolean) = {
+      (mockPartyManagementService
+        .createInstitution(_: InstitutionSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(institutionSeed, *, *)
+        .returning(if (success) Future.successful(institution) else Future.failed(ResourceConflictError(externalId)))
+        .once()
+    }
+
+    "succeed when valid and not exists yet" in {
+      mockPartyRegistry(true)
+      mockPartyManagement(true)
+
+      val response =
+        Http()
+          .singleRequest(HttpRequest(uri = s"$url/institutions/$externalId", method = HttpMethods.POST))
+          .futureValue
+
+      val body = Unmarshal(response.entity).to[Institution].futureValue
+
+      body equals expected
+
+      response.status mustBe StatusCodes.Created
+    }
+
+    "NotFoundError when externalId not found in userRegistry" in {
+      mockPartyRegistry(false)
+
+      val response =
+        Http()
+          .singleRequest(HttpRequest(uri = s"$url/institutions/$externalId", method = HttpMethods.POST))
+          .futureValue
+
+      response.status mustBe StatusCodes.NotFound
+    }
+
+    "ConflictError when already exists an institution having the same externalId" in {
+      mockPartyRegistry(true)
+      mockPartyManagement(false)
+
+      val response =
+        Http()
+          .singleRequest(HttpRequest(uri = s"$url/institutions/$externalId", method = HttpMethods.POST))
+          .futureValue
+
+      response.status mustBe StatusCodes.Conflict
+    }
   }
 
 }
