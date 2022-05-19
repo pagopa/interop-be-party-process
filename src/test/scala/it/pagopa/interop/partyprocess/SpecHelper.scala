@@ -15,12 +15,14 @@ import org.scalamock.scalatest.MockFactory
 
 import java.io.File
 import java.util.UUID
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 object MockMailEngine extends MailEngine {
   override def sendMail(
     mailTemplate: PersistedTemplate
-  )(addresses: Seq[String], file: File, bodyParameters: Map[String, String]): Future[Unit] = Future.successful(())
+  )(addresses: Seq[String], file: File, bodyParameters: Map[String, String])(
+    emailPurpose: String = "email-notification"
+  )(implicit executor: ExecutionContext, contexts: Seq[(String, String)]): Future[Unit] = Future.successful(())
 }
 
 trait SpecHelper { self: MockFactory =>
