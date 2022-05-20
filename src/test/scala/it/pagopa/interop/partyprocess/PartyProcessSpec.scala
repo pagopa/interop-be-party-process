@@ -234,8 +234,8 @@ class PartyProcessSpec
     )
 
     (mockUserRegistryService
-      .getUserById(_: UUID))
-      .expects(*)
+      .getUserById(_: UUID)(_: Seq[(String, String)]))
+      .expects(*, *)
       .returning(Future.successful(UserRegistryUser(id = UUID.randomUUID(), taxCode = "", name = "", surname = "")))
       .once()
 
@@ -398,8 +398,8 @@ class PartyProcessSpec
 //      .once()
 
     (mockUserRegistryService
-      .getUserById(_: UUID))
-      .expects(*)
+      .getUserById(_: UUID)(_: Seq[(String, String)]))
+      .expects(*, *)
       .returning(Future.successful(UserRegistryUser(id = UUID.randomUUID(), taxCode = "", name = "", surname = "")))
       .once()
 
@@ -1222,8 +1222,8 @@ class PartyProcessSpec
     "not onboard an institution if it doesn't exists" in {
       val externalId = UUID.randomUUID.toString
       (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(*)
+        .getUserById(_: UUID)(_: Seq[(String, String)]))
+        .expects(*, *)
         .returning(Future.successful(UserRegistryUser(id = UUID.randomUUID(), taxCode = "", name = "", surname = "")))
         .once()
 
@@ -1781,15 +1781,15 @@ class PartyProcessSpec
         .returning(Future.successful(token))
 
       (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(partyIdManager)
+        .getUserById(_: UUID)(_: Seq[(String, String)]))
+        .expects(partyIdManager, *)
         .returning(
           Future.successful(UserRegistryUser(id = partyIdManager, taxCode = managerTaxCode, name = "", surname = ""))
         )
 
       (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(partyIdDelegate)
+        .getUserById(_: UUID)(_: Seq[(String, String)]))
+        .expects(partyIdDelegate, *)
         .returning(
           Future.successful(UserRegistryUser(id = partyIdDelegate, taxCode = delegateTaxCode, name = "", surname = ""))
         )
@@ -3392,14 +3392,14 @@ class PartyProcessSpec
       //        .once()
 
       (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(*)
+        .getUserById(_: UUID)(_: Seq[(String, String)]))
+        .expects(*, *)
         .returning(Future.successful(UserRegistryUser(id = UUID.randomUUID(), taxCode = "", name = "", surname = "")))
         .once()
 
       (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(manager.id)
+        .getUserById(_: UUID)(_: Seq[(String, String)]))
+        .expects(manager.id, *)
         .returning(
           Future.successful(
             UserRegistryUser(id = manager.id, taxCode = manager.taxCode, name = manager.name, surname = manager.surname)
@@ -3775,8 +3775,8 @@ class PartyProcessSpec
         )
 
       (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(*)
+        .getUserById(_: UUID)(_: Seq[(String, String)]))
+        .expects(*, *)
         .returning(Future.successful(UserRegistryUser(id = UUID.randomUUID(), taxCode = "", name = "", surname = "")))
         .once()
 
@@ -3887,8 +3887,8 @@ class PartyProcessSpec
 //        .once()
 
       (mockUserRegistryService
-        .getUserById(_: UUID))
-        .expects(*)
+        .getUserById(_: UUID)(_: Seq[(String, String)]))
+        .expects(*, *)
         .returning(Future.successful(UserRegistryUser(id = UUID.randomUUID(), taxCode = "", name = "", surname = "")))
         .once()
 

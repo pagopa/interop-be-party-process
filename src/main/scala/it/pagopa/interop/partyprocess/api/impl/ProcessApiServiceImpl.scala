@@ -334,12 +334,16 @@ class ProcessApiServiceImpl(
       product == rl.product.id && rl.role == PartyManagementDependency.PartyRole.MANAGER && rl.state == PartyManagementDependency.RelationshipState.ACTIVE
     )
 
-  private def getValidManager(manager: Option[PartyManagementDependency.Relationship], users: Seq[User]): Future[User] =
+  private def getValidManager(manager: Option[PartyManagementDependency.Relationship], users: Seq[User])(implicit
+    context: Seq[(String, String)]
+  ): Future[User] =
     manager
       .map(getUserFromRelationship)
       .getOrElse(users.find(user => user.role == PartyRole.MANAGER).toFuture(ManagerFoundError))
 
-  private def getUserFromRelationship(relationship: PartyManagementDependency.Relationship): Future[User] =
+  private def getUserFromRelationship(
+    relationship: PartyManagementDependency.Relationship
+  )(implicit context: Seq[(String, String)]): Future[User] =
     userRegistryManagementService
       .getUserById(relationship.from)
       .map(user =>

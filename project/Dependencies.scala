@@ -90,46 +90,41 @@ object Dependencies {
 
     lazy val `server`: Seq[ModuleID] = Seq(
       // For making Java 12 happy
-      "javax.annotation"                  % "javax.annotation-api" % "1.3.2" % "compile",
+      "javax.annotation"           % "javax.annotation-api" % "1.3.2" % "compile",
       //
-      akka.actor                          % Compile,
-      akka.actorTyped                     % Compile,
-      akka.http                           % Compile,
-      akka.httpJson                       % Compile,
-      akka.management                     % Compile,
-      akka.managementLogLevels            % Compile,
-      akka.persistence                    % Compile,
-      akka.slf4j                          % Compile,
-      akka.stream                         % Compile,
-      cats.core                           % Compile,
-      europa.dssCades                     % Compile,
-      europa.dssPades                     % Compile,
-      europa.dssPadesPdfbox               % Compile,
-      europa.dssUtilsApacheCommons        % Compile,
-      europa.dssService                   % Compile,
-      europa.dssTlsValidation             % Compile,
-      kamon.bundle                        % Compile,
-      kamon.prometheus                    % Compile,
-      logback.classic                     % Compile,
-      mustache.compiler                   % Compile,
-      pagopa.commons                      % Compile,
-      pagopa.commonsFile                  % Compile,
-      pagopa.commonsJWT                   % Compile,
-      pagopa.commonsMail                  % Compile,
-      pagopa.partyManagementClient        % Compile,
-      pagopa.partyProxyClient             % Compile,
-      akka.testkit                        % Test,
-      scalatest.core                      % Test,
-      scalamock.core                      % Test
+      akka.actor                   % Compile,
+      akka.actorTyped              % Compile,
+      akka.http                    % Compile,
+      akka.httpJson                % Compile,
+      akka.management              % Compile,
+      akka.managementLogLevels     % Compile,
+      akka.persistence             % Compile,
+      akka.slf4j                   % Compile,
+      akka.stream                  % Compile,
+      cats.core                    % Compile,
+      europa.dssCades              % Compile,
+      europa.dssPades              % Compile,
+      europa.dssPadesPdfbox        % Compile,
+      europa.dssUtilsApacheCommons % Compile,
+      europa.dssService            % Compile,
+      europa.dssTlsValidation      % Compile,
+      kamon.bundle                 % Compile,
+      kamon.prometheus             % Compile,
+      logback.classic              % Compile,
+      mustache.compiler            % Compile,
+      pagopa.commons               % Compile,
+      pagopa.commonsFile           % Compile,
+      pagopa.commonsJWT            % Compile,
+      pagopa.commonsMail           % Compile,
+      pagopa.partyManagementClient % Compile,
+      pagopa.partyProxyClient      % Compile,
+      akka.testkit                 % Test,
+      scalatest.core               % Test,
+      scalamock.core               % Test
     )
     lazy val client: Seq[ModuleID]   =
-      Seq(
-        akka.stream     % Compile,
-        akka.http       % Compile,
-        akka.slf4j      % Compile,
-        akka.httpJson4s % Compile,
-        json4s.jackson  % Compile,
-        json4s.ext      % Compile
+      Seq(akka.stream, akka.http, akka.slf4j, akka.httpJson4s, json4s.jackson, json4s.ext, pagopa.commons).map(
+        _ % Compile
       )
   }
 }
