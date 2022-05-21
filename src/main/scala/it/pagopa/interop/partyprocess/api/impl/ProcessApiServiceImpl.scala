@@ -115,10 +115,10 @@ class ProcessApiServiceImpl(
       List(PartyManagementDependency.RelationshipState.ACTIVE, PartyManagementDependency.RelationshipState.PENDING)
 
     val result: Future[OnboardingInfo] = for {
-      bearer <- getFutureBearer(contexts)
-      uid    <- getUidFuture(contexts)
-      userId <- uid.toFutureUUID
-      institutionUuid <- institutionId.traverse(_.toFutureUUID)
+      bearer           <- getFutureBearer(contexts)
+      uid              <- getUidFuture(contexts)
+      userId           <- uid.toFutureUUID
+      institutionUuid  <- institutionId.traverse(_.toFutureUUID)
       institution      <- getInstitutionByOptionIdAndOptionExternalId(institutionUuid, institutionExternalId)(bearer)
       statesParamArray <- parseArrayParameters(states)
         .traverse(PartyManagementDependency.RelationshipState.fromValue)
