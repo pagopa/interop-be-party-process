@@ -92,7 +92,6 @@ class ApiInvoker(formats: Formats)(implicit system: ActorSystem) extends CustomC
   private def headers(headers: Map[String, Any]) =
     headers.asFormattedParams
       .map { case (name, value) => RawHeader(name, value.toString) }
-      .toSeq
   private def bodyPart(name: String, value: Any): BodyPart = {
     value match {
       case f: File =>
@@ -103,7 +102,7 @@ class ApiInvoker(formats: Formats)(implicit system: ActorSystem) extends CustomC
           f.length().toInt
         )
       case v: String =>
-        BodyPart.Strict(name, v.toString)
+        BodyPart.Strict(name, v)
       case NumericValue(v) =>
         BodyPart.Strict(name, v.toString)
       case m: ApiModel =>
@@ -153,23 +152,23 @@ class ApiInvoker(formats: Formats)(implicit system: ActorSystem) extends CustomC
     )
   }
   def makeQuery(r: ApiRequest[_]): Query = {
-    r.credentials.foldLeft(r.queryParams) {
-      case (params, ApiKeyCredentials(key, keyName, ApiKeyLocations.QUERY)) =>
-        params + (keyName -> key.value)
-      case (params, _) => params
-    }.asFormattedParams
-      .mapValues(_.toString)
-      .foldRight[Query](Uri.Query.Empty) {
-      case ((name, value), acc) => acc.+:(name, value)
-    }
+     val params: Seq[(String, String)] =
+         r.credentials
+           .foldLeft(r.queryParams) {
+             case (params, ApiKeyCredentials(key, keyName, ApiKeyLocations.QUERY)) => params + (keyName -> key.value)
+             case (params, _)                                                      => params
+           }
+           .asFormattedParams
+           .map { case (k, v) => k -> v.toString }
+     val query: Query = params.foldRight[Query](Uri.Query.Empty) { case ((name, value), acc) => acc.+:(name, value) }
+     query
   }
   def makeUri(r: ApiRequest[_]): Uri = {
     val opPath = r.operationPath.replaceAll("\\{format\\}", "json")
     val opPathWithParams = r.pathParams.asFormattedParams
-      .mapValues(_.toString)
-      .foldLeft(opPath) {
-        case (path, (name, value)) => path.replaceAll(s"\\{$name\\}", value)
-      }
+      .foldLeft(opPath) { case (path, (name, value)) =>
+            path.replaceAll(s"\\{$name\\}", value.toString)
+    }
     val query = makeQuery(r)
     Uri(r.basePath + opPathWithParams).withQuery(query)
   }

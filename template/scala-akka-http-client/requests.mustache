@@ -147,7 +147,7 @@ object ParametersMap {
 */
 implicit class ParametersMapImprovements(val m: Map[String, Any]) {
 def asFormattedParamsList: List[(String, Any)] = m.toList.flatMap(formattedParams)
-def asFormattedParams: Map[String, Any] = m.flatMap(formattedParams)
+def asFormattedParams: Seq[(String, Any)] = m.toSeq.flatMap(formattedParams)
 private def urlEncode(v: Any) = String.valueOf(v)   //double encoding removed
 private def formattedParams(tuple: (String, Any)): Seq[(String, Any)] = formattedParams(tuple._1, tuple._2)
 private def formattedParams(name: String, value: Any): Seq[(String, Any)] = value match {

@@ -21,7 +21,7 @@ final case class UserRegistryManagementServiceImpl(invoker: UserRegistryManageme
 ) extends UserRegistryManagementService {
   implicit val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  private val userFields2fetch: Seq[String] = Seq("name,familyName,fiscalCode")
+  private val userFields2fetch: Seq[String] = Seq("name", "familyName", "fiscalCode")
 
   override def getUserById(userId: UUID): Future[UserRegistryUser] = {
     val request: ApiRequest[UserResource] = api.findByIdUsingGET(userId, userFields2fetch)
