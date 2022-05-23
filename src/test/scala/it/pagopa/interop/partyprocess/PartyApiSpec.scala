@@ -4,13 +4,11 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.Directives.Authenticator
-import akka.http.scaladsl.server.directives.{AuthenticationDirective, Credentials, FileInfo, SecurityDirectives}
+import akka.http.scaladsl.server.directives.FileInfo
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import cats.implicits.catsSyntaxValidatedId
 import eu.europa.esig.dss.validation.SignedDocumentValidator
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.{ResourceConflictError, ResourceNotFoundError}
-import it.pagopa.interop.commons.utils.{BEARER, UID}
 import it.pagopa.interop.partymanagement.client.model.{
   InstitutionSeed,
   RelationshipBinding,
@@ -23,19 +21,13 @@ import it.pagopa.interop.partymanagement.client.model.{
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess
 import it.pagopa.interop.partyprocess.api.impl.Conversions._
-import it.pagopa.interop.partyprocess.api.impl.{ExternalApiServiceImpl, ProcessApiServiceImpl, PublicApiServiceImpl}
-import it.pagopa.interop.partyprocess.api.{ExternalApi, ProcessApi, PublicApi}
 import it.pagopa.interop.partyprocess.common.system.{classicActorSystem, executionContext}
 import it.pagopa.interop.partyprocess.error.SignatureValidationError
 import it.pagopa.interop.partyprocess.model.PartyRole.{DELEGATE, MANAGER, OPERATOR, SUB_DELEGATE}
 import it.pagopa.interop.partyprocess.model.RelationshipState.ACTIVE
 import it.pagopa.interop.partyprocess.model.{Attribute, Billing, Institution, InstitutionUpdate, _}
-import it.pagopa.interop.partyprocess.server.Controller
-import it.pagopa.interop.partyprocess.service.impl.{ProductServiceImpl, RelationshipServiceImpl}
-import it.pagopa.interop.partyprocess.service.{ProductService, RelationshipService}
 import it.pagopa.interop.partyregistryproxy.client.{model => PartyProxyDependencies}
 import org.scalamock.scalatest.MockFactory
-import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -45,30 +37,17 @@ import java.io.{ByteArrayOutputStream, File}
 import java.nio.file.Paths
 import java.time.OffsetDateTime
 import java.util.UUID
-import scala.concurrent.duration.{Duration, DurationInt}
+import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
-class PartyProcessSpec
+trait PartyProcessSpec
     extends MockFactory
     with AnyWordSpecLike
-    with BeforeAndAfterAll
     with Matchers
     with SprayJsonSupport
     with DefaultJsonProtocol
     with SpecHelper
     with ScalaFutures {
-
-  var controller: Option[Controller]                 = None
-  var bindServer: Option[Future[Http.ServerBinding]] = None
-
-  object MockAuthenticator extends Authenticator[Seq[(String, String)]] {
-    override def apply(credentials: Credentials): Option[Seq[(String, String)]] = Some(
-      Seq(BEARER -> token.toString, UID -> uid.toString)
-    )
-  }
-
-  val wrappingDirective: AuthenticationDirective[Seq[(String, String)]] =
-    SecurityDirectives.authenticateOAuth2("SecurityRealm", MockAuthenticator)
 
   final val defaultProductTimestamp: OffsetDateTime      = OffsetDateTime.now()
   final val defaultRelationshipTimestamp: OffsetDateTime = OffsetDateTime.now()
@@ -88,71 +67,6 @@ class PartyProcessSpec
     state = PartyManagementDependency.RelationshipState.PENDING,
     createdAt = OffsetDateTime.now()
   )
-
-  override def beforeAll(): Unit = {
-    loadEnvVars()
-
-    val relationshipService: RelationshipService =
-      new RelationshipServiceImpl(mockPartyManagementService)
-    val productService: ProductService           = new ProductServiceImpl(mockPartyManagementService)
-
-    val processApi = new ProcessApi(
-      new ProcessApiServiceImpl(
-        partyManagementService = mockPartyManagementService,
-        partyRegistryService = mockPartyRegistryService,
-        userRegistryManagementService = mockUserRegistryService,
-        pdfCreator = mockPdfCreator,
-        fileManager = mockFileManager,
-        signatureService = mockSignatureService,
-        mailer = mockMailer,
-        mailTemplate = mockMailTemplate,
-        relationshipService = relationshipService,
-        productService = productService
-      ),
-      processApiMarshaller,
-      wrappingDirective
-    )
-
-    val externalApi = new ExternalApi(
-      new ExternalApiServiceImpl(
-        partyManagementService = mockPartyManagementService,
-        relationshipService = relationshipService,
-        productService = productService
-      ),
-      externalApiMarshaller,
-      wrappingDirective
-    )
-
-    val publicApi = new PublicApi(
-      new PublicApiServiceImpl(
-        partyManagementService = mockPartyManagementService,
-        userRegistryManagementService = mockUserRegistryService,
-        signatureService = mockSignatureService,
-        signatureValidationService = mockSignatureValidationService
-      ),
-      publicApiMarshaller,
-      wrappingDirective
-    )
-
-    controller = Some(
-      new Controller(health = mockHealthApi, external = externalApi, process = processApi, public = publicApi)
-    )
-
-    controller foreach { controller =>
-      bindServer = Some(
-        Http()
-          .newServerAt("0.0.0.0", SpecConfig.port)
-          .bind(controller.routes)
-      )
-
-      Await.result(bindServer.get, 100.seconds)
-    }
-
-  }
-
-  override def afterAll(): Unit = {
-    bindServer.foreach(_.foreach(_.unbind()))
-  }
 
   def performOnboardingRequestByRoleForFailure(state: PartyManagementDependency.RelationshipState): HttpResponse = {
     val taxCode1   = "managerTaxCode"
@@ -390,12 +304,6 @@ class PartyProcessSpec
         )
       case _                    => Seq.empty
     }
-
-//    (mockJWTReader
-//      .getClaims(_: String))
-//      .expects(*)
-//      .returning(Success(jwtClaimsSet))
-//      .once()
 
     (mockUserRegistryService
       .getUserById(_: UUID)(_: Seq[(String, String)]))
@@ -812,14 +720,6 @@ class PartyProcessSpec
         )
       )
 
-//      val mockUidUUID = "af80fac0-2775-4646-8fcf-28e083751988"
-
-//      (mockJWTReader
-//        .getClaims(_: String))
-//        .expects(*)
-//        .returning(mockUid(mockUidUUID))
-//        .once()
-
       (mockPartyManagementService
         .retrieveRelationships(
           _: Option[UUID],
@@ -926,14 +826,6 @@ class PartyProcessSpec
           )
         )
       )
-
-      //      val mockUidUUID = UUID.randomUUID().toString
-
-      //      (mockJWTReader
-      //        .getClaims(_: String))
-      //        .expects(*)
-      //        .returning(mockUid(mockUidUUID))
-      //        .once()
 
       (mockPartyManagementService
         .retrieveRelationships(
@@ -2008,6 +1900,7 @@ class PartyProcessSpec
         .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
         .expects(externalId, *, *)
         .returning(Future.successful(institution))
+        .once()
 
       (mockPartyManagementService
         .retrieveRelationships(
@@ -3292,12 +3185,6 @@ class PartyProcessSpec
     "succeed when the relationship id is bound to the selected institution" in {
       val relationshipId = UUID.randomUUID()
 
-//      (mockJWTReader
-//        .getClaims(_: String))
-//        .expects(*)
-//        .returning(mockUid(relationshipId.toString))
-//        .once()
-
       (mockPartyManagementService
         .deleteRelationshipById(_: UUID)(_: String)(_: Seq[(String, String)]))
         .expects(relationshipId, *, *)
@@ -3314,12 +3201,6 @@ class PartyProcessSpec
 
     "fail if party management deletion returns a failed future" in {
       val relationshipId = UUID.randomUUID()
-
-//      (mockJWTReader
-//        .getClaims(_: String))
-//        .expects(*)
-//        .returning(mockUid(relationshipId.toString))
-//        .once()
 
       (mockPartyManagementService
         .deleteRelationshipById(_: UUID)(_: String)(_: Seq[(String, String)]))
@@ -3384,12 +3265,6 @@ class PartyProcessSpec
           createdAt = defaultRelationshipTimestamp,
           updatedAt = None
         )
-
-      //      (mockJWTReader
-      //        .getClaims(_: String))
-      //        .expects(*)
-      //        .returning(Success(jwtClaimsSet))
-      //        .once()
 
       (mockUserRegistryService
         .getUserById(_: UUID)(_: Seq[(String, String)]))
@@ -3880,12 +3755,6 @@ class PartyProcessSpec
           )
         )
 
-//      (mockJWTReader
-//        .getClaims(_: String))
-//        .expects(*)
-//        .returning(Success(jwtClaimsSet))
-//        .once()
-
       (mockUserRegistryService
         .getUserById(_: UUID)(_: Seq[(String, String)]))
         .expects(*, *)
@@ -4037,12 +3906,6 @@ class PartyProcessSpec
           )
         )
       )
-
-//      (mockJWTReader
-//        .getClaims(_: String))
-//        .expects(*)
-//        .returning(mockUid(uid))
-//        .once()
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
@@ -4235,12 +4098,6 @@ class PartyProcessSpec
           )
         )
       )
-
-//      (mockJWTReader
-//        .getClaims(_: String))
-//        .expects(*)
-//        .returning(mockUid(uid))
-//        .once()
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
@@ -4456,12 +4313,6 @@ class PartyProcessSpec
           )
         )
       )
-//
-//      (mockJWTReader
-//        .getClaims(_: String))
-//        .expects(*)
-//        .returning(mockUid(uid))
-//        .once()
 
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
@@ -4654,12 +4505,6 @@ class PartyProcessSpec
         )
       )
 
-//      (mockJWTReader
-//        .getClaims(_: String))
-//        .expects(*)
-//        .returning(mockUid(uid))
-//        .once()
-
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
         .expects(externalId, *, *)
@@ -4795,12 +4640,6 @@ class PartyProcessSpec
         )
       )
 
-//      (mockJWTReader
-//        .getClaims(_: String))
-//        .expects(*)
-//        .returning(mockUid(uid))
-//        .once()
-
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
         .expects(externalId, *, *)
@@ -4932,12 +4771,6 @@ class PartyProcessSpec
         )
       )
 
-//      (mockJWTReader
-//        .getClaims(_: String))
-//        .expects(*)
-//        .returning(mockUid(uid))
-//        .once()
-
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
         .expects(externalId, *, *)
@@ -5013,12 +4846,6 @@ class PartyProcessSpec
         .expects(externalId, *, *)
         .returning(Future.successful(institution))
         .once()
-
-//      (mockJWTReader
-//        .getClaims(_: String))
-//        .expects(*)
-//        .returning(mockUid(uid))
-//        .once()
 
       (mockPartyManagementService
         .retrieveRelationships(
