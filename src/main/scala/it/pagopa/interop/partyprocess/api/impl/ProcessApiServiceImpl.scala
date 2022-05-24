@@ -917,14 +917,18 @@ class ProcessApiServiceImpl(
     } yield institution
 
     onComplete(result) {
-      case Success(institution)            => getInstitution200(InstitutionConverter.dependencyToApi(institution))
-      case Failure(ex: UidValidationError) =>
+      case Success(institution)               => getInstitution200(InstitutionConverter.dependencyToApi(institution))
+      case Failure(ex: UidValidationError)    =>
         logger.error(s"Error while retrieving institution for id $id", ex)
         val errorResponse: Problem = problemOf(StatusCodes.Unauthorized, ex)
         complete(errorResponse.status, errorResponse)
-      case Failure(ex)                     =>
+      case Failure(ex: ResourceNotFoundError) =>
+        logger.info(s"Cannot find institution having id $id")
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
+        complete(errorResponse.status, errorResponse)
+      case Failure(ex)                        =>
         logger.error(s"Error while retrieving institution for id $id", ex)
-        val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, GetProductsError)
+        val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, GetInstitutionError(id))
         complete(errorResponse.status, errorResponse)
     }
   }
