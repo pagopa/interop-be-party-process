@@ -7,18 +7,20 @@ import akka.http.scaladsl.marshalling.ToEntityMarshaller
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.stream.scaladsl.Source
-import akka.util.ByteString
+import akka.util.{ByteString, Timeout}
 import it.pagopa.interop.commons.utils.SprayCommonFormats.uuidFormat
 import it.pagopa.interop.partyprocess.api.impl._
 import it.pagopa.interop.partyprocess.model._
 import spray.json.RootJsonFormat
 
 import scala.concurrent.Await
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{Duration, DurationInt}
 
 package object partyprocess extends SprayJsonSupport {
   final lazy val url: String =
     s"http://localhost:8088/party-process/${buildinfo.BuildInfo.interfaceVersion}"
+
+  implicit val timeout: Timeout = 3.seconds
 
   implicit val fromEntityUnmarshallerOnboardingInfo: FromEntityUnmarshaller[OnboardingInfo] =
     sprayJsonUnmarshaller[OnboardingInfo]

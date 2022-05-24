@@ -22,7 +22,6 @@ import it.pagopa.interop.partyprocess.error.PartyProcessErrors._
 import it.pagopa.interop.partyprocess.model._
 import it.pagopa.interop.partyprocess.service._
 import it.pagopa.userreg.client.model.UserId
-import org.slf4j.LoggerFactory
 
 import java.io.{File, FileOutputStream}
 import java.nio.charset.StandardCharsets
@@ -45,7 +44,7 @@ class ProcessApiServiceImpl(
 )(implicit ec: ExecutionContext)
     extends ProcessApiService {
 
-  private val logger = Logger.takingImplicit[ContextFieldsToLog](LoggerFactory.getLogger(this.getClass))
+  private val logger = Logger.takingImplicit[ContextFieldsToLog](this.getClass)
 
   private final val validOnboardingStates: Seq[PartyManagementDependency.RelationshipState] =
     List(
@@ -138,11 +137,11 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(res)                       => getOnboardingInfo200(res)
       case Failure(ex: ResourceNotFoundError) =>
-        logger.info("No onboarding information found for {}, reason: {}", ex.resourceId, ex.getMessage)
+        logger.info("No onboarding information found for {}", ex.resourceId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         getOnboardingInfo404(errorResponse)
       case Failure(ex)                        =>
-        logger.error("Error getting onboarding info , reason: {}", ex.getMessage)
+        logger.error("Error getting onboarding info", ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, GettingOnboardingInfoError)
         getOnboardingInfo400(errorResponse)
 
@@ -243,27 +242,15 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_)                       => onboardingInstitution204
       case Failure(ex: ContractNotFound)    =>
-        logger.info(
-          "Error while onboarding institution {}, reason: {}",
-          onboardingRequest.institutionExternalId,
-          ex.getMessage
-        )
+        logger.info("Error while onboarding institution {}", onboardingRequest.institutionExternalId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         onboardingInstitution404(errorResponse)
       case Failure(ex: InstitutionNotFound) =>
-        logger.error(
-          "Institution having externalId {} not found, reason: {}",
-          onboardingRequest.institutionExternalId,
-          ex.getMessage
-        )
+        logger.error("Institution having externalId {} not found", onboardingRequest.institutionExternalId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         onboardingInstitution404(errorResponse)
       case Failure(ex)                      =>
-        logger.error(
-          "Error while onboarding institution {}, reason: {}",
-          onboardingRequest.institutionExternalId,
-          ex.getMessage
-        )
+        logger.error("Error while onboarding institution {}", onboardingRequest.institutionExternalId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, OnboardingOperationError)
         onboardingInstitution400(errorResponse)
     }
@@ -320,19 +307,19 @@ class ProcessApiServiceImpl(
       case Success(_)                       => onboardingLegalsOnInstitution204
       case Failure(ex: InstitutionNotFound) =>
         logger.error(
-          "Error while onboarding Legals of institution {} and/or externalId {} caused by not existent institution, reason: {}",
+          "Error while onboarding Legals of institution {} and/or externalId {} caused by not existent institution",
           onboardingRequest.institutionId,
           onboardingRequest.institutionExternalId,
-          ex.getMessage
+          ex
         )
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         onboardingLegalsOnInstitution404(errorResponse)
       case Failure(ex)                      =>
         logger.error(
-          "Error while onboarding Legals of institution {} and/or externalId {}, reason: {}",
+          "Error while onboarding Legals of institution {} and/or externalId {}",
           onboardingRequest.institutionId,
           onboardingRequest.institutionExternalId,
-          ex.getMessage
+          ex
         )
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, OnboardingLegalsError)
         onboardingLegalsOnInstitution400(errorResponse)
@@ -347,12 +334,16 @@ class ProcessApiServiceImpl(
       product == rl.product.id && rl.role == PartyManagementDependency.PartyRole.MANAGER && rl.state == PartyManagementDependency.RelationshipState.ACTIVE
     )
 
-  private def getValidManager(manager: Option[PartyManagementDependency.Relationship], users: Seq[User]): Future[User] =
+  private def getValidManager(manager: Option[PartyManagementDependency.Relationship], users: Seq[User])(implicit
+    context: Seq[(String, String)]
+  ): Future[User] =
     manager
       .map(getUserFromRelationship)
       .getOrElse(users.find(user => user.role == PartyRole.MANAGER).toFuture(ManagerFoundError))
 
-  private def getUserFromRelationship(relationship: PartyManagementDependency.Relationship): Future[User] =
+  private def getUserFromRelationship(
+    relationship: PartyManagementDependency.Relationship
+  )(implicit context: Seq[(String, String)]): Future[User] =
     userRegistryManagementService
       .getUserById(relationship.from)
       .map(user =>
@@ -570,11 +561,7 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(relationships) => onboardingSubDelegatesOnInstitution200(relationships)
       case Failure(ex)            =>
-        logger.error(
-          "Error while onboarding subdelegates on institution {}, reason: {}",
-          onboardingRequest.institutionId,
-          ex.getMessage
-        )
+        logger.error("Error while onboarding subdelegates on institution {}", onboardingRequest.institutionId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, OnboardingSubdelegatesError)
         onboardingSubDelegatesOnInstitution400(errorResponse)
     }
@@ -611,11 +598,7 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(relationships) => onboardingOperators200(relationships)
       case Failure(ex)            =>
-        logger.error(
-          "Error while onboarding operators on institution {}, reason: {}",
-          onboardingRequest.institutionId,
-          ex.getMessage
-        )
+        logger.error("Error while onboarding operators on institution {}", onboardingRequest.institutionId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, OnboardingOperatorsError)
         onboardingOperators400(errorResponse)
     }
@@ -754,11 +737,11 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_)                        => activateRelationship204
       case Failure(ex: RelationshipNotFound) =>
-        logger.error("Error while activating relationship {}, reason: {}", relationshipId, ex.getMessage)
+        logger.error("Error while activating relationship {}", relationshipId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         activateRelationship404(errorResponse)
       case Failure(ex)                       =>
-        logger.error("Error while activating relationship {}, reason: {}", relationshipId, ex.getMessage)
+        logger.error("Error while activating relationship {}", relationshipId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, ActivateRelationshipError)
         activateRelationship400(errorResponse)
     }
@@ -783,11 +766,11 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_)                        => suspendRelationship204
       case Failure(ex: RelationshipNotFound) =>
-        logger.error("Error while suspending relationship {}, reason: {}", relationshipId, ex.getMessage)
+        logger.error("Error while suspending relationship {}", relationshipId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         suspendRelationship404(errorResponse)
       case Failure(ex)                       =>
-        logger.error("Error while suspending relationship {}, reason: {}", relationshipId, ex.getMessage)
+        logger.error("Error while suspending relationship {}", relationshipId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, SuspendingRelationshipError)
         suspendRelationship400(errorResponse)
     }
@@ -818,27 +801,15 @@ class ProcessApiServiceImpl(
         val output: MessageEntity = convertToMessageEntity(document)
         complete(output)
       case Failure(ex: ResourceNotFoundError)        =>
-        logger.error(
-          "Error while getting onboarding document of relationship {}, reason: {}",
-          relationshipId,
-          ex.getMessage
-        )
+        logger.error("Error while getting onboarding document of relationship {}", relationshipId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         getOnboardingDocument404(errorResponse)
       case Failure(ex: RelationshipDocumentNotFound) =>
-        logger.error(
-          "Error while getting onboarding document of relationship {}, reason: {}",
-          relationshipId,
-          ex.getMessage
-        )
+        logger.error("Error while getting onboarding document of relationship {}", relationshipId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         getOnboardingDocument404(errorResponse)
       case Failure(ex)                               =>
-        logger.error(
-          "Error while getting onboarding document of relationship {}, reason: {}",
-          relationshipId,
-          ex.getMessage
-        )
+        logger.error("Error while getting onboarding document of relationship {}", relationshipId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, OnboardingDocumentError(relationshipId))
         complete(errorResponse.status, errorResponse)
     }
@@ -885,11 +856,11 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(relationshipInfo)         => getRelationship200(relationshipInfo)
       case Failure(ex: RelationshipNotFound) =>
-        logger.error("Getting relationship {}, reason: {}", relationshipId, ex.getMessage)
+        logger.error("Getting relationship {}", relationshipId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         getRelationship404(errorResponse)
       case Failure(ex)                       =>
-        logger.error("Getting relationship {}, reason: {}", relationshipId, ex.getMessage)
+        logger.error("Getting relationship {}", relationshipId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, GetRelationshipError)
         getRelationship400(errorResponse)
     }
@@ -913,11 +884,11 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_)                      => deleteRelationshipById204
       case Failure(ex: UidValidationError) =>
-        logger.error("Error while deleting relationship {}, reason: {}", relationshipId, ex.getMessage)
+        logger.error("Error while deleting relationship {}", relationshipId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.Unauthorized, ex)
         complete(errorResponse.status, errorResponse)
       case Failure(ex)                     =>
-        logger.error("Error while deleting relationship {}, reason: {}", relationshipId, ex.getMessage)
+        logger.error("Error while deleting relationship {}", relationshipId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, DeleteRelationshipError)
         deleteRelationshipById404(errorResponse)
     }
@@ -946,14 +917,18 @@ class ProcessApiServiceImpl(
     } yield institution
 
     onComplete(result) {
-      case Success(institution)            => getInstitution200(InstitutionConverter.dependencyToApi(institution))
-      case Failure(ex: UidValidationError) =>
-        logger.error(s"Error while retrieving institution for id $id - ${ex.getMessage}")
+      case Success(institution)               => getInstitution200(InstitutionConverter.dependencyToApi(institution))
+      case Failure(ex: UidValidationError)    =>
+        logger.error(s"Error while retrieving institution for id $id", ex)
         val errorResponse: Problem = problemOf(StatusCodes.Unauthorized, ex)
         complete(errorResponse.status, errorResponse)
-      case Failure(ex)                     =>
-        logger.error(s"Error while retrieving institution for id $id - ${ex.getMessage}")
-        val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, GetProductsError)
+      case Failure(ex: ResourceNotFoundError) =>
+        logger.info(s"Cannot find institution having id $id")
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
+        complete(errorResponse.status, errorResponse)
+      case Failure(ex)                        =>
+        logger.error(s"Error while retrieving institution for id $id", ex)
+        val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, GetInstitutionError(id))
         complete(errorResponse.status, errorResponse)
     }
   }
@@ -986,7 +961,7 @@ class ProcessApiServiceImpl(
         val errorResponse: Problem = problemOf(StatusCodes.Conflict, CreateInstitutionConflict)
         complete(errorResponse.status, errorResponse)
       case Failure(ex)                        =>
-        logger.error(s"Error while creating institution having external id $externalId - ${ex.getMessage}")
+        logger.error(s"Error while creating institution having external id $externalId", ex)
         val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, CreateInstitutionError)
         complete(errorResponse.status, errorResponse)
     }
@@ -1033,11 +1008,7 @@ class ProcessApiServiceImpl(
       case Success(relationships) => getUserInstitutionRelationships200(relationships)
       case Failure(ex)            =>
         ex.printStackTrace()
-        logger.error(
-          "Error while getting relationship for institution {} and current user, reason: {}",
-          institutionId,
-          ex.getMessage
-        )
+        logger.error("Error while getting relationship for institution {} and current user", institutionId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, RetrievingUserRelationshipsError)
         getUserInstitutionRelationships400(errorResponse)
     }
@@ -1070,11 +1041,11 @@ class ProcessApiServiceImpl(
         retrieveInstitutionProducts404(errorResponse)
       case Success(institution)                                 => retrieveInstitutionProducts200(institution)
       case Failure(ex: UidValidationError)                      =>
-        logger.error("Error while retrieving products for institution {}, reason: {}", institutionId, ex.getMessage)
+        logger.error("Error while retrieving products for institution {}", institutionId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.Unauthorized, ex)
         complete(errorResponse.status, errorResponse)
       case Failure(ex)                                          =>
-        logger.error("Error while retrieving products for institution {}, reason: {}", institutionId, ex.getMessage)
+        logger.error("Error while retrieving products for institution {}", institutionId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, GetProductsError)
         complete(errorResponse.status, errorResponse)
     }

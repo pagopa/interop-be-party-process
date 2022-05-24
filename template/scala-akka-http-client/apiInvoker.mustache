@@ -23,7 +23,8 @@ import scala.collection.immutable
 import scala.concurrent.{ ExecutionContext, ExecutionContextExecutor, Future }
 import scala.reflect.ClassTag
 import scala.util.{Success, Failure}
-import org.slf4j.Logger
+import com.typesafe.scalalogging.LoggerTakingImplicit
+import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 
 object ApiInvoker {
   def apply()(implicit system: ActorSystem): ApiInvoker =
@@ -244,24 +245,39 @@ class ApiInvoker(formats: Formats)(implicit system: ActorSystem) extends CustomC
     * <br/>
     * <code>pf</code> accepts two parameters, namely the current logger passed implicitly and the <code>message</code> as defined in the input parameter here.
     */
-    def invoke[T](
-      request: ApiRequest[T],
-      message: String, pf: (Logger, String) => PartialFunction[Throwable, Future[T]] = defaultInvocationRecovery)(implicit m: Manifest[T], logger: Logger): Future[T] =
-      execute[T](request)
-        .map { response =>
-          logger.info("{} - Status code: {}", message, response.code)
-          response.content
-        }
-        .recoverWith { pf(logger, message) }
+  def invoke[T](
+    request: ApiRequest[T],
+    message: String,
+    pf: (
+      ContextFieldsToLog,
+      LoggerTakingImplicit[ContextFieldsToLog],
+      String
+    ) => PartialFunction[Throwable, Future[T]] = defaultInvocationRecovery
+  )(implicit m: Manifest[T], context: ContextFieldsToLog, logger: LoggerTakingImplicit[ContextFieldsToLog]): Future[T] =
+    execute[T](request)
+      .map { response =>
+        logger.info("{} - Status code: {}", message, response.code)
+        response.content
+      }
+      .recoverWith { pf(context, logger, message) }
 
-     private def defaultInvocationRecovery[T]: (Logger, String) => PartialFunction[Throwable, Future[T]] = (logger, message) => {
-        case ex @ ApiError(code, apiMessage, response, throwable, _) =>
-            logger.error("{} FAILED. code > {} - message > {} - response > {}", message, code, apiMessage, response, throwable)
-            Future.failed[T](ex)
-        case ex =>
-            logger.error("{} FAILED. Error: {}", message, ex.getMessage, ex)
-            Future.failed[T](ex)
-       }
+  private def defaultInvocationRecovery[T]
+    : (ContextFieldsToLog, LoggerTakingImplicit[ContextFieldsToLog], String) => PartialFunction[Throwable, Future[T]] =
+    (context, logger, message) => {
+      case ex @ ApiError(code, apiMessage, response, throwable, _) =>
+        logger.error(
+          "{} FAILED. code > {} - message > {} - response > {}",
+          message,
+          code,
+          apiMessage,
+          response,
+          throwable
+        )(context)
+        Future.failed[T](ex)
+      case ex                                                      =>
+        logger.error("{} FAILED. Error: {}", message, ex.getMessage, ex)(context)
+        Future.failed[T](ex)
+    }
 }
 sealed trait CustomContentTypes {
   protected def normalizedContentType(original: String): ContentType =

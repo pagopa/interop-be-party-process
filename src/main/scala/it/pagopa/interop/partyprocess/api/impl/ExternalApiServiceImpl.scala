@@ -10,12 +10,12 @@ import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLo
 import it.pagopa.interop.commons.utils.AkkaUtils.{getFutureBearer, getUidFuture}
 import it.pagopa.interop.commons.utils.OpenapiUtils._
 import it.pagopa.interop.commons.utils.TypeConversions._
+import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.ResourceNotFoundError
 import it.pagopa.interop.partyprocess.api.ExternalApiService
 import it.pagopa.interop.partyprocess.api.converters.partymanagement.InstitutionConverter
 import it.pagopa.interop.partyprocess.error.PartyProcessErrors._
 import it.pagopa.interop.partyprocess.model._
 import it.pagopa.interop.partyprocess.service._
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
@@ -27,7 +27,7 @@ class ExternalApiServiceImpl(
 )(implicit ec: ExecutionContext)
     extends ExternalApiService {
 
-  private val logger = Logger.takingImplicit[ContextFieldsToLog](LoggerFactory.getLogger(this.getClass))
+  private val logger = Logger.takingImplicit[ContextFieldsToLog](this.getClass)
 
   /**
    * Code: 200, Message: successful operation, DataType: Institution
@@ -48,13 +48,18 @@ class ExternalApiServiceImpl(
 
     onComplete(result) {
       case Success(institution) => getInstitutionByExternalId200(InstitutionConverter.dependencyToApi(institution))
-      case Failure(ex: UidValidationError) =>
-        logger.error(s"Error while retrieving institution for externalId $externalId - ${ex.getMessage}")
+      case Failure(ex: UidValidationError)    =>
+        logger.error(s"Error while retrieving institution for externalId $externalId", ex)
         val errorResponse: Problem = problemOf(StatusCodes.Unauthorized, ex)
         complete(errorResponse.status, errorResponse)
-      case Failure(ex)                     =>
-        logger.error(s"Error while retrieving institution $externalId - ${ex.getMessage}")
-        val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, GetProductsError)
+      case Failure(ex: ResourceNotFoundError) =>
+        logger.info(s"Cannot find institution having externalId $externalId")
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
+        complete(errorResponse.status, errorResponse)
+      case Failure(ex)                        =>
+        logger.error(s"Error while retrieving institution $externalId", ex)
+        val errorResponse: Problem =
+          problemOf(StatusCodes.InternalServerError, GetInstitutionByExternalIdError(externalId))
         complete(errorResponse.status, errorResponse)
     }
   }
@@ -98,11 +103,10 @@ class ExternalApiServiceImpl(
     onComplete(result) {
       case Success(relationships) => getUserInstitutionRelationshipsByExternalId200(relationships)
       case Failure(ex)            =>
-        ex.printStackTrace()
         logger.error(
-          "Error while getting relationship for institution having externalId {} and current user, reason: {}",
+          "Error while getting relationship for institution having externalId {} and current user",
           externalId,
-          ex.getMessage
+          ex
         )
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, RetrievingUserRelationshipsError)
         getUserInstitutionRelationshipsByExternalId400(errorResponse)
@@ -135,19 +139,11 @@ class ExternalApiServiceImpl(
         retrieveInstitutionProductsByExternalId404(errorResponse)
       case Success(institution)            => retrieveInstitutionProductsByExternalId200(institution)
       case Failure(ex: UidValidationError) =>
-        logger.error(
-          "Error while retrieving products for institution having externalId {}, reason: {}",
-          externalId,
-          ex.getMessage
-        )
+        logger.error("Error while retrieving products for institution having externalId {}", externalId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.Unauthorized, ex)
         complete(errorResponse.status, errorResponse)
       case Failure(ex)                     =>
-        logger.error(
-          "Error while retrieving products for institution having externalId {}, reason: {}",
-          externalId,
-          ex.getMessage
-        )
+        logger.error("Error while retrieving products for institution having externalId {}", externalId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, GetProductsError)
         complete(errorResponse.status, errorResponse)
     }
