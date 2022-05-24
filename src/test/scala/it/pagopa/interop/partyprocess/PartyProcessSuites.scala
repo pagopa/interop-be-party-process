@@ -16,7 +16,7 @@ import org.scalatest.BeforeAndAfterAll
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 
-class TestSuites extends ExternalApiSpec with PartyProcessSpec with BeforeAndAfterAll {
+class PartyProcessSuites extends ExternalApiSpec with PartyApiSpec with BeforeAndAfterAll {
   var controller: Option[Controller]                 = None
   var bindServer: Option[Future[Http.ServerBinding]] = None
 

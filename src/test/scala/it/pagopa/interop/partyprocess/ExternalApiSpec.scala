@@ -1,120 +1,35 @@
-/*
 package it.pagopa.interop.partyprocess
 
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.Directives.Authenticator
-import akka.http.scaladsl.server.directives.{AuthenticationDirective, Credentials, SecurityDirectives}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.ResourceNotFoundError
-import it.pagopa.interop.commons.utils.{BEARER, UID}
 import it.pagopa.interop.partymanagement.client.model.{PartyRole => _, RelationshipState => _}
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
-import it.pagopa.interop.partyprocess.api.impl.{ExternalApiServiceImpl, ProcessApiServiceImpl, PublicApiServiceImpl}
-import it.pagopa.interop.partyprocess.api.{ExternalApi, ProcessApi, PublicApi}
 import it.pagopa.interop.partyprocess.common.system.{classicActorSystem, executionContext}
 import it.pagopa.interop.partyprocess.model.{Attribute, Institution}
-import it.pagopa.interop.partyprocess.server.Controller
-import it.pagopa.interop.partyprocess.service.impl.{ProductServiceImpl, RelationshipServiceImpl}
-import it.pagopa.interop.partyprocess.service.{ProductService, RelationshipService}
 import org.scalamock.scalatest.MockFactory
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.must.Matchers
+import org.scalatest.time.{Seconds, Span}
 import org.scalatest.wordspec.AnyWordSpecLike
 import spray.json.DefaultJsonProtocol
 
 import java.util.UUID
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
-class ExternalApiSpec
+trait ExternalApiSpec
     extends MockFactory
     with AnyWordSpecLike
-    with BeforeAndAfterAll
     with Matchers
     with SprayJsonSupport
     with DefaultJsonProtocol
     with SpecHelper
     with ScalaFutures {
 
-  var controller: Option[Controller]                 = None
-  var bindServer: Option[Future[Http.ServerBinding]] = None
-
-  object MockAuthenticator extends Authenticator[Seq[(String, String)]] {
-    override def apply(credentials: Credentials): Option[Seq[(String, String)]] = Some(
-      Seq(BEARER -> token.toString, UID -> uid.toString)
-    )
-  }
-
-  val wrappingDirective: AuthenticationDirective[Seq[(String, String)]] =
-    SecurityDirectives.authenticateOAuth2("SecurityRealm", MockAuthenticator)
-
-  override def beforeAll(): Unit = {
-    loadEnvVars()
-
-    val relationshipService: RelationshipService =
-      new RelationshipServiceImpl(mockPartyManagementService)
-    val productService: ProductService           = new ProductServiceImpl(mockPartyManagementService)
-
-    val processApi = new ProcessApi(
-      new ProcessApiServiceImpl(
-        partyManagementService = mockPartyManagementService,
-        partyRegistryService = mockPartyRegistryService,
-        userRegistryManagementService = mockUserRegistryService,
-        pdfCreator = mockPdfCreator,
-        fileManager = mockFileManager,
-        signatureService = mockSignatureService,
-        mailer = mockMailer,
-        mailTemplate = mockMailTemplate,
-        relationshipService = relationshipService,
-        productService = productService
-      ),
-      processApiMarshaller,
-      wrappingDirective
-    )
-
-    val externalApi = new ExternalApi(
-      new ExternalApiServiceImpl(
-        partyManagementService = mockPartyManagementService,
-        relationshipService = relationshipService,
-        productService = productService
-      ),
-      externalApiMarshaller,
-      wrappingDirective
-    )
-
-    val publicApi = new PublicApi(
-      new PublicApiServiceImpl(
-        partyManagementService = mockPartyManagementService,
-        userRegistryManagementService = mockUserRegistryService,
-        signatureService = mockSignatureService,
-        signatureValidationService = mockSignatureValidationService
-      ),
-      publicApiMarshaller,
-      wrappingDirective
-    )
-
-    controller = Some(
-      new Controller(health = mockHealthApi, external = externalApi, process = processApi, public = publicApi)
-    )
-
-    controller foreach { controller =>
-      bindServer = Some(
-        Http()
-          .newServerAt("0.0.0.0", SpecConfig.port)
-          .bind(controller.routes)
-      )
-
-      Await.result(bindServer.get, 100.seconds)
-    }
-
-  }
-
-  override def afterAll(): Unit = {
-    bindServer.foreach(_.foreach(_.unbind()))
-  }
+  val timeout: Timeout = Timeout(Span(3, Seconds))
 
   "Get institution by externalId" must {
     val orgPartyId = UUID.randomUUID()
@@ -152,8 +67,8 @@ class ExternalApiSpec
 
     def mockPartyManagement(success: Boolean) = {
       (mockPartyManagementService
-        .retrieveInstitution(_: UUID)(_: String)(_: Seq[(String, String)]))
-        .expects(orgPartyId, *, *)
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
         .returning(if (success) Future.successful(institution) else Future.failed(ResourceNotFoundError(externalId)))
         .once()
     }
@@ -164,9 +79,9 @@ class ExternalApiSpec
       val response =
         Http()
           .singleRequest(HttpRequest(uri = s"$url/external/institutions/$externalId", method = HttpMethods.GET))
-          .futureValue
+          .futureValue(timeout)
 
-      val body = Unmarshal(response.entity).to[Institution].futureValue
+      val body = Unmarshal(response.entity).to[Institution].futureValue(timeout)
 
       body equals expected
 
@@ -179,7 +94,7 @@ class ExternalApiSpec
       val response =
         Http()
           .singleRequest(HttpRequest(uri = s"$url/external/institutions/$externalId", method = HttpMethods.GET))
-          .futureValue
+          .futureValue(timeout)
 
       response.status mustBe StatusCodes.NotFound
     }
@@ -187,4 +102,3 @@ class ExternalApiSpec
   }
 
 }
- */

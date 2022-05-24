@@ -102,7 +102,6 @@ class ExternalApiServiceImpl(
     onComplete(result) {
       case Success(relationships) => getUserInstitutionRelationshipsByExternalId200(relationships)
       case Failure(ex)            =>
-        ex.printStackTrace()
         logger.error(
           "Error while getting relationship for institution having externalId {} and current user",
           externalId,

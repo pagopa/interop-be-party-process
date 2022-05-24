@@ -40,7 +40,7 @@ import java.util.UUID
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
-trait PartyProcessSpec
+trait PartyApiSpec
     extends MockFactory
     with AnyWordSpecLike
     with Matchers
