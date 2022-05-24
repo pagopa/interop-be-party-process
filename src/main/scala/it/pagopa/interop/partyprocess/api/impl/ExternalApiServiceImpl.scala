@@ -48,7 +48,7 @@ class ExternalApiServiceImpl(
 
     onComplete(result) {
       case Success(institution) => getInstitutionByExternalId200(InstitutionConverter.dependencyToApi(institution))
-      case Failure(ex: UidValidationError) =>
+      case Failure(ex: UidValidationError)    =>
         logger.error(s"Error while retrieving institution for externalId $externalId", ex)
         val errorResponse: Problem = problemOf(StatusCodes.Unauthorized, ex)
         complete(errorResponse.status, errorResponse)
@@ -56,9 +56,10 @@ class ExternalApiServiceImpl(
         logger.info(s"Cannot find institution having externalId $externalId")
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         complete(errorResponse.status, errorResponse)
-      case Failure(ex)                     =>
+      case Failure(ex)                        =>
         logger.error(s"Error while retrieving institution $externalId", ex)
-        val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, GetInstitutionByExternalIdError(externalId))
+        val errorResponse: Problem =
+          problemOf(StatusCodes.InternalServerError, GetInstitutionByExternalIdError(externalId))
         complete(errorResponse.status, errorResponse)
     }
   }

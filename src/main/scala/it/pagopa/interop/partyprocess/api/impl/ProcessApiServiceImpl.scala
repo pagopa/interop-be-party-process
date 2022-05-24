@@ -917,8 +917,8 @@ class ProcessApiServiceImpl(
     } yield institution
 
     onComplete(result) {
-      case Success(institution)            => getInstitution200(InstitutionConverter.dependencyToApi(institution))
-      case Failure(ex: UidValidationError) =>
+      case Success(institution)               => getInstitution200(InstitutionConverter.dependencyToApi(institution))
+      case Failure(ex: UidValidationError)    =>
         logger.error(s"Error while retrieving institution for id $id", ex)
         val errorResponse: Problem = problemOf(StatusCodes.Unauthorized, ex)
         complete(errorResponse.status, errorResponse)
