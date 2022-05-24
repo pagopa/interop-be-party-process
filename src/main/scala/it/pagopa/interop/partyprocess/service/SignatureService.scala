@@ -26,7 +26,7 @@ import eu.europa.esig.dss.tsl.source.LOTLSource
 import eu.europa.esig.dss.tsl.sync.AcceptAllStrategy
 import eu.europa.esig.dss.validation.{CommonCertificateVerifier, SignedDocumentValidator}
 import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
-import org.slf4j.{Logger, LoggerFactory}
+import com.typesafe.scalalogging.Logger
 
 import java.io.File
 import java.util
@@ -39,7 +39,7 @@ trait SignatureService {
 
 object SignatureService {
 
-  val logger: Logger = LoggerFactory.getLogger(this.getClass)
+  val logger: Logger = Logger(this.getClass())
 
   final val certificateVerifier: CommonCertificateVerifier = new CommonCertificateVerifier
 

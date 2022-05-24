@@ -14,7 +14,6 @@ import it.pagopa.interop.partyprocess.api.PublicApiService
 import it.pagopa.interop.partyprocess.error.PartyProcessErrors._
 import it.pagopa.interop.partyprocess.model._
 import it.pagopa.interop.partyprocess.service._
-import org.slf4j.LoggerFactory
 
 import java.io.File
 import java.nio.file.Files
@@ -29,7 +28,7 @@ class PublicApiServiceImpl(
 )(implicit ec: ExecutionContext)
     extends PublicApiService {
 
-  private val logger = Logger.takingImplicit[ContextFieldsToLog](LoggerFactory.getLogger(this.getClass))
+  private val logger = Logger.takingImplicit[ContextFieldsToLog](this.getClass)
 
   /** Code: 200, Message: successful operation
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
@@ -88,11 +87,11 @@ class PublicApiServiceImpl(
         )
         confirmOnboarding409(errorResponse)
       case Failure(ex: ResourceConflictError)                   =>
-        logger.error("Error while confirming onboarding of token identified with {} - {}", tokenId, ex.getMessage)
+        logger.error("Error while confirming onboarding of token identified with {}", tokenId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.Conflict, ex)
         confirmOnboarding409(errorResponse)
       case Failure(ex)                                          =>
-        logger.error("Error while confirming onboarding of token identified with {} - {}", tokenId, ex.getMessage)
+        logger.error("Error while confirming onboarding of token identified with {}", tokenId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, ConfirmOnboardingError)
         confirmOnboarding400(errorResponse)
     }
@@ -114,11 +113,11 @@ class PublicApiServiceImpl(
     onComplete(result) {
       case Success(_)                         => invalidateOnboarding204
       case Failure(ex: ResourceConflictError) =>
-        logger.error("Error while confirming onboarding of token identified with {} - {}", tokenId, ex.getMessage)
+        logger.error("Error while confirming onboarding of token identified with {}", tokenId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.Conflict, ex)
         confirmOnboarding409(errorResponse)
       case Failure(ex)                        =>
-        logger.error("Error while invalidating onboarding for token identified with {}", tokenId, ex.getMessage)
+        logger.error("Error while invalidating onboarding for token identified with {}", tokenId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, InvalidateOnboardingError)
         invalidateOnboarding400(errorResponse)
 
