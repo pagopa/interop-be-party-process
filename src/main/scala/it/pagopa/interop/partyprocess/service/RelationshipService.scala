@@ -16,4 +16,8 @@ trait RelationshipService {
   )(personId: Option[String], userId: UUID, bearer: String)(implicit
     contexts: Seq[(String, String)]
   ): Future[Seq[RelationshipInfo]]
+
+  def getInstitutionActiveManager(institution: Institution, productId: String)(bearer: String)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[Option[RelationshipInfo]]
 }

@@ -148,4 +148,34 @@ class ExternalApiServiceImpl(
         complete(errorResponse.status, errorResponse)
     }
   }
+
+  /**
+   * Code: 200, Message: successful operation, DataType: RelationshipInfo
+   * Code: 404, Message: There is not a relationship between an ACTIVE manager and the institution/product, DataType: Problem
+   * Code: 400, Message: Invalid institution id supplied, DataType: Problem
+   */
+  override def getManagerInstitutionByExternalId(externalId: String, productId: String)(implicit
+    toEntityMarshallerRelationshipInfo: ToEntityMarshaller[RelationshipInfo],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    contexts: Seq[(String, String)]
+  ): Route = {
+    logger.info("Getting manager for institution having externalId {}", externalId)
+    val result: Future[Option[RelationshipInfo]] = for {
+      bearer      <- getFutureBearer(contexts)
+      institution <- partyManagementService.retrieveInstitutionByExternalId(externalId)(bearer)
+      manager     <- relationshipService.getInstitutionActiveManager(institution, productId)(bearer)
+    } yield manager
+
+    onComplete(result) {
+      case Success(manager) if manager.isDefined => getManagerInstitutionByExternalId200(manager.get)
+      case Success(_)                            =>
+        getManagerInstitutionByExternalId404(
+          problemOf(StatusCodes.NotFound, GetInstitutionManagerNotFound(externalId, productId))
+        )
+      case Failure(ex)                           =>
+        logger.error("Error while retrieving institution having externalId {}", externalId, ex)
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, GetInstitutionManagerError(externalId))
+        getUserInstitutionRelationshipsByExternalId400(errorResponse)
+    }
+  }
 }

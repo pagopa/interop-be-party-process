@@ -112,4 +112,12 @@ object PartyProcessErrors {
       extends ComponentError("0040", s"Error while retrieving institution having id $institutionId")
   final case class GetInstitutionByExternalIdError(externalId: String)
       extends ComponentError("0041", s"Error while retrieving institution having externalId $externalId")
+
+  final case class GetInstitutionManagerError(externalId: String)
+      extends ComponentError("0042", s"Error while retrieving institution having externalId $externalId")
+  final case class GetInstitutionManagerNotFound(externalId: String, productId: String)
+      extends ComponentError(
+        "0043",
+        s"Cannot find active manager for institution having externalId $externalId and product $productId"
+      )
 }

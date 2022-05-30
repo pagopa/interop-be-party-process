@@ -70,4 +70,23 @@ class RelationshipServiceImpl(partyManagementService: PartyManagementService)(im
 
     PartyManagementDependency.Relationships(filteredRelationships)
   }
+
+  override def getInstitutionActiveManager(institution: Institution, productId: String)(
+    bearer: String
+  )(implicit contexts: Seq[(String, String)]): Future[Option[RelationshipInfo]] = {
+    for {
+      userAdminRelationships <- partyManagementService.retrieveRelationships(
+        from = None,
+        to = Some(institution.id),
+        roles = Seq(PartyManagementDependency.PartyRole.MANAGER),
+        states = Seq(PartyManagementDependency.RelationshipState.ACTIVE),
+        products = Seq(productId),
+        productRoles = Seq.empty
+      )(bearer)
+      activeManager = userAdminRelationships.items.headOption.map(rl =>
+        Conversions.relationshipToRelationshipsResponse(rl)
+      )
+    } yield activeManager
+  }
+
 }
