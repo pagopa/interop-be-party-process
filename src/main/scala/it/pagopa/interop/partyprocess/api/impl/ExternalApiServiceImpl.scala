@@ -167,7 +167,8 @@ class ExternalApiServiceImpl(
     } yield manager
 
     onComplete(result) {
-      case Success(manager) if manager.isDefined => getManagerInstitutionByExternalId200(manager.get)
+      case Success(manager) if manager.isDefined =>
+        getManagerInstitutionByExternalId200(manager.get)
       case Success(_)                            =>
         getManagerInstitutionByExternalId404(
           problemOf(StatusCodes.NotFound, GetInstitutionManagerNotFound(externalId, productId))

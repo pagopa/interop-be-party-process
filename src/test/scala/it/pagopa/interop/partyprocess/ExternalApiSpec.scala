@@ -206,7 +206,12 @@ trait ExternalApiSpec
 
       val response =
         Http()
-          .singleRequest(HttpRequest(uri = s"$url/external/institutions/$externalId/products/$productId", method = HttpMethods.GET))
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/external/institutions/$externalId/products/$productId/manager",
+              method = HttpMethods.GET
+            )
+          )
           .futureValue(timeout)
 
       val body = Unmarshal(response.entity).to[RelationshipInfo].futureValue(timeout)
@@ -221,7 +226,12 @@ trait ExternalApiSpec
 
       val response =
         Http()
-          .singleRequest(HttpRequest(uri = s"$url/external/institutions/$externalId/products/$productId", method = HttpMethods.GET))
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/external/institutions/$externalId/products/$productId/manager",
+              method = HttpMethods.GET
+            )
+          )
           .futureValue(timeout)
 
       response.status mustBe StatusCodes.NotFound
@@ -233,11 +243,14 @@ trait ExternalApiSpec
       val response =
         Http()
           .singleRequest(
-            HttpRequest(uri = s"$url/external/institutions/$externalId/products/$productId", method = HttpMethods.GET)
+            HttpRequest(
+              uri = s"$url/external/institutions/$externalId/products/$productId/manager",
+              method = HttpMethods.GET
+            )
           )
           .futureValue(timeout)
 
-      response.status mustBe StatusCodes.ClientError
+      response.status mustBe StatusCodes.BadRequest
     }
 
   }
