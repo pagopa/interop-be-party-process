@@ -31,7 +31,7 @@ generateCode := {
   import sys.process._
 
   val openApiCommand: String = {
-    if(System.getProperty("os.name").toLowerCase.contains("win")) {
+    if (System.getProperty("os.name").toLowerCase.contains("win")) {
       "openapi-generator-cli-win.bat"
     } else {
       "openapi-generator-cli"
@@ -145,6 +145,6 @@ lazy val root = (project in file("."))
 
 javaAgents += "io.kamon" % "kanela-agent" % "1.0.14"
 
-Test / fork := true
+Test / fork              := true
 Test / javaOptions += "-Dconfig.file=src/test/resources/application-test.conf"
-Test / parallelExecution    := false
+Test / parallelExecution := false

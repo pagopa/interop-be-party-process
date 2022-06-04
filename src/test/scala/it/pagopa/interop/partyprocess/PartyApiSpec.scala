@@ -4963,11 +4963,12 @@ trait PartyApiSpec
         )
         .once()
 
-      if (success)(mockPartyRegistryService
-        .getCategory(_: String, _: String)(_: String)(_: Seq[(String, String)]))
-        .expects(origin, *, *, *)
-        .returning(Future.successful(PartyProxyDependencies.Category("C17", "attrs", "test", origin)))
-        .once()
+      if (success)
+        (mockPartyRegistryService
+          .getCategory(_: String, _: String)(_: String)(_: Seq[(String, String)]))
+          .expects(origin, *, *, *)
+          .returning(Future.successful(PartyProxyDependencies.Category("C17", "attrs", "test", origin)))
+          .once()
     }
 
     def mockPartyManagement(success: Boolean) = {
