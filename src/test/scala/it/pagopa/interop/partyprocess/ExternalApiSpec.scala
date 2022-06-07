@@ -5,10 +5,17 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.ResourceNotFoundError
-import it.pagopa.interop.partymanagement.client.model.{PartyRole => _, RelationshipState => _}
+import it.pagopa.interop.partymanagement.client.model.Relationships
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess.common.system.{classicActorSystem, executionContext}
-import it.pagopa.interop.partyprocess.model.{Attribute, Institution}
+import it.pagopa.interop.partyprocess.model.{
+  Attribute,
+  Institution,
+  PartyRole,
+  ProductInfo,
+  RelationshipInfo,
+  RelationshipState
+}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
@@ -17,6 +24,7 @@ import org.scalatest.time.{Seconds, Span}
 import org.scalatest.wordspec.AnyWordSpecLike
 import spray.json.DefaultJsonProtocol
 
+import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.Future
 
@@ -98,7 +106,152 @@ trait ExternalApiSpec
 
       response.status mustBe StatusCodes.NotFound
     }
-
   }
 
+  "Get institution/product active manager" must {
+    val productId = "prod-io"
+
+    val orgPartyId = UUID.randomUUID()
+    val originId   = UUID.randomUUID().toString
+    val externalId = UUID.randomUUID().toString
+    val origin     = "ORIGIN"
+
+    val managerRelationshipId = UUID.randomUUID()
+    val managerId             = UUID.randomUUID()
+
+    val institution = PartyManagementDependency.Institution(
+      id = orgPartyId,
+      externalId = externalId,
+      originId = originId,
+      description = "description",
+      digitalAddress = "digitalAddress",
+      attributes = Seq(PartyManagementDependency.Attribute(origin, "C17", "attrs")),
+      taxCode = "taxCode",
+      origin = origin,
+      address = "address",
+      zipCode = "zipCode",
+      products = Map.empty
+    )
+
+    val manager = PartyManagementDependency.Relationship(
+      id = managerRelationshipId,
+      from = managerId,
+      to = orgPartyId,
+      role = PartyManagementDependency.PartyRole.MANAGER,
+      product =
+        PartyManagementDependency.RelationshipProduct(id = productId, role = "admin", createdAt = OffsetDateTime.now),
+      state = PartyManagementDependency.RelationshipState.ACTIVE,
+      pricingPlan = None,
+      institutionUpdate = None,
+      billing = None,
+      createdAt = OffsetDateTime.now,
+      updatedAt = None
+    )
+
+    val expected = RelationshipInfo(
+      id = manager.id,
+      from = manager.from,
+      to = manager.to,
+      role = PartyRole.MANAGER,
+      product =
+        ProductInfo(id = manager.product.id, role = manager.product.role, createdAt = manager.product.createdAt),
+      state = RelationshipState.ACTIVE,
+      pricingPlan = manager.pricingPlan,
+      institutionUpdate = None,
+      billing = None,
+      createdAt = manager.createdAt,
+      updatedAt = manager.updatedAt
+    )
+
+    def mockPartyManagement(retrieveInstitution: Boolean, retrieveManager: Boolean) = {
+      (mockPartyManagementService
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
+        .returning(
+          if (retrieveInstitution) Future.successful(institution)
+          else Future.failed(ResourceNotFoundError(externalId))
+        )
+        .once()
+
+      if (retrieveInstitution) {
+        (mockPartyManagementService
+          .retrieveRelationships(
+            _: Option[UUID],
+            _: Option[UUID],
+            _: Seq[PartyManagementDependency.PartyRole],
+            _: Seq[PartyManagementDependency.RelationshipState],
+            _: Seq[String],
+            _: Seq[String]
+          )(_: String)(_: Seq[(String, String)]))
+          .expects(
+            None,
+            Some(institution.id),
+            Seq(PartyManagementDependency.PartyRole.MANAGER),
+            Seq(PartyManagementDependency.RelationshipState.ACTIVE),
+            Seq(productId),
+            Seq.empty,
+            *,
+            *
+          )
+          .returning(
+            if (retrieveManager) Future.successful(Relationships(Seq(manager)))
+            else Future.successful(Relationships(Seq.empty))
+          )
+          .once()
+      }
+    }
+
+    "succeed when exists" in {
+      mockPartyManagement(retrieveInstitution = true, retrieveManager = true)
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/external/institutions/$externalId/products/$productId/manager",
+              method = HttpMethods.GET
+            )
+          )
+          .futureValue(timeout)
+
+      val body = Unmarshal(response.entity).to[RelationshipInfo].futureValue(timeout)
+
+      body equals expected
+
+      response.status mustBe StatusCodes.OK
+    }
+
+    "NotFoundError when not exists" in {
+      mockPartyManagement(retrieveInstitution = true, retrieveManager = false)
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/external/institutions/$externalId/products/$productId/manager",
+              method = HttpMethods.GET
+            )
+          )
+          .futureValue(timeout)
+
+      response.status mustBe StatusCodes.NotFound
+    }
+
+    "400 when institution not exists" in {
+      mockPartyManagement(retrieveInstitution = false, retrieveManager = false)
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/external/institutions/$externalId/products/$productId/manager",
+              method = HttpMethods.GET
+            )
+          )
+          .futureValue(timeout)
+
+      response.status mustBe StatusCodes.BadRequest
+    }
+
+  }
 }
