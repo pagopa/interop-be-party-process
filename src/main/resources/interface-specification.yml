@@ -893,8 +893,6 @@ components:
       properties:
         productId:
           type: string
-        productName:
-          type: string
         users:
           type: array
           items:
@@ -907,7 +905,6 @@ components:
       additionalProperties: false
       required:
         - productId
-        - productName
         - users
         - institutionId
     OnboardingContract:
