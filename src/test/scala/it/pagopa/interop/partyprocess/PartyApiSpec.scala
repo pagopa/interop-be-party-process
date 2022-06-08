@@ -53,10 +53,10 @@ trait PartyApiSpec
   final val defaultRelationshipTimestamp: OffsetDateTime = OffsetDateTime.now()
 
   final val defaultProduct: RelationshipProduct =
-    PartyManagementDependency.RelationshipProduct(id = "product", role = "admin", createdAt = defaultProductTimestamp)
+    PartyManagementDependency.RelationshipProduct(id = "productId", role = "admin", createdAt = defaultProductTimestamp)
 
   final val defaultProductInfo: ProductInfo =
-    ProductInfo(id = "product", role = "admin", createdAt = defaultProductTimestamp)
+    ProductInfo(id = "productId", role = "admin", createdAt = defaultProductTimestamp)
 
   final val relationship: Relationship = PartyManagementDependency.Relationship(
     id = UUID.randomUUID(),
@@ -100,7 +100,6 @@ trait PartyApiSpec
         taxCode = taxCode1,
         role = MANAGER,
         email = None,
-        product = "product",
         productRole = "admin"
       )
 
@@ -113,7 +112,6 @@ trait PartyApiSpec
         taxCode = taxCode2,
         role = DELEGATE,
         email = None,
-        product = "product",
         productRole = "admin"
       )
 
@@ -173,6 +171,8 @@ trait PartyApiSpec
       .once()
 
     val req = OnboardingInstitutionRequest(
+      productId = "productId",
+      productName = "productName",
       users = Seq(manager, delegate),
       institutionExternalId = externalId,
       contract = OnboardingContract("a", "b"),
@@ -222,7 +222,6 @@ trait PartyApiSpec
         taxCode = taxCode1,
         role = PartyRole.MANAGER,
         email = Option("manager@email.it"),
-        product = "product",
         productRole = "admin"
       )
     val delegate   =
@@ -233,7 +232,6 @@ trait PartyApiSpec
         taxCode = taxCode2,
         role = PartyRole.DELEGATE,
         email = Option("delegate@email.it"),
-        product = "product",
         productRole = "admin"
       )
 
@@ -369,6 +367,8 @@ trait PartyApiSpec
       .once()
 
     val req = OnboardingInstitutionRequest(
+      productId = "productId",
+      productName = "productName",
       users = Seq(manager, delegate),
       institutionExternalId = externalId,
       contract = OnboardingContract("a", "b"),
@@ -1126,6 +1126,8 @@ trait PartyApiSpec
         .once()
 
       val req = OnboardingInstitutionRequest(
+        productId = "productId",
+        productName = "productName",
         users = Seq.empty,
         institutionExternalId = externalId,
         contract = OnboardingContract("a", "b"),
@@ -1227,7 +1229,6 @@ trait PartyApiSpec
         taxCode = taxCode1,
         role = OPERATOR,
         email = Some("operat@ore.it"),
-        product = "product",
         productRole = "admin"
       )
       val operator2 = User(
@@ -1237,7 +1238,6 @@ trait PartyApiSpec
         taxCode = taxCode2,
         role = PartyRole.OPERATOR,
         email = None,
-        product = "product",
         productRole = "security"
       )
 
@@ -1276,7 +1276,8 @@ trait PartyApiSpec
         .expects(*, *, *, *, *, *, *, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(Seq.empty)))
 
-      val req = OnboardingUsersRequest(users = Seq(operator1, operator2), institutionId = orgPartyId)
+      val req =
+        OnboardingUsersRequest(productId = "productId", users = Seq(operator1, operator2), institutionId = orgPartyId)
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/operators", HttpMethods.POST)
@@ -1350,7 +1351,6 @@ trait PartyApiSpec
         taxCode = taxCode1,
         role = PartyRole.OPERATOR,
         email = Some("mario@ros.si"),
-        product = "product",
         productRole = "security"
       )
       val operator2 = User(
@@ -1360,7 +1360,6 @@ trait PartyApiSpec
         taxCode = taxCode2,
         role = PartyRole.OPERATOR,
         email = Some("operator2@email.it"),
-        product = "product",
         productRole = "security"
       )
 
@@ -1400,7 +1399,8 @@ trait PartyApiSpec
         .returning(Future.successful(relationship))
         .repeat(2)
 
-      val req = OnboardingUsersRequest(users = Seq(operator1, operator2), institutionId = orgPartyId)
+      val req =
+        OnboardingUsersRequest(productId = "productId", users = Seq(operator1, operator2), institutionId = orgPartyId)
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/operators", HttpMethods.POST)
@@ -1427,7 +1427,6 @@ trait PartyApiSpec
         taxCode = taxCode1,
         role = SUB_DELEGATE,
         email = Some("subdel@ore.it"),
-        product = "product",
         productRole = "admin"
       )
       val subdelegate2 = User(
@@ -1437,7 +1436,6 @@ trait PartyApiSpec
         taxCode = taxCode2,
         role = PartyRole.SUB_DELEGATE,
         email = None,
-        product = "product",
         productRole = "security"
       )
 
@@ -1476,7 +1474,11 @@ trait PartyApiSpec
         .expects(*, *, *, *, *, *, *, *)
         .returning(Future.successful(PartyManagementDependency.Relationships(Seq.empty)))
 
-      val req = OnboardingUsersRequest(users = Seq(subdelegate1, subdelegate2), institutionId = orgPartyID)
+      val req = OnboardingUsersRequest(
+        productId = "productId",
+        users = Seq(subdelegate1, subdelegate2),
+        institutionId = orgPartyID
+      )
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/subdelegates", HttpMethods.POST)
@@ -1551,7 +1553,6 @@ trait PartyApiSpec
         taxCode = taxCode1,
         role = PartyRole.SUB_DELEGATE,
         email = Some("mario@ros.si"),
-        product = "product",
         productRole = "admin"
       )
       val subdelegate2 = User(
@@ -1561,7 +1562,6 @@ trait PartyApiSpec
         taxCode = taxCode2,
         role = PartyRole.SUB_DELEGATE,
         email = Some("subdelegate2@email.it"),
-        product = "product",
         productRole = "admin"
       )
 
@@ -1601,7 +1601,11 @@ trait PartyApiSpec
         .returning(Future.successful(relationship))
         .repeat(2)
 
-      val req = OnboardingUsersRequest(users = Seq(subdelegate1, subdelegate2), institutionId = orgPartyId)
+      val req = OnboardingUsersRequest(
+        productId = "productId",
+        users = Seq(subdelegate1, subdelegate2),
+        institutionId = orgPartyId
+      )
 
       val data     = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
       val response = request(data, "onboarding/subdelegates", HttpMethods.POST)
@@ -3416,7 +3420,6 @@ trait PartyApiSpec
           surname = "managerSurname",
           taxCode = taxCode1,
           role = PartyRole.MANAGER,
-          product = "product",
           productRole = "admin",
           email = Option("manager@email.it")
         )
@@ -3427,7 +3430,6 @@ trait PartyApiSpec
           surname = "delegateSurname",
           taxCode = taxCode2,
           role = PartyRole.DELEGATE,
-          product = "product",
           productRole = "admin",
           email = Option("delegate@email.it")
         )
@@ -3441,6 +3443,8 @@ trait PartyApiSpec
         .once()
 
       val req = OnboardingLegalUsersRequest(
+        productId = "productId",
+        productName = "productName",
         users = Seq(manager, delegate),
         institutionId = Option(orgPartyId),
         contract = OnboardingContract("a", "b")
@@ -3483,7 +3487,6 @@ trait PartyApiSpec
           surname = "manager",
           taxCode = taxCode1,
           role = PartyRole.MANAGER,
-          product = "product",
           productRole = "admin",
           email = Option("manager@email.it")
         )
@@ -3494,7 +3497,6 @@ trait PartyApiSpec
           surname = "delegate",
           taxCode = taxCode2,
           role = PartyRole.DELEGATE,
-          product = "product",
           productRole = "admin",
           email = Option("delegate@email.it")
         )
@@ -3508,6 +3510,8 @@ trait PartyApiSpec
         .once()
 
       val req = OnboardingLegalUsersRequest(
+        productId = "productId",
+        productName = "productName",
         users = Seq(manager, delegate),
         institutionExternalId = Option(externalId),
         contract = OnboardingContract("a", "b")
@@ -3523,6 +3527,8 @@ trait PartyApiSpec
       val users = createInvalidManagerTest(PartyManagementDependency.RelationshipState.PENDING)
 
       val req = OnboardingLegalUsersRequest(
+        productId = "productId",
+        productName = "productName",
         users = users,
         institutionId = Option(UUID.randomUUID()),
         contract = OnboardingContract("a", "b")
@@ -3539,6 +3545,8 @@ trait PartyApiSpec
       val users = createInvalidManagerTest(PartyManagementDependency.RelationshipState.REJECTED)
 
       val req = OnboardingLegalUsersRequest(
+        productId = "productId",
+        productName = "productName",
         users = users,
         institutionId = Option(UUID.randomUUID()),
         contract = OnboardingContract("a", "b")
@@ -3555,6 +3563,8 @@ trait PartyApiSpec
       val users = createInvalidManagerTest(PartyManagementDependency.RelationshipState.DELETED)
 
       val req = OnboardingLegalUsersRequest(
+        productId = "productId",
+        productName = "productName",
         users = users,
         institutionId = Option(UUID.randomUUID()),
         contract = OnboardingContract("a", "b")
@@ -3571,6 +3581,8 @@ trait PartyApiSpec
       val users = createInvalidManagerTest(PartyManagementDependency.RelationshipState.SUSPENDED)
 
       val req = OnboardingLegalUsersRequest(
+        productId = "productId",
+        productName = "productName",
         users = users,
         institutionId = Option(UUID.randomUUID()),
         contract = OnboardingContract("a", "b")
@@ -3614,7 +3626,6 @@ trait PartyApiSpec
           surname = "delegate",
           taxCode = taxCode,
           role = PartyRole.DELEGATE,
-          product = "product",
           productRole = "admin",
           email = None
         )
@@ -3708,7 +3719,6 @@ trait PartyApiSpec
           surname = "manager",
           taxCode = taxCode1,
           role = PartyRole.MANAGER,
-          product = "product",
           productRole = "admin",
           email = None
         )
@@ -3719,7 +3729,6 @@ trait PartyApiSpec
           surname = "delegate",
           taxCode = taxCode2,
           role = PartyRole.DELEGATE,
-          product = "product",
           productRole = "admin",
           email = None
         )
@@ -3781,6 +3790,8 @@ trait PartyApiSpec
         .once()
 
       val req = OnboardingLegalUsersRequest(
+        productId = "productId",
+        productName = "productName",
         users = Seq(manager, delegate),
         institutionId = Option(orgPartyId),
         contract = OnboardingContract("a", "b")

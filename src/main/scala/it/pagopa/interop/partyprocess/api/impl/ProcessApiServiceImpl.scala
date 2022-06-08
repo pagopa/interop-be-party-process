@@ -228,9 +228,8 @@ class ProcessApiServiceImpl(
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
-      product                  <- extractProduct(onboardingRequest.users)
-      _                        <- notExistsAnOnboardedManager(institutionRelationships, product)
-      currentManager = extractActiveManager(institutionRelationships, product)
+      _                        <- notExistsAnOnboardedManager(institutionRelationships, onboardingRequest.productId)
+      currentManager = extractActiveManager(institutionRelationships, onboardingRequest.productId)
       response <- performOnboardingWithSignature(
         OnboardingSignedRequest.fromApi(onboardingRequest),
         currentManager,
@@ -292,9 +291,8 @@ class ProcessApiServiceImpl(
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
-      product                  <- extractProduct(onboardingRequest.users)
-      _                        <- existsAnOnboardedManager(institutionRelationships, product)
-      activeManager = extractActiveManager(institutionRelationships, product)
+      _                        <- existsAnOnboardedManager(institutionRelationships, onboardingRequest.productId)
+      activeManager = extractActiveManager(institutionRelationships, onboardingRequest.productId)
       response <- performOnboardingWithSignature(
         OnboardingSignedRequest.fromApi(onboardingRequest),
         activeManager,
@@ -354,7 +352,6 @@ class ProcessApiServiceImpl(
           taxCode = user.taxCode,
           role = roleToApi(relationship.role),
           email = None,
-          product = relationship.product.id,
           productRole = relationship.product.role
         )
       )
@@ -368,7 +365,7 @@ class ProcessApiServiceImpl(
     for {
       validUsers         <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
       validManager       <- getValidManager(activeManager, validUsers)
-      personIdsWithRoles <- Future.traverse(validUsers)(addUser)
+      personIdsWithRoles <- Future.traverse(validUsers)(u => addUser(u, onboardingRequest.productId))
       relationships      <- Future.traverse(personIdsWithRoles) { case (personId, role, product, productRole) =>
         role match {
           case PartyRole.MANAGER =>
@@ -424,6 +421,11 @@ class ProcessApiServiceImpl(
       }
     }
 
+    val productParameters: Map[String, String] = Map(
+      ApplicationConfiguration.onboardingMailProductIdPlaceholder   -> onboardingRequest.productId,
+      ApplicationConfiguration.onboardingMailProductNamePlaceholder -> onboardingRequest.productName
+    )
+
     val userParameters: Map[String, String] = Map(
       ApplicationConfiguration.onboardingMailUserNamePlaceholder    -> currentUser.name,
       ApplicationConfiguration.onboardingMailUserSurnamePlaceholder -> currentUser.surname,
@@ -457,19 +459,10 @@ class ProcessApiServiceImpl(
       ).flatten.toMap
     }
 
-    val bodyParameters: Map[String, String] =
-      tokenParameters ++ userParameters ++ institutionInfoParameters ++ billingParameters
-
-    extractProduct(onboardingRequest.users).map(product =>
-      bodyParameters + (ApplicationConfiguration.onboardingMailProductPlaceholder -> product)
+    Future.successful(
+      tokenParameters ++ productParameters ++ userParameters ++ institutionInfoParameters ++ billingParameters
     )
 
-  }
-
-  private def extractProduct(users: Seq[User]): Future[String] = {
-    val products: Seq[String] = users.map(_.product).distinct
-    if (products.size == 1) Future.successful(products.head)
-    else Future.failed(MultipleProductsRequestError(products))
   }
 
   private def createOrGetRelationship(
@@ -550,8 +543,7 @@ class ProcessApiServiceImpl(
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
-      product       <- extractProduct(onboardingRequest.users)
-      _             <- existsAnOnboardedManager(relationships, product)
+      _             <- existsAnOnboardedManager(relationships, onboardingRequest.productId)
       result        <- performOnboardingWithoutSignature(onboardingRequest, Set(PartyRole.SUB_DELEGATE), institution)(
         bearer,
         contexts
@@ -587,8 +579,7 @@ class ProcessApiServiceImpl(
         products = Seq.empty,
         productRoles = Seq.empty
       )(bearer)
-      product       <- extractProduct(onboardingRequest.users)
-      _             <- existsAnOnboardedManager(relationships, product)
+      _             <- existsAnOnboardedManager(relationships, onboardingRequest.productId)
       result        <- performOnboardingWithoutSignature(onboardingRequest, Set(PartyRole.OPERATOR), institution)(
         bearer,
         contexts
@@ -611,7 +602,7 @@ class ProcessApiServiceImpl(
   )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Seq[RelationshipInfo]] = {
     for {
       validUsers    <- verifyUsersByRoles(onboardingRequest.users, rolesToCheck)
-      userIds       <- Future.traverse(validUsers)(addUser)
+      userIds       <- Future.traverse(validUsers)(u => addUser(u, onboardingRequest.productId))
       relationships <- Future.traverse(userIds) { case (userId, role, product, productRole) =>
         val relationshipSeed: PartyManagementDependency.RelationshipSeed =
           PartyManagementDependency.RelationshipSeed(
@@ -678,16 +669,17 @@ class ProcessApiServiceImpl(
   private def isNotAnOnboardedManager(product: String): PartyManagementDependency.Relationship => Boolean =
     relationship => !isAnOnboardedManager(product)(relationship)
 
-  private def addUser(
-    user: User
-  )(implicit bearer: String, contexts: Seq[(String, String)]): Future[(UserId, PartyRole, String, String)] = {
+  private def addUser(user: User, productId: String)(implicit
+    bearer: String,
+    contexts: Seq[(String, String)]
+  ): Future[(UserId, PartyRole, String, String)] = {
     logger.info("Adding user {}", user.toString)
     createPerson(user)(bearer)
       .recoverWith {
         case _: ResourceConflictError => Future.successful(UserId(user.id))
         case ex                       => Future.failed(ex)
       }
-      .map((_, user.role, user.product, user.productRole))
+      .map((_, user.role, productId, user.productRole))
   }
 
   private def createPerson(user: User)(bearer: String)(implicit contexts: Seq[(String, String)]): Future[UserId] =

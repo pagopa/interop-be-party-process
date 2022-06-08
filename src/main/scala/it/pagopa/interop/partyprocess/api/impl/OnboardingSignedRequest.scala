@@ -11,6 +11,8 @@ import it.pagopa.interop.partyprocess.model._
  * @param contract  for example: ''null''
 */
 final case class OnboardingSignedRequest(
+  productId: String,
+  productName: String,
   users: Seq[User],
   institutionUpdate: Option[InstitutionUpdate] = None,
   pricingPlan: Option[String] = None,
@@ -21,6 +23,8 @@ final case class OnboardingSignedRequest(
 object OnboardingSignedRequest {
   def fromApi(onboardingRequest: OnboardingInstitutionRequest): OnboardingSignedRequest =
     OnboardingSignedRequest(
+      productId = onboardingRequest.productId,
+      productName = onboardingRequest.productName,
       users = onboardingRequest.users,
       institutionUpdate = onboardingRequest.institutionUpdate,
       pricingPlan = onboardingRequest.pricingPlan,
@@ -30,6 +34,8 @@ object OnboardingSignedRequest {
 
   def fromApi(onboardingRequest: OnboardingLegalUsersRequest): OnboardingSignedRequest =
     OnboardingSignedRequest(
+      productId = onboardingRequest.productId,
+      productName = onboardingRequest.productName,
       users = onboardingRequest.users,
       institutionUpdate = Option.empty,
       pricingPlan = Option.empty,
