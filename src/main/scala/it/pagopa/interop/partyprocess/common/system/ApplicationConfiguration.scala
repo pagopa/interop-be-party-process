@@ -49,8 +49,10 @@ object ApplicationConfiguration {
     config.getString("party-process.mail-template.onboarding-mail-placeholders.userSurname")
   val onboardingMailTaxCodePlaceholder: String                   =
     config.getString("party-process.mail-template.onboarding-mail-placeholders.userTaxCode")
-  val onboardingMailProductPlaceholder: String                   =
-    config.getString("party-process.mail-template.onboarding-mail-placeholders.product")
+  val onboardingMailProductIdPlaceholder: String                 =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.productId")
+  val onboardingMailProductNamePlaceholder: String               =
+    config.getString("party-process.mail-template.onboarding-mail-placeholders.productName")
 
   val onboardingMailInstitutionInfoInstitutionTypePlaceholder: String =
     config.getString("party-process.mail-template.onboarding-mail-placeholders.institution-info.institutionType")

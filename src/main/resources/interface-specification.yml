@@ -837,6 +837,10 @@ components:
   schemas:
     OnboardingInstitutionRequest:
       properties:
+        productId:
+          type: string
+        productName:
+          type: string
         users:
           type: array
           items:
@@ -854,12 +858,18 @@ components:
           $ref: '#/components/schemas/OnboardingContract'
       additionalProperties: false
       required:
+        - productId
+        - productName
         - users
         - institutionExternalId
         - billing
         - contract
     OnboardingLegalUsersRequest:
       properties:
+        productId:
+          type: string
+        productName:
+          type: string
         users:
           type: array
           items:
@@ -875,10 +885,14 @@ components:
           $ref: '#/components/schemas/OnboardingContract'
       additionalProperties: false
       required:
+        - productId
+        - productName
         - users
         - contract
     OnboardingUsersRequest:
       properties:
+        productId:
+          type: string
         users:
           type: array
           items:
@@ -890,6 +904,7 @@ components:
           example: 97c0f418-bcb3-48d4-825a-fe8b29ae68e5
       additionalProperties: false
       required:
+        - productId
         - users
         - institutionId
     OnboardingContract:
@@ -962,8 +977,6 @@ components:
           type: string
         role:
           $ref: '#/components/schemas/PartyRole'
-        product:
-          type: string
         productRole:
           type: string
       additionalProperties: false
