@@ -986,7 +986,6 @@ components:
         - name
         - surname
         - role
-        - product
         - productRole
     ProductInfo:
       type: object
