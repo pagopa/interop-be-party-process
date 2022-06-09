@@ -1,6 +1,6 @@
 package it.pagopa.interop.partyprocess.api.impl
 
-import it.pagopa.interop.partymanagement.client.model.{Relationship, RelationshipProduct}
+import it.pagopa.interop.partymanagement.client.model.{InstitutionProduct, Relationship, RelationshipProduct}
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess.model._
 
@@ -70,6 +70,26 @@ object Conversions {
       pricingPlan = relationship.pricingPlan,
       institutionUpdate = relationship.institutionUpdate.map(institutionUpdateToApi),
       billing = relationship.billing.map(billingToApi)
+    )
+  }
+
+  def institutionBillingToBillingData(
+    institution: PartyManagementDependency.Institution,
+    institutionProduct: InstitutionProduct
+  ): BillingData = {
+    BillingData(
+      institutionId = institution.id,
+      externalId = institution.externalId,
+      origin = institution.origin,
+      originId = institution.originId,
+      description = institution.description,
+      taxCode = institution.taxCode,
+      digitalAddress = institution.digitalAddress,
+      address = institution.address,
+      zipCode = institution.zipCode,
+      institutionType = institution.institutionType,
+      pricingPlan = institutionProduct.pricingPlan,
+      billing = billingToApi(institutionProduct.billing)
     )
   }
 

@@ -35,6 +35,7 @@ package object impl extends DefaultJsonProtocol {
   implicit val relationshipInfoFormat: RootJsonFormat[RelationshipInfo] = jsonFormat11(RelationshipInfo)
   implicit val productFormat: RootJsonFormat[Product]                   = jsonFormat2(Product)
   implicit val productsFormat: RootJsonFormat[Products]                 = jsonFormat1(Products)
+  implicit val billingDataFormat: RootJsonFormat[BillingData]           = jsonFormat12(BillingData)
 
   final val serviceErrorCodePrefix: String = "002"
   final val defaultProblemType: String     = "about:blank"

@@ -20,4 +20,7 @@ object ExternalApiMarshallerImpl extends ExternalApiMarshaller with SprayJsonSup
 
   override implicit def toEntityMarshallerRelationshipInfo: ToEntityMarshaller[RelationshipInfo] =
     sprayJsonMarshaller[RelationshipInfo]
+
+  override implicit def toEntityMarshallerBillingData: ToEntityMarshaller[BillingData] =
+    sprayJsonMarshaller[BillingData]
 }
