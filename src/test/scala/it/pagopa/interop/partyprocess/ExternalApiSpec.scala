@@ -301,36 +301,45 @@ trait ExternalApiSpec
       billing = Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
     )
 
-    def mockPartyManagement(retrieveInstitution: Boolean, existsBilling: Boolean) = {
+    def mockPartyManagementNoInstitution() = {
+      (mockPartyManagementService
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
+        .returning(Future.failed(ResourceNotFoundError(externalId)))
+        .once()
+    }
+
+    def mockPartyManagementWithBilling() = {
+      (mockPartyManagementService
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
+        .returning(Future.successful(institution))
+        .once()
+    }
+
+    def mockPartyManagementWithoutBilling() = {
       (mockPartyManagementService
         .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
         .expects(externalId, *, *)
         .returning(
-          if (retrieveInstitution)
-            Future.successful(
-              if (existsBilling) institution
-              else
-                institution.copy(products =
-                  Map(
-                    "prodX" -> InstitutionProduct(
-                      product = "prodX",
-                      pricingPlan = None,
-                      billing = PartyManagementDependency.Billing(
-                        vatNumber = "VATNUMBER",
-                        recipientCode = "RECIPIENTCODE",
-                        publicServices = Option(true)
-                      )
-                    )
-                  )
+          Future.successful(
+            institution.copy(products =
+              Map(
+                "prodX" -> InstitutionProduct(
+                  product = "prodX",
+                  pricingPlan = None,
+                  billing = PartyManagementDependency
+                    .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
                 )
+              )
             )
-          else Future.failed(ResourceNotFoundError(externalId))
+          )
         )
         .once()
     }
 
     "succeed when exists" in {
-      mockPartyManagement(retrieveInstitution = true, existsBilling = true)
+      mockPartyManagementWithBilling()
 
       val response =
         Http()
@@ -350,7 +359,7 @@ trait ExternalApiSpec
     }
 
     "NotFoundError when not exists" in {
-      mockPartyManagement(retrieveInstitution = true, existsBilling = false)
+      mockPartyManagementWithoutBilling()
 
       val response =
         Http()
@@ -366,7 +375,7 @@ trait ExternalApiSpec
     }
 
     "NotFoundError when institution not exists" in {
-      mockPartyManagement(retrieveInstitution = false, existsBilling = false)
+      mockPartyManagementNoInstitution()
 
       val response =
         Http()
