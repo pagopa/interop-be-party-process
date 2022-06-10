@@ -42,7 +42,6 @@ class ExternalApiServiceImpl(
     logger.info(s"Retrieving institution for externalId $externalId")
     val result = for {
       bearer      <- getFutureBearer(contexts)
-      _           <- getUidFuture(contexts)
       institution <- partyManagementService.retrieveInstitutionByExternalId(externalId)(bearer)
     } yield institution
 
@@ -126,7 +125,6 @@ class ExternalApiServiceImpl(
     logger.info("Retrieving products for institution having externalId {}", externalId)
     val result = for {
       bearer       <- getFutureBearer(contexts)
-      _            <- getUidFuture(contexts)
       statesFilter <- parseArrayParameters(states).traverse(par => ProductState.fromValue(par)).toFuture
       institution  <- partyManagementService.retrieveInstitutionByExternalId(externalId)(bearer)
       products     <- productService.retrieveInstitutionProducts(institution, statesFilter)(bearer)
@@ -193,7 +191,6 @@ class ExternalApiServiceImpl(
     logger.info(s"Retrieving billing data for institution having externalId $externalId and productId $productId")
     val result = for {
       bearer      <- getFutureBearer(contexts)
-      _           <- getUidFuture(contexts)
       institution <- partyManagementService.retrieveInstitutionByExternalId(externalId)(bearer)
     } yield institution
 
