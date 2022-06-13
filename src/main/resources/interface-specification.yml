@@ -405,6 +405,45 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /external/institutions/{externalId}/products/{productId}/billing:
+    get:
+      tags:
+        - external
+      summary: returns the billing data related to the institution even if the current user is not related to the institution/product
+      description: Return ok
+      operationId: getBillingInstitutionByExternalId
+      parameters:
+        - name: externalId
+          in: path
+          description: The external identifier of the institution
+          required: true
+          schema:
+            type: string
+        - name: productId
+          in: path
+          description: The id of the product
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingData'
+        '404':
+          description: There is not confirmed billing data for the institution/product
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '400':
+          description: Invalid institution id supplied
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /institutions/{id}/products:
     get:
       tags:
@@ -1301,6 +1340,51 @@ components:
       required:
         - vatNumber
         - recipientCode
+      additionalProperties: false
+    BillingData:
+      type: object
+      properties:
+        institutionId:
+          type: string
+          format: uuid
+        externalId:
+          type: string
+        origin:
+          type: string
+          description: The origin form which the institution has been retrieved
+          example: IPA
+        originId:
+          type: string
+        description:
+          type: string
+        taxCode:
+          type: string
+        digitalAddress:
+          type: string
+        address:
+          type: string
+        zipCode:
+          type: string
+        institutionType:
+          type: string
+          description: institution type
+          example: PA
+        pricingPlan:
+          type: string
+          description: pricing plan
+        billing:
+          $ref: '#/components/schemas/Billing'
+      required:
+        - institutionId
+        - externalId
+        - originId
+        - origin
+        - taxCode
+        - description
+        - digitalAddress
+        - address
+        - zipCode
+        - billing
       additionalProperties: false
   securitySchemes:
     bearerAuth:

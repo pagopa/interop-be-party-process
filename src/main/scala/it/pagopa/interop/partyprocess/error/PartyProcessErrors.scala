@@ -120,4 +120,12 @@ object PartyProcessErrors {
         "0043",
         s"Cannot find active manager for institution having externalId $externalId and product $productId"
       )
+
+  final case class GetInstitutionBillingError(externalId: String)
+      extends ComponentError("0044", s"Error while retrieving institution having externalId $externalId")
+  final case class GetInstitutionBillingNotFound(externalId: String, productId: String)
+      extends ComponentError(
+        "0045",
+        s"Cannot find billing data for institution having externalId $externalId and product $productId"
+      )
 }

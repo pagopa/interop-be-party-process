@@ -5,11 +5,13 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.ResourceNotFoundError
-import it.pagopa.interop.partymanagement.client.model.Relationships
+import it.pagopa.interop.partymanagement.client.model.{InstitutionProduct, Relationships}
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess.common.system.{classicActorSystem, executionContext}
 import it.pagopa.interop.partyprocess.model.{
   Attribute,
+  Billing,
+  BillingData,
   Institution,
   PartyRole,
   ProductInfo,
@@ -254,4 +256,140 @@ trait ExternalApiSpec
     }
 
   }
+
+  "Get institution/product billing data" must {
+    val productId = "prod-io"
+
+    val orgPartyId = UUID.randomUUID()
+    val originId   = UUID.randomUUID().toString
+    val externalId = UUID.randomUUID().toString
+    val origin     = "ORIGIN"
+
+    val institution = PartyManagementDependency.Institution(
+      id = orgPartyId,
+      externalId = externalId,
+      originId = originId,
+      description = "description",
+      digitalAddress = "digitalAddress",
+      attributes = Seq(PartyManagementDependency.Attribute(origin, "C17", "attrs")),
+      taxCode = "taxCode",
+      origin = origin,
+      address = "address",
+      zipCode = "zipCode",
+      products = Map(
+        "prod-io" -> PartyManagementDependency.InstitutionProduct(
+          product = "prod-io",
+          pricingPlan = Option("pricingPlan"),
+          billing = PartyManagementDependency
+            .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+        )
+      )
+    )
+
+    val expected = BillingData(
+      institutionId = institution.id,
+      externalId = institution.externalId,
+      origin = institution.origin,
+      originId = institution.originId,
+      description = institution.description,
+      taxCode = institution.taxCode,
+      digitalAddress = institution.digitalAddress,
+      address = institution.address,
+      zipCode = institution.zipCode,
+      institutionType = institution.institutionType,
+      pricingPlan = Option("pricingPlan"),
+      billing = Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+    )
+
+    def mockPartyManagementNoInstitution() = {
+      (mockPartyManagementService
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
+        .returning(Future.failed(ResourceNotFoundError(externalId)))
+        .once()
+    }
+
+    def mockPartyManagementWithBilling() = {
+      (mockPartyManagementService
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
+        .returning(Future.successful(institution))
+        .once()
+    }
+
+    def mockPartyManagementWithoutBilling() = {
+      (mockPartyManagementService
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
+        .returning(
+          Future.successful(
+            institution.copy(products =
+              Map(
+                "prodX" -> InstitutionProduct(
+                  product = "prodX",
+                  pricingPlan = None,
+                  billing = PartyManagementDependency
+                    .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+                )
+              )
+            )
+          )
+        )
+        .once()
+    }
+
+    "succeed when exists" in {
+      mockPartyManagementWithBilling()
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/external/institutions/$externalId/products/$productId/billing",
+              method = HttpMethods.GET
+            )
+          )
+          .futureValue(timeout)
+
+      val body = Unmarshal(response.entity).to[BillingData].futureValue(timeout)
+
+      body equals expected
+
+      response.status mustBe StatusCodes.OK
+    }
+
+    "NotFoundError when not exists" in {
+      mockPartyManagementWithoutBilling()
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/external/institutions/$externalId/products/$productId/billing",
+              method = HttpMethods.GET
+            )
+          )
+          .futureValue(timeout)
+
+      response.status mustBe StatusCodes.NotFound
+    }
+
+    "NotFoundError when institution not exists" in {
+      mockPartyManagementNoInstitution()
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/external/institutions/$externalId/products/$productId/billing",
+              method = HttpMethods.GET
+            )
+          )
+          .futureValue(timeout)
+
+      response.status mustBe StatusCodes.NotFound
+    }
+
+  }
+
 }

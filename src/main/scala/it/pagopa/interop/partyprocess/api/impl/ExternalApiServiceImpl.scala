@@ -42,7 +42,6 @@ class ExternalApiServiceImpl(
     logger.info(s"Retrieving institution for externalId $externalId")
     val result = for {
       bearer      <- getFutureBearer(contexts)
-      _           <- getUidFuture(contexts)
       institution <- partyManagementService.retrieveInstitutionByExternalId(externalId)(bearer)
     } yield institution
 
@@ -126,7 +125,6 @@ class ExternalApiServiceImpl(
     logger.info("Retrieving products for institution having externalId {}", externalId)
     val result = for {
       bearer       <- getFutureBearer(contexts)
-      _            <- getUidFuture(contexts)
       statesFilter <- parseArrayParameters(states).traverse(par => ProductState.fromValue(par)).toFuture
       institution  <- partyManagementService.retrieveInstitutionByExternalId(externalId)(bearer)
       products     <- productService.retrieveInstitutionProducts(institution, statesFilter)(bearer)
@@ -177,6 +175,44 @@ class ExternalApiServiceImpl(
         logger.error("Error while retrieving institution having externalId {}", externalId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, GetInstitutionManagerError(externalId))
         getUserInstitutionRelationshipsByExternalId400(errorResponse)
+    }
+  }
+
+  /**
+   * Code: 200, Message: successful operation, DataType: BillingData
+   * Code: 404, Message: There is not confirmed billing data for the institution/product, DataType: Problem
+   * Code: 400, Message: Invalid institution id supplied, DataType: Problem
+   */
+  override def getBillingInstitutionByExternalId(externalId: String, productId: String)(implicit
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerBillingData: ToEntityMarshaller[BillingData],
+    contexts: Seq[(String, String)]
+  ): Route = {
+    logger.info(s"Retrieving billing data for institution having externalId $externalId and productId $productId")
+    val result = for {
+      bearer      <- getFutureBearer(contexts)
+      institution <- partyManagementService.retrieveInstitutionByExternalId(externalId)(bearer)
+    } yield institution
+
+    onComplete(result) {
+      case Success(institution)              =>
+        institution.products
+          .get(productId)
+          .map(p => getBillingInstitutionByExternalId200(Conversions.institutionBillingToBillingData(institution, p)))
+          .getOrElse({
+            logger.info(s"The institution having externalId $externalId has not billing data for product $productId")
+            getBillingInstitutionByExternalId404(
+              problemOf(StatusCodes.NotFound, GetInstitutionBillingNotFound(externalId, productId))
+            )
+          })
+      case Failure(_: ResourceNotFoundError) =>
+        logger.info(s"Cannot find institution having externalId $externalId")
+        getBillingInstitutionByExternalId404(
+          problemOf(StatusCodes.NotFound, GetInstitutionBillingNotFound(externalId, productId))
+        )
+      case Failure(ex)                       =>
+        logger.error("Error while retrieving institution having externalId {}", externalId, ex)
+        getBillingInstitutionByExternalId400(problemOf(StatusCodes.BadRequest, GetInstitutionBillingError(externalId)))
     }
   }
 }

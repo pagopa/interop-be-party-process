@@ -868,7 +868,6 @@ class ProcessApiServiceImpl(
     logger.info("Deleting relationship {}", relationshipId)
     val result = for {
       bearer           <- getFutureBearer(contexts)
-      _                <- getUidFuture(contexts)
       relationshipUUID <- relationshipId.toFutureUUID
       _                <- partyManagementService.deleteRelationshipById(relationshipUUID)(bearer)
     } yield ()
@@ -903,7 +902,6 @@ class ProcessApiServiceImpl(
     logger.info(s"Retrieving institution for id $id")
     val result = for {
       bearer      <- getFutureBearer(contexts)
-      _           <- getUidFuture(contexts)
       uuid        <- id.toFutureUUID
       institution <- partyManagementService.retrieveInstitution(uuid)(bearer)
     } yield institution
@@ -938,7 +936,6 @@ class ProcessApiServiceImpl(
     logger.info(s"Creating institution having external id $externalId")
     val result = for {
       bearer      <- getFutureBearer(contexts)
-      _           <- getUidFuture(contexts)
       institution <- createInstitutionInner(externalId)(bearer, contexts)
     } yield institution
 
@@ -1019,7 +1016,6 @@ class ProcessApiServiceImpl(
     logger.info("Retrieving products for institution {}", institutionId)
     val result = for {
       bearer         <- getFutureBearer(contexts)
-      _              <- getUidFuture(contexts)
       statesFilter   <- parseArrayParameters(states).traverse(par => ProductState.fromValue(par)).toFuture
       institutionUid <- institutionId.toFutureUUID
       institution    <- partyManagementService.retrieveInstitution(institutionUid)(bearer)
