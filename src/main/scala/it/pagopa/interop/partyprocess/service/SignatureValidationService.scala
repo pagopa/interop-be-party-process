@@ -12,8 +12,6 @@ import scala.concurrent.Future
 
 trait SignatureValidationService {
 
-  def verifySignatureForm(documentValidator: SignedDocumentValidator): ValidatedNel[SignatureValidationError, Unit]
-
   def isDocumentSigned(documentValidator: SignedDocumentValidator): ValidatedNel[SignatureValidationError, Unit]
 
   def verifyDigest(
