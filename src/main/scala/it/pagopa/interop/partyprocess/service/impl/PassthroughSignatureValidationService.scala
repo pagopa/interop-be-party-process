@@ -10,11 +10,6 @@ case object PassthroughSignatureValidationService extends SignatureValidationSer
 
   private final val fakeValidationResult: ValidatedNel[SignatureValidationError, Unit] = Validated.validNel(())
 
-  override def verifySignatureForm(
-    documentValidator: SignedDocumentValidator
-  ): ValidatedNel[SignatureValidationError, Unit] =
-    fakeValidationResult
-
   override def isDocumentSigned(
     documentValidator: SignedDocumentValidator
   ): ValidatedNel[SignatureValidationError, Unit] =
