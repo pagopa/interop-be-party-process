@@ -363,6 +363,7 @@ class ProcessApiServiceImpl(
     currentUser: UserRegistryUser
   )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Unit] = {
     for {
+      _                  <- validateOverridingData(onboardingRequest, institution)
       validUsers         <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
       validManager       <- getValidManager(activeManager, validUsers)
       personIdsWithRoles <- Future.traverse(validUsers)(u => addUser(u, onboardingRequest.productId))
@@ -393,9 +394,9 @@ class ProcessApiServiceImpl(
         }
       }
       contractTemplate   <- getFileAsString(onboardingRequest.contract.path)
-      pdf                <- pdfCreator.createContract(contractTemplate, validManager, validUsers, institution)
-      digest             <- signatureService.createDigest(pdf)
-      token              <- partyManagementService.createToken(
+      pdf    <- pdfCreator.createContract(contractTemplate, validManager, validUsers, institution, onboardingRequest)
+      digest <- signatureService.createDigest(pdf)
+      token  <- partyManagementService.createToken(
         PartyManagementDependency.Relationships(relationships),
         digest,
         onboardingRequest.contract.version,
@@ -403,10 +404,32 @@ class ProcessApiServiceImpl(
       )(bearer)
       _ = logger.info("Digest {}", digest)
       onboardingMailParameters <- getOnboardingMailParameters(token.token, currentUser, onboardingRequest)
-      destinationMails = ApplicationConfiguration.destinationMails.getOrElse(Seq(institution.digitalAddress))
+      destinationMails = ApplicationConfiguration.destinationMails.getOrElse(
+        Seq(onboardingRequest.institutionUpdate.flatMap(_.digitalAddress).getOrElse(institution.digitalAddress))
+      )
       _ <- sendOnboardingMail(destinationMails, pdf, onboardingMailParameters)
       _ = logger.info(s"$token")
     } yield ()
+  }
+
+  private def validateOverridingData(
+    onboardingRequest: OnboardingSignedRequest,
+    institution: PartyManagementDependency.Institution
+  ): Future[Unit] = {
+    val success = if (institution.origin === "IPA") {
+      onboardingRequest.institutionUpdate.forall(updates =>
+        updates.description.forall(_.equals(institution.description)) &&
+          updates.taxCode.forall(_.equals(institution.taxCode)) &&
+          updates.digitalAddress.forall(_.equals(institution.digitalAddress)) &&
+          updates.zipCode.forall(_.equals(institution.zipCode)) &&
+          updates.address.forall(_.equals(institution.address))
+      )
+    } else {
+      true
+    }
+
+    if (success) Future.successful(())
+    else Future.failed(OnboardingInvalidUpdates(institution.externalId))
   }
 
   private def getOnboardingMailParameters(
