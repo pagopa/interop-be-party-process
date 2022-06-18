@@ -3,7 +3,7 @@ object Versions {
   lazy val akkaHttpVersion       = "10.2.6"
   lazy val akkaManagementVersion = "1.1.1"
   lazy val akkaVersion           = "2.6.17"
-  lazy val catsVersion           = "2.7.0"
+  lazy val catsVersion           = "2.8.0"
   lazy val courierVersion        = "3.0.1"
   lazy val dssVersion            = "5.10"
   lazy val jacksonVersion        = "2.11.4"
@@ -16,7 +16,7 @@ object Versions {
 }
 
 object PagopaVersions {
-  lazy val commonsVersion                = "0.1.x-SNAPSHOT"
-  lazy val partyManagementVersion        = "0.1.x-SNAPSHOT"
-  lazy val partyProxyVersion             = "0.1.x-SNAPSHOT"
+  lazy val commonsVersion         = "0.1.x-SNAPSHOT"
+  lazy val partyManagementVersion = "0.1.x-SNAPSHOT"
+  lazy val partyProxyVersion      = "0.1.x-SNAPSHOT"
 }
