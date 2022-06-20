@@ -9,12 +9,6 @@ object ValidationErrors {
 
   case object InvalidDocumentSignature extends SignatureValidationError("1002", s"Document signature is invalid")
 
-  final case class InvalidSignatureForms(invalidSignatureForms: List[String])
-      extends SignatureValidationError(
-        "1003",
-        s"Only CAdES signature form is admitted. Invalid signatures forms detected: ${invalidSignatureForms.mkString(",")}"
-      )
-
   case object InvalidSignatureTaxCode
       extends SignatureValidationError(
         "1004",

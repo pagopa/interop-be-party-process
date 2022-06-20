@@ -2,14 +2,14 @@ package it.pagopa.interop.partyprocess.service.impl
 
 import cats.data.ValidatedNel
 import cats.implicits._
-import eu.europa.esig.dss.enumerations.{DigestAlgorithm, Indication, SignatureForm}
+import eu.europa.esig.dss.enumerations.{DigestAlgorithm, Indication}
 import eu.europa.esig.dss.model.DSSDocument
 import eu.europa.esig.dss.validation.reports.Reports
 import eu.europa.esig.dss.validation.{AdvancedSignature, SignedDocumentValidator}
 import it.pagopa.interop.partyprocess.error.SignatureValidationError
 import it.pagopa.interop.partyprocess.error.ValidationErrors._
-import it.pagopa.interop.partyprocess.service.SignatureValidationService
 import it.pagopa.interop.partyprocess.model.UserRegistryUser
+import it.pagopa.interop.partyprocess.service.SignatureValidationService
 
 import scala.jdk.CollectionConverters.IterableHasAsScala
 import scala.util.matching.Regex
@@ -18,19 +18,6 @@ import scala.util.{Failure, Success, Try}
 case object SignatureValidationServiceImpl extends SignatureValidationService {
 
   private final val signatureRegex: Regex = "(TINIT-)(.*)".r
-
-  def verifySignatureForm(documentValidator: SignedDocumentValidator): ValidatedNel[SignatureValidationError, Unit] = {
-    val signatures: List[AdvancedSignature]             = documentValidator.getSignatures.asScala.toList
-    val invalidSignatureForms: List[SignatureForm]      =
-      signatures.map(_.getSignatureForm).filter(_ != SignatureForm.CAdES)
-    val validation: Either[InvalidSignatureForms, Unit] =
-      Either.cond(invalidSignatureForms.isEmpty, (), InvalidSignatureForms(invalidSignatureForms.map(_.toString)))
-
-    validation match {
-      case Left(throwable)  => throwable.invalidNel[Unit]
-      case Right(validated) => validated.validNel[SignatureValidationError]
-    }
-  }
 
   def isDocumentSigned(documentValidator: SignedDocumentValidator): ValidatedNel[SignatureValidationError, Unit] = {
     val validation: Either[SignatureValidationError, Unit] =
