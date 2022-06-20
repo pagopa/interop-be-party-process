@@ -416,20 +416,28 @@ class ProcessApiServiceImpl(
     onboardingRequest: OnboardingSignedRequest,
     institution: PartyManagementDependency.Institution
   ): Future[Unit] = {
-    val success = if (institution.origin === "IPA") {
-      onboardingRequest.institutionUpdate.forall(updates =>
-        updates.description.forall(_.equals(institution.description)) &&
-          updates.taxCode.forall(_.equals(institution.taxCode)) &&
-          updates.digitalAddress.forall(_.equals(institution.digitalAddress)) &&
-          updates.zipCode.forall(_.equals(institution.zipCode)) &&
-          updates.address.forall(_.equals(institution.address))
-      )
-    } else {
-      true
-    }
 
-    if (success) Future.successful(())
-    else Future.failed(OnboardingInvalidUpdates(institution.externalId))
+    // TODO remove me and replace me with the block below
+    val areIpaDataMatching: Boolean = onboardingRequest.institutionUpdate.forall(updates =>
+      updates.description.contains(institution.description) ||
+        updates.taxCode.contains(institution.taxCode) ||
+        updates.digitalAddress.contains(institution.digitalAddress) ||
+        updates.zipCode.contains(institution.zipCode) ||
+        updates.address.contains(institution.address)
+    )
+    /* TODO replace the previous block with this
+    val areIpaDataMatching: Boolean = onboardingRequest.institutionUpdate.forall(updates =>
+      updates.description.forall(_ == institution.description) &&
+        updates.taxCode.forall(_ == institution.taxCode) &&
+        updates.digitalAddress.forall(_ == institution.digitalAddress) &&
+        updates.zipCode.forall(_ == institution.zipCode) &&
+        updates.address.forall(_ == institution.address)
+    )
+     */
+
+    Future
+      .failed(OnboardingInvalidUpdates(institution.externalId))
+      .unlessA(institution.origin != "IPA" || areIpaDataMatching)
   }
 
   private def getOnboardingMailParameters(

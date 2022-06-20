@@ -1312,49 +1312,10 @@ trait PartyApiSpec
         billing = Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
       )
 
-      if (overriddenField.equals("")) {
-        (mockPartyManagementService
-          .createPerson(_: PartyManagementDependency.PersonSeed)(_: String)(_: Seq[(String, String)]))
-          .expects(PartyManagementDependency.PersonSeed(managerId), *, *)
-          .returning(Future.successful(PartyManagementDependency.Person(managerId)))
-          .once()
-
-        (mockPartyManagementService
-          .createPerson(_: PartyManagementDependency.PersonSeed)(_: String)(_: Seq[(String, String)]))
-          .expects(PartyManagementDependency.PersonSeed(delegateId), *, *)
-          .returning(Future.successful(PartyManagementDependency.Person(delegateId)))
-          .once()
-
-        (mockPartyManagementService
-          .createRelationship(_: RelationshipSeed)(_: String)(_: Seq[(String, String)]))
-          .expects(*, *, *)
-          .returning(Future.successful(relationship))
-          .repeat(2)
-
-        (mockFileManager
-          .get(_: String)(_: String))
-          .expects(*, *)
-          .returning(Future.successful(new ByteArrayOutputStream()))
-          .once()
-
-        (mockSignatureService
-          .createDigest(_: File))
-          .expects(*)
-          .returning(Future.successful("hash"))
-          .once()
-
-        (mockPartyManagementService
-          .createToken(_: PartyManagementDependency.Relationships, _: String, _: String, _: String)(_: String)(
-            _: Seq[(String, String)]
-          ))
-          .expects(*, *, *, *, *, *)
-          .returning(Future.successful(PartyManagementDependency.TokenText("token")))
-          .once()
-
-        (mockPdfCreator.createContract _)
-          .expects(*, *, *, *, OnboardingSignedRequest.fromApi(req))
-          .returning(Future.successful(new File("src/test/resources/fake.file")))
-          .once()
+      if (overriddenField == "") {
+        checkOnboardingOverridingIPAFieldsSucceed(managerId, delegateId, req)
+      } else {
+        checkOnboardingOverridingIPAFieldsFailure()
       }
 
       val data = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
@@ -1362,37 +1323,119 @@ trait PartyApiSpec
       request(data, "onboarding/institution", HttpMethods.POST)
     }
 
-    "onboarding overriding IPA data overriding description" in {
+    def checkOnboardingOverridingIPAFieldsSucceed(
+      managerId: UUID,
+      delegateId: UUID,
+      req: OnboardingInstitutionRequest
+    ) = {
+      (mockPartyManagementService
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(PartyManagementDependency.PersonSeed(managerId), *, *)
+        .returning(Future.successful(PartyManagementDependency.Person(managerId)))
+        .once()
+
+      (mockPartyManagementService
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(PartyManagementDependency.PersonSeed(delegateId), *, *)
+        .returning(Future.successful(PartyManagementDependency.Person(delegateId)))
+        .once()
+
+      (mockPartyManagementService
+        .createRelationship(_: RelationshipSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(*, *, *)
+        .returning(Future.successful(relationship))
+        .repeat(2)
+
+      (mockFileManager
+        .get(_: String)(_: String))
+        .expects(*, *)
+        .returning(Future.successful(new ByteArrayOutputStream()))
+        .once()
+
+      (mockSignatureService
+        .createDigest(_: File))
+        .expects(*)
+        .returning(Future.successful("hash"))
+        .once()
+
+      (mockPartyManagementService
+        .createToken(_: PartyManagementDependency.Relationships, _: String, _: String, _: String)(_: String)(
+          _: Seq[(String, String)]
+        ))
+        .expects(*, *, *, *, *, *)
+        .returning(Future.successful(PartyManagementDependency.TokenText("token")))
+        .once()
+
+      (mockPdfCreator.createContract _)
+        .expects(*, *, *, *, OnboardingSignedRequest.fromApi(req))
+        .returning(Future.successful(new File("src/test/resources/fake.file")))
+        .once()
+    }
+
+    def checkOnboardingOverridingIPAFieldsFailure() = {
+      (mockPartyManagementService
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(*, *, *)
+        .never()
+
+      (mockPartyManagementService
+        .createRelationship(_: RelationshipSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(*, *, *)
+        .never()
+
+      (mockFileManager
+        .get(_: String)(_: String))
+        .expects(*, *)
+        .never()
+
+      (mockSignatureService
+        .createDigest(_: File))
+        .expects(*)
+        .never()
+
+      (mockPartyManagementService
+        .createToken(_: PartyManagementDependency.Relationships, _: String, _: String, _: String)(_: String)(
+          _: Seq[(String, String)]
+        ))
+        .expects(*, *, *, *, *, *)
+        .never()
+
+      (mockPdfCreator.createContract _)
+        .expects(*, *, *, *, *)
+        .never()
+    }
+
+    "fail when onboarding overriding IPA data overriding description" in {
       val response = performOnboardingOverridingIPAFields("description")
 
       response.status mustBe StatusCodes.BadRequest
     }
 
-    "onboarding overriding IPA data overriding digitalAddress" in {
+    "fail when onboarding overriding IPA data overriding digitalAddress" in {
       val response = performOnboardingOverridingIPAFields("desdigitalAddress")
 
       response.status mustBe StatusCodes.BadRequest
     }
 
-    "onboarding overriding IPA data overriding address" in {
+    "fail when onboarding overriding IPA data overriding address" in {
       val response = performOnboardingOverridingIPAFields("address")
 
       response.status mustBe StatusCodes.BadRequest
     }
 
-    "onboarding overriding IPA data overriding zipCode" in {
+    "fail when onboarding overriding IPA data overriding zipCode" in {
       val response = performOnboardingOverridingIPAFields("zipCode")
 
       response.status mustBe StatusCodes.BadRequest
     }
 
-    "onboarding overriding IPA data overriding taxCode" in {
+    "fail when onboarding overriding IPA data overriding taxCode" in {
       val response = performOnboardingOverridingIPAFields("taxCode")
 
       response.status mustBe StatusCodes.BadRequest
     }
 
-    "onboarding IPA without data overriding" in {
+    "succeed when onboarding IPA without data overriding" in {
       val response = performOnboardingOverridingIPAFields("")
 
       response.status mustBe StatusCodes.NoContent
