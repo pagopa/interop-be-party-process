@@ -172,7 +172,7 @@ trait PartyApiSpec
       .once()
 
     val req = OnboardingInstitutionRequest(
-      productId = "productId",
+      productId = "product",
       productName = "productName",
       users = Seq(manager, delegate),
       institutionExternalId = externalId,
@@ -1299,13 +1299,12 @@ trait PartyApiSpec
         institutionUpdate = Option(
           InstitutionUpdate(
             institutionType = Option("OVERRIDE_institutionType"),
-            description = if (overriddenField.equals("description")) Option("OVERRIDE_description") else None,
+            description = if (overriddenField == "description") Option("OVERRIDE_description") else None,
             digitalAddress =
-              if (overriddenField.equals("digitalAddress")) Option("OVERRIDE_digitalAddress")
+              if (overriddenField == "digitalAddress") Option("OVERRIDE_digitalAddress")
               else Option(institution.digitalAddress),
-            address = if (overriddenField.equals("address")) Option("OVERRIDE_address") else None,
-            zipCode =
-              if (overriddenField.equals("zipCode")) Option("OVERRIDE_zipCode") else Option(institution.zipCode),
+            address = if (overriddenField == "address") Option("OVERRIDE_address") else None,
+            zipCode = if (overriddenField == "zipCode") Option("OVERRIDE_zipCode") else Option(institution.zipCode),
             taxCode = if (overriddenField.equals("taxCode")) Option("OVERRIDE_taxCode") else None
           )
         ),
@@ -1412,7 +1411,7 @@ trait PartyApiSpec
     }
 
     "fail when onboarding overriding IPA data overriding digitalAddress" in {
-      val response = performOnboardingOverridingIPAFields("desdigitalAddress")
+      val response = performOnboardingOverridingIPAFields("digitalAddress")
 
       response.status mustBe StatusCodes.BadRequest
     }

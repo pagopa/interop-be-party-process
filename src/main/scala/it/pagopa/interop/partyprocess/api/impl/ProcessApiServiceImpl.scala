@@ -239,19 +239,27 @@ class ProcessApiServiceImpl(
     } yield response
 
     onComplete(result) {
-      case Success(_)                       => onboardingInstitution204
-      case Failure(ex: ContractNotFound)    =>
+      case Success(_)                            => onboardingInstitution204
+      case Failure(ex: ContractNotFound)         =>
         logger.info("Error while onboarding institution {}", onboardingRequest.institutionExternalId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         onboardingInstitution404(errorResponse)
-      case Failure(ex: InstitutionNotFound) =>
+      case Failure(ex: InstitutionNotFound)      =>
         logger.error("Institution having externalId {} not found", onboardingRequest.institutionExternalId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         onboardingInstitution404(errorResponse)
-      case Failure(ex)                      =>
-        logger.error("Error while onboarding institution {}", onboardingRequest.institutionExternalId, ex)
-        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, OnboardingOperationError)
+      case Failure(ex: OnboardingInvalidUpdates) =>
+        logger.error("Invalid institution updates for Institution {}", onboardingRequest.institutionExternalId, ex)
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, ex)
         onboardingInstitution400(errorResponse)
+      case Failure(ManagerFoundError)            =>
+        logger.error("Institution already onboarded {}", onboardingRequest.institutionExternalId, ManagerFoundError)
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, ManagerFoundError)
+        onboardingInstitution400(errorResponse)
+      case Failure(ex)                           =>
+        logger.error("Error while onboarding institution {}", onboardingRequest.institutionExternalId, ex)
+        val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, OnboardingOperationError)
+        complete(StatusCodes.InternalServerError, errorResponse)
     }
 
   }
