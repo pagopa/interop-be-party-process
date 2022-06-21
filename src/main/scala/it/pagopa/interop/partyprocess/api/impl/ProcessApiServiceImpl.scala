@@ -250,8 +250,8 @@ class ProcessApiServiceImpl(
         onboardingInstitution404(errorResponse)
       case Failure(ex: OnboardingInvalidUpdates) =>
         logger.error("Invalid institution updates for Institution {}", onboardingRequest.institutionExternalId, ex)
-        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, ex)
-        onboardingInstitution400(errorResponse)
+        val errorResponse: Problem = problemOf(StatusCodes.Conflict, ex)
+        onboardingInstitution409(errorResponse)
       case Failure(ManagerFoundError)            =>
         logger.error("Institution already onboarded {}", onboardingRequest.institutionExternalId, ManagerFoundError)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, ManagerFoundError)
@@ -424,24 +424,13 @@ class ProcessApiServiceImpl(
     onboardingRequest: OnboardingSignedRequest,
     institution: PartyManagementDependency.Institution
   ): Future[Unit] = {
-
-    // TODO remove me and replace me with the block below
-    val areIpaDataMatching: Boolean = onboardingRequest.institutionUpdate.forall(updates =>
-      updates.description.contains(institution.description) ||
-        updates.taxCode.contains(institution.taxCode) ||
-        updates.digitalAddress.contains(institution.digitalAddress) ||
-        updates.zipCode.contains(institution.zipCode) ||
-        updates.address.contains(institution.address)
-    )
-    /* TODO replace the previous block with this
-    val areIpaDataMatching: Boolean = onboardingRequest.institutionUpdate.forall(updates =>
+    lazy val areIpaDataMatching: Boolean = onboardingRequest.institutionUpdate.forall(updates =>
       updates.description.forall(_ == institution.description) &&
         updates.taxCode.forall(_ == institution.taxCode) &&
         updates.digitalAddress.forall(_ == institution.digitalAddress) &&
         updates.zipCode.forall(_ == institution.zipCode) &&
         updates.address.forall(_ == institution.address)
     )
-     */
 
     Future
       .failed(OnboardingInvalidUpdates(institution.externalId))

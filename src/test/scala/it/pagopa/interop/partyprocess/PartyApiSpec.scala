@@ -1407,31 +1407,31 @@ trait PartyApiSpec
     "fail when onboarding overriding IPA data overriding description" in {
       val response = performOnboardingOverridingIPAFields("description")
 
-      response.status mustBe StatusCodes.BadRequest
+      response.status mustBe StatusCodes.Conflict
     }
 
     "fail when onboarding overriding IPA data overriding digitalAddress" in {
       val response = performOnboardingOverridingIPAFields("digitalAddress")
 
-      response.status mustBe StatusCodes.BadRequest
+      response.status mustBe StatusCodes.Conflict
     }
 
     "fail when onboarding overriding IPA data overriding address" in {
       val response = performOnboardingOverridingIPAFields("address")
 
-      response.status mustBe StatusCodes.BadRequest
+      response.status mustBe StatusCodes.Conflict
     }
 
     "fail when onboarding overriding IPA data overriding zipCode" in {
       val response = performOnboardingOverridingIPAFields("zipCode")
 
-      response.status mustBe StatusCodes.BadRequest
+      response.status mustBe StatusCodes.Conflict
     }
 
     "fail when onboarding overriding IPA data overriding taxCode" in {
       val response = performOnboardingOverridingIPAFields("taxCode")
 
-      response.status mustBe StatusCodes.BadRequest
+      response.status mustBe StatusCodes.Conflict
     }
 
     "succeed when onboarding IPA without data overriding" in {
