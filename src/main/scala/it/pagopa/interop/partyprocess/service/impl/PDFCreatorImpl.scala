@@ -67,12 +67,11 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
       "managerEmail"         -> managerEmail,
       "manager"              -> userToText(manager),
       "delegates"            -> delegatesToText(users),
-      "institutionType"      -> transcodeInstitutionType(
-        onboardingRequest.institutionUpdate
-          .flatMap(_.institutionType)
-          .orElse(institution.institutionType)
-          .getOrElse("")
-      ),
+      "institutionType"      -> onboardingRequest.institutionUpdate
+        .flatMap(_.institutionType)
+        .orElse(institution.institutionType)
+        .map(transcodeInstitutionType)
+        .getOrElse(""),
       "address"              -> onboardingRequest.institutionUpdate.flatMap(_.address).getOrElse(institution.address),
       "zipCode"              -> onboardingRequest.institutionUpdate.flatMap(_.zipCode).getOrElse(institution.zipCode),
       "pricingPlan"          -> onboardingRequest.pricingPlan.getOrElse(""),
