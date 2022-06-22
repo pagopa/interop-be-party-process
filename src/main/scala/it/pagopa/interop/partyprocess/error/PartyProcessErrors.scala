@@ -128,4 +128,7 @@ object PartyProcessErrors {
         "0045",
         s"Cannot find billing data for institution having externalId $externalId and product $productId"
       )
+
+  final case class OnboardingInvalidUpdates(externalId: String)
+      extends ComponentError("0046", s"Cannot perform data overrides on institution having external id $externalId")
 }

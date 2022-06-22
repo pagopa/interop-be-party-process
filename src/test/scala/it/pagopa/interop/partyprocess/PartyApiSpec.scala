@@ -21,6 +21,7 @@ import it.pagopa.interop.partymanagement.client.model.{
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess
 import it.pagopa.interop.partyprocess.api.impl.Conversions._
+import it.pagopa.interop.partyprocess.api.impl.OnboardingSignedRequest
 import it.pagopa.interop.partyprocess.common.system.{classicActorSystem, executionContext}
 import it.pagopa.interop.partyprocess.error.SignatureValidationError
 import it.pagopa.interop.partyprocess.model.PartyRole.{DELEGATE, MANAGER, OPERATOR, SUB_DELEGATE}
@@ -171,7 +172,7 @@ trait PartyApiSpec
       .once()
 
     val req = OnboardingInstitutionRequest(
-      productId = "productId",
+      productId = "product",
       productName = "productName",
       users = Seq(manager, delegate),
       institutionExternalId = externalId,
@@ -357,7 +358,7 @@ trait PartyApiSpec
       .expects(*, *)
       .returning(Future.successful(new ByteArrayOutputStream()))
       .once()
-    (mockPdfCreator.createContract _).expects(*, *, *, *).returning(Future.successful(file)).once()
+
     (mockPartyManagementService
       .createToken(_: PartyManagementDependency.Relationships, _: String, _: String, _: String)(_: String)(
         _: Seq[(String, String)]
@@ -385,6 +386,11 @@ trait PartyApiSpec
       ),
       billing = Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
     )
+
+    (mockPdfCreator.createContract _)
+      .expects(*, *, *, *, OnboardingSignedRequest.fromApi(req))
+      .returning(Future.successful(file))
+      .once()
 
     val data = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
 
@@ -1210,6 +1216,228 @@ trait PartyApiSpec
 
       response.status mustBe StatusCodes.NoContent
 
+    }
+
+    def performOnboardingOverridingIPAFields(overriddenField: String): HttpResponse = {
+      val taxCode1   = "managerTaxCode"
+      val taxCode2   = "delegateTaxCode"
+      val originId   = UUID.randomUUID().toString
+      val externalId = UUID.randomUUID().toString
+      val origin     = "IPA"
+      val orgPartyId = UUID.randomUUID()
+
+      val institution = PartyManagementDependency.Institution(
+        id = orgPartyId,
+        externalId = externalId,
+        originId = originId,
+        description = "org1",
+        digitalAddress = "digitalAddress1",
+        attributes = Seq.empty,
+        taxCode = "123",
+        address = "address",
+        zipCode = "zipCode",
+        origin = origin,
+        institutionType = Option("PA"),
+        products = Map.empty
+      )
+
+      val managerId  = UUID.randomUUID()
+      val delegateId = UUID.randomUUID()
+      val manager    =
+        User(
+          id = managerId,
+          name = "manager",
+          surname = "managerSurname",
+          taxCode = taxCode1,
+          role = PartyRole.MANAGER,
+          email = Option("manager@email.it"),
+          productRole = "admin"
+        )
+      val delegate   =
+        User(
+          id = delegateId,
+          name = "delegate",
+          surname = "delegateSurname",
+          taxCode = taxCode2,
+          role = PartyRole.DELEGATE,
+          email = Option("delegate@email.it"),
+          productRole = "admin"
+        )
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: Seq[(String, String)]))
+        .expects(*, *)
+        .returning(Future.successful(UserRegistryUser(id = UUID.randomUUID(), taxCode = "", name = "", surname = "")))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
+        .returning(Future.successful(institution))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String)(_: Seq[(String, String)]))
+        .expects(None, Some(institution.id), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *, *)
+        .returning(Future.successful(PartyManagementDependency.Relationships(Seq.empty)))
+        .once()
+
+      val req = OnboardingInstitutionRequest(
+        productId = "productId",
+        productName = "productName",
+        users = Seq(manager, delegate),
+        institutionExternalId = externalId,
+        contract = OnboardingContract("a", "b"),
+        pricingPlan = Option("pricingPlan"),
+        institutionUpdate = Option(
+          InstitutionUpdate(
+            institutionType = Option("OVERRIDE_institutionType"),
+            description = if (overriddenField == "description") Option("OVERRIDE_description") else None,
+            digitalAddress =
+              if (overriddenField == "digitalAddress") Option("OVERRIDE_digitalAddress")
+              else Option(institution.digitalAddress),
+            address = if (overriddenField == "address") Option("OVERRIDE_address") else None,
+            zipCode = if (overriddenField == "zipCode") Option("OVERRIDE_zipCode") else Option(institution.zipCode),
+            taxCode = if (overriddenField.equals("taxCode")) Option("OVERRIDE_taxCode") else None
+          )
+        ),
+        billing = Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+      )
+
+      if (overriddenField == "") {
+        checkOnboardingOverridingIPAFieldsSucceed(managerId, delegateId, req)
+      } else {
+        checkOnboardingOverridingIPAFieldsFailure()
+      }
+
+      val data = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
+
+      request(data, "onboarding/institution", HttpMethods.POST)
+    }
+
+    def checkOnboardingOverridingIPAFieldsSucceed(
+      managerId: UUID,
+      delegateId: UUID,
+      req: OnboardingInstitutionRequest
+    ) = {
+      (mockPartyManagementService
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(PartyManagementDependency.PersonSeed(managerId), *, *)
+        .returning(Future.successful(PartyManagementDependency.Person(managerId)))
+        .once()
+
+      (mockPartyManagementService
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(PartyManagementDependency.PersonSeed(delegateId), *, *)
+        .returning(Future.successful(PartyManagementDependency.Person(delegateId)))
+        .once()
+
+      (mockPartyManagementService
+        .createRelationship(_: RelationshipSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(*, *, *)
+        .returning(Future.successful(relationship))
+        .repeat(2)
+
+      (mockFileManager
+        .get(_: String)(_: String))
+        .expects(*, *)
+        .returning(Future.successful(new ByteArrayOutputStream()))
+        .once()
+
+      (mockSignatureService
+        .createDigest(_: File))
+        .expects(*)
+        .returning(Future.successful("hash"))
+        .once()
+
+      (mockPartyManagementService
+        .createToken(_: PartyManagementDependency.Relationships, _: String, _: String, _: String)(_: String)(
+          _: Seq[(String, String)]
+        ))
+        .expects(*, *, *, *, *, *)
+        .returning(Future.successful(PartyManagementDependency.TokenText("token")))
+        .once()
+
+      (mockPdfCreator.createContract _)
+        .expects(*, *, *, *, OnboardingSignedRequest.fromApi(req))
+        .returning(Future.successful(new File("src/test/resources/fake.file")))
+        .once()
+    }
+
+    def checkOnboardingOverridingIPAFieldsFailure() = {
+      (mockPartyManagementService
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(*, *, *)
+        .never()
+
+      (mockPartyManagementService
+        .createRelationship(_: RelationshipSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(*, *, *)
+        .never()
+
+      (mockFileManager
+        .get(_: String)(_: String))
+        .expects(*, *)
+        .never()
+
+      (mockSignatureService
+        .createDigest(_: File))
+        .expects(*)
+        .never()
+
+      (mockPartyManagementService
+        .createToken(_: PartyManagementDependency.Relationships, _: String, _: String, _: String)(_: String)(
+          _: Seq[(String, String)]
+        ))
+        .expects(*, *, *, *, *, *)
+        .never()
+
+      (mockPdfCreator.createContract _)
+        .expects(*, *, *, *, *)
+        .never()
+    }
+
+    "fail when onboarding overriding IPA data overriding description" in {
+      val response = performOnboardingOverridingIPAFields("description")
+
+      response.status mustBe StatusCodes.Conflict
+    }
+
+    "fail when onboarding overriding IPA data overriding digitalAddress" in {
+      val response = performOnboardingOverridingIPAFields("digitalAddress")
+
+      response.status mustBe StatusCodes.Conflict
+    }
+
+    "fail when onboarding overriding IPA data overriding address" in {
+      val response = performOnboardingOverridingIPAFields("address")
+
+      response.status mustBe StatusCodes.Conflict
+    }
+
+    "fail when onboarding overriding IPA data overriding zipCode" in {
+      val response = performOnboardingOverridingIPAFields("zipCode")
+
+      response.status mustBe StatusCodes.Conflict
+    }
+
+    "fail when onboarding overriding IPA data overriding taxCode" in {
+      val response = performOnboardingOverridingIPAFields("taxCode")
+
+      response.status mustBe StatusCodes.Conflict
+    }
+
+    "succeed when onboarding IPA without data overriding" in {
+      val response = performOnboardingOverridingIPAFields("")
+
+      response.status mustBe StatusCodes.NoContent
     }
 
     "not create operators if does not exists any active legal for a given institution" in {
@@ -3371,7 +3599,7 @@ trait PartyApiSpec
         .returning(Future.successful(new ByteArrayOutputStream()))
         .once()
 
-      (mockPdfCreator.createContract _).expects(*, *, *, *).returning(Future.successful(file)).once()
+      (mockPdfCreator.createContract _).expects(*, *, *, *, *).returning(Future.successful(file)).once()
 
       (mockPartyManagementService
         .createToken(_: PartyManagementDependency.Relationships, _: String, _: String, _: String)(_: String)(

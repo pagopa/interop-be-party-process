@@ -4,6 +4,7 @@ import com.openhtmltopdf.util.XRLog
 import it.pagopa.interop.commons.files.service.PDFManager
 import it.pagopa.interop.commons.utils.TypeConversions.OptionOps
 import it.pagopa.interop.partymanagement.client.model.Institution
+import it.pagopa.interop.partyprocess.api.impl.OnboardingSignedRequest
 import it.pagopa.interop.partyprocess.model.{PartyRole, User}
 import it.pagopa.interop.partyprocess.service.PDFCreator
 
@@ -26,12 +27,13 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
     contractTemplate: String,
     manager: User,
     users: Seq[User],
-    institution: Institution
+    institution: Institution,
+    onboardingRequest: OnboardingSignedRequest
   ): Future[File] =
     Future.fromTry {
       for {
         file <- createTempFile
-        data <- setupData(manager, users, institution)
+        data <- setupData(manager, users, institution, onboardingRequest)
         pdf  <- getPDFAsFile(file.toPath, contractTemplate, data)
       } yield pdf
 
@@ -44,20 +46,41 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
     }
   }
 
-  private def setupData(manager: User, users: Seq[User], institution: Institution): Try[Map[String, String]] = {
+  private def setupData(
+    manager: User,
+    users: Seq[User],
+    institution: Institution,
+    onboardingRequest: OnboardingSignedRequest
+  ): Try[Map[String, String]] = {
     for {
       managerEmail <- manager.email.toTry("Manager email not found")
     } yield Map(
-      "institutionName"    -> institution.description,
-      "institutionTaxCode" -> institution.taxCode,
-      "originId"           -> institution.originId,
-      "institutionMail"    -> institution.digitalAddress,
-      "managerName"        -> manager.name,
-      "managerSurname"     -> manager.surname,
-      "managerTaxCode"     -> manager.taxCode,
-      "managerEmail"       -> managerEmail,
-      "manager"            -> userToText(manager),
-      "delegates"          -> delegatesToText(users)
+      "institutionName"      -> onboardingRequest.institutionUpdate
+        .flatMap(_.description)
+        .getOrElse(institution.description),
+      "institutionTaxCode"   -> onboardingRequest.institutionUpdate.flatMap(_.taxCode).getOrElse(institution.taxCode),
+      "originId"             -> institution.originId,
+      "institutionMail"      -> institution.digitalAddress,
+      "managerName"          -> manager.name,
+      "managerSurname"       -> manager.surname,
+      "managerTaxCode"       -> manager.taxCode,
+      "managerEmail"         -> managerEmail,
+      "manager"              -> userToText(manager),
+      "delegates"            -> delegatesToText(users),
+      "institutionType"      -> onboardingRequest.institutionUpdate
+        .flatMap(_.institutionType)
+        .orElse(institution.institutionType)
+        .map(transcodeInstitutionType)
+        .getOrElse(""),
+      "address"              -> onboardingRequest.institutionUpdate.flatMap(_.address).getOrElse(institution.address),
+      "zipCode"              -> onboardingRequest.institutionUpdate.flatMap(_.zipCode).getOrElse(institution.zipCode),
+      "pricingPlan"          -> onboardingRequest.pricingPlan.getOrElse(""),
+      "institutionVatNumber" -> onboardingRequest.billing.map(_.vatNumber).getOrElse(""),
+      "institutionRecipientCode" -> onboardingRequest.billing.map(_.recipientCode).getOrElse(""),
+      "isPublicServicesManager"  -> onboardingRequest.billing
+        .flatMap(_.publicServices)
+        .map(if (_) "Y" else "N")
+        .getOrElse("")
     )
 
   }
@@ -72,7 +95,7 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
            |<p class="c158"><span class="c6">Codice Fiscale: ${delegate.taxCode}</span></p>
            |<p class="c24"><span class="c6">Amm.ne/Ente/Societ&agrave;: </span></p>
            |<p class="c229"><span class="c6">Qualifica/Posizione: </span></p>
-           |<p class="c255"><span class="c6">e-mail: ${delegate.email}&nbsp;</span></p>
+           |<p class="c255"><span class="c6">e-mail: ${delegate.email.getOrElse("")}&nbsp;</span></p>
            |<p class="c74"><span class="c6">PEC: &nbsp;</span></p>
            |""".stripMargin
       }
@@ -81,5 +104,14 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
 
   private def userToText(user: User): String = {
     s"${user.name} ${user.surname}"
+  }
+
+  private def transcodeInstitutionType(institutionType: String): String = {
+    institutionType.toUpperCase match {
+      case "PA"  => "Pubblica Amministrazione"
+      case "GSP" => "Gestore di servizi pubblici"
+      case "SCP" => "Società a controllo pubblico"
+      case "PT"  => "Partner tecnologico"
+    }
   }
 }

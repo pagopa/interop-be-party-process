@@ -239,19 +239,27 @@ class ProcessApiServiceImpl(
     } yield response
 
     onComplete(result) {
-      case Success(_)                       => onboardingInstitution204
-      case Failure(ex: ContractNotFound)    =>
+      case Success(_)                            => onboardingInstitution204
+      case Failure(ex: ContractNotFound)         =>
         logger.info("Error while onboarding institution {}", onboardingRequest.institutionExternalId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         onboardingInstitution404(errorResponse)
-      case Failure(ex: InstitutionNotFound) =>
+      case Failure(ex: InstitutionNotFound)      =>
         logger.error("Institution having externalId {} not found", onboardingRequest.institutionExternalId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         onboardingInstitution404(errorResponse)
-      case Failure(ex)                      =>
-        logger.error("Error while onboarding institution {}", onboardingRequest.institutionExternalId, ex)
-        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, OnboardingOperationError)
+      case Failure(ex: OnboardingInvalidUpdates) =>
+        logger.error("Invalid institution updates for Institution {}", onboardingRequest.institutionExternalId, ex)
+        val errorResponse: Problem = problemOf(StatusCodes.Conflict, ex)
+        onboardingInstitution409(errorResponse)
+      case Failure(ManagerFoundError)            =>
+        logger.error("Institution already onboarded {}", onboardingRequest.institutionExternalId, ManagerFoundError)
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, ManagerFoundError)
         onboardingInstitution400(errorResponse)
+      case Failure(ex)                           =>
+        logger.error("Error while onboarding institution {}", onboardingRequest.institutionExternalId, ex)
+        val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, OnboardingOperationError)
+        complete(StatusCodes.InternalServerError, errorResponse)
     }
 
   }
@@ -363,6 +371,7 @@ class ProcessApiServiceImpl(
     currentUser: UserRegistryUser
   )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Unit] = {
     for {
+      _                  <- validateOverridingData(onboardingRequest, institution)
       validUsers         <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
       validManager       <- getValidManager(activeManager, validUsers)
       personIdsWithRoles <- Future.traverse(validUsers)(u => addUser(u, onboardingRequest.productId))
@@ -393,9 +402,9 @@ class ProcessApiServiceImpl(
         }
       }
       contractTemplate   <- getFileAsString(onboardingRequest.contract.path)
-      pdf                <- pdfCreator.createContract(contractTemplate, validManager, validUsers, institution)
-      digest             <- signatureService.createDigest(pdf)
-      token              <- partyManagementService.createToken(
+      pdf    <- pdfCreator.createContract(contractTemplate, validManager, validUsers, institution, onboardingRequest)
+      digest <- signatureService.createDigest(pdf)
+      token  <- partyManagementService.createToken(
         PartyManagementDependency.Relationships(relationships),
         digest,
         onboardingRequest.contract.version,
@@ -403,10 +412,29 @@ class ProcessApiServiceImpl(
       )(bearer)
       _ = logger.info("Digest {}", digest)
       onboardingMailParameters <- getOnboardingMailParameters(token.token, currentUser, onboardingRequest)
-      destinationMails = ApplicationConfiguration.destinationMails.getOrElse(Seq(institution.digitalAddress))
+      destinationMails = ApplicationConfiguration.destinationMails.getOrElse(
+        Seq(onboardingRequest.institutionUpdate.flatMap(_.digitalAddress).getOrElse(institution.digitalAddress))
+      )
       _ <- sendOnboardingMail(destinationMails, pdf, onboardingMailParameters)
       _ = logger.info(s"$token")
     } yield ()
+  }
+
+  private def validateOverridingData(
+    onboardingRequest: OnboardingSignedRequest,
+    institution: PartyManagementDependency.Institution
+  ): Future[Unit] = {
+    lazy val areIpaDataMatching: Boolean = onboardingRequest.institutionUpdate.forall(updates =>
+      updates.description.forall(_ == institution.description) &&
+        updates.taxCode.forall(_ == institution.taxCode) &&
+        updates.digitalAddress.forall(_ == institution.digitalAddress) &&
+        updates.zipCode.forall(_ == institution.zipCode) &&
+        updates.address.forall(_ == institution.address)
+    )
+
+    Future
+      .failed(OnboardingInvalidUpdates(institution.externalId))
+      .unlessA(institution.origin != "IPA" || areIpaDataMatching)
   }
 
   private def getOnboardingMailParameters(
