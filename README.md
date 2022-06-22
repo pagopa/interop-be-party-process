@@ -13,10 +13,23 @@ Currently, the available variables are the following:
 
 | Variable name | Notes                                                                                                    |
 | ------------- |----------------------------------------------------------------------------------------------------------|
-| **institutionName** | name of the institution this onboarding is for                                                        |
-| **institutionMail** | digital address of the institution                                                  |
-| **manager** | name, surname and tax code of the institution MANAGER                                   |
-| **users** | a set of rows each containing the name, the surname, the tax code and the role of a user |
+| **institutionName** | name of the institution this onboarding is for |
+| **institutionMail** | digital address of the institution |
+| **institutionTaxCode** | tax code of the institution |
+| **institutionType** | institution's type. One of: _Pubblica Amministrazione_, _Gestore di servizi pubblici_, _Società a controllo pubblico_, _Partner tecnologico_ |
+| **address** | address of the institution |
+| **zipCode** | zip code of the institution |
+| **pricingPlan** | pricing plan used for the institution to onboard on the product |
+| **isPublicServicesManager** | in case of _Gestore di servizi pubblici_ it will contain "Y" or "N", otherwise it will an be empty string |
+| **institutionVatNumber** | vat number of the institution declared for this product |
+| **institutionRecipientCode** | recipient code of the institution declared for this product |
+| **manager** | name, surname and tax code of the institution MANAGER |
+| **delegates** | a set of rows each containing the name, the surname, the tax code and the role of a user |
+| **originId** | id of the institution inside the origin from which has been retrieved |
+| **managerName** | name of the manager |
+| **managerSurname** | surname of the manager |
+| **managerTaxCode** | tax code of the manager |
+| **managerEmail** | email of the manager |
 
 For example:
 
@@ -25,7 +38,7 @@ For example:
 | **institutionName** | Comune di Sessa Aurunca                                                                                                         |
 | **institutionMail** | test@pecmail.com                                                                                                                |
 | **manager** | Mario Rossi, Codice fiscale: MRRSSS                                                                                             |
-| **users** | Gianni Brera, Codice fiscale: MRRSSSSSSS, Ruolo: SUB_DELEGATE<BR/>Mario Sconcerti, Codice fiscale: MRRSSSSSSS, Ruolo: DELEGATE |
+| **delegates** | Gianni Brera, Codice fiscale: MRRSSSSSSS, Ruolo: SUB_DELEGATE<BR/>Mario Sconcerti, Codice fiscale: MRRSSSSSSS, Ruolo: DELEGATE |
 
 :warning: Please mind that, so far, both "`, Codice fiscale: `" and "`Ruolo: `" are still hardcoded in our vanilla templating engine.
 
