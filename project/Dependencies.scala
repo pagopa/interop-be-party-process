@@ -32,7 +32,7 @@ object Dependencies {
 
     lazy val commons     = namespace %% "interop-commons-utils"        % commonsVersion
     lazy val commonsMail = namespace %% "interop-commons-mail-manager" % commonsVersion
-    lazy val commonsFile = namespace %% "interop-commons-file-manager" % commonsVersion
+    lazy val commonsFile = namespace %% "interop-commons-file-manager" % "1.0.1"
     lazy val commonsJWT  = namespace %% "interop-commons-jwt"          % commonsVersion
 
   }
