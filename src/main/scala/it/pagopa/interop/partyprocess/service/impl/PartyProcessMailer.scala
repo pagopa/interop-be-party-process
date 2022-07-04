@@ -27,7 +27,7 @@ trait PartyProcessMailer extends MailEngine { interopMailer: DefaultInteropMaile
       recipients = addresses,
       subject = subject,
       body = TextTemplate(mailTemplate.body, bodyParameters),
-      attachments = Seq(parseAttachmentFile(file))
+      attachments = Seq(parseAttachmentFile(file, bodyParameters.get("productName")))
     )
 
     interopMailer
@@ -39,10 +39,11 @@ trait PartyProcessMailer extends MailEngine { interopMailer: DefaultInteropMaile
       })
   }
 
-  private def parseAttachmentFile(file: File): MailAttachment = {
+  private def parseAttachmentFile(file: File, productName: Option[String]): MailAttachment = {
     val filePath = file.toPath
     val content  = Files.readAllBytes(filePath)
     val mimeType = Files.probeContentType(filePath)
-    MailAttachment("onboarding.pdf", content, mimeType)
+    val prefix = if (productName.isEmpty) "" else productName.toString
+    MailAttachment(prefix + "_accordo_adesione.pdf", content, mimeType)
   }
 }
