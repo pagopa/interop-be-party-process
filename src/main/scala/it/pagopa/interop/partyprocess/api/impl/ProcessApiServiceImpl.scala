@@ -61,7 +61,7 @@ class ProcessApiServiceImpl(
   )(implicit contexts: Seq[(String, String)]): Future[Unit] = {
     mailer.sendMail(mailTemplate.copy(subject = s"${productName}: Accordo di Adesione"))(
       addresses,
-      productName + "_accordo_adesione.pdf",
+      s"${productName}_accordo_adesione.pdf",
       file,
       onboardingMailParameters
     )("onboarding-contract-email")
