@@ -53,10 +53,18 @@ class ProcessApiServiceImpl(
       PartyManagementDependency.RelationshipState.SUSPENDED
     )
 
-  private def sendOnboardingMail(addresses: Seq[String], file: File, onboardingMailParameters: Map[String, String])(
-    implicit contexts: Seq[(String, String)]
-  ): Future[Unit] = {
-    mailer.sendMail(mailTemplate)(addresses, file, onboardingMailParameters)("onboarding-contract-email")
+  private def sendOnboardingMail(
+    addresses: Seq[String],
+    file: File,
+    productName: String,
+    onboardingMailParameters: Map[String, String]
+  )(implicit contexts: Seq[(String, String)]): Future[Unit] = {
+    mailer.sendMail(mailTemplate.copy(subject = productName + ": Accordo di Adesione"))(
+      addresses,
+      productName + "_accordo_adesione.pdf",
+      file,
+      onboardingMailParameters
+    )("onboarding-contract-email")
   }
 
   /** Code: 204, Message: successful operation
@@ -415,7 +423,7 @@ class ProcessApiServiceImpl(
       destinationMails = ApplicationConfiguration.destinationMails.getOrElse(
         Seq(onboardingRequest.institutionUpdate.flatMap(_.digitalAddress).getOrElse(institution.digitalAddress))
       )
-      _ <- sendOnboardingMail(destinationMails, pdf, onboardingMailParameters)
+      _ <- sendOnboardingMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
       _ = logger.info(s"$token")
     } yield ()
   }

@@ -20,7 +20,7 @@ import scala.concurrent.{ExecutionContext, Future}
 object MockMailEngine extends MailEngine {
   override def sendMail(
     mailTemplate: PersistedTemplate
-  )(addresses: Seq[String], file: File, bodyParameters: Map[String, String])(
+  )(addresses: Seq[String], attachmentName: String, file: File, bodyParameters: Map[String, String])(
     emailPurpose: String = "email-notification"
   )(implicit executor: ExecutionContext, contexts: Seq[(String, String)]): Future[Unit] = Future.successful(())
 }
