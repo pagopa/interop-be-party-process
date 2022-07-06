@@ -7,7 +7,7 @@ object Versions {
   lazy val courierVersion        = "3.0.1"
   lazy val dssVersion            = "5.10.1"
   lazy val jacksonVersion        = "2.11.4"
-  lazy val json4sVersion         = "4.0.5"
+  lazy val json4sVersion         = "4.0.4"
   lazy val kamonVersion          = "2.5.5"
   lazy val logbackVersion        = "1.2.11"
   lazy val mustacheVersion       = "0.9.10"
