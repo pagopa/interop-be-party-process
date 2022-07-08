@@ -18,7 +18,7 @@ trait PartyProcessMailer extends MailEngine { interopMailer: DefaultInteropMaile
 
   def sendMail(
     mailTemplate: PersistedTemplate
-  )(addresses: Seq[String], file: File, bodyParameters: Map[String, String])(
+  )(addresses: Seq[String], attachmentName: String, file: File, bodyParameters: Map[String, String])(
     emailPurpose: String = "email-notification"
   )(implicit executor: ExecutionContext, contexts: Seq[(String, String)]): Future[Unit] = {
     val subject = TextTemplate(mailTemplate.subject)
@@ -27,7 +27,7 @@ trait PartyProcessMailer extends MailEngine { interopMailer: DefaultInteropMaile
       recipients = addresses,
       subject = subject,
       body = TextTemplate(mailTemplate.body, bodyParameters),
-      attachments = Seq(parseAttachmentFile(file))
+      attachments = Seq(parseAttachmentFile(file, attachmentName))
     )
 
     interopMailer
@@ -39,10 +39,10 @@ trait PartyProcessMailer extends MailEngine { interopMailer: DefaultInteropMaile
       })
   }
 
-  private def parseAttachmentFile(file: File): MailAttachment = {
+  private def parseAttachmentFile(file: File, attachmentName: String): MailAttachment = {
     val filePath = file.toPath
     val content  = Files.readAllBytes(filePath)
     val mimeType = Files.probeContentType(filePath)
-    MailAttachment("onboarding.pdf", content, mimeType)
+    MailAttachment(attachmentName, content, mimeType)
   }
 }

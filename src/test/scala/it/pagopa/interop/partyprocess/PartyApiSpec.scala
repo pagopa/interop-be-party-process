@@ -41,6 +41,8 @@ import java.util.UUID
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
+import org.scalatest.time.{Seconds, Span, Millis}
+
 trait PartyApiSpec
     extends MockFactory
     with AnyWordSpecLike
@@ -49,6 +51,10 @@ trait PartyApiSpec
     with DefaultJsonProtocol
     with SpecHelper
     with ScalaFutures {
+
+  private val testTimeout: Span                        = Span(3, Seconds)
+  private val checkInterval: Span                      = Span(15, Millis)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(testTimeout, checkInterval)
 
   final val defaultProductTimestamp: OffsetDateTime      = OffsetDateTime.now()
   final val defaultRelationshipTimestamp: OffsetDateTime = OffsetDateTime.now()
