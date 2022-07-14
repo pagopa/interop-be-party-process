@@ -37,6 +37,7 @@ import it.pagopa.interop.partyregistryproxy.client.{api => partyregistryproxyApi
 import it.pagopa.userreg.client.invoker.ApiKeyValue
 import it.pagopa.userreg.client.{api => userregistrymanagement}
 
+import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 import akka.actor.typed.ActorSystem
@@ -44,9 +45,11 @@ import akka.http.scaladsl.server.Route
 import com.atlassian.oai.validator.report.ValidationReport
 
 trait Dependencies {
-  def partyManagementService()(implicit actorSystem: ActorSystem[_]): PartyManagementService =
+  def partyManagementService(
+    blockingEc: ExecutionContextExecutor
+  )(implicit actorSystem: ActorSystem[_]): PartyManagementService =
     PartyManagementServiceImpl(
-      PartyManagementInvoker()(actorSystem.classicSystem),
+      PartyManagementInvoker(blockingEc)(actorSystem.classicSystem),
       partyManagementApi.PartyApi(ApplicationConfiguration.getPartyManagementUrl),
       partyManagementApi.ExternalApi(ApplicationConfiguration.getPartyManagementUrl),
       partyManagementApi.PublicApi(ApplicationConfiguration.getPartyManagementUrl)

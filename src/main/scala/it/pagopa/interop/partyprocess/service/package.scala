@@ -4,6 +4,8 @@ import akka.actor.ActorSystem
 import it.pagopa.interop._
 import it.pagopa._
 
+import scala.concurrent.ExecutionContextExecutor
+
 package object service {
 
   final val replacementEntityId: String = "UNKNOWN"
@@ -13,12 +15,13 @@ package object service {
   type UserRegistryManagementInvoker = userreg.client.invoker.ApiInvoker
 
   object PartyProxyInvoker {
-    def apply()(implicit actorSystem: ActorSystem): PartyProxyInvoker = partyregistryproxy.client.invoker.ApiInvoker()
+    def apply()(implicit actorSystem: ActorSystem): PartyProxyInvoker =
+      partyregistryproxy.client.invoker.ApiInvoker()
   }
 
   object PartyManagementInvoker {
-    def apply()(implicit actorSystem: ActorSystem): PartyManagementInvoker =
-      partymanagement.client.invoker.ApiInvoker(partymanagement.client.api.EnumsSerializers.all)
+    def apply(blockingEc: ExecutionContextExecutor)(implicit actorSystem: ActorSystem): PartyManagementInvoker =
+      partymanagement.client.invoker.ApiInvoker(partymanagement.client.api.EnumsSerializers.all, blockingEc)
   }
 
   object UserRegistryManagementInvoker {
