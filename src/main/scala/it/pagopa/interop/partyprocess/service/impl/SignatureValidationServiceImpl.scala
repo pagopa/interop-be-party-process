@@ -54,12 +54,10 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
   }
 
   def verifySignature(documentValidator: SignedDocumentValidator): ValidatedNel[SignatureValidationError, Unit] = {
-    val validation: Either[SignatureValidationError, Unit] = {
-      for {
-        reports   <- validateDocument(documentValidator)
-        validated <- isValid(reports)
-      } yield validated
-    }
+    val validation: Either[SignatureValidationError, Unit] = for {
+      reports   <- validateDocument(documentValidator)
+      validated <- isValid(reports)
+    } yield validated
 
     validation match {
       case Left(throwable)  => throwable.invalidNel[Unit]

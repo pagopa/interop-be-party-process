@@ -19,6 +19,8 @@ import java.io.File
 import java.nio.file.Files
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
+import it.pagopa.interop.partymanagement.client.model.TokenInfo
+import java.util.UUID
 
 class PublicApiServiceImpl(
   partyManagementService: PartyManagementService,
@@ -52,17 +54,18 @@ class PublicApiServiceImpl(
   ): Route = {
     logger.info("Confirm onboarding of token identified with {}", tokenId)
     val result: Future[Unit] = for {
-      tokenIdUUID <- tokenId.toFutureUUID
-      token       <- partyManagementService.verifyToken(tokenIdUUID)
-      legalUsers  <- Future.traverse(token.legals)(legal => userRegistryManagementService.getUserById(legal.partyId))
-      validator   <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
-      _ <- SignatureValidationService.validateSignature(signatureValidationService.isDocumentSigned(validator))
-      _ <- SignatureValidationService.validateSignature(
+      _ <- tokenId.toFutureUUID
+      token = TokenInfo(id = UUID.randomUUID(), checksum = "", legals = Seq.empty)
+      legalUsers <- Future.successful(Seq.empty)
+      validator  <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
+      _          <- SignatureValidationService.validateSignature(signatureValidationService.isDocumentSigned(validator))
+      _          <- SignatureValidationService.validateSignature(
         signatureValidationService.verifySignature(validator),
         signatureValidationService.verifyDigest(validator, token.checksum),
         signatureValidationService.verifyManagerTaxCode(validator, legalUsers)
       )
-      _ <- partyManagementService.consumeToken(token.id, contract)
+      _          <- Future.traverse(token.legals)(legal => userRegistryManagementService.getUserById(legal.partyId))
+      _          <- partyManagementService.consumeToken(token.id, contract)
     } yield ()
 
     onComplete(result) {

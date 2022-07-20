@@ -42,6 +42,9 @@ import scala.concurrent.ExecutionContext
 import akka.actor.typed.ActorSystem
 import akka.http.scaladsl.server.Route
 import com.atlassian.oai.validator.report.ValidationReport
+import eu.europa.esig.dss.tsl.source.LOTLSource
+import eu.europa.esig.dss.spi.tsl.TrustedListsCertificateSource
+import eu.europa.esig.dss.tsl.job.TLValidationJob
 
 trait Dependencies {
   def partyManagementService()(implicit actorSystem: ActorSystem[_]): PartyManagementService =
@@ -71,7 +74,16 @@ trait Dependencies {
     if (ApplicationConfiguration.signatureValidationEnabled) SignatureValidationServiceImpl
     else PassthroughSignatureValidationService
 
-  def signatureService(): SignatureService = SignatureServiceImpl
+  def signatureService()(implicit ec: ExecutionContext): Future[SignatureService] = {
+
+    val europeanLOTL: LOTLSource      = SignatureService.getEuropeanLOTL
+    val trustedListsCertificateSource = new TrustedListsCertificateSource()
+
+    val job: TLValidationJob = SignatureService.getJob(europeanLOTL)
+    job.setTrustedListCertificateSource(trustedListsCertificateSource)
+    // TODO this must be managed with cronjob
+    Future(job.offlineRefresh()).map(_ => SignatureServiceImpl(trustedListsCertificateSource))
+  }
 
   private val mailer: MailEngine = new PartyProcessMailer with DefaultInteropMailer with CourierMailer
 
