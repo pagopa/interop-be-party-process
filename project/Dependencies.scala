@@ -46,7 +46,7 @@ object Dependencies {
     lazy val dssUtilsApacheCommons = namespace % "dss-utils-apache-commons" % dssVersion
     lazy val dssService            = namespace % "dss-service"              % dssVersion
     lazy val dssTlsValidation      = namespace % "dss-tsl-validation"       % dssVersion
-
+    lazy val dssTCrlParserStreams  = namespace % "dss-crl-parser-stream"    % dssVersion
   }
 
   private[this] object mustache {
@@ -108,6 +108,7 @@ object Dependencies {
       europa.dssUtilsApacheCommons % Compile,
       europa.dssService            % Compile,
       europa.dssTlsValidation      % Compile,
+      europa.dssTCrlParserStreams  % Compile,
       kamon.bundle                 % Compile,
       kamon.prometheus             % Compile,
       logback.classic              % Compile,

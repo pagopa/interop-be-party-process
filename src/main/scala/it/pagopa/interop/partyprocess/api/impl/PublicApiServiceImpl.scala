@@ -2,7 +2,7 @@ package it.pagopa.interop.partyprocess.api.impl
 
 import akka.http.scaladsl.marshalling.ToEntityMarshaller
 import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.server.Directives.onComplete
+import akka.http.scaladsl.server.Directives.{onComplete, withRequestTimeout}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import com.typesafe.scalalogging.Logger
@@ -11,6 +11,7 @@ import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.ResourceConflictError
 import it.pagopa.interop.partymanagement.client.model.{Problem => _}
 import it.pagopa.interop.partyprocess.api.PublicApiService
+import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.partyprocess.error.PartyProcessErrors._
 import it.pagopa.interop.partyprocess.model._
 import it.pagopa.interop.partyprocess.service._
@@ -49,20 +50,21 @@ class PublicApiServiceImpl(
   override def confirmOnboarding(tokenId: String, contract: (FileInfo, File))(implicit
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     contexts: Seq[(String, String)]
-  ): Route = {
+  ): Route = withRequestTimeout(ApplicationConfiguration.confirmTokenTimeout) {
     logger.info("Confirm onboarding of token identified with {}", tokenId)
     val result: Future[Unit] = for {
       tokenIdUUID <- tokenId.toFutureUUID
       token       <- partyManagementService.verifyToken(tokenIdUUID)
       legalUsers  <- Future.traverse(token.legals)(legal => userRegistryManagementService.getUserById(legal.partyId))
       validator   <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
-      _ <- SignatureValidationService.validateSignature(signatureValidationService.isDocumentSigned(validator))
-      _ <- SignatureValidationService.validateSignature(
-        signatureValidationService.verifySignature(validator),
+      _       <- SignatureValidationService.validateSignature(signatureValidationService.isDocumentSigned(validator))
+      reports <- signatureValidationService.validateDocument(validator)
+      _       <- SignatureValidationService.validateSignature(
+        signatureValidationService.verifySignature(reports),
         signatureValidationService.verifyDigest(validator, token.checksum),
-        signatureValidationService.verifyManagerTaxCode(validator, legalUsers)
+        signatureValidationService.verifyManagerTaxCode(reports, legalUsers)
       )
-      _ <- partyManagementService.consumeToken(token.id, contract)
+      _       <- partyManagementService.consumeToken(token.id, contract)
     } yield ()
 
     onComplete(result) {
