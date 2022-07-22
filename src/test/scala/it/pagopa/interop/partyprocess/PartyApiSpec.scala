@@ -7,7 +7,12 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.directives.FileInfo
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import cats.implicits.catsSyntaxValidatedId
+import eu.europa.esig.dss.detailedreport.jaxb.XmlDetailedReport
+import eu.europa.esig.dss.diagnostic.jaxb.XmlDiagnosticData
+import eu.europa.esig.dss.simplereport.jaxb.XmlSimpleReport
 import eu.europa.esig.dss.validation.SignedDocumentValidator
+import eu.europa.esig.dss.validation.reports.Reports
+import eu.europa.esig.validationreport.jaxb.ValidationReportType
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.{ResourceConflictError, ResourceNotFoundError}
 import it.pagopa.interop.partymanagement.client.model.{
   InstitutionSeed,
@@ -39,9 +44,8 @@ import java.nio.file.Paths
 import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
-
-import org.scalatest.time.{Seconds, Span, Millis}
+import scala.concurrent.{Await, ExecutionContext, Future}
+import org.scalatest.time.{Millis, Seconds, Span}
 
 trait PartyApiSpec
     extends MockFactory
@@ -1858,6 +1862,9 @@ trait PartyApiSpec
       val relationshipIdDelegate: UUID = UUID.randomUUID()
       val delegateTaxCode: String      = "TINIT-DELEGATE"
 
+      val reports: Reports =
+        new Reports(new XmlDiagnosticData(), new XmlDetailedReport(), new XmlSimpleReport(), new ValidationReportType())
+
       val token: TokenInfo =
         TokenInfo(
           id = tokenId,
@@ -1882,7 +1889,13 @@ trait PartyApiSpec
         .once()
 
       (mockSignatureValidationService
-        .verifySignature(_: SignedDocumentValidator))
+        .validateDocument(_: SignedDocumentValidator)(_: ExecutionContext))
+        .expects(*, *)
+        .returning(Future.successful(reports))
+        .once()
+
+      (mockSignatureValidationService
+        .verifySignature(_: Reports))
         .expects(*)
         .returning(().validNel[SignatureValidationError])
         .once()
@@ -1894,7 +1907,7 @@ trait PartyApiSpec
         .once()
 
       (mockSignatureValidationService
-        .verifyManagerTaxCode(_: SignedDocumentValidator, _: Seq[UserRegistryUser]))
+        .verifyManagerTaxCode(_: Reports, _: Seq[UserRegistryUser]))
         .expects(*, *)
         .returning(().validNel[SignatureValidationError])
         .once()

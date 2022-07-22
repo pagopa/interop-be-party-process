@@ -2,6 +2,7 @@ package it.pagopa.interop.partyprocess.common.system
 
 import com.typesafe.config.{Config, ConfigFactory}
 
+import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.util.Try
 
 object ApplicationConfiguration {
@@ -77,5 +78,8 @@ object ApplicationConfiguration {
   val storageContainer: String = config.getString("party-process.storage.container")
 
   val jwtAudience: Set[String] = config.getString("party-process.jwt.audience").split(",").toSet.filter(_.nonEmpty)
+
+  val confirmTokenTimeout: FiniteDuration =
+    Duration.fromNanos(config.getDuration("party-process.confirm-token-timeout").toNanos)
 
 }

@@ -11,9 +11,9 @@ import it.pagopa.interop.partyprocess.error.ValidationErrors._
 import it.pagopa.interop.partyprocess.model.UserRegistryUser
 import it.pagopa.interop.partyprocess.service.SignatureValidationService
 
+import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.IterableHasAsScala
 import scala.util.matching.Regex
-import scala.util.{Failure, Success, Try}
 
 case object SignatureValidationServiceImpl extends SignatureValidationService {
 
@@ -37,11 +37,9 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
     val signs: List[AdvancedSignature] = documentValidator.getSignatures.asScala.toList
 
     val isDigestVerified: Boolean = signs.exists { sign =>
-      val incomingOriginal: DSSDocument = documentValidator.getOriginalDocuments(sign.getId).get(0)
-      val incomingDigest: String        = incomingOriginal.getDigest(DigestAlgorithm.SHA256)
-
-      originalDigest == incomingDigest
-
+      val incomingOriginals: List[DSSDocument] = documentValidator.getOriginalDocuments(sign.getId).asScala.toList
+      val incomingDigests: List[String]        = incomingOriginals.map(_.getDigest(DigestAlgorithm.SHA256))
+      incomingDigests.contains(originalDigest)
     }
 
     val validation = Either.cond(isDigestVerified, (), InvalidContractDigest)
@@ -53,25 +51,18 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
 
   }
 
-  def verifySignature(documentValidator: SignedDocumentValidator): ValidatedNel[SignatureValidationError, Unit] = {
-    val validation: Either[SignatureValidationError, Unit] = for {
-      reports   <- validateDocument(documentValidator)
-      validated <- isValid(reports)
-    } yield validated
-
-    validation match {
+  def verifySignature(reports: Reports): ValidatedNel[SignatureValidationError, Unit] =
+    isValid(reports) match {
       case Left(throwable)  => throwable.invalidNel[Unit]
       case Right(validated) => validated.validNel[SignatureValidationError]
     }
-  }
 
   def verifyManagerTaxCode(
-    documentValidator: SignedDocumentValidator,
+    reports: Reports,
     legals: Seq[UserRegistryUser]
   ): ValidatedNel[SignatureValidationError, Unit] = {
 
     val validation: Either[SignatureValidationError, Unit] = for {
-      reports          <- validateDocument(documentValidator)
       signatureTaxCode <- extractTaxCode(reports)
       validated <- Either.cond(legals.exists(legal => legal.taxCode == signatureTaxCode), (), InvalidSignatureTaxCode)
     } yield validated
@@ -82,14 +73,10 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
     }
   }
 
-  private def validateDocument(
-    documentValidator: SignedDocumentValidator
-  ): Either[SignatureValidationError, Reports] = {
-    Try(documentValidator.validateDocument()) match {
-      case Success(value) => Right(value)
-      case Failure(ex)    => Left(DocumentValidationFail(ex.getMessage))
+  def validateDocument(documentValidator: SignedDocumentValidator)(implicit ec: ExecutionContext): Future[Reports] =
+    Future(documentValidator.validateDocument()).recoverWith { case ex =>
+      Future.failed(DocumentValidationFail(ex.getMessage))
     }
-  }
 
   private def extractTaxCode(reports: Reports): Either[SignatureValidationError, String] = {
     for {

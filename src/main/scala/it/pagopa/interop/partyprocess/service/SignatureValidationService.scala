@@ -4,11 +4,12 @@ import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, Validated, ValidatedNel}
 import cats.implicits._
 import eu.europa.esig.dss.validation.SignedDocumentValidator
+import eu.europa.esig.dss.validation.reports.Reports
 import it.pagopa.interop.partyprocess.error.PartyProcessErrors.InvalidSignature
 import it.pagopa.interop.partyprocess.error.SignatureValidationError
 import it.pagopa.interop.partyprocess.model.UserRegistryUser
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 trait SignatureValidationService {
 
@@ -19,12 +20,14 @@ trait SignatureValidationService {
     originalDigest: String
   ): ValidatedNel[SignatureValidationError, Unit]
 
-  def verifySignature(documentValidator: SignedDocumentValidator): ValidatedNel[SignatureValidationError, Unit]
+  def verifySignature(reports: Reports): ValidatedNel[SignatureValidationError, Unit]
 
   def verifyManagerTaxCode(
-    documentValidator: SignedDocumentValidator,
+    reports: Reports,
     legals: Seq[UserRegistryUser]
   ): ValidatedNel[SignatureValidationError, Unit]
+
+  def validateDocument(documentValidator: SignedDocumentValidator)(implicit ec: ExecutionContext): Future[Reports]
 
 }
 

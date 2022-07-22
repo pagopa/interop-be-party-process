@@ -16,7 +16,8 @@ import akka.actor.typed.scaladsl.Behaviors
 import it.pagopa.interop.commons.logging.renderBuildInfo
 import com.typesafe.scalalogging.Logger
 import buildinfo.BuildInfo
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+import akka.actor.typed.DispatcherSelector
 
 object Main extends App with CORSSupport with Dependencies {
 
@@ -28,6 +29,8 @@ object Main extends App with CORSSupport with Dependencies {
     Behaviors.setup[Nothing] { context =>
       implicit val actorSystem: ActorSystem[_]        = context.system
       implicit val executionContext: ExecutionContext = actorSystem.executionContext
+      val selector: DispatcherSelector                = DispatcherSelector.fromConfig("futures-dispatcher")
+      val blockingEc: ExecutionContextExecutor        = actorSystem.dispatchers.lookup(selector)
 
       Kamon.init()
       AkkaManagement.get(actorSystem.classicSystem).start()
@@ -37,13 +40,13 @@ object Main extends App with CORSSupport with Dependencies {
         jwtReader    <- getJwtValidator()
         fileManager  <- getFileManager()
         mailTemplate <- getMailTemplate(fileManager)
-        partyManService  = partyManagementService()
-        relService       = relationshipService(partyManService)
-        prodService      = productService(partyManService)
-        extApi           = externalApi(partyManService, relService, prodService, jwtReader)
-        partyProcService = partyProcessService()
-        userreg          = userRegistryManagementService()
-        sigService <- signatureService()
+        partyManService      = partyManagementService(blockingEc)
+        relService           = relationshipService(partyManService)
+        prodService          = productService(partyManService)
+        extApi               = externalApi(partyManService, relService, prodService, jwtReader)
+        partyProcService     = partyProcessService()
+        userreg              = userRegistryManagementService()
+        sigService           = signatureService()
         sigValidationService = signatureValidationService()
         process              = processApi(
           partyManService,
