@@ -25,7 +25,6 @@ import eu.europa.esig.dss.tsl.job.TLValidationJob
 import eu.europa.esig.dss.tsl.source.LOTLSource
 import eu.europa.esig.dss.tsl.sync.AcceptAllStrategy
 import eu.europa.esig.dss.validation.{CommonCertificateVerifier, SignedDocumentValidator}
-import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
 import com.typesafe.scalalogging.Logger
 
 import java.io.File
@@ -49,10 +48,12 @@ object SignatureService {
 
   def getEuropeanLOTL: LOTLSource = {
     val lotlSource: LOTLSource = new LOTLSource()
-    lotlSource.setUrl(ApplicationConfiguration.euListOfTrustedListsURL)
+    lotlSource.setUrl("https://ec.europa.eu/tools/lotl/eu-lotl.xml")
     lotlSource.setCertificateSource(new CommonCertificateSource())
     lotlSource.setSigningCertificatesAnnouncementPredicate(
-      new OfficialJournalSchemeInformationURI(ApplicationConfiguration.euOfficialJournalUrl)
+      new OfficialJournalSchemeInformationURI(
+        "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv:OJ.C_.2019.276.01.0001.01.ENG"
+      )
     )
     lotlSource.setPivotSupport(true)
     lotlSource

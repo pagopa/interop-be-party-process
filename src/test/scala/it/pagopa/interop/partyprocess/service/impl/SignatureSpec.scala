@@ -1,25 +1,25 @@
 package it.pagopa.interop.partyprocess.service.impl
 
-import org.scalatest.wordspec.AnyWordSpecLike
-import org.scalatest.matchers.should.Matchers
-import scala.concurrent.ExecutionContext.Implicits.global
-import java.nio.file.{Files, Paths, Path}
-import scala.concurrent.Await
-import scala.concurrent.duration._
-import it.pagopa.interop.partyprocess.server.impl.Dependencies
-import it.pagopa.interop.partyprocess.service.SignatureService
-import eu.europa.esig.dss.validation.CommonCertificateVerifier
-import eu.europa.esig.dss.spi.x509.aia.DefaultAIASource
-import eu.europa.esig.dss.service.ocsp.OnlineOCSPSource
-import eu.europa.esig.dss.service.crl.OnlineCRLSource
 import eu.europa.esig.dss.model.InMemoryDocument
-import eu.europa.esig.dss.validation.SignedDocumentValidator
-import eu.europa.esig.dss.tsl.source.LOTLSource
+import eu.europa.esig.dss.service.crl.OnlineCRLSource
+import eu.europa.esig.dss.service.ocsp.OnlineOCSPSource
 import eu.europa.esig.dss.spi.tsl.TrustedListsCertificateSource
+import eu.europa.esig.dss.spi.x509.aia.DefaultAIASource
 import eu.europa.esig.dss.tsl.job.TLValidationJob
-import scala.concurrent.Future
+import eu.europa.esig.dss.tsl.source.LOTLSource
+import eu.europa.esig.dss.validation.{CommonCertificateVerifier, SignedDocumentValidator}
+import it.pagopa.interop.partyprocess.model.UserRegistryUser
+import it.pagopa.interop.partyprocess.service.{SignatureService, SignatureValidationService}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
-class SignatureSpec extends AnyWordSpecLike with Matchers with Dependencies {
+import java.nio.file.{Files, Path, Paths}
+import java.util.UUID
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
+
+class SignatureSpec extends AnyWordSpecLike with Matchers {
 
   def trustedListsCertificateSourceJob(): Future[TrustedListsCertificateSource] = {
     val europeanLOTL: LOTLSource      = SignatureService.getEuropeanLOTL
@@ -38,25 +38,48 @@ class SignatureSpec extends AnyWordSpecLike with Matchers with Dependencies {
     certificateVerifier
   }
 
-  def docValidator(certificateVerifier: CommonCertificateVerifier): SignedDocumentValidator = {
-    println("Creating Validator")
-    val documentValidator = SignedDocumentValidator.fromDocument(new InMemoryDocument(documentBytes))
-    documentValidator.setCertificateVerifier(certificateVerifier)
-    documentValidator
-  }
-
-  val documentPath: Path         = Paths.get("path to document")
-  val documentBytes: Array[Byte] = Files.readAllBytes(documentPath)
-
   "signature must work" in {
-    assert(documentBytes.nonEmpty)
 
-    val validator: Future[SignedDocumentValidator] =
-      trustedListsCertificateSourceJob().map(certificateViewer).map(docValidator)
+    val unsignedDocumentPath: Path = Paths.get("unsigned doc path")
 
-    val actualValidator = Await.result(validator, 10.minutes)
+    val signedDocumentPath: Path = Paths.get("signed doc path")
 
-    println(actualValidator.validateDocument())
+    val signedDocumentBytes: Array[Byte] = Files.readAllBytes(signedDocumentPath)
+
+    assert(signedDocumentBytes.nonEmpty)
+
+    def docValidator(certificateVerifier: CommonCertificateVerifier): SignedDocumentValidator = {
+      println("Creating Validator")
+      val documentValidator = SignedDocumentValidator.fromDocument(new InMemoryDocument(signedDocumentBytes))
+      documentValidator.setCertificateVerifier(certificateVerifier)
+      documentValidator
+    }
+
+    val testResult: Future[String] = for {
+      tl <- trustedListsCertificateSourceJob()
+      signatureService = SignatureServiceImpl(tl)
+      unsignedDigest <- signatureService.createDigest(unsignedDocumentPath.toFile)
+      _         = println(s"Unsigned Digest: $unsignedDigest")
+      validator = docValidator(certificateViewer(tl))
+      _ <- SignatureValidationService.validateSignature(SignatureValidationServiceImpl.isDocumentSigned(validator))
+      reports <- SignatureValidationServiceImpl.validateDocument(validator)
+      _       <-
+        SignatureValidationService.validateSignature(
+          SignatureValidationServiceImpl.verifySignature(reports),
+          SignatureValidationServiceImpl.verifyDigest(validator, unsignedDigest),
+          SignatureValidationServiceImpl.verifyManagerTaxCode(
+            reports,
+            Seq(
+              UserRegistryUser(id = UUID.randomUUID(), name = "", surname = "", taxCode = "tax code 1"),
+              UserRegistryUser(id = UUID.randomUUID(), name = "", surname = "", taxCode = "tax code 2")
+            )
+          )
+        )
+    } yield "OK"
+
+    val result = Await.result(testResult, Duration.Inf)
+
+    assert(result == "OK")
   }
 
 }
