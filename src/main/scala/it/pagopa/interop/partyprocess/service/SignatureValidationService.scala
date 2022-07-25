@@ -31,6 +31,8 @@ trait SignatureValidationService {
 
   def validateDocument(documentValidator: SignedDocumentValidator)(implicit ec: ExecutionContext): Future[Reports]
 
+  def verifySignatureForm(documentValidator: SignedDocumentValidator): ValidatedNel[SignatureValidationError, Unit]
+
 }
 
 object SignatureValidationService {

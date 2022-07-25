@@ -68,6 +68,7 @@ class PublicApiServiceImpl(
       _ <- SignatureValidationService.validateSignature(signatureValidationService.verifyOriginalDocument(validator))
       reports <- signatureValidationService.validateDocument(validator)
       _       <- SignatureValidationService.validateSignature(
+        signatureValidationService.verifySignatureForm(validator),
         signatureValidationService.verifySignature(reports),
         signatureValidationService.verifyDigest(validator, token.checksum),
         signatureValidationService.verifyManagerTaxCode(reports, legalUsers)

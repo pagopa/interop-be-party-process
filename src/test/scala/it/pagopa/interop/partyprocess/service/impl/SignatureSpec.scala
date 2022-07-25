@@ -38,7 +38,7 @@ class SignatureSpec extends AnyWordSpecLike with Matchers with Dependencies {
           SignatureValidationServiceImpl.verifyOriginalDocument(validator),
           SignatureValidationServiceImpl.verifySignature(reports),
           SignatureValidationServiceImpl.verifyDigest(validator, unsignedDigest),
-          SignatureValidationServiceImpl.verifyManagerTaxCode(
+          SignatureValidationServiceImpl.verifyManagerTaxCode( // To pass this test taxCode must be set with real ones
             reports,
             Seq(
               UserRegistryUser(id = UUID.randomUUID(), name = "", surname = "", taxCode = "tax code 1"),
@@ -50,7 +50,7 @@ class SignatureSpec extends AnyWordSpecLike with Matchers with Dependencies {
 
     val result = Await.result(testResult, Duration.Inf)
 
-    assert(result == "OK")
+    result shouldBe "OK"
   }
 
 }

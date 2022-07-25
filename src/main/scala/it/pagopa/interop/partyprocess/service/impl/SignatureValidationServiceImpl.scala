@@ -2,7 +2,7 @@ package it.pagopa.interop.partyprocess.service.impl
 
 import cats.data.ValidatedNel
 import cats.implicits._
-import eu.europa.esig.dss.enumerations.{DigestAlgorithm, Indication}
+import eu.europa.esig.dss.enumerations.{DigestAlgorithm, Indication, SignatureForm}
 import eu.europa.esig.dss.model.DSSDocument
 import eu.europa.esig.dss.validation.reports.Reports
 import eu.europa.esig.dss.validation.{AdvancedSignature, SignedDocumentValidator}
@@ -128,6 +128,19 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
       taxCodes   <- subjectSNs.traverse(extractTaxCodeFromSubjectSN)
     } yield taxCodes
 
+  }
+
+  def verifySignatureForm(documentValidator: SignedDocumentValidator): ValidatedNel[SignatureValidationError, Unit] = {
+    val signatures: List[AdvancedSignature]                = documentValidator.getSignatures.asScala.toList
+    val invalidSignatureForms: List[SignatureForm]         =
+      signatures.map(_.getSignatureForm).filter(_ != SignatureForm.CAdES)
+    val validation: Either[SignatureValidationError, Unit] =
+      Either.cond(invalidSignatureForms.isEmpty, (), InvalidSignatureForms(invalidSignatureForms.map(_.toString)))
+
+    validation match {
+      case Left(throwable)  => throwable.invalidNel[Unit]
+      case Right(validated) => validated.validNel[SignatureValidationError]
+    }
   }
 
   private def isValid(reports: Reports): Either[SignatureValidationError, Unit] = {

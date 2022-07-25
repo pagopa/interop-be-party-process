@@ -48,4 +48,7 @@ case object PassthroughSignatureValidationService extends SignatureValidationSer
     Future.successful(reports)
   }
 
+  override def verifySignatureForm(
+    documentValidator: SignedDocumentValidator
+  ): ValidatedNel[SignatureValidationError, Unit] = fakeValidationResult
 }

@@ -1901,6 +1901,12 @@ trait PartyApiSpec
         .once()
 
       (mockSignatureValidationService
+        .verifySignatureForm(_: SignedDocumentValidator))
+        .expects(*)
+        .returning(().validNel[SignatureValidationError])
+        .once()
+
+      (mockSignatureValidationService
         .verifyOriginalDocument(_: SignedDocumentValidator))
         .expects(*)
         .returning(().validNel[SignatureValidationError])
