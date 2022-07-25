@@ -23,4 +23,7 @@ object ValidationErrors {
 
   case object SignatureNotFound extends SignatureValidationError("1007", "No signature found")
 
+  case object OriginalDocumentNotFound
+      extends SignatureValidationError("1008", "Original document information not found")
+
 }

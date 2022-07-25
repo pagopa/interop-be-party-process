@@ -1,11 +1,9 @@
 package it.pagopa.interop.partyprocess.service
 
-import eu.europa.esig.dss.service.crl.OnlineCRLSource
+import com.typesafe.scalalogging.Logger
 import eu.europa.esig.dss.service.http.commons.{CommonsDataLoader, FileCacheDataLoader}
-import eu.europa.esig.dss.service.ocsp.OnlineOCSPSource
 import eu.europa.esig.dss.spi.client.http.{DSSFileLoader, IgnoreDataLoader}
 import eu.europa.esig.dss.spi.x509.CommonCertificateSource
-import eu.europa.esig.dss.spi.x509.aia.DefaultAIASource
 import eu.europa.esig.dss.tsl.alerts.detections.{
   LOTLLocationChangeDetection,
   OJUrlChangeDetection,
@@ -24,8 +22,8 @@ import eu.europa.esig.dss.tsl.function.OfficialJournalSchemeInformationURI
 import eu.europa.esig.dss.tsl.job.TLValidationJob
 import eu.europa.esig.dss.tsl.source.LOTLSource
 import eu.europa.esig.dss.tsl.sync.AcceptAllStrategy
-import eu.europa.esig.dss.validation.{CommonCertificateVerifier, SignedDocumentValidator}
-import com.typesafe.scalalogging.Logger
+import eu.europa.esig.dss.validation.SignedDocumentValidator
+import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
 
 import java.io.File
 import java.util
@@ -40,20 +38,12 @@ object SignatureService {
 
   val logger: Logger = Logger(this.getClass())
 
-  final val certificateVerifier: CommonCertificateVerifier = new CommonCertificateVerifier
-
-  certificateVerifier.setAIASource(new DefaultAIASource())
-  certificateVerifier.setOcspSource(new OnlineOCSPSource())
-  certificateVerifier.setCrlSource(new OnlineCRLSource())
-
   def getEuropeanLOTL: LOTLSource = {
     val lotlSource: LOTLSource = new LOTLSource()
-    lotlSource.setUrl("https://ec.europa.eu/tools/lotl/eu-lotl.xml")
+    lotlSource.setUrl(ApplicationConfiguration.euListOfTrustedListsURL)
     lotlSource.setCertificateSource(new CommonCertificateSource())
     lotlSource.setSigningCertificatesAnnouncementPredicate(
-      new OfficialJournalSchemeInformationURI(
-        "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv:OJ.C_.2019.276.01.0001.01.ENG"
-      )
+      new OfficialJournalSchemeInformationURI(ApplicationConfiguration.euOfficialJournalUrl)
     )
     lotlSource.setPivotSupport(true)
     lotlSource

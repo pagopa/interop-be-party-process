@@ -15,6 +15,8 @@ trait SignatureValidationService {
 
   def isDocumentSigned(documentValidator: SignedDocumentValidator): ValidatedNel[SignatureValidationError, Unit]
 
+  def verifyOriginalDocument(documentValidator: SignedDocumentValidator): ValidatedNel[SignatureValidationError, Unit]
+
   def verifyDigest(
     documentValidator: SignedDocumentValidator,
     originalDigest: String

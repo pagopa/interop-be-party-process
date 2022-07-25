@@ -65,13 +65,14 @@ class PublicApiServiceImpl(
       legalUsers <- Future.traverse(legalsRelationships)(legal => userRegistryManagementService.getUserById(legal.from))
       validator  <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
       _          <- SignatureValidationService.validateSignature(signatureValidationService.isDocumentSigned(validator))
-      reports    <- signatureValidationService.validateDocument(validator)
-      _          <- SignatureValidationService.validateSignature(
+      _ <- SignatureValidationService.validateSignature(signatureValidationService.verifyOriginalDocument(validator))
+      reports <- signatureValidationService.validateDocument(validator)
+      _       <- SignatureValidationService.validateSignature(
         signatureValidationService.verifySignature(reports),
         signatureValidationService.verifyDigest(validator, token.checksum),
         signatureValidationService.verifyManagerTaxCode(reports, legalUsers)
       )
-      _          <- partyManagementService.consumeToken(token.id, contract)
+      _       <- partyManagementService.consumeToken(token.id, contract)
     } yield ()
 
     onComplete(result) {

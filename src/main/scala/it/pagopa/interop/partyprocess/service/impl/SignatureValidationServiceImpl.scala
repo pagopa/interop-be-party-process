@@ -30,6 +30,26 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
     }
   }
 
+  def verifyOriginalDocument(
+    documentValidator: SignedDocumentValidator
+  ): ValidatedNel[SignatureValidationError, Unit] = {
+
+    val signs: List[AdvancedSignature] = documentValidator.getSignatures.asScala.toList
+
+    val existOriginalDocuments: Boolean = signs.foldLeft(true) { (res, sign) =>
+      val original: List[DSSDocument] = documentValidator.getOriginalDocuments(sign.getId).asScala.toList
+      res && original.nonEmpty
+    }
+
+    val validation = Either.cond(existOriginalDocuments, (), OriginalDocumentNotFound)
+
+    validation match {
+      case Left(throwable)  => throwable.invalidNel[Unit]
+      case Right(validated) => validated.validNel[SignatureValidationError]
+    }
+
+  }
+
   def verifyDigest(
     documentValidator: SignedDocumentValidator,
     originalDigest: String
@@ -65,7 +85,7 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
 
     val validation: Either[SignatureValidationError, Unit] = for {
       signatureTaxCodes <- extractTaxCodes(reports)
-      validated         <- Either.cond(didLegalsSign(legals, signatureTaxCodes), (), InvalidSignatureTaxCode)
+      validated         <- Either.cond(isSignedByLegals(legals, signatureTaxCodes), (), InvalidSignatureTaxCode)
     } yield validated
 
     validation match {
@@ -74,7 +94,7 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
     }
   }
 
-  def didLegalsSign(legals: Seq[UserRegistryUser], signatureTaxCodes: List[String]): Boolean = {
+  def isSignedByLegals(legals: Seq[UserRegistryUser], signatureTaxCodes: List[String]): Boolean = {
     val legalsTaxCodes: Seq[String] = legals.map(_.taxCode)
 
     signatureTaxCodes.nonEmpty &&
