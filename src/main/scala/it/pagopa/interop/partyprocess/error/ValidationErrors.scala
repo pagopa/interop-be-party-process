@@ -9,6 +9,12 @@ object ValidationErrors {
 
   case object InvalidDocumentSignature extends SignatureValidationError("1002", s"Document signature is invalid")
 
+  final case class InvalidSignatureForms(invalidSignatureForms: List[String])
+      extends SignatureValidationError(
+        "1003",
+        s"Only CAdES signature form is admitted. Invalid signatures forms detected: ${invalidSignatureForms.mkString(",")}"
+      )
+
   case object InvalidSignatureTaxCode
       extends SignatureValidationError(
         "1004",
@@ -22,5 +28,8 @@ object ValidationErrors {
       extends SignatureValidationError("1006", "No tax code has been found in digital signature")
 
   case object SignatureNotFound extends SignatureValidationError("1007", "No signature found")
+
+  case object OriginalDocumentNotFound
+      extends SignatureValidationError("1008", "Original document information not found")
 
 }

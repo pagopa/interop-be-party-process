@@ -2,10 +2,11 @@ package it.pagopa.interop.partyprocess.service.impl
 
 import cats.data.ValidatedNel
 import cats.implicits._
-import eu.europa.esig.dss.enumerations.{DigestAlgorithm, Indication}
+import eu.europa.esig.dss.enumerations.{DigestAlgorithm, Indication, SignatureForm}
 import eu.europa.esig.dss.model.DSSDocument
 import eu.europa.esig.dss.validation.reports.Reports
 import eu.europa.esig.dss.validation.{AdvancedSignature, SignedDocumentValidator}
+import eu.europa.esig.validationreport.jaxb.SignatureValidationReportType
 import it.pagopa.interop.partyprocess.error.SignatureValidationError
 import it.pagopa.interop.partyprocess.error.ValidationErrors._
 import it.pagopa.interop.partyprocess.model.UserRegistryUser
@@ -27,6 +28,26 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
       case Left(throwable)  => throwable.invalidNel[Unit]
       case Right(validated) => validated.validNel[SignatureValidationError]
     }
+  }
+
+  def verifyOriginalDocument(
+    documentValidator: SignedDocumentValidator
+  ): ValidatedNel[SignatureValidationError, Unit] = {
+
+    val signs: List[AdvancedSignature] = documentValidator.getSignatures.asScala.toList
+
+    val existOriginalDocuments: Boolean = signs.foldLeft(true) { (res, sign) =>
+      val original: List[DSSDocument] = documentValidator.getOriginalDocuments(sign.getId).asScala.toList
+      res && original.nonEmpty
+    }
+
+    val validation = Either.cond(existOriginalDocuments, (), OriginalDocumentNotFound)
+
+    validation match {
+      case Left(throwable)  => throwable.invalidNel[Unit]
+      case Right(validated) => validated.validNel[SignatureValidationError]
+    }
+
   }
 
   def verifyDigest(
@@ -63,8 +84,8 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
   ): ValidatedNel[SignatureValidationError, Unit] = {
 
     val validation: Either[SignatureValidationError, Unit] = for {
-      signatureTaxCode <- extractTaxCode(reports)
-      validated <- Either.cond(legals.exists(legal => legal.taxCode == signatureTaxCode), (), InvalidSignatureTaxCode)
+      signatureTaxCodes <- extractTaxCodes(reports)
+      validated         <- Either.cond(isSignedByLegals(legals, signatureTaxCodes), (), InvalidSignatureTaxCode)
     } yield validated
 
     validation match {
@@ -73,31 +94,64 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
     }
   }
 
+  private def isSignedByLegals(legals: Seq[UserRegistryUser], signatureTaxCodes: List[String]): Boolean = {
+    val legalsTaxCodes: Seq[String] = legals.map(_.taxCode)
+
+    signatureTaxCodes.nonEmpty &&
+    legalsTaxCodes.nonEmpty &&
+    legalsTaxCodes.forall(signatureTaxCodes.contains)
+
+  }
+
   def validateDocument(documentValidator: SignedDocumentValidator)(implicit ec: ExecutionContext): Future[Reports] =
     Future(documentValidator.validateDocument()).recoverWith { case ex =>
       Future.failed(DocumentValidationFail(ex.getMessage))
     }
 
-  private def extractTaxCode(reports: Reports): Either[SignatureValidationError, String] = {
-    for {
-      prefixedTaxCode <- reports.getDiagnosticData.getUsedCertificates.asScala
-        .flatMap(c => Option(c.getSubjectSerialNumber))
-        .headOption
-        .toRight(TaxCodeNotFoundInSignature)
-      taxCode         <- prefixedTaxCode match {
+  private def extractTaxCodes(reports: Reports): Either[SignatureValidationError, List[String]] = {
+
+    def extractTaxCodeFromSubjectSN(subjectSerialNumber: String): Either[SignatureValidationError, String] = {
+      subjectSerialNumber match {
         case signatureRegex(_, taxCode) => Right(taxCode)
         case _                          => Left(InvalidSignatureTaxCodeFormat)
       }
-    } yield taxCode
+    }
+
+    val subjectSerialNumbers: Either[SignatureValidationError, List[String]] = {
+      val subjectSNs: List[String] =
+        reports.getDiagnosticData.getUsedCertificates.asScala.toList.flatMap(c => Option(c.getSubjectSerialNumber))
+      if (subjectSNs.nonEmpty) Right(subjectSNs) else Left(TaxCodeNotFoundInSignature)
+    }
+
+    for {
+      subjectSNs <- subjectSerialNumbers
+      taxCodes   <- subjectSNs.traverse(extractTaxCodeFromSubjectSN)
+    } yield taxCodes
+
+  }
+
+  def verifySignatureForm(documentValidator: SignedDocumentValidator): ValidatedNel[SignatureValidationError, Unit] = {
+    val signatures: List[AdvancedSignature]                = documentValidator.getSignatures.asScala.toList
+    val invalidSignatureForms: List[SignatureForm]         =
+      signatures.map(_.getSignatureForm).filter(_ != SignatureForm.CAdES)
+    val validation: Either[SignatureValidationError, Unit] =
+      Either.cond(invalidSignatureForms.isEmpty, (), InvalidSignatureForms(invalidSignatureForms.map(_.toString)))
+
+    validation match {
+      case Left(throwable)  => throwable.invalidNel[Unit]
+      case Right(validated) => validated.validNel[SignatureValidationError]
+    }
   }
 
   private def isValid(reports: Reports): Either[SignatureValidationError, Unit] = {
+    val signatureValidationReportTypes: List[SignatureValidationReportType] =
+      reports.getEtsiValidationReportJaxb.getSignatureValidationReport.asScala.toList
+
     Either
       .cond(
-        reports.getEtsiValidationReportJaxb.getSignatureValidationReport
-          .get(0)
-          .getSignatureValidationStatus
-          .getMainIndication == Indication.TOTAL_PASSED,
+        signatureValidationReportTypes.nonEmpty && signatureValidationReportTypes.forall(
+          _.getSignatureValidationStatus.getMainIndication == Indication.TOTAL_PASSED
+        ),
         (),
         InvalidDocumentSignature
       )

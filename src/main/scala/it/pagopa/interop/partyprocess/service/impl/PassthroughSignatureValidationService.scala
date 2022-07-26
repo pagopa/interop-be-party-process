@@ -27,6 +27,10 @@ case object PassthroughSignatureValidationService extends SignatureValidationSer
     originalDigest: String
   ): ValidatedNel[SignatureValidationError, Unit] = fakeValidationResult
 
+  override def verifyOriginalDocument(
+    documentValidator: SignedDocumentValidator
+  ): ValidatedNel[SignatureValidationError, Unit] = fakeValidationResult
+
   override def verifySignature(reports: Reports): ValidatedNel[SignatureValidationError, Unit] =
     fakeValidationResult
 
@@ -44,4 +48,7 @@ case object PassthroughSignatureValidationService extends SignatureValidationSer
     Future.successful(reports)
   }
 
+  override def verifySignatureForm(
+    documentValidator: SignedDocumentValidator
+  ): ValidatedNel[SignatureValidationError, Unit] = fakeValidationResult
 }

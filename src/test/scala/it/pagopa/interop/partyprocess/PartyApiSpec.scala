@@ -1901,6 +1901,18 @@ trait PartyApiSpec
         .once()
 
       (mockSignatureValidationService
+        .verifySignatureForm(_: SignedDocumentValidator))
+        .expects(*)
+        .returning(().validNel[SignatureValidationError])
+        .once()
+
+      (mockSignatureValidationService
+        .verifyOriginalDocument(_: SignedDocumentValidator))
+        .expects(*)
+        .returning(().validNel[SignatureValidationError])
+        .once()
+
+      (mockSignatureValidationService
         .verifyDigest(_: SignedDocumentValidator, _: String))
         .expects(*, *)
         .returning(().validNel[SignatureValidationError])
@@ -1916,6 +1928,58 @@ trait PartyApiSpec
         .verifyToken(_: UUID)(_: Seq[(String, String)]))
         .expects(tokenId, *)
         .returning(Future.successful(token))
+
+      (mockPartyManagementService
+        .getRelationshipById(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(*, *, *)
+        .returning(
+          Future.successful(
+            Relationship(
+              id = UUID.randomUUID(),
+              from = partyIdManager,
+              to = UUID.randomUUID(),
+              filePath = None,
+              fileName = None,
+              contentType = None,
+              tokenId = None,
+              role = PartyManagementDependency.PartyRole.MANAGER,
+              product =
+                PartyManagementDependency.RelationshipProduct(id = "", role = "", createdAt = OffsetDateTime.now()),
+              state = PartyManagementDependency.RelationshipState.PENDING,
+              pricingPlan = None,
+              institutionUpdate = None,
+              billing = None,
+              createdAt = OffsetDateTime.now(),
+              updatedAt = None
+            )
+          )
+        )
+
+      (mockPartyManagementService
+        .getRelationshipById(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(*, *, *)
+        .returning(
+          Future.successful(
+            Relationship(
+              id = UUID.randomUUID(),
+              from = partyIdDelegate,
+              to = UUID.randomUUID(),
+              filePath = None,
+              fileName = None,
+              contentType = None,
+              tokenId = None,
+              role = PartyManagementDependency.PartyRole.MANAGER,
+              product =
+                PartyManagementDependency.RelationshipProduct(id = "", role = "", createdAt = OffsetDateTime.now()),
+              state = PartyManagementDependency.RelationshipState.PENDING,
+              pricingPlan = None,
+              institutionUpdate = None,
+              billing = None,
+              createdAt = OffsetDateTime.now(),
+              updatedAt = None
+            )
+          )
+        )
 
       (mockUserRegistryService
         .getUserById(_: UUID)(_: Seq[(String, String)]))

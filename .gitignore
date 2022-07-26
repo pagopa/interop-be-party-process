@@ -22,3 +22,6 @@ snapshots
 snapshots/
 .env
 .credentials
+!src/test/resources/contract-test-01.pdf
+src/test/resources/*.pdf
+src/test/resources/*.p7m

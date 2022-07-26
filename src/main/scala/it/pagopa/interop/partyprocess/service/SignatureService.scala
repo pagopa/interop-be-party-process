@@ -1,11 +1,9 @@
 package it.pagopa.interop.partyprocess.service
 
-import eu.europa.esig.dss.service.crl.OnlineCRLSource
+import com.typesafe.scalalogging.Logger
 import eu.europa.esig.dss.service.http.commons.{CommonsDataLoader, FileCacheDataLoader}
-import eu.europa.esig.dss.service.ocsp.OnlineOCSPSource
 import eu.europa.esig.dss.spi.client.http.{DSSFileLoader, IgnoreDataLoader}
 import eu.europa.esig.dss.spi.x509.CommonCertificateSource
-import eu.europa.esig.dss.spi.x509.aia.DefaultAIASource
 import eu.europa.esig.dss.tsl.alerts.detections.{
   LOTLLocationChangeDetection,
   OJUrlChangeDetection,
@@ -24,9 +22,8 @@ import eu.europa.esig.dss.tsl.function.OfficialJournalSchemeInformationURI
 import eu.europa.esig.dss.tsl.job.TLValidationJob
 import eu.europa.esig.dss.tsl.source.LOTLSource
 import eu.europa.esig.dss.tsl.sync.AcceptAllStrategy
-import eu.europa.esig.dss.validation.{CommonCertificateVerifier, SignedDocumentValidator}
+import eu.europa.esig.dss.validation.SignedDocumentValidator
 import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
-import com.typesafe.scalalogging.Logger
 
 import java.io.File
 import java.util
@@ -40,12 +37,6 @@ trait SignatureService {
 object SignatureService {
 
   val logger: Logger = Logger(this.getClass())
-
-  final val certificateVerifier: CommonCertificateVerifier = new CommonCertificateVerifier
-
-  certificateVerifier.setAIASource(new DefaultAIASource())
-  certificateVerifier.setOcspSource(new OnlineOCSPSource())
-  certificateVerifier.setCrlSource(new OnlineCRLSource())
 
   def getEuropeanLOTL: LOTLSource = {
     val lotlSource: LOTLSource = new LOTLSource()
