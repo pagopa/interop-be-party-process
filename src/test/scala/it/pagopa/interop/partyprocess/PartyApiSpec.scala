@@ -1860,7 +1860,6 @@ trait PartyApiSpec
       val managerTaxCode: String       = "TINIT-MANAGER"
       val partyIdDelegate: UUID        = UUID.randomUUID()
       val relationshipIdDelegate: UUID = UUID.randomUUID()
-      val delegateTaxCode: String      = "TINIT-DELEGATE"
 
       val reports: Reports =
         new Reports(new XmlDiagnosticData(), new XmlDetailedReport(), new XmlSimpleReport(), new ValidationReportType())
@@ -1870,8 +1869,16 @@ trait PartyApiSpec
           id = tokenId,
           checksum = "6ddee820d06383127ef029f571285339",
           legals = Seq(
-            RelationshipBinding(partyId = partyIdManager, relationshipId = relationshipIdManager),
-            RelationshipBinding(partyId = partyIdDelegate, relationshipId = relationshipIdDelegate)
+            RelationshipBinding(
+              partyId = partyIdManager,
+              relationshipId = relationshipIdManager,
+              role = PartyManagementDependency.PartyRole.MANAGER
+            ),
+            RelationshipBinding(
+              partyId = partyIdDelegate,
+              relationshipId = relationshipIdDelegate,
+              role = PartyManagementDependency.PartyRole.DELEGATE
+            )
           )
         )
       val path             = Paths.get("src/test/resources/contract-test-01.pdf")
@@ -1929,70 +1936,11 @@ trait PartyApiSpec
         .expects(tokenId, *)
         .returning(Future.successful(token))
 
-      (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String)(_: Seq[(String, String)]))
-        .expects(*, *, *)
-        .returning(
-          Future.successful(
-            Relationship(
-              id = UUID.randomUUID(),
-              from = partyIdManager,
-              to = UUID.randomUUID(),
-              filePath = None,
-              fileName = None,
-              contentType = None,
-              tokenId = None,
-              role = PartyManagementDependency.PartyRole.MANAGER,
-              product =
-                PartyManagementDependency.RelationshipProduct(id = "", role = "", createdAt = OffsetDateTime.now()),
-              state = PartyManagementDependency.RelationshipState.PENDING,
-              pricingPlan = None,
-              institutionUpdate = None,
-              billing = None,
-              createdAt = OffsetDateTime.now(),
-              updatedAt = None
-            )
-          )
-        )
-
-      (mockPartyManagementService
-        .getRelationshipById(_: UUID)(_: String)(_: Seq[(String, String)]))
-        .expects(*, *, *)
-        .returning(
-          Future.successful(
-            Relationship(
-              id = UUID.randomUUID(),
-              from = partyIdDelegate,
-              to = UUID.randomUUID(),
-              filePath = None,
-              fileName = None,
-              contentType = None,
-              tokenId = None,
-              role = PartyManagementDependency.PartyRole.MANAGER,
-              product =
-                PartyManagementDependency.RelationshipProduct(id = "", role = "", createdAt = OffsetDateTime.now()),
-              state = PartyManagementDependency.RelationshipState.PENDING,
-              pricingPlan = None,
-              institutionUpdate = None,
-              billing = None,
-              createdAt = OffsetDateTime.now(),
-              updatedAt = None
-            )
-          )
-        )
-
       (mockUserRegistryService
         .getUserById(_: UUID)(_: Seq[(String, String)]))
         .expects(partyIdManager, *)
         .returning(
           Future.successful(UserRegistryUser(id = partyIdManager, taxCode = managerTaxCode, name = "", surname = ""))
-        )
-
-      (mockUserRegistryService
-        .getUserById(_: UUID)(_: Seq[(String, String)]))
-        .expects(partyIdDelegate, *)
-        .returning(
-          Future.successful(UserRegistryUser(id = partyIdDelegate, taxCode = delegateTaxCode, name = "", surname = ""))
         )
 
       (mockPartyManagementService
@@ -2060,8 +2008,16 @@ trait PartyApiSpec
           id = tokenId,
           checksum = "6ddee820d06383127ef029f571285339",
           legals = Seq(
-            RelationshipBinding(partyId = partyIdManager, relationshipId = relationshipIdManager),
-            RelationshipBinding(partyId = partyIdDelegate, relationshipId = relationshipIdDelegate)
+            RelationshipBinding(
+              partyId = partyIdManager,
+              relationshipId = relationshipIdManager,
+              role = PartyManagementDependency.PartyRole.MANAGER
+            ),
+            RelationshipBinding(
+              partyId = partyIdDelegate,
+              relationshipId = relationshipIdDelegate,
+              role = PartyManagementDependency.PartyRole.DELEGATE
+            )
           )
         )
 

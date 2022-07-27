@@ -7,11 +7,9 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import com.typesafe.scalalogging.Logger
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
-import it.pagopa.interop.commons.utils.AkkaUtils.getFutureBearer
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.ResourceConflictError
-import it.pagopa.interop.partymanagement.client.model.{Problem => _}
-import it.pagopa.interop.partymanagement.client.model.{PartyRole => PartyMgmtRole}
+import it.pagopa.interop.partymanagement.client.model.{PartyRole => PartyMgmtRole, Problem => _}
 import it.pagopa.interop.partyprocess.api.PublicApiService
 import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.partyprocess.error.PartyProcessErrors._
@@ -55,14 +53,12 @@ class PublicApiServiceImpl(
   ): Route = withRequestTimeout(ApplicationConfiguration.confirmTokenTimeout) {
     logger.info("Confirm onboarding of token identified with {}", tokenId)
     val result: Future[Unit] = for {
-      bearer        <- getFutureBearer(contexts)
-      tokenIdUUID   <- tokenId.toFutureUUID
-      token         <- partyManagementService.verifyToken(tokenIdUUID)
-      relationships <- Future.traverse(token.legals)(legal =>
-        partyManagementService.getRelationshipById(legal.relationshipId)(bearer)
+      tokenIdUUID <- tokenId.toFutureUUID
+      token       <- partyManagementService.verifyToken(tokenIdUUID)
+      legalsRelationships = token.legals.filter(_.role == PartyMgmtRole.MANAGER)
+      legalUsers <- Future.traverse(legalsRelationships)(legal =>
+        userRegistryManagementService.getUserById(legal.partyId)
       )
-      legalsRelationships = relationships.filter(_.role == PartyMgmtRole.MANAGER)
-      legalUsers <- Future.traverse(legalsRelationships)(legal => userRegistryManagementService.getUserById(legal.from))
       validator  <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
       _          <- SignatureValidationService.validateSignature(signatureValidationService.isDocumentSigned(validator))
       _ <- SignatureValidationService.validateSignature(signatureValidationService.verifyOriginalDocument(validator))
