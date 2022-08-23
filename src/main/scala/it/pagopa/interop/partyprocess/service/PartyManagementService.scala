@@ -64,4 +64,5 @@ trait PartyManagementService {
     contexts: Seq[(String, String)]
   ): Future[Relationship]
 
+  def getInstitutionId(relationshipId: UUID)(implicit contexts: Seq[(String, String)]): Future[InstitutionId]
 }

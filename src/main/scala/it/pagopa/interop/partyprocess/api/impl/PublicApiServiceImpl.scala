@@ -31,6 +31,10 @@ class PublicApiServiceImpl(
 
   private val logger = Logger.takingImplicit[ContextFieldsToLog](this.getClass)
 
+  def sendOnboardingCompleteEmail(legalEmails: Seq[String]): Boolean = {
+    legalEmails.isEmpty
+  }
+
   /** Code: 200, Message: successful operation
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
     * Code: 409, Message: Document validation failed
@@ -52,28 +56,41 @@ class PublicApiServiceImpl(
     contexts: Seq[(String, String)]
   ): Route = withRequestTimeout(ApplicationConfiguration.confirmTokenTimeout) {
     logger.info("Confirm onboarding of token identified with {}", tokenId)
-    val result: Future[Unit] = for {
+
+    val result: Future[Seq[String]] = for {
       tokenIdUUID <- tokenId.toFutureUUID
       token       <- partyManagementService.verifyToken(tokenIdUUID)
       legalsRelationships = token.legals.filter(_.role == PartyMgmtRole.MANAGER)
-      legalUsers <- Future.traverse(legalsRelationships)(legal =>
-        userRegistryManagementService.getUserById(legal.partyId)
+      legalUsers   <- Future.traverse(legalsRelationships)(legal =>
+        userRegistryManagementService.getUserWithEmailById(legal.partyId)
       )
-      validator  <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
-      _          <- SignatureValidationService.validateSignature(signatureValidationService.isDocumentSigned(validator))
-      _ <- SignatureValidationService.validateSignature(signatureValidationService.verifyOriginalDocument(validator))
-      reports <- signatureValidationService.validateDocument(validator)
-      _       <- SignatureValidationService.validateSignature(
-        signatureValidationService.verifySignatureForm(validator),
-        signatureValidationService.verifySignature(reports),
-        signatureValidationService.verifyDigest(validator, token.checksum),
-        signatureValidationService.verifyManagerTaxCode(reports, legalUsers)
+      istitutionId <- Future.traverse(legalsRelationships)(legalUser =>
+        partyManagementService.getInstitutionId(legalUser.relationshipId)
       )
-      _       <- partyManagementService.consumeToken(token.id, contract)
-    } yield ()
+      institutionInternalId = istitutionId.map(_.to.toString)
+      legalEmails           = institutionInternalId.map(id =>
+        legalUsers.filter(_.email.get(id).nonEmpty).head.email.get(id).orNull
+      )
+      _                     = sendOnboardingCompleteEmail(legalEmails)
+      // legalUsers.filter(_.w)
+      validator <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
+      _         <- SignatureValidationService.validateSignature(signatureValidationService.isDocumentSigned(validator))
+      /*
+     _ <- SignatureValidationService.validateSignature(signatureValidationService.verifyOriginalDocument(validator))
+     reports <- signatureValidationService.validateDocument(validator)
+     _       <- SignatureValidationService.validateSignature(
+       signatureValidationService.verifySignatureForm(validator),
+       signatureValidationService.verifySignature(reports),
+       // signatureValidationService.verifyDigest(validator, token.checksum),
+       signatureValidationService.verifyManagerTaxCode(reports, legalUsers)
+     )*/
+      // _       <- partyManagementService.consumeToken(token.id, contract)
+    } yield legalEmails
 
     onComplete(result) {
-      case Success(_)                                           => confirmOnboarding204
+      case Success(emails)                                      =>
+        sendOnboardingCompleteEmail(emails)
+        confirmOnboarding204
       case Failure(InvalidSignature(signatureValidationErrors)) =>
         logger.error(
           "Error while confirming onboarding of token identified with {} - {}, reason: {}",

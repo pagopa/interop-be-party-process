@@ -160,6 +160,13 @@ final case class PartyManagementServiceImpl(
     invoke(request, s"Getting relationship $relationshipId", Some(relationshipId.toString))
   }
 
+  override def getInstitutionId(
+    relationshipId: UUID
+  )(implicit contexts: Seq[(String, String)]): Future[InstitutionId] = {
+    val request = publicApi.getInstitutionIdFromRelationshipId(relationshipId)
+    invoke(request, s"Getting institutionId from $relationshipId", Some(relationshipId.toString))
+  }
+
   override def deleteRelationshipById(
     relationshipId: UUID
   )(bearerToken: String)(implicit contexts: Seq[(String, String)]): Future[Unit] = {
