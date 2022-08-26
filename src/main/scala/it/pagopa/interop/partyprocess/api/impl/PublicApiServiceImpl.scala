@@ -7,9 +7,10 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import com.typesafe.scalalogging.Logger
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
+import it.pagopa.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.ResourceConflictError
-import it.pagopa.interop.partymanagement.client.model.{PartyRole => PartyMgmtRole, Problem => _}
+import it.pagopa.interop.partymanagement.client.model.{InstitutionId, PartyRole => PartyMgmtRole, Problem => _}
 import it.pagopa.interop.partyprocess.api.PublicApiService
 import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.partyprocess.error.PartyProcessErrors._
@@ -25,15 +26,13 @@ class PublicApiServiceImpl(
   partyManagementService: PartyManagementService,
   userRegistryManagementService: UserRegistryManagementService,
   signatureService: SignatureService,
-  signatureValidationService: SignatureValidationService
+  signatureValidationService: SignatureValidationService,
+  mailer: MailEngine,
+  mailTemplate: PersistedTemplate
 )(implicit ec: ExecutionContext)
     extends PublicApiService {
 
   private val logger = Logger.takingImplicit[ContextFieldsToLog](this.getClass)
-
-  def sendOnboardingCompleteEmail(legalEmails: Seq[String]): Boolean = {
-    legalEmails.isEmpty
-  }
 
   /** Code: 200, Message: successful operation
     * Code: 400, Message: Invalid ID supplied, DataType: Problem
@@ -57,7 +56,7 @@ class PublicApiServiceImpl(
   ): Route = withRequestTimeout(ApplicationConfiguration.confirmTokenTimeout) {
     logger.info("Confirm onboarding of token identified with {}", tokenId)
 
-    val result: Future[Seq[String]] = for {
+    val result: Future[Unit] = for {
       tokenIdUUID <- tokenId.toFutureUUID
       token       <- partyManagementService.verifyToken(tokenIdUUID)
       legalsRelationships = token.legals.filter(_.role == PartyMgmtRole.MANAGER)
@@ -71,25 +70,24 @@ class PublicApiServiceImpl(
       legalEmails           = institutionInternalId.map(id =>
         legalUsers.filter(_.email.get(id).nonEmpty).head.email.get(id).orNull
       )
-      _                     = sendOnboardingCompleteEmail(legalEmails)
-      // legalUsers.filter(_.w)
       validator <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
       _         <- SignatureValidationService.validateSignature(signatureValidationService.isDocumentSigned(validator))
       /*
-     _ <- SignatureValidationService.validateSignature(signatureValidationService.verifyOriginalDocument(validator))
-     reports <- signatureValidationService.validateDocument(validator)
-     _       <- SignatureValidationService.validateSignature(
-       signatureValidationService.verifySignatureForm(validator),
-       signatureValidationService.verifySignature(reports),
-       // signatureValidationService.verifyDigest(validator, token.checksum),
-       signatureValidationService.verifyManagerTaxCode(reports, legalUsers)
-     )*/
+            _ <- SignatureValidationService.validateSignature(signatureValidationService.verifyOriginalDocument(validator))
+            reports                  <- signatureValidationService.validateDocument(validator)
+            _                        <- SignatureValidationService.validateSignature(
+              signatureValidationService.verifySignatureForm(validator),
+              signatureValidationService.verifySignature(reports),
+              // signatureValidationService.verifyDigest(validator, token.checksum),
+              signatureValidationService.verifyManagerTaxCode(reports, legalUsers)
+            )*/
+      onboardingMailParameters <- getOnboardingMailParameters(istitutionId)
+      _                        <- sendOnboardingCompleteEmail(legalEmails, onboardingMailParameters)
       // _       <- partyManagementService.consumeToken(token.id, contract)
-    } yield legalEmails
+    } yield ()
 
     onComplete(result) {
-      case Success(emails)                                      =>
-        sendOnboardingCompleteEmail(emails)
+      case Success(_)                                           =>
         confirmOnboarding204
       case Failure(InvalidSignature(signatureValidationErrors)) =>
         logger.error(
@@ -145,7 +143,26 @@ class PublicApiServiceImpl(
         invalidateOnboarding400(errorResponse)
 
     }
-
   }
 
+  private def sendOnboardingCompleteEmail(legalEmails: Seq[String], onboardingMailParameters: Map[String, String])(
+    implicit contexts: Seq[(String, String)]
+  ): Future[Unit] = {
+    // legalEmails.isEmpty
+    mailer.sendMail(mailTemplate)(legalEmails, null, null, onboardingMailParameters)("onboarding-complete-email")
+  }
+
+  private def getOnboardingMailParameters(istitutionId: Seq[InstitutionId]): Future[Map[String, String]] = {
+
+    val productParameters: Map[String, String] = Map(
+      ApplicationConfiguration.onboardingCompleteProductNamePlaceholder -> istitutionId.head.product
+    )
+
+    val selfcareParameters: Map[String, String] = Map(
+      ApplicationConfiguration.onboardingCompleteSelfcareUrlName ->
+        ApplicationConfiguration.onboardingCompleteSelfcareUrlPlaceholder
+    )
+
+    Future.successful(productParameters ++ selfcareParameters)
+  }
 }

@@ -4,7 +4,13 @@ import it.pagopa.userreg.client.model.{UserResource}
 
 import java.util.UUID
 
-final case class UserRegistryUser(id: UUID, name: String, surname: String, taxCode: String, email: Map[String, String])
+final case class UserRegistryUser(
+  id: UUID,
+  name: String,
+  surname: String,
+  taxCode: String,
+  email: Map[String, String] = Map()
+)
 
 object UserRegistryUser {
   def fromUserResource(resource: UserResource): UserRegistryUser =

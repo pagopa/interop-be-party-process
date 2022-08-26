@@ -33,7 +33,18 @@ object ApplicationConfiguration {
   val euListOfTrustedListsURL: String = config.getString("party-process.eu_list_of_trusted_lists_url")
   val euOfficialJournalUrl: String    = config.getString("party-process.eu_official_journal_url")
 
-  val mailTemplatePath: String   = config.getString("party-process.mail-template.path")
+  val selfcareUrl: String = config.getString("party-process.eu_official_journal_url")
+
+  val onboardingCompleteMailTemplatePath: String       =
+    config.getString("party-process.mail-template.onboarding-complete-mail-placeholders.path")
+  val onboardingCompleteProductNamePlaceholder: String =
+    config.getString("party-process.mail-template.onboarding-complete-mail-placeholders.productName")
+  val onboardingCompleteSelfcareUrlPlaceholder: String =
+    config.getString("party-process.mail-template.onboarding-complete-mail-placeholders.selfcare.name")
+  val onboardingCompleteSelfcareUrlName: String        =
+    config.getString("party-process.mail-template.onboarding-complete-mail-placeholders.selfcare.placeholder")
+
+  val mailTemplatePath: String   = config.getString("party-process.mail-template.onboarding-mail-placeholders.path")
   val userRegistryApiKey: String = config.getString("party-process.user-registry-api-key")
 
   val onboardingMailPlaceholdersReplacement: Map[String, String] = {

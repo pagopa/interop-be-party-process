@@ -37,9 +37,10 @@ object Main extends App with CORSSupport with Dependencies {
       logger.info(renderBuildInfo(BuildInfo))
 
       val serverBinding: Future[Http.ServerBinding] = for {
-        jwtReader    <- getJwtValidator()
-        fileManager  <- getFileManager()
-        mailTemplate <- getMailTemplate(fileManager)
+        jwtReader                      <- getJwtValidator()
+        fileManager                    <- getFileManager()
+        onboardingInitMailTemplate     <- getOnboardingInitMailTemplate(fileManager)
+        onboardingCompleteMailTemplate <- getOnboardingCompleteMailTemplate(fileManager)
         partyManService  = partyManagementService(blockingEc)
         relService       = relationshipService(partyManService)
         prodService      = productService(partyManService)
@@ -56,11 +57,11 @@ object Main extends App with CORSSupport with Dependencies {
           partyProcService,
           userreg,
           fileManager,
-          mailTemplate,
+          onboardingInitMailTemplate,
           jwtReader
         )
-        public               = publicApi(partyManService, userreg, sigService, sigValidationService)
-        controller           = new Controller(extApi, healthApi, process, public, validationExceptionToRoute.some)(
+        public = publicApi(partyManService, userreg, sigService, sigValidationService, onboardingCompleteMailTemplate)
+        controller = new Controller(extApi, healthApi, process, public, validationExceptionToRoute.some)(
           actorSystem.classicSystem
         )
         binding <- Http()

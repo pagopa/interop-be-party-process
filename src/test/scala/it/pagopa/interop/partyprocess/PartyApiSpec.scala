@@ -4,7 +4,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.directives.FileInfo
+// import akka.http.scaladsl.server.directives.FileInfo
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import cats.implicits.catsSyntaxValidatedId
 import eu.europa.esig.dss.detailedreport.jaxb.XmlDetailedReport
@@ -1860,6 +1860,7 @@ trait PartyApiSpec
       val managerTaxCode: String       = "TINIT-MANAGER"
       val partyIdDelegate: UUID        = UUID.randomUUID()
       val relationshipIdDelegate: UUID = UUID.randomUUID()
+      val institutionInternalId: UUID  = UUID.randomUUID()
 
       val reports: Reports =
         new Reports(new XmlDiagnosticData(), new XmlDetailedReport(), new XmlSimpleReport(), new ValidationReportType())
@@ -1881,7 +1882,10 @@ trait PartyApiSpec
             )
           )
         )
-      val path             = Paths.get("src/test/resources/contract-test-01.pdf")
+
+      val institutionId: InstitutionId = InstitutionId(relationshipIdManager, institutionInternalId)
+
+      val path = Paths.get("src/test/resources/contract-test-01.pdf")
 
       (mockSignatureService
         .createDocumentValidator(_: Array[Byte]))
@@ -1919,11 +1923,11 @@ trait PartyApiSpec
         .returning(().validNel[SignatureValidationError])
         .once()
 
-      (mockSignatureValidationService
+      /* (mockSignatureValidationService
         .verifyDigest(_: SignedDocumentValidator, _: String))
         .expects(*, *)
         .returning(().validNel[SignatureValidationError])
-        .once()
+        .once()*/
 
       (mockSignatureValidationService
         .verifyManagerTaxCode(_: Reports, _: Seq[UserRegistryUser]))
@@ -1937,16 +1941,29 @@ trait PartyApiSpec
         .returning(Future.successful(token))
 
       (mockUserRegistryService
-        .getUserById(_: UUID)(_: Seq[(String, String)]))
+        .getUserWithEmailById(_: UUID)(_: Seq[(String, String)]))
         .expects(partyIdManager, *)
         .returning(
-          Future.successful(UserRegistryUser(id = partyIdManager, taxCode = managerTaxCode, name = "", surname = ""))
+          Future.successful(
+            UserRegistryUser(
+              id = partyIdManager,
+              taxCode = managerTaxCode,
+              name = "",
+              surname = "",
+              email = Map((institutionInternalId.toString, "email@email.email"))
+            )
+          )
         )
 
-      (mockPartyManagementService
+      /*(mockPartyManagementService
         .consumeToken(_: UUID, _: (FileInfo, File))(_: Seq[(String, String)]))
         .expects(tokenId, *, *)
-        .returning(Future.successful(()))
+        .returning(Future.successful(()))*/
+
+      (mockPartyManagementService
+        .getInstitutionId(_: UUID)(_: Seq[(String, String)]))
+        .expects(relationshipIdManager, *)
+        .returning(Future.successful(institutionId))
 
       val formData =
         Multipart.FormData.fromPath(name = "contract", MediaTypes.`application/octet-stream`, file = path, 100000)

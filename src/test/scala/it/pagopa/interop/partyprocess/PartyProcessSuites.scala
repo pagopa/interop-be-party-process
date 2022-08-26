@@ -68,7 +68,9 @@ class PartyProcessSuites extends ExternalApiSpec with PartyApiSpec with BeforeAn
         partyManagementService = mockPartyManagementService,
         userRegistryManagementService = mockUserRegistryService,
         signatureService = mockSignatureService,
-        signatureValidationService = mockSignatureValidationService
+        signatureValidationService = mockSignatureValidationService,
+        mailer = mockMailer,
+        mailTemplate = mockMailTemplate
       ),
       publicApiMarshaller,
       wrappingDirective

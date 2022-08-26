@@ -86,7 +86,10 @@ trait Dependencies {
     Future(job.onlineRefresh()).map(_ => SignatureServiceImpl(trustedListsCertificateSource))
   }
 
-  private val mailer: MailEngine = new PartyProcessMailer with DefaultInteropMailer with CourierMailer
+  private val onboardingInitMailer: MailEngine     = new PartyProcessMailer with DefaultInteropMailer with CourierMailer
+  private val onboardingCompleteMailer: MailEngine = new PartyOnboardingCompleteMailer
+    with DefaultInteropMailer
+    with CourierMailer
 
   def relationshipService(partyManagementService: PartyManagementService)(implicit
     ec: ExecutionContext
@@ -113,7 +116,7 @@ trait Dependencies {
       pdfCreator = PDFCreatorImpl,
       fileManager,
       signatureService,
-      mailer,
+      onboardingInitMailer,
       mailTemplate,
       relationshipService,
       productService
@@ -137,13 +140,16 @@ trait Dependencies {
     partyManagementService: PartyManagementService,
     userRegistryManagementService: UserRegistryManagementService,
     signatureService: SignatureService,
-    signatureValidationService: SignatureValidationService
+    signatureValidationService: SignatureValidationService,
+    mailTemplate: PersistedTemplate
   )(implicit ec: ExecutionContext): PublicApi = new PublicApi(
     new PublicApiServiceImpl(
       partyManagementService,
       userRegistryManagementService,
       signatureService,
-      signatureValidationService
+      signatureValidationService,
+      onboardingCompleteMailer,
+      mailTemplate
     ),
     PublicApiMarshallerImpl,
     SecurityDirectives.authenticateBasic("Public", AkkaUtils.PassThroughAuthenticator)
@@ -158,8 +164,15 @@ trait Dependencies {
   def getFileManager(): Future[FileManager] =
     FileManager.getConcreteImplementation(StorageConfiguration.runtimeFileManager).toFuture
 
-  def getMailTemplate(fileManager: FileManager)(implicit ec: ExecutionContext): Future[PersistedTemplate] =
+  def getOnboardingInitMailTemplate(fileManager: FileManager)(implicit
+    ec: ExecutionContext
+  ): Future[PersistedTemplate] =
     MailTemplate.get(ApplicationConfiguration.mailTemplatePath, fileManager)
+
+  def getOnboardingCompleteMailTemplate(fileManager: FileManager)(implicit
+    ec: ExecutionContext
+  ): Future[PersistedTemplate] =
+    MailTemplate.get(ApplicationConfiguration.onboardingCompleteMailTemplatePath, fileManager)
 
   def getJwtValidator()(implicit ec: ExecutionContext): Future[JWTReader] = JWTConfiguration.jwtReader
     .loadKeyset()
