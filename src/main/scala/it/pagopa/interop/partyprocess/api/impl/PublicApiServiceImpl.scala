@@ -18,7 +18,7 @@ import it.pagopa.interop.partyprocess.model._
 import it.pagopa.interop.partyprocess.service._
 
 import java.io.File
-import java.nio.file.Files
+import java.nio.file.{Files, Paths}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -81,8 +81,10 @@ class PublicApiServiceImpl(
               // signatureValidationService.verifyDigest(validator, token.checksum),
               signatureValidationService.verifyManagerTaxCode(reports, legalUsers)
             )*/
+      logo = Paths.get("src/main/resources/logo_pagopacorp.png")
+
       onboardingMailParameters <- getOnboardingMailParameters(istitutionId)
-      _                        <- sendOnboardingCompleteEmail(legalEmails, onboardingMailParameters)
+      _                        <- sendOnboardingCompleteEmail(legalEmails, onboardingMailParameters, logo.toFile)
       // _       <- partyManagementService.consumeToken(token.id, contract)
     } yield ()
 
@@ -145,17 +147,21 @@ class PublicApiServiceImpl(
     }
   }
 
-  private def sendOnboardingCompleteEmail(legalEmails: Seq[String], onboardingMailParameters: Map[String, String])(
-    implicit contexts: Seq[(String, String)]
-  ): Future[Unit] = {
+  private def sendOnboardingCompleteEmail(
+    legalEmails: Seq[String],
+    onboardingMailParameters: Map[String, String],
+    logo: File
+  )(implicit contexts: Seq[(String, String)]): Future[Unit] = {
     // legalEmails.isEmpty
-    mailer.sendMail(mailTemplate)(legalEmails, null, null, onboardingMailParameters)("onboarding-complete-email")
+    mailer.sendMail(mailTemplate)(legalEmails, "pagopa-logo.png", logo, onboardingMailParameters)(
+      "onboarding-complete-email"
+    )
   }
 
   private def getOnboardingMailParameters(istitutionId: Seq[InstitutionId]): Future[Map[String, String]] = {
 
     val productParameters: Map[String, String] = Map(
-      ApplicationConfiguration.onboardingCompleteProductNamePlaceholder -> istitutionId.head.product
+      ApplicationConfiguration.onboardingCompleteProductName -> istitutionId.head.product
     )
 
     val selfcareParameters: Map[String, String] = Map(
@@ -165,4 +171,20 @@ class PublicApiServiceImpl(
 
     Future.successful(productParameters ++ selfcareParameters)
   }
+
+  /*private def createTempLogoFile: Try[File] = {
+    Try {
+      val fileTimestamp: String = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+      File.createTempFile(s"${fileTimestamp}_${UUID.randomUUID().toString}_logo_pagopacorp", ".png")
+    }
+  }*/
+
+  /*private def getLogoFromStorage(): Future[String] = for {
+    logoFromContainer <- fileManager.get(ApplicationConfiguration.storageContainer)("logo_pagopacorp.png")
+    fileString             <- Try { logoFromContainer.toString(StandardCharsets.UTF_8) }.toFuture
+
+    toFile(new FileOutput
+      Stream(destination.toFile)).map(_ => destination.toFile)
+  } yield fileString*/
+
 }

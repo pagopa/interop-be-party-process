@@ -2,12 +2,13 @@ package it.pagopa.interop.partyprocess.service.impl
 
 import com.typesafe.scalalogging.Logger
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
-import it.pagopa.interop.commons.mail.model.{MailDataTemplate, PersistedTemplate}
+import it.pagopa.interop.commons.mail.model.{MailAttachment, MailDataTemplate, PersistedTemplate}
 import it.pagopa.interop.commons.mail.service.impl.DefaultInteropMailer
 import it.pagopa.interop.commons.utils.model.TextTemplate
 import it.pagopa.interop.partyprocess.service.MailEngine
 
 import java.io.File
+import java.nio.file.Files
 import scala.concurrent.{ExecutionContext, Future}
 
 /** Decorates mail-manager mailer with party-process features
@@ -25,7 +26,8 @@ trait PartyOnboardingCompleteMailer extends MailEngine { interopMailer: DefaultI
     val mailData = MailDataTemplate(
       recipients = addresses,
       subject = subject,
-      body = TextTemplate(mailTemplate.body, bodyParameters)
+      body = TextTemplate(mailTemplate.body, bodyParameters),
+      attachments = Seq(parseAttachmentFile(file, attachmentName))
     )
 
     interopMailer
@@ -35,5 +37,12 @@ trait PartyOnboardingCompleteMailer extends MailEngine { interopMailer: DefaultI
         logger.error(s"[$emailPurpose] An error occurred while sending email", t)
         throw t
       })
+  }
+
+  private def parseAttachmentFile(file: File, attachmentName: String): MailAttachment = {
+    val filePath = file.toPath
+    val content  = Files.readAllBytes(filePath)
+    val mimeType = Files.probeContentType(filePath)
+    MailAttachment(attachmentName, content, mimeType)
   }
 }

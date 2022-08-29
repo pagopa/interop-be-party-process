@@ -37,12 +37,12 @@ object ApplicationConfiguration {
 
   val onboardingCompleteMailTemplatePath: String       =
     config.getString("party-process.mail-template.onboarding-complete-mail-placeholders.path")
-  val onboardingCompleteProductNamePlaceholder: String =
+  val onboardingCompleteProductName: String            =
     config.getString("party-process.mail-template.onboarding-complete-mail-placeholders.productName")
   val onboardingCompleteSelfcareUrlPlaceholder: String =
-    config.getString("party-process.mail-template.onboarding-complete-mail-placeholders.selfcare.name")
-  val onboardingCompleteSelfcareUrlName: String        =
     config.getString("party-process.mail-template.onboarding-complete-mail-placeholders.selfcare.placeholder")
+  val onboardingCompleteSelfcareUrlName: String        =
+    config.getString("party-process.mail-template.onboarding-complete-mail-placeholders.selfcare.name")
 
   val mailTemplatePath: String   = config.getString("party-process.mail-template.onboarding-mail-placeholders.path")
   val userRegistryApiKey: String = config.getString("party-process.user-registry-api-key")
