@@ -47,6 +47,7 @@ object Main extends App with CORSSupport with Dependencies {
         extApi           = externalApi(partyManService, relService, prodService, jwtReader)
         partyProcService = partyProcessService()
         userreg          = userRegistryManagementService()
+        productmng       = productManagementService()
         sigService <- signatureService()
         sigValidationService = signatureValidationService()
         process              = processApi(
@@ -60,8 +61,15 @@ object Main extends App with CORSSupport with Dependencies {
           onboardingInitMailTemplate,
           jwtReader
         )
-        public = publicApi(partyManService, userreg, sigService, sigValidationService, onboardingCompleteMailTemplate)
-        controller = new Controller(extApi, healthApi, process, public, validationExceptionToRoute.some)(
+        public               = publicApi(
+          partyManService,
+          userreg,
+          productmng,
+          sigService,
+          sigValidationService,
+          onboardingCompleteMailTemplate
+        )
+        controller           = new Controller(extApi, healthApi, process, public, validationExceptionToRoute.some)(
           actorSystem.classicSystem
         )
         binding <- Http()

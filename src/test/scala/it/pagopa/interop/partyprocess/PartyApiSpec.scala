@@ -4,7 +4,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model._
-// import akka.http.scaladsl.server.directives.FileInfo
+import akka.http.scaladsl.server.directives.FileInfo
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import cats.implicits.catsSyntaxValidatedId
 import eu.europa.esig.dss.detailedreport.jaxb.XmlDetailedReport
@@ -1861,6 +1861,8 @@ trait PartyApiSpec
       val partyIdDelegate: UUID        = UUID.randomUUID()
       val relationshipIdDelegate: UUID = UUID.randomUUID()
       val institutionInternalId: UUID  = UUID.randomUUID()
+      val productTestId                = "prod-test"
+      val productTestName              = "Product Test"
 
       val reports: Reports =
         new Reports(new XmlDiagnosticData(), new XmlDetailedReport(), new XmlSimpleReport(), new ValidationReportType())
@@ -1883,7 +1885,7 @@ trait PartyApiSpec
           )
         )
 
-      val institutionId: InstitutionId = InstitutionId(relationshipIdManager, institutionInternalId)
+      val institutionId: InstitutionId = InstitutionId(relationshipIdManager, institutionInternalId, productTestId)
 
       val path = Paths.get("src/test/resources/contract-test-01.pdf")
 
@@ -1923,11 +1925,11 @@ trait PartyApiSpec
         .returning(().validNel[SignatureValidationError])
         .once()
 
-      /* (mockSignatureValidationService
+      (mockSignatureValidationService
         .verifyDigest(_: SignedDocumentValidator, _: String))
         .expects(*, *)
         .returning(().validNel[SignatureValidationError])
-        .once()*/
+        .once()
 
       (mockSignatureValidationService
         .verifyManagerTaxCode(_: Reports, _: Seq[UserRegistryUser]))
@@ -1955,10 +1957,15 @@ trait PartyApiSpec
           )
         )
 
-      /*(mockPartyManagementService
+      (mockProductService
+        .getProductById(_: String)(_: Seq[(String, String)]))
+        .expects(productTestId, *)
+        .returning(Future.successful(ProductResourceProduct(id = productTestId, name = productTestName)))
+
+      (mockPartyManagementService
         .consumeToken(_: UUID, _: (FileInfo, File))(_: Seq[(String, String)]))
         .expects(tokenId, *, *)
-        .returning(Future.successful(()))*/
+        .returning(Future.successful(()))
 
       (mockPartyManagementService
         .getInstitutionId(_: UUID)(_: Seq[(String, String)]))

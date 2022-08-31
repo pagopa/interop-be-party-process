@@ -12,6 +12,7 @@ object ApplicationConfiguration {
   val getPartyManagementUrl: String = config.getString("party-process.services.party-management")
   val getPartyProxyUrl: String      = config.getString("party-process.services.party-proxy")
   val getUserRegistryURL: String    = config.getString("party-process.services.user-registry-management")
+  val getProductURL: String         = config.getString("party-process.services.product-management")
 
   /*
      _________  ________  ________  ________
@@ -46,6 +47,8 @@ object ApplicationConfiguration {
 
   val mailTemplatePath: String   = config.getString("party-process.mail-template.onboarding-mail-placeholders.path")
   val userRegistryApiKey: String = config.getString("party-process.user-registry-api-key")
+  val externalApiKey: String     = config.getString("party-process.external-api-key")
+  val externalApiUser: String    = config.getString("party-process.external-api-user")
 
   val onboardingMailPlaceholdersReplacement: Map[String, String] = {
     Map(

@@ -40,8 +40,8 @@ import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.partyprocess.service._
 import it.pagopa.interop.partyprocess.service.impl._
 import it.pagopa.interop.partyregistryproxy.client.{api => partyregistryproxyApi}
-import it.pagopa.userreg.client.invoker.ApiKeyValue
 import it.pagopa.userreg.client.{api => userregistrymanagement}
+import it.pagopa.product.client.{api => productmanagement}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 
@@ -63,13 +63,23 @@ trait Dependencies {
       partyregistryproxyApi.CategoryApi(ApplicationConfiguration.getPartyProxyUrl)
     )
 
-  implicit val apiKey: ApiKeyValue = ApiKeyValue(ApplicationConfiguration.userRegistryApiKey)
+  val userRegistryApiKey: it.pagopa.userreg.client.invoker.ApiKeyValue =
+    it.pagopa.userreg.client.invoker.ApiKeyValue(ApplicationConfiguration.userRegistryApiKey)
 
   def userRegistryManagementService()(implicit actorSystem: ActorSystem[_]): UserRegistryManagementService =
     UserRegistryManagementServiceImpl(
       UserRegistryManagementInvoker()(actorSystem.classicSystem),
       userregistrymanagement.UserApi(ApplicationConfiguration.getUserRegistryURL)
-    )
+    )(userRegistryApiKey)
+
+  val externalApiKey: it.pagopa.product.client.invoker.ApiKeyValue =
+    it.pagopa.product.client.invoker.ApiKeyValue(ApplicationConfiguration.externalApiKey)
+
+  def productManagementService()(implicit actorSystem: ActorSystem[_]): ProductManagementService =
+    ProductManagementServiceImpl(
+      ProductManagementInvoker()(actorSystem.classicSystem),
+      productmanagement.ProductApi(ApplicationConfiguration.getProductURL)
+    )(externalApiKey, ApplicationConfiguration.externalApiUser)
 
   def signatureValidationService(): SignatureValidationService =
     if (ApplicationConfiguration.signatureValidationEnabled) SignatureValidationServiceImpl
@@ -139,6 +149,7 @@ trait Dependencies {
   def publicApi(
     partyManagementService: PartyManagementService,
     userRegistryManagementService: UserRegistryManagementService,
+    productManagementService: ProductManagementService,
     signatureService: SignatureService,
     signatureValidationService: SignatureValidationService,
     mailTemplate: PersistedTemplate
@@ -146,6 +157,7 @@ trait Dependencies {
     new PublicApiServiceImpl(
       partyManagementService,
       userRegistryManagementService,
+      productManagementService,
       signatureService,
       signatureValidationService,
       onboardingCompleteMailer,

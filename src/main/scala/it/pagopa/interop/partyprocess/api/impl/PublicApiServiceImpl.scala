@@ -10,7 +10,7 @@ import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLo
 import it.pagopa.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.ResourceConflictError
-import it.pagopa.interop.partymanagement.client.model.{InstitutionId, PartyRole => PartyMgmtRole, Problem => _}
+import it.pagopa.interop.partymanagement.client.model.{PartyRole => PartyMgmtRole, Problem => _}
 import it.pagopa.interop.partyprocess.api.PublicApiService
 import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.partyprocess.error.PartyProcessErrors._
@@ -25,6 +25,7 @@ import scala.util.{Failure, Success}
 class PublicApiServiceImpl(
   partyManagementService: PartyManagementService,
   userRegistryManagementService: UserRegistryManagementService,
+  productManagementService: ProductManagementService,
   signatureService: SignatureService,
   signatureValidationService: SignatureValidationService,
   mailer: MailEngine,
@@ -72,20 +73,21 @@ class PublicApiServiceImpl(
       )
       validator <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
       _         <- SignatureValidationService.validateSignature(signatureValidationService.isDocumentSigned(validator))
-      /*
-            _ <- SignatureValidationService.validateSignature(signatureValidationService.verifyOriginalDocument(validator))
-            reports                  <- signatureValidationService.validateDocument(validator)
-            _                        <- SignatureValidationService.validateSignature(
-              signatureValidationService.verifySignatureForm(validator),
-              signatureValidationService.verifySignature(reports),
-              // signatureValidationService.verifyDigest(validator, token.checksum),
-              signatureValidationService.verifyManagerTaxCode(reports, legalUsers)
-            )*/
+
+      _ <- SignatureValidationService.validateSignature(signatureValidationService.verifyOriginalDocument(validator))
+      reports <- signatureValidationService.validateDocument(validator)
+      _       <- SignatureValidationService.validateSignature(
+        signatureValidationService.verifySignatureForm(validator),
+        signatureValidationService.verifySignature(reports),
+        signatureValidationService.verifyDigest(validator, token.checksum),
+        signatureValidationService.verifyManagerTaxCode(reports, legalUsers)
+      )
       logo = Paths.get("src/main/resources/logo_pagopacorp.png")
 
-      onboardingMailParameters <- getOnboardingMailParameters(istitutionId)
+      product                  <- productManagementService.getProductById(istitutionId.head.product)
+      onboardingMailParameters <- getOnboardingMailParameters(product.name)
       _                        <- sendOnboardingCompleteEmail(legalEmails, onboardingMailParameters, logo.toFile)
-      // _       <- partyManagementService.consumeToken(token.id, contract)
+      _                        <- partyManagementService.consumeToken(token.id, contract)
     } yield ()
 
     onComplete(result) {
@@ -152,16 +154,15 @@ class PublicApiServiceImpl(
     onboardingMailParameters: Map[String, String],
     logo: File
   )(implicit contexts: Seq[(String, String)]): Future[Unit] = {
-    // legalEmails.isEmpty
     mailer.sendMail(mailTemplate)(legalEmails, "pagopa-logo.png", logo, onboardingMailParameters)(
       "onboarding-complete-email"
     )
   }
 
-  private def getOnboardingMailParameters(istitutionId: Seq[InstitutionId]): Future[Map[String, String]] = {
+  private def getOnboardingMailParameters(productName: String): Future[Map[String, String]] = {
 
     val productParameters: Map[String, String] = Map(
-      ApplicationConfiguration.onboardingCompleteProductName -> istitutionId.head.product
+      ApplicationConfiguration.onboardingCompleteProductName -> productName
     )
 
     val selfcareParameters: Map[String, String] = Map(
@@ -171,20 +172,4 @@ class PublicApiServiceImpl(
 
     Future.successful(productParameters ++ selfcareParameters)
   }
-
-  /*private def createTempLogoFile: Try[File] = {
-    Try {
-      val fileTimestamp: String = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-      File.createTempFile(s"${fileTimestamp}_${UUID.randomUUID().toString}_logo_pagopacorp", ".png")
-    }
-  }*/
-
-  /*private def getLogoFromStorage(): Future[String] = for {
-    logoFromContainer <- fileManager.get(ApplicationConfiguration.storageContainer)("logo_pagopacorp.png")
-    fileString             <- Try { logoFromContainer.toString(StandardCharsets.UTF_8) }.toFuture
-
-    toFile(new FileOutput
-      Stream(destination.toFile)).map(_ => destination.toFile)
-  } yield fileString*/
-
 }
