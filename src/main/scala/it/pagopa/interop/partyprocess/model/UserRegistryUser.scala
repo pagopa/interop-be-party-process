@@ -19,6 +19,6 @@ object UserRegistryUser {
       taxCode = resource.fiscalCode,
       name = resource.name.map(n => n.value),
       surname = resource.familyName.map(s => s.value),
-      email = resource.workContacts.map(w => w.transform((_, v) => v.email.map(e => e.value).orNull))
+      email = resource.workContacts.map(w => w.transform((_, v) => v.email.map(e => e.value).getOrElse("")))
     )
 }
