@@ -148,7 +148,6 @@ lazy val product = project
   .in(file("product"))
   .settings(
     name                := "product",
-    scalacOptions       := Seq(),
     scalafmtOnCompile   := true,
     libraryDependencies := Dependencies.Jars.client,
     updateOptions       := updateOptions.value.withGigahorse(false)
