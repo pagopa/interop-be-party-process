@@ -67,8 +67,10 @@ class PublicApiServiceImpl(
       istitutionId <- Future.traverse(legalsRelationships)(legalUser =>
         partyManagementService.getInstitutionId(legalUser.relationshipId)
       )
-      institutionInternalId = istitutionId.map(_.to.toString)
-      legalEmails = institutionInternalId.map(id => legalUsers.filter(_.email.get(id).nonEmpty).head.email.get(id))
+      institutionInternalId = istitutionId.headOption.map(_.to.toString)
+      legalUserWithEmails   = legalUsers.filter(_.email.get(institutionInternalId.getOrElse("")).nonEmpty)
+      legalEmails           = legalUserWithEmails.map(u => u.email.get(institutionInternalId.getOrElse("")))
+
       validator <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
       _         <- SignatureValidationService.validateSignature(signatureValidationService.isDocumentSigned(validator))
 
