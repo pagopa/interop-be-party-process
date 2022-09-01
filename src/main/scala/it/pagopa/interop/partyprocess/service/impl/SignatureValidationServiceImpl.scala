@@ -95,7 +95,7 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
   }
 
   private def isSignedByLegals(legals: Seq[UserRegistryUser], signatureTaxCodes: List[String]): Boolean = {
-    val legalsTaxCodes: Seq[String] = legals.map(_.taxCode)
+    val legalsTaxCodes: Seq[String] = legals.map(_.taxCode.getOrElse(""))
 
     signatureTaxCodes.nonEmpty &&
     legalsTaxCodes.nonEmpty &&
