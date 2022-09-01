@@ -3,7 +3,7 @@
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
-            <layout class="it.pagopa.interop.commons.logging.LoggerLayout"/>
+            <layout class="it.pagopa.interop.partyprocess.logging.LoggerLayout"/>
         </encoder>
     </appender>
 
