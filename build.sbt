@@ -71,6 +71,16 @@ generateCode := {
              |                               -p dateLibrary=java8
              |                               -o userreg""".stripMargin).!!
 
+  Process(s"""$openApiCommand generate -t template/scala-akka-http-client
+             |                               -i product/api-docs.json
+             |                               -g scala-akka
+             |                               -p projectName=product
+             |                               -p invokerPackage=it.pagopa.product.client.invoker
+             |                               -p modelPackage=it.pagopa.product.client.model
+             |                               -p apiPackage=it.pagopa.product.client.api
+             |                               -p dateLibrary=java8
+             |                               -o product""".stripMargin).!!
+
 }
 
 val runStandalone = inputKey[Unit]("Run the app using standalone configuration")
@@ -93,6 +103,10 @@ cleanFiles += baseDirectory.value / "client" / "target"
 cleanFiles += baseDirectory.value / "userreg" / "src"
 
 cleanFiles += baseDirectory.value / "userreg" / "target"
+
+cleanFiles += baseDirectory.value / "product" / "src"
+
+cleanFiles += baseDirectory.value / "product" / "target"
 
 ThisBuild / credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
 
@@ -130,6 +144,16 @@ lazy val userreg = project
     updateOptions       := updateOptions.value.withGigahorse(false)
   )
 
+lazy val product = project
+  .in(file("product"))
+  .settings(
+    name                := "product",
+    scalacOptions       := Seq(),
+    scalafmtOnCompile   := true,
+    libraryDependencies := Dependencies.Jars.client,
+    updateOptions       := updateOptions.value.withGigahorse(false)
+  )
+
 lazy val root = (project in file("."))
   .settings(
     name                        := "interop-be-party-process",
@@ -148,6 +172,7 @@ lazy val root = (project in file("."))
   .aggregate(client)
   .dependsOn(generated)
   .dependsOn(userreg)
+  .dependsOn(product)
   .enablePlugins(JavaAppPackaging, JavaAgent)
   .setupBuildInfo
 

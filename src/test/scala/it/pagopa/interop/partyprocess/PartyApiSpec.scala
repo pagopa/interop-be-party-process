@@ -159,7 +159,10 @@ trait PartyApiSpec
     (mockUserRegistryService
       .getUserById(_: UUID)(_: Seq[(String, String)]))
       .expects(*, *)
-      .returning(Future.successful(UserRegistryUser(id = UUID.randomUUID(), taxCode = "", name = "", surname = "")))
+      .returning(
+        Future
+          .successful(UserRegistryUser(id = UUID.randomUUID(), taxCode = Some(""), name = Some(""), surname = Some("")))
+      )
       .once()
 
     (mockPartyManagementService
@@ -317,7 +320,10 @@ trait PartyApiSpec
     (mockUserRegistryService
       .getUserById(_: UUID)(_: Seq[(String, String)]))
       .expects(*, *)
-      .returning(Future.successful(UserRegistryUser(id = UUID.randomUUID(), taxCode = "", name = "", surname = "")))
+      .returning(
+        Future
+          .successful(UserRegistryUser(id = UUID.randomUUID(), taxCode = Some(""), name = Some(""), surname = Some("")))
+      )
       .once()
 
     (mockSignatureService
@@ -1132,7 +1138,11 @@ trait PartyApiSpec
       (mockUserRegistryService
         .getUserById(_: UUID)(_: Seq[(String, String)]))
         .expects(*, *)
-        .returning(Future.successful(UserRegistryUser(id = UUID.randomUUID(), taxCode = "", name = "", surname = "")))
+        .returning(
+          Future.successful(
+            UserRegistryUser(id = UUID.randomUUID(), taxCode = Some(""), name = Some(""), surname = Some(""))
+          )
+        )
         .once()
 
       (mockPartyManagementService
@@ -1277,7 +1287,11 @@ trait PartyApiSpec
       (mockUserRegistryService
         .getUserById(_: UUID)(_: Seq[(String, String)]))
         .expects(*, *)
-        .returning(Future.successful(UserRegistryUser(id = UUID.randomUUID(), taxCode = "", name = "", surname = "")))
+        .returning(
+          Future.successful(
+            UserRegistryUser(id = UUID.randomUUID(), taxCode = Some(""), name = Some(""), surname = Some(""))
+          )
+        )
         .once()
 
       (mockPartyManagementService
@@ -1860,6 +1874,9 @@ trait PartyApiSpec
       val managerTaxCode: String       = "TINIT-MANAGER"
       val partyIdDelegate: UUID        = UUID.randomUUID()
       val relationshipIdDelegate: UUID = UUID.randomUUID()
+      val institutionInternalId: UUID  = UUID.randomUUID()
+      val productTestId                = "prod-test"
+      val productTestName              = "Product Test"
 
       val reports: Reports =
         new Reports(new XmlDiagnosticData(), new XmlDetailedReport(), new XmlSimpleReport(), new ValidationReportType())
@@ -1881,7 +1898,10 @@ trait PartyApiSpec
             )
           )
         )
-      val path             = Paths.get("src/test/resources/contract-test-01.pdf")
+
+      val institutionId: InstitutionId = InstitutionId(relationshipIdManager, institutionInternalId, productTestId)
+
+      val path = Paths.get("src/test/resources/contract-test-01.pdf")
 
       (mockSignatureService
         .createDocumentValidator(_: Array[Byte]))
@@ -1937,16 +1957,34 @@ trait PartyApiSpec
         .returning(Future.successful(token))
 
       (mockUserRegistryService
-        .getUserById(_: UUID)(_: Seq[(String, String)]))
+        .getUserWithEmailById(_: UUID)(_: Seq[(String, String)]))
         .expects(partyIdManager, *)
         .returning(
-          Future.successful(UserRegistryUser(id = partyIdManager, taxCode = managerTaxCode, name = "", surname = ""))
+          Future.successful(
+            UserRegistryUser(
+              id = partyIdManager,
+              taxCode = Some(managerTaxCode),
+              name = Some(""),
+              surname = Some(""),
+              email = Some(Map((institutionInternalId.toString, "email@email.email")))
+            )
+          )
         )
+
+      (mockProductService
+        .getProductById(_: String)(_: Seq[(String, String)]))
+        .expects(productTestId, *)
+        .returning(Future.successful(ProductResourceProduct(id = productTestId, name = productTestName)))
 
       (mockPartyManagementService
         .consumeToken(_: UUID, _: (FileInfo, File))(_: Seq[(String, String)]))
         .expects(tokenId, *, *)
         .returning(Future.successful(()))
+
+      (mockPartyManagementService
+        .getInstitutionId(_: UUID)(_: Seq[(String, String)]))
+        .expects(relationshipIdManager, *)
+        .returning(Future.successful(institutionId))
 
       val formData =
         Multipart.FormData.fromPath(name = "contract", MediaTypes.`application/octet-stream`, file = path, 100000)
@@ -3534,7 +3572,11 @@ trait PartyApiSpec
       (mockUserRegistryService
         .getUserById(_: UUID)(_: Seq[(String, String)]))
         .expects(*, *)
-        .returning(Future.successful(UserRegistryUser(id = UUID.randomUUID(), taxCode = "", name = "", surname = "")))
+        .returning(
+          Future.successful(
+            UserRegistryUser(id = UUID.randomUUID(), taxCode = Some(""), name = Some(""), surname = Some(""))
+          )
+        )
         .once()
 
       (mockUserRegistryService
@@ -3542,7 +3584,12 @@ trait PartyApiSpec
         .expects(manager.id, *)
         .returning(
           Future.successful(
-            UserRegistryUser(id = manager.id, taxCode = manager.taxCode, name = manager.name, surname = manager.surname)
+            UserRegistryUser(
+              id = manager.id,
+              taxCode = Some(manager.taxCode),
+              name = Some(manager.name),
+              surname = Some(manager.surname)
+            )
           )
         )
         .once()
@@ -3924,7 +3971,11 @@ trait PartyApiSpec
       (mockUserRegistryService
         .getUserById(_: UUID)(_: Seq[(String, String)]))
         .expects(*, *)
-        .returning(Future.successful(UserRegistryUser(id = UUID.randomUUID(), taxCode = "", name = "", surname = "")))
+        .returning(
+          Future.successful(
+            UserRegistryUser(id = UUID.randomUUID(), taxCode = Some(""), name = Some(""), surname = Some(""))
+          )
+        )
         .once()
 
       (mockPartyManagementService
@@ -4028,7 +4079,11 @@ trait PartyApiSpec
       (mockUserRegistryService
         .getUserById(_: UUID)(_: Seq[(String, String)]))
         .expects(*, *)
-        .returning(Future.successful(UserRegistryUser(id = UUID.randomUUID(), taxCode = "", name = "", surname = "")))
+        .returning(
+          Future.successful(
+            UserRegistryUser(id = UUID.randomUUID(), taxCode = Some(""), name = Some(""), surname = Some(""))
+          )
+        )
         .once()
 
       (mockPartyManagementService

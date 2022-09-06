@@ -12,6 +12,7 @@ package object service {
 
   type PartyProxyInvoker             = partyregistryproxy.client.invoker.ApiInvoker
   type PartyManagementInvoker        = partymanagement.client.invoker.ApiInvoker
+  type ProductManagementInvoker      = product.client.invoker.ApiInvoker
   type UserRegistryManagementInvoker = userreg.client.invoker.ApiInvoker
 
   object PartyProxyInvoker {
@@ -22,6 +23,11 @@ package object service {
   object PartyManagementInvoker {
     def apply(blockingEc: ExecutionContextExecutor)(implicit actorSystem: ActorSystem): PartyManagementInvoker =
       partymanagement.client.invoker.ApiInvoker(partymanagement.client.api.EnumsSerializers.all, blockingEc)
+  }
+
+  object ProductManagementInvoker {
+    def apply()(implicit actorSystem: ActorSystem): ProductManagementInvoker =
+      product.client.invoker.ApiInvoker(product.client.api.EnumsSerializers.all)
   }
 
   object UserRegistryManagementInvoker {

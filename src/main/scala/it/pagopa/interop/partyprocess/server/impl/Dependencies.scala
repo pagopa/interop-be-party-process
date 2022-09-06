@@ -40,8 +40,8 @@ import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.partyprocess.service._
 import it.pagopa.interop.partyprocess.service.impl._
 import it.pagopa.interop.partyregistryproxy.client.{api => partyregistryproxyApi}
-import it.pagopa.userreg.client.invoker.ApiKeyValue
 import it.pagopa.userreg.client.{api => userregistrymanagement}
+import it.pagopa.product.client.{api => productmanagement}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 
@@ -63,13 +63,23 @@ trait Dependencies {
       partyregistryproxyApi.CategoryApi(ApplicationConfiguration.getPartyProxyUrl)
     )
 
-  implicit val apiKey: ApiKeyValue = ApiKeyValue(ApplicationConfiguration.userRegistryApiKey)
+  val userRegistryApiKey: it.pagopa.userreg.client.invoker.ApiKeyValue =
+    it.pagopa.userreg.client.invoker.ApiKeyValue(ApplicationConfiguration.userRegistryApiKey)
 
   def userRegistryManagementService()(implicit actorSystem: ActorSystem[_]): UserRegistryManagementService =
     UserRegistryManagementServiceImpl(
       UserRegistryManagementInvoker()(actorSystem.classicSystem),
       userregistrymanagement.UserApi(ApplicationConfiguration.getUserRegistryURL)
-    )
+    )(userRegistryApiKey)
+
+  val externalApiKey: it.pagopa.product.client.invoker.ApiKeyValue =
+    it.pagopa.product.client.invoker.ApiKeyValue(ApplicationConfiguration.externalApiKey)
+
+  def productManagementService()(implicit actorSystem: ActorSystem[_]): ProductManagementService =
+    ProductManagementServiceImpl(
+      ProductManagementInvoker()(actorSystem.classicSystem),
+      productmanagement.ProductApi(ApplicationConfiguration.getProductURL)
+    )(externalApiKey, ApplicationConfiguration.externalApiUser)
 
   def signatureValidationService(): SignatureValidationService =
     if (ApplicationConfiguration.signatureValidationEnabled) SignatureValidationServiceImpl
@@ -86,7 +96,10 @@ trait Dependencies {
     Future(job.onlineRefresh()).map(_ => SignatureServiceImpl(trustedListsCertificateSource))
   }
 
-  private val mailer: MailEngine = new PartyProcessMailer with DefaultInteropMailer with CourierMailer
+  private val onboardingInitMailer: MailEngine     = new PartyProcessMailer with DefaultInteropMailer with CourierMailer
+  private val onboardingCompleteMailer: MailEngine = new PartyOnboardingCompleteMailer
+    with DefaultInteropMailer
+    with CourierMailer
 
   def relationshipService(partyManagementService: PartyManagementService)(implicit
     ec: ExecutionContext
@@ -113,7 +126,7 @@ trait Dependencies {
       pdfCreator = PDFCreatorImpl,
       fileManager,
       signatureService,
-      mailer,
+      onboardingInitMailer,
       mailTemplate,
       relationshipService,
       productService
@@ -136,14 +149,19 @@ trait Dependencies {
   def publicApi(
     partyManagementService: PartyManagementService,
     userRegistryManagementService: UserRegistryManagementService,
+    productManagementService: ProductManagementService,
     signatureService: SignatureService,
-    signatureValidationService: SignatureValidationService
+    signatureValidationService: SignatureValidationService,
+    mailTemplate: PersistedTemplate
   )(implicit ec: ExecutionContext): PublicApi = new PublicApi(
     new PublicApiServiceImpl(
       partyManagementService,
       userRegistryManagementService,
+      productManagementService,
       signatureService,
-      signatureValidationService
+      signatureValidationService,
+      onboardingCompleteMailer,
+      mailTemplate
     ),
     PublicApiMarshallerImpl,
     SecurityDirectives.authenticateBasic("Public", AkkaUtils.PassThroughAuthenticator)
@@ -158,8 +176,15 @@ trait Dependencies {
   def getFileManager(): Future[FileManager] =
     FileManager.getConcreteImplementation(StorageConfiguration.runtimeFileManager).toFuture
 
-  def getMailTemplate(fileManager: FileManager)(implicit ec: ExecutionContext): Future[PersistedTemplate] =
+  def getOnboardingInitMailTemplate(fileManager: FileManager)(implicit
+    ec: ExecutionContext
+  ): Future[PersistedTemplate] =
     MailTemplate.get(ApplicationConfiguration.mailTemplatePath, fileManager)
+
+  def getOnboardingCompleteMailTemplate(fileManager: FileManager)(implicit
+    ec: ExecutionContext
+  ): Future[PersistedTemplate] =
+    MailTemplate.get(ApplicationConfiguration.onboardingCompleteMailTemplatePath, fileManager)
 
   def getJwtValidator()(implicit ec: ExecutionContext): Future[JWTReader] = JWTConfiguration.jwtReader
     .loadKeyset()

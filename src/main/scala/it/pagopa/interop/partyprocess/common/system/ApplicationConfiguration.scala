@@ -12,6 +12,7 @@ object ApplicationConfiguration {
   val getPartyManagementUrl: String = config.getString("party-process.services.party-management")
   val getPartyProxyUrl: String      = config.getString("party-process.services.party-proxy")
   val getUserRegistryURL: String    = config.getString("party-process.services.user-registry-management")
+  val getProductURL: String         = config.getString("party-process.services.product-management")
 
   /*
      _________  ________  ________  ________
@@ -33,8 +34,21 @@ object ApplicationConfiguration {
   val euListOfTrustedListsURL: String = config.getString("party-process.eu_list_of_trusted_lists_url")
   val euOfficialJournalUrl: String    = config.getString("party-process.eu_official_journal_url")
 
-  val mailTemplatePath: String   = config.getString("party-process.mail-template.path")
+  val selfcareUrl: String = config.getString("party-process.eu_official_journal_url")
+
+  val onboardingCompleteMailTemplatePath: String       =
+    config.getString("party-process.mail-template.onboarding-complete-mail-placeholders.path")
+  val onboardingCompleteProductName: String            =
+    config.getString("party-process.mail-template.onboarding-complete-mail-placeholders.productName")
+  val onboardingCompleteSelfcareUrlPlaceholder: String =
+    config.getString("party-process.mail-template.onboarding-complete-mail-placeholders.selfcare.placeholder")
+  val onboardingCompleteSelfcareUrlName: String        =
+    config.getString("party-process.mail-template.onboarding-complete-mail-placeholders.selfcare.name")
+
+  val mailTemplatePath: String   = config.getString("party-process.mail-template.onboarding-mail-placeholders.path")
   val userRegistryApiKey: String = config.getString("party-process.user-registry-api-key")
+  val externalApiKey: String     = config.getString("party-process.external-api-key")
+  val externalApiUser: String    = config.getString("party-process.external-api-user")
 
   val onboardingMailPlaceholdersReplacement: Map[String, String] = {
     Map(

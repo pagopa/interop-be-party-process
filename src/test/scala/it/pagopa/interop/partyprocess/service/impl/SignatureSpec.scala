@@ -57,7 +57,14 @@ class SignatureSpec extends AnyWordSpecLike with Matchers with Dependencies {
             reports,
             // This sequence must contain a UserRegistryUser entry for each signer contained in the document signature.
             // For each signature present, the taxCode field must be set with the real tax code associated with the signature.
-            Seq(UserRegistryUser(id = UUID.randomUUID(), name = "", surname = "", taxCode = "tax code 1"))
+            Seq(
+              UserRegistryUser(
+                id = UUID.randomUUID(),
+                name = Some(""),
+                surname = Some(""),
+                taxCode = Some("tax code 1")
+              )
+            )
           )
         )
     } yield "OK"

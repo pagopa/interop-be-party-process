@@ -363,9 +363,9 @@ class ProcessApiServiceImpl(
       .map(user =>
         User(
           id = user.id,
-          name = user.name,
-          surname = user.surname,
-          taxCode = user.taxCode,
+          name = user.name.getOrElse(""),
+          surname = user.surname.getOrElse(""),
+          taxCode = user.taxCode.getOrElse(""),
           role = roleToApi(relationship.role),
           email = None,
           productRole = relationship.product.role
@@ -463,9 +463,9 @@ class ProcessApiServiceImpl(
     )
 
     val userParameters: Map[String, String] = Map(
-      ApplicationConfiguration.onboardingMailUserNamePlaceholder    -> currentUser.name,
-      ApplicationConfiguration.onboardingMailUserSurnamePlaceholder -> currentUser.surname,
-      ApplicationConfiguration.onboardingMailTaxCodePlaceholder     -> currentUser.taxCode
+      ApplicationConfiguration.onboardingMailUserNamePlaceholder    -> currentUser.name.getOrElse(""),
+      ApplicationConfiguration.onboardingMailUserSurnamePlaceholder -> currentUser.surname.getOrElse(""),
+      ApplicationConfiguration.onboardingMailTaxCodePlaceholder     -> currentUser.taxCode.getOrElse("")
     )
 
     val institutionInfoParameters: Map[String, String] = {

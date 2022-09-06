@@ -17,15 +17,22 @@ import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-final case class UserRegistryManagementServiceImpl(invoker: UserRegistryManagementInvoker, api: UserApi)(implicit
+final case class UserRegistryManagementServiceImpl(invoker: UserRegistryManagementInvoker, api: UserApi)(
   apiKeyValue: ApiKeyValue
 ) extends UserRegistryManagementService {
   implicit val logger = Logger.takingImplicit[ContextFieldsToLog](this.getClass())
 
-  private val userFields2fetch: Seq[String] = Seq("name", "familyName", "fiscalCode")
+  private val userFields2fetch: Seq[String]    = Seq("name", "familyName", "fiscalCode")
+  private val userFieldsWithEmail: Seq[String] = Seq("name", "familyName", "fiscalCode", "workContacts")
 
-  override def getUserById(userId: UUID)(implicit context: Seq[(String, String)]): Future[UserRegistryUser]       = {
-    val request: ApiRequest[UserResource] = api.findByIdUsingGET(userId, userFields2fetch)
+  override def getUserById(userId: UUID)(implicit context: Seq[(String, String)]): Future[UserRegistryUser] = {
+    val request: ApiRequest[UserResource] = api.findByIdUsingGET(userId, userFields2fetch)(apiKeyValue)
+    invokeAPI(request, s"Retrieve User By ID ${userId.toString}", Some(userId.toString))
+      .map(u => UserRegistryUser.fromUserResource(u))
+  }
+
+  override def getUserWithEmailById(userId: UUID)(implicit context: Seq[(String, String)]): Future[UserRegistryUser] = {
+    val request: ApiRequest[UserResource] = api.findByIdUsingGET(userId, userFieldsWithEmail)(apiKeyValue)
     invokeAPI(request, s"Retrieve User By ID ${userId.toString}", Some(userId.toString))
       .map(u => UserRegistryUser.fromUserResource(u))
   }
@@ -34,12 +41,13 @@ final case class UserRegistryManagementServiceImpl(invoker: UserRegistryManageme
     externalId: String
   )(implicit context: Seq[(String, String)]): Future[UserRegistryUser] = {
     val request: ApiRequest[UserResource] =
-      api.searchUsingPOST(userFields2fetch, Option(UserSearchDto(fiscalCode = externalId)))
+      api.searchUsingPOST(userFields2fetch, Option(UserSearchDto(fiscalCode = externalId)))(apiKeyValue)
     invokeAPI(request, s"Retrieve User By External ID ${externalId}", Some(externalId))
       .map(u => UserRegistryUser.fromUserResource(u))
   }
-  override def getUserIdByExternalId(externalId: String)(implicit context: Seq[(String, String)]): Future[UserId] = {
-    val request: ApiRequest[UserResource] = api.searchUsingPOST(Seq(), Option(UserSearchDto(fiscalCode = externalId)))
+  override def getUserIdByExternalId(externalId: String)(implicit context: Seq[(String, String)]): Future[UserId]    = {
+    val request: ApiRequest[UserResource] =
+      api.searchUsingPOST(Seq(), Option(UserSearchDto(fiscalCode = externalId)))(apiKeyValue)
     invokeAPI(request, s"Retrieve User By External ID ${externalId}", Some(externalId))
       .map(u => UserId(u.id))
   }

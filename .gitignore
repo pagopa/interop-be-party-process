@@ -16,6 +16,8 @@ client/target
 client/src
 userreg/src
 userreg/target
+product/src
+product/target
 .bsp
 .DS_Store
 snapshots
