@@ -45,6 +45,7 @@ object ApplicationConfiguration {
   val onboardingCompleteSelfcareUrlName: String        =
     config.getString("party-process.mail-template.onboarding-complete-mail-placeholders.selfcare.name")
 
+  val emailLogoPath: String      = config.getString("party-process.logo.path")
   val mailTemplatePath: String   = config.getString("party-process.mail-template.onboarding-mail-placeholders.path")
   val userRegistryApiKey: String = config.getString("party-process.user-registry-api-key")
   val externalApiKey: String     = config.getString("party-process.external-api-key")

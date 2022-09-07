@@ -152,7 +152,8 @@ trait Dependencies {
     productManagementService: ProductManagementService,
     signatureService: SignatureService,
     signatureValidationService: SignatureValidationService,
-    mailTemplate: PersistedTemplate
+    mailTemplate: PersistedTemplate,
+    fileManager: FileManager
   )(implicit ec: ExecutionContext): PublicApi = new PublicApi(
     new PublicApiServiceImpl(
       partyManagementService,
@@ -161,7 +162,8 @@ trait Dependencies {
       signatureService,
       signatureValidationService,
       onboardingCompleteMailer,
-      mailTemplate
+      mailTemplate,
+      fileManager
     ),
     PublicApiMarshallerImpl,
     SecurityDirectives.authenticateBasic("Public", AkkaUtils.PassThroughAuthenticator)

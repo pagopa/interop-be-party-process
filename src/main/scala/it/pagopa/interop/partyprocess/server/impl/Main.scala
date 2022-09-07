@@ -67,7 +67,8 @@ object Main extends App with CORSSupport with Dependencies {
           productmng,
           sigService,
           sigValidationService,
-          onboardingCompleteMailTemplate
+          onboardingCompleteMailTemplate,
+          fileManager
         )
         controller           = new Controller(extApi, healthApi, process, public, validationExceptionToRoute.some)(
           actorSystem.classicSystem
