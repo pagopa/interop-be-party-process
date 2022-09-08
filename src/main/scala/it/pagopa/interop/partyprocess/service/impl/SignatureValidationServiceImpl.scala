@@ -120,7 +120,8 @@ case object SignatureValidationServiceImpl extends SignatureValidationService {
     val subjectSerialNumbers: Either[SignatureValidationError, List[String]] = {
       val subjectSNs: List[String] =
         reports.getDiagnosticData.getUsedCertificates.asScala.toList.flatMap(c => Option(c.getSubjectSerialNumber))
-      if (subjectSNs.nonEmpty) Right(subjectSNs) else Left(TaxCodeNotFoundInSignature)
+      val subjectSNCFs = if (subjectSNs.nonEmpty) subjectSNs.filter(s => signatureRegex.matches(s)) else List()
+      if (subjectSNCFs.nonEmpty) Right(subjectSNCFs) else Left(TaxCodeNotFoundInSignature)
     }
 
     for {
