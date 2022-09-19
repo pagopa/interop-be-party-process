@@ -1986,6 +1986,12 @@ trait PartyApiSpec
         .expects(relationshipIdManager, *)
         .returning(Future.successful(institutionId))
 
+      (mockFileManager
+        .get(_: String)(_: String))
+        .expects(*, *)
+        .returning(Future.successful(new ByteArrayOutputStream()))
+        .once()
+
       val formData =
         Multipart.FormData.fromPath(name = "contract", MediaTypes.`application/octet-stream`, file = path, 100000)
 
