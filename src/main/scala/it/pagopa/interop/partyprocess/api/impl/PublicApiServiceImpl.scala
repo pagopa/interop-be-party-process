@@ -6,6 +6,7 @@ import akka.http.scaladsl.server.Directives.{onComplete, withRequestTimeout}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import com.typesafe.scalalogging.Logger
+import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.interop.commons.utils.TypeConversions._
@@ -17,10 +18,13 @@ import it.pagopa.interop.partyprocess.error.PartyProcessErrors._
 import it.pagopa.interop.partyprocess.model._
 import it.pagopa.interop.partyprocess.service._
 
-import java.io.File
-import java.nio.file.{Files, Paths}
+import java.io.{ByteArrayOutputStream, File, FileOutputStream}
+import java.nio.file.Files
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 class PublicApiServiceImpl(
   partyManagementService: PartyManagementService,
@@ -29,7 +33,8 @@ class PublicApiServiceImpl(
   signatureService: SignatureService,
   signatureValidationService: SignatureValidationService,
   mailer: MailEngine,
-  mailTemplate: PersistedTemplate
+  mailTemplate: PersistedTemplate,
+  fileManager: FileManager
 )(implicit ec: ExecutionContext)
     extends PublicApiService {
 
@@ -75,18 +80,17 @@ class PublicApiServiceImpl(
       _         <- SignatureValidationService.validateSignature(signatureValidationService.isDocumentSigned(validator))
 
       _ <- SignatureValidationService.validateSignature(signatureValidationService.verifyOriginalDocument(validator))
-      reports <- signatureValidationService.validateDocument(validator)
-      _       <- SignatureValidationService.validateSignature(
+      reports                  <- signatureValidationService.validateDocument(validator)
+      _                        <- SignatureValidationService.validateSignature(
         signatureValidationService.verifySignatureForm(validator),
         signatureValidationService.verifySignature(reports),
         signatureValidationService.verifyDigest(validator, token.checksum),
         signatureValidationService.verifyManagerTaxCode(reports, legalUsers)
       )
-      logo = Paths.get("src/main/resources/logo_pagopacorp.png")
-
+      logo                     <- getLogoFile(ApplicationConfiguration.emailLogoPath)
       product                  <- productManagementService.getProductById(istitutionId.head.product)
       onboardingMailParameters <- getOnboardingMailParameters(product.name)
-      _                        <- sendOnboardingCompleteEmail(legalEmails, onboardingMailParameters, logo.toFile)
+      _                        <- sendOnboardingCompleteEmail(legalEmails, onboardingMailParameters, logo)
       _                        <- partyManagementService.consumeToken(token.id, contract)
     } yield ()
 
@@ -171,5 +175,27 @@ class PublicApiServiceImpl(
     )
 
     Future.successful(productParameters ++ selfcareParameters)
+  }
+
+  private def getLogoFile(filePath: String): Future[File] = for {
+    logoStream <- fileManager.get(ApplicationConfiguration.storageContainer)(filePath)
+    file       <- Try { createTempFile }.toFuture
+    _          <- Try { getLogoAsFile(file.get, logoStream) }.toFuture
+  } yield file.get
+
+  private def createTempFile: Try[File] = {
+    Try {
+      val fileTimestamp: String = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+      File.createTempFile(s"${fileTimestamp}_${UUID.randomUUID().toString}_logo.", ".png")
+    }
+  }
+
+  private def getLogoAsFile(destination: File, logo: ByteArrayOutputStream): Try[File] = {
+    Try {
+      val fos = new FileOutputStream(destination)
+      logo.writeTo(fos)
+      fos.close()
+      destination
+    }
   }
 }
