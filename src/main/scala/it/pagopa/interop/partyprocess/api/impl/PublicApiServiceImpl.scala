@@ -90,10 +90,7 @@ class PublicApiServiceImpl(
       logo      <- getLogoFile(ApplicationConfiguration.emailLogoPath)
       product   <- productManagementService.getProductById(istitutionId.head.product)
       onboardingMailParameters <- getOnboardingMailParameters(product.name)
-      emails: Seq[String] =
-        if (institutionEmail.isEmpty) legalEmails
-        else
-          legalEmails ++ institutionEmail
+      emails = legalEmails ++ institutionEmail.toSeq
       _ <- sendOnboardingCompleteEmail(emails, onboardingMailParameters, logo)
       _ <- partyManagementService.consumeToken(token.id, contract)
     } yield ()
