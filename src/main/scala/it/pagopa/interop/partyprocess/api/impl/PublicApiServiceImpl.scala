@@ -95,7 +95,7 @@ class PublicApiServiceImpl(
         else
           legalEmails ++ institutionEmail
       _ <- sendOnboardingCompleteEmail(emails, onboardingMailParameters, logo)
-      // _                        <- partyManagementService.consumeToken(token.id, contract)
+      _ <- partyManagementService.consumeToken(token.id, contract)
     } yield ()
 
     onComplete(result) {
