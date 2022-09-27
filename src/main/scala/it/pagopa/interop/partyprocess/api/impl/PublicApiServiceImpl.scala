@@ -69,7 +69,7 @@ class PublicApiServiceImpl(
       legalUsers   <- Future.traverse(legalsRelationships)(legal =>
         userRegistryManagementService.getUserWithEmailById(legal.partyId)
       )
-      istitutionId <- Future.traverse(legalsRelationships)(legalUser =>
+      institutionId <- Future.traverse(legalsRelationships)(legalUser =>
         partyManagementService.getInstitutionId(legalUser.relationshipId)
       )
       institutionEmail      = istitutionId.headOption.map(_.digitalAddress)
