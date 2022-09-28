@@ -69,16 +69,16 @@ class PublicApiServiceImpl(
       legalUsers   <- Future.traverse(legalsRelationships)(legal =>
         userRegistryManagementService.getUserWithEmailById(legal.partyId)
       )
-      istitutionId <- Future.traverse(legalsRelationships)(legalUser =>
+      institutionId <- Future.traverse(legalsRelationships)(legalUser =>
         partyManagementService.getInstitutionId(legalUser.relationshipId)
       )
+      institutionEmail      = istitutionId.headOption.map(_.digitalAddress)
       institutionInternalId = istitutionId.headOption.map(_.to.toString)
       legalUserWithEmails   = legalUsers.filter(_.email.get(institutionInternalId.getOrElse("")).nonEmpty)
       legalEmails           = legalUserWithEmails.map(u => u.email.get(institutionInternalId.getOrElse("")))
 
       validator <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
       _         <- SignatureValidationService.validateSignature(signatureValidationService.isDocumentSigned(validator))
-
       _ <- SignatureValidationService.validateSignature(signatureValidationService.verifyOriginalDocument(validator))
       reports                  <- signatureValidationService.validateDocument(validator)
       _                        <- SignatureValidationService.validateSignature(
@@ -87,11 +87,12 @@ class PublicApiServiceImpl(
         signatureValidationService.verifyDigest(validator, token.checksum),
         signatureValidationService.verifyManagerTaxCode(reports, legalUsers)
       )
-      logo                     <- getLogoFile(ApplicationConfiguration.emailLogoPath)
-      product                  <- productManagementService.getProductById(istitutionId.head.product)
+      logo      <- getLogoFile(ApplicationConfiguration.emailLogoPath)
+      product   <- productManagementService.getProductById(istitutionId.head.product)
       onboardingMailParameters <- getOnboardingMailParameters(product.name)
-      _                        <- sendOnboardingCompleteEmail(legalEmails, onboardingMailParameters, logo)
-      _                        <- partyManagementService.consumeToken(token.id, contract)
+      emails = legalEmails ++ institutionEmail.toSeq
+      _ <- sendOnboardingCompleteEmail(emails, onboardingMailParameters, logo)
+      _ <- partyManagementService.consumeToken(token.id, contract)
     } yield ()
 
     onComplete(result) {
