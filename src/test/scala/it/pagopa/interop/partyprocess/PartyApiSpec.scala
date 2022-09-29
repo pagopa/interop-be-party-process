@@ -1877,6 +1877,7 @@ trait PartyApiSpec
       val institutionInternalId: UUID  = UUID.randomUUID()
       val productTestId                = "prod-test"
       val productTestName              = "Product Test"
+      val institutionEmail             = "email@email.test"
 
       val reports: Reports =
         new Reports(new XmlDiagnosticData(), new XmlDetailedReport(), new XmlSimpleReport(), new ValidationReportType())
@@ -1899,7 +1900,8 @@ trait PartyApiSpec
           )
         )
 
-      val institutionId: InstitutionId = InstitutionId(relationshipIdManager, institutionInternalId, productTestId)
+      val institutionId: InstitutionId =
+        InstitutionId(relationshipIdManager, institutionInternalId, productTestId, institutionEmail)
 
       val path = Paths.get("src/test/resources/contract-test-01.pdf")
 

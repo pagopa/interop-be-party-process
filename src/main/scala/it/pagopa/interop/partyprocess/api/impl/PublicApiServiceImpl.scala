@@ -66,20 +66,20 @@ class PublicApiServiceImpl(
       tokenIdUUID <- tokenId.toFutureUUID
       token       <- partyManagementService.verifyToken(tokenIdUUID)
       legalsRelationships = token.legals.filter(_.role == PartyMgmtRole.MANAGER)
-      legalUsers   <- Future.traverse(legalsRelationships)(legal =>
+      legalUsers    <- Future.traverse(legalsRelationships)(legal =>
         userRegistryManagementService.getUserWithEmailById(legal.partyId)
       )
       institutionId <- Future.traverse(legalsRelationships)(legalUser =>
         partyManagementService.getInstitutionId(legalUser.relationshipId)
       )
-      institutionEmail      = istitutionId.headOption.map(_.digitalAddress)
-      institutionInternalId = istitutionId.headOption.map(_.to.toString)
+      institutionEmail      = institutionId.headOption.map(_.digitalAddress)
+      institutionInternalId = institutionId.headOption.map(_.to.toString)
       legalUserWithEmails   = legalUsers.filter(_.email.get(institutionInternalId.getOrElse("")).nonEmpty)
       legalEmails           = legalUserWithEmails.map(u => u.email.get(institutionInternalId.getOrElse("")))
 
       validator <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
       _         <- SignatureValidationService.validateSignature(signatureValidationService.isDocumentSigned(validator))
-      _ <- SignatureValidationService.validateSignature(signatureValidationService.verifyOriginalDocument(validator))
+      _    <- SignatureValidationService.validateSignature(signatureValidationService.verifyOriginalDocument(validator))
       reports                  <- signatureValidationService.validateDocument(validator)
       _                        <- SignatureValidationService.validateSignature(
         signatureValidationService.verifySignatureForm(validator),
@@ -87,8 +87,8 @@ class PublicApiServiceImpl(
         signatureValidationService.verifyDigest(validator, token.checksum),
         signatureValidationService.verifyManagerTaxCode(reports, legalUsers)
       )
-      logo      <- getLogoFile(ApplicationConfiguration.emailLogoPath)
-      product   <- productManagementService.getProductById(istitutionId.head.product)
+      logo <- getLogoFile(ApplicationConfiguration.emailLogoPath)
+      product                  <- productManagementService.getProductById(institutionId.head.product)
       onboardingMailParameters <- getOnboardingMailParameters(product.name)
       emails = legalEmails ++ institutionEmail.toSeq
       _ <- sendOnboardingCompleteEmail(emails, onboardingMailParameters, logo)
