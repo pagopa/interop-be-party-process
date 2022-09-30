@@ -72,10 +72,10 @@ class PublicApiServiceImpl(
       institutionId <- Future.traverse(legalsRelationships)(legalUser =>
         partyManagementService.getInstitutionId(legalUser.relationshipId)
       )
-      institutionEmail      = if (ApplicationConfiguration.sendEmailToInstitution)
-      institutionId.headOption.map(_.digitalAddress)
+      institutionEmail =
+        if (ApplicationConfiguration.sendEmailToInstitution) institutionId.headOption.map(_.digitalAddress)
         else Some(ApplicationConfiguration.institutionAlternativeEmail)
-      
+
       institutionInternalId = institutionId.headOption.map(_.to.toString)
       legalUserWithEmails   = legalUsers.filter(_.email.get(institutionInternalId.getOrElse("")).nonEmpty)
       legalEmails           = legalUserWithEmails.map(u => u.email.get(institutionInternalId.getOrElse("")))
