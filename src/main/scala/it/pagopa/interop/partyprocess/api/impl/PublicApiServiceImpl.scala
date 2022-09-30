@@ -72,7 +72,10 @@ class PublicApiServiceImpl(
       institutionId <- Future.traverse(legalsRelationships)(legalUser =>
         partyManagementService.getInstitutionId(legalUser.relationshipId)
       )
-      institutionEmail      = institutionId.headOption.map(_.digitalAddress)
+      institutionEmail =
+        if (ApplicationConfiguration.sendEmailToInstitution) institutionId.headOption.map(_.digitalAddress)
+        else Some(ApplicationConfiguration.institutionAlternativeEmail)
+
       institutionInternalId = institutionId.headOption.map(_.to.toString)
       legalUserWithEmails   = legalUsers.filter(_.email.get(institutionInternalId.getOrElse("")).nonEmpty)
       legalEmails           = legalUserWithEmails.map(u => u.email.get(institutionInternalId.getOrElse("")))
@@ -87,8 +90,8 @@ class PublicApiServiceImpl(
         signatureValidationService.verifyDigest(validator, token.checksum),
         signatureValidationService.verifyManagerTaxCode(reports, legalUsers)
       )
-      logo <- getLogoFile(ApplicationConfiguration.emailLogoPath)
-      product                  <- productManagementService.getProductById(institutionId.head.product)
+      logo      <- getLogoFile(ApplicationConfiguration.emailLogoPath)
+      product   <- productManagementService.getProductById(institutionId.head.product)
       onboardingMailParameters <- getOnboardingMailParameters(product.name)
       emails = legalEmails ++ institutionEmail.toSeq
       _ <- sendOnboardingCompleteEmail(emails, onboardingMailParameters, logo)

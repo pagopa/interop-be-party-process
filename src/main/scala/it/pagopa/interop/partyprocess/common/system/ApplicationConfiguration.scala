@@ -51,6 +51,11 @@ object ApplicationConfiguration {
   val externalApiKey: String     = config.getString("party-process.external-api-key")
   val externalApiUser: String    = config.getString("party-process.external-api-user")
 
+  val sendEmailToInstitution: Boolean     =
+    config.getBoolean("party-process.mail-template.onboarding_send_email_to_institution")
+  val institutionAlternativeEmail: String =
+    config.getString("party-process.mail-template.onboarding_institution_alternative_email")
+
   val onboardingMailPlaceholdersReplacement: Map[String, String] = {
     Map(
       config.getString("party-process.mail-template.onboarding-mail-placeholders.confirm-token.name") -> config
