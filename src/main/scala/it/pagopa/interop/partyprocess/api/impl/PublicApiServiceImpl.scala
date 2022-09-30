@@ -90,8 +90,8 @@ class PublicApiServiceImpl(
         signatureValidationService.verifyDigest(validator, token.checksum),
         signatureValidationService.verifyManagerTaxCode(reports, legalUsers)
       )
-      logo <- getLogoFile(ApplicationConfiguration.emailLogoPath)
-      product                  <- productManagementService.getProductById(institutionId.head.product)
+      logo      <- getLogoFile(ApplicationConfiguration.emailLogoPath)
+      product   <- productManagementService.getProductById(institutionId.head.product)
       onboardingMailParameters <- getOnboardingMailParameters(product.name)
       emails = legalEmails ++ institutionEmail.toSeq
       _ <- sendOnboardingCompleteEmail(emails, onboardingMailParameters, logo)
