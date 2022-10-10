@@ -112,6 +112,7 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
       case "GSP" => "Gestore di servizi pubblici"
       case "SCP" => "Società a controllo pubblico"
       case "PT"  => "Partner tecnologico"
+      case "PSP" => "Prestatori Servizi di Pagamento"
     }
   }
 }
