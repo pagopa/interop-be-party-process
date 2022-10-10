@@ -10,7 +10,7 @@ import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.interop.commons.utils.TypeConversions._
-import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.ResourceConflictError
+import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.{GenericClientError, ResourceConflictError}
 import it.pagopa.interop.partymanagement.client.model.{PartyRole => PartyMgmtRole, Problem => _}
 import it.pagopa.interop.partyprocess.api.PublicApiService
 import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
@@ -82,7 +82,7 @@ class PublicApiServiceImpl(
 
       validator <- signatureService.createDocumentValidator(Files.readAllBytes(contract._2.toPath))
       _         <- SignatureValidationService.validateSignature(signatureValidationService.isDocumentSigned(validator))
-      _    <- SignatureValidationService.validateSignature(signatureValidationService.verifyOriginalDocument(validator))
+      _ <- SignatureValidationService.validateSignature(signatureValidationService.verifyOriginalDocument(validator))
       reports                  <- signatureValidationService.validateDocument(validator)
       _                        <- SignatureValidationService.validateSignature(
         signatureValidationService.verifySignatureForm(validator),
@@ -90,8 +90,8 @@ class PublicApiServiceImpl(
         signatureValidationService.verifyDigest(validator, token.checksum),
         signatureValidationService.verifyManagerTaxCode(reports, legalUsers)
       )
-      logo      <- getLogoFile(ApplicationConfiguration.emailLogoPath)
-      product   <- productManagementService.getProductById(institutionId.head.product)
+      logo                     <- getLogoFile(ApplicationConfiguration.emailLogoPath)
+      product                  <- productManagementService.getProductById(institutionId.head.product)
       onboardingMailParameters <- getOnboardingMailParameters(product.name)
       emails = legalEmails ++ institutionEmail.toSeq
       _ <- sendOnboardingCompleteEmail(emails, onboardingMailParameters, logo)
@@ -153,7 +153,42 @@ class PublicApiServiceImpl(
         logger.error("Error while invalidating onboarding for token identified with {}", tokenId, ex)
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, InvalidateOnboardingError)
         invalidateOnboarding400(errorResponse)
+    }
+  }
 
+  /**
+    * Code: 200, Message: successful operation, DataType: TokenId
+    * Code: 400, Message: Invalid ID supplied, DataType: Problem
+    * Code: 404, Message: Token not found, DataType: Problem
+    * Code: 409, Message: Token already consumed, DataType: Problem
+    */
+  override def verifyToken(tokenId: String)(implicit
+    toEntityMarshallerTokenId: ToEntityMarshaller[TokenId],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    contexts: Seq[(String, String)]
+  ): Route = {
+    val result: Future[TokenId] = for {
+      tokenIdUUID <- tokenId.toFutureUUID
+      token       <- partyManagementService.verifyToken(tokenIdUUID)
+    } yield TokenId(id = token.id)
+
+    onComplete(result) {
+      case Success(tokenId)                => verifyToken200(tokenId)
+      case Failure(ex: GenericClientError) =>
+        logger.error(s"Token not found", ex)
+        verifyToken404(problemOf(StatusCodes.NotFound, ex))
+
+      /*case Failure(ex: TokenAlreadyConsumed)    =>
+        logger.error(s"Token already consumed", ex)
+        verifyToken409(problemOf(StatusCodes.Conflict, ex))
+      case Failure(ex: GetRelationshipNotFound) =>
+        logger.error(s"Missing token relationships", ex)
+        verifyToken400(problemOf(StatusCodes.BadRequest, ex))
+        */
+      case Failure(ex)                          =>
+        logger.error(s"Verifying token failed", ex)
+        //complete(problemOf(StatusCodes.InternalServerError, TokenVerificationFatalError(tokenId, ex.getMessage)))
+        verifyToken400(problemOf(StatusCodes.InternalServerError, TokenVerificationFatalError(tokenId, ex.getMessage)))
     }
   }
 

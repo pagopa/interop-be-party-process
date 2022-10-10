@@ -131,4 +131,7 @@ object PartyProcessErrors {
 
   final case class OnboardingInvalidUpdates(externalId: String)
       extends ComponentError("0046", s"Cannot perform data overrides on institution having external id $externalId")
+
+  final case class TokenVerificationFatalError(tokenId: String, error: String)
+    extends ComponentError("0048", s"Error on retrieve $tokenId: $error")
 }
