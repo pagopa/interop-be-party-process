@@ -10,4 +10,5 @@ object PublicApiMarshallerImpl extends PublicApiMarshaller with SprayJsonSupport
 
   override implicit def toEntityMarshallerProblem: ToEntityMarshaller[Problem] = sprayJsonMarshaller[Problem]
 
+  override implicit def toEntityMarshallerTokenId: ToEntityMarshaller[TokenId] = sprayJsonMarshaller[TokenId]
 }
