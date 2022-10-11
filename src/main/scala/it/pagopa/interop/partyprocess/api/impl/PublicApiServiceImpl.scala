@@ -10,7 +10,7 @@ import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.interop.commons.mail.model.PersistedTemplate
 import it.pagopa.interop.commons.utils.TypeConversions._
-import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.{GenericClientError, ResourceConflictError}
+import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.{ResourceConflictError, ResourceNotFoundError}
 import it.pagopa.interop.partymanagement.client.model.{PartyRole => PartyMgmtRole, Problem => _}
 import it.pagopa.interop.partyprocess.api.PublicApiService
 import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
@@ -173,21 +173,15 @@ class PublicApiServiceImpl(
     } yield TokenId(id = token.id)
 
     onComplete(result) {
-      case Success(tokenId)                => verifyToken200(tokenId)
-      case Failure(ex: GenericClientError) =>
+      case Success(tokenId)                   => verifyToken200(tokenId)
+      case Failure(ex: ResourceNotFoundError) =>
         logger.error(s"Token not found", ex)
         verifyToken404(problemOf(StatusCodes.NotFound, ex))
-
-      /*case Failure(ex: TokenAlreadyConsumed)    =>
+      case Failure(ex: ResourceConflictError) =>
         logger.error(s"Token already consumed", ex)
         verifyToken409(problemOf(StatusCodes.Conflict, ex))
-      case Failure(ex: GetRelationshipNotFound) =>
-        logger.error(s"Missing token relationships", ex)
-        verifyToken400(problemOf(StatusCodes.BadRequest, ex))
-        */
-      case Failure(ex)                          =>
+      case Failure(ex)                        =>
         logger.error(s"Verifying token failed", ex)
-        //complete(problemOf(StatusCodes.InternalServerError, TokenVerificationFatalError(tokenId, ex.getMessage)))
         verifyToken400(problemOf(StatusCodes.InternalServerError, TokenVerificationFatalError(tokenId, ex.getMessage)))
     }
   }
