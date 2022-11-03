@@ -25,6 +25,8 @@ object ProcessApiMarshallerImpl extends ProcessApiMarshaller with SprayJsonSuppo
   override implicit def toEntityMarshallerInstitution: ToEntityMarshaller[Institution] =
     sprayJsonMarshaller[Institution]
 
+  // override implicit def toEntityMarshallerInstitutionSeed: ToEntityMarshaller[InstitutionSeed] = sprayJsonMarshaller[InstitutionSeed]
+
   override implicit def toEntityMarshallerOnboardingInfo: ToEntityMarshaller[OnboardingInfo] =
     sprayJsonMarshaller[OnboardingInfo]
 
@@ -38,6 +40,9 @@ object ProcessApiMarshallerImpl extends ProcessApiMarshaller with SprayJsonSuppo
 
   override implicit def fromEntityUnmarshallerOnboardingUsersRequest: FromEntityUnmarshaller[OnboardingUsersRequest] =
     sprayJsonUnmarshaller[OnboardingUsersRequest]
+
+  override implicit def fromEntityUnmarshallerInstitutionSeed: FromEntityUnmarshaller[InstitutionSeed] =
+    sprayJsonUnmarshaller[InstitutionSeed]
 
   override implicit def toEntityMarshallerProblem: ToEntityMarshaller[Problem] = sprayJsonMarshaller[Problem]
 

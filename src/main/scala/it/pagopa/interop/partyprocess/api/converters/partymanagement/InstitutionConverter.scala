@@ -16,7 +16,9 @@ object InstitutionConverter {
       taxCode = institution.taxCode,
       institutionType = institution.institutionType,
       origin = institution.origin,
-      attributes = institution.attributes.map(AttributeConverter.dependencyToApi)
+      attributes = institution.attributes.map(AttributeConverter.dependencyToApi),
+      paymentServiceProvider = None,
+      dataProtectionOfficer = None
     )
   }
 }
