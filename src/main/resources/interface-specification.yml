@@ -1283,6 +1283,58 @@ components:
       enum:
         - PENDING
         - ACTIVE
+    InstitutionSeed:
+      type: object
+      properties:
+        externalId:
+          description: external institution id
+          example: 'c_f205'
+          type: string
+        originId:
+          description: origin institution id (e.g iPA code)
+          example: 'c_f205'
+          type: string
+        description:
+          type: string
+          example: AGENCY X
+        digitalAddress:
+          example: email@pec.mail.org
+          format: email
+          type: string
+        address:
+          example: via del campo
+          type: string
+        zipCode:
+          example: 20100
+          type: string
+        taxCode:
+          description: institution tax code
+          type: string
+        origin:
+          type: string
+          description: The origin form which the institution has been retrieved
+          example: IPA
+        institutionType:
+          type: string
+          description: institution type
+          example: PA
+        attributes:
+          $ref: '#/components/schemas/Attributes'
+        paymentServiceProvider:
+          $ref: '#/components/schemas/PaymentServiceProvider'
+        dataProtectionOfficer:
+          $ref: '#/components/schemas/DataProtectionOfficer'
+      required:
+        - externalId
+        - originId
+        - description
+        - digitalAddress
+        - address
+        - zipCode
+        - taxCode
+        - attributes
+        - origin
+      additionalProperties: false
     Institution:
       type: object
       properties:
@@ -1324,6 +1376,10 @@ components:
           example: PA
         attributes:
           $ref: '#/components/schemas/Attributes'
+        paymentServiceProvider:
+          $ref: '#/components/schemas/PaymentServiceProvider'
+        dataProtectionOfficer:
+          $ref: '#/components/schemas/DataProtectionOfficer'
       required:
         - id
         - externalId
@@ -1484,6 +1540,38 @@ components:
       additionalProperties: false
       required:
         - id
+    PaymentServiceProvider:
+      type: object
+      additionalProperties: false
+      properties:
+        abiCode:
+          type: string
+          description: 'ABI Code'
+        businessRegisterNumber:
+          type: string
+          description: 'ID Registration Number on Business Register'
+        legalRegisterName:
+          type: string
+          description: 'Chairman name on Business Register'
+        legalRegisterNumber:
+          type: string
+          description: 'Chairman ID on Business Register'
+        vatNumberGroup:
+          type: boolean
+          description: 'true when vat number identify a group'
+    DataProtectionOfficer:
+      type: object
+      additionalProperties: false
+      properties:
+        address:
+          type: string
+          description: 'Data protection officer address'
+        email:
+          type: string
+          description: 'Data protection officer email'
+        pec:
+          type: string
+          description: 'Data protection officer digital address'
   securitySchemes:
     bearerAuth:
       type: http
