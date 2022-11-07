@@ -59,7 +59,7 @@ class ProcessApiServiceImpl(
     productName: String,
     onboardingMailParameters: Map[String, String]
   )(implicit contexts: Seq[(String, String)]): Future[Unit] = {
-    mailer.sendMail(mailTemplate.copy(subject = s"${productName}: Accordo di Adesione"))(
+    mailer.sendMail(mailTemplate.copy(subject = s"$productName: Accordo di Adesione"))(
       addresses,
       s"${productName}_accordo_adesione.pdf",
       file,
@@ -752,7 +752,7 @@ class ProcessApiServiceImpl(
   ): Future[PartyManagementDependency.Institution] = {
     val seed = PartyManagementDependency.InstitutionSeed(
       externalId = externalId,
-      originId = institutionSeed.originId,
+      originId = "SELC",
       description = institutionSeed.description,
       digitalAddress = institutionSeed.digitalAddress,
       taxCode = institutionSeed.taxCode,
@@ -760,8 +760,8 @@ class ProcessApiServiceImpl(
         institutionSeed.attributes.map(a => PartyManagementDependency.Attribute(a.origin, a.code, a.description)),
       address = institutionSeed.address,
       zipCode = institutionSeed.zipCode,
-      institutionType = Option.empty,
-      origin = institutionSeed.origin
+      institutionType = institutionSeed.institutionType,
+      origin = institutionSeed.institutionType + "-" + externalId
     )
 
     for {

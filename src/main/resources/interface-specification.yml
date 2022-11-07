@@ -1288,11 +1288,7 @@ components:
       properties:
         externalId:
           description: external institution id
-          example: 'c_f205'
-          type: string
-        originId:
-          description: origin institution id (e.g iPA code)
-          example: 'c_f205'
+          example: '012345678901'
           type: string
         description:
           type: string
@@ -1310,10 +1306,6 @@ components:
         taxCode:
           description: institution tax code
           type: string
-        origin:
-          type: string
-          description: The origin form which the institution has been retrieved
-          example: IPA
         institutionType:
           type: string
           description: institution type
@@ -1326,14 +1318,12 @@ components:
           $ref: '#/components/schemas/DataProtectionOfficer'
       required:
         - externalId
-        - originId
         - description
         - digitalAddress
         - address
         - zipCode
         - taxCode
         - attributes
-        - origin
       additionalProperties: false
     Institution:
       type: object
@@ -1469,6 +1459,10 @@ components:
         taxCode:
           description: institution tax code
           type: string
+        paymentServiceProvider:
+          $ref: '#/components/schemas/PaymentServiceProvider'
+        dataProtectionOfficer:
+          $ref: '#/components/schemas/DataProtectionOfficer'
     Billing:
       type: object
       properties:
