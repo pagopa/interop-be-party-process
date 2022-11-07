@@ -140,7 +140,7 @@ class ProcessApiServiceImpl(
         productRoles = Seq.empty
       )(bearer)
       onboardingData <- Future.traverse(relationships.items)(getOnboardingDataDetails(bearer))
-    } yield OnboardingInfo(Option(userId), onboardingData)
+    } yield OnboardingInfo(userId, onboardingData)
 
     onComplete(result) {
       case Success(res)                       => getOnboardingInfo200(res)
@@ -761,13 +761,10 @@ class ProcessApiServiceImpl(
       address = institutionSeed.address,
       zipCode = institutionSeed.zipCode,
       institutionType = institutionSeed.institutionType,
-      origin = institutionSeed.institutionType + "-" + externalId
+      origin = s"${institutionSeed.institutionType.getOrElse("SELC")}_${externalId}"
     )
 
     for {
-      // institution <- partyRegistryService.getInstitution(externalId)(bearer)
-      // category    <- partyRegistryService.getCategory(institution.origin, institution.category)(bearer)
-
       institution <- partyManagementService.createInstitution(seed)(bearer)
       _ = logger.info("institution created {}", institution.externalId)
     } yield institution

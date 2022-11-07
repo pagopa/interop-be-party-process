@@ -1214,7 +1214,7 @@ components:
             $ref: '#/components/schemas/OnboardingData'
       additionalProperties: false
       required:
-        - person
+        - userId
         - institutions
     Product:
       type: object
@@ -1286,10 +1286,6 @@ components:
     InstitutionSeed:
       type: object
       properties:
-        externalId:
-          description: external institution id
-          example: '012345678901'
-          type: string
         description:
           type: string
           example: AGENCY X
@@ -1317,7 +1313,6 @@ components:
         dataProtectionOfficer:
           $ref: '#/components/schemas/DataProtectionOfficer'
       required:
-        - externalId
         - description
         - digitalAddress
         - address
