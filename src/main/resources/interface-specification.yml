@@ -714,6 +714,45 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  '/institutions/insert/{externalId}':
+    post:
+      tags:
+        - process
+      summary: Create an institution using external institution id without fetching data from party-registry
+      description: Create an institution using external institution id without fetching data from party-registry
+      operationId: createInstitutionRaw
+      parameters:
+        - name: externalId
+          in: path
+          description: The externalId of the institution
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstitutionSeed'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Institution'
+        '404':
+          description: Invalid externalId supplied
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: institution having externalId already exists
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   '/external/institutions/{externalId}':
     get:
       security: [{}]
@@ -1175,7 +1214,7 @@ components:
             $ref: '#/components/schemas/OnboardingData'
       additionalProperties: false
       required:
-        - person
+        - userId
         - institutions
     Product:
       type: object
@@ -1237,12 +1276,50 @@ components:
         - SUSPENDED
         - DELETED
         - REJECTED
+        - TOBEVALIDATED
     ProductState:
       type: string
       description: Represents the product state
       enum:
         - PENDING
         - ACTIVE
+    InstitutionSeed:
+      type: object
+      properties:
+        description:
+          type: string
+          example: AGENCY X
+        digitalAddress:
+          example: email@pec.mail.org
+          format: email
+          type: string
+        address:
+          example: via del campo
+          type: string
+        zipCode:
+          example: 20100
+          type: string
+        taxCode:
+          description: institution tax code
+          type: string
+        institutionType:
+          type: string
+          description: institution type
+          example: PA
+        attributes:
+          $ref: '#/components/schemas/Attributes'
+        paymentServiceProvider:
+          $ref: '#/components/schemas/PaymentServiceProvider'
+        dataProtectionOfficer:
+          $ref: '#/components/schemas/DataProtectionOfficer'
+      required:
+        - description
+        - digitalAddress
+        - address
+        - zipCode
+        - taxCode
+        - attributes
+      additionalProperties: false
     Institution:
       type: object
       properties:
@@ -1284,6 +1361,10 @@ components:
           example: PA
         attributes:
           $ref: '#/components/schemas/Attributes'
+        paymentServiceProvider:
+          $ref: '#/components/schemas/PaymentServiceProvider'
+        dataProtectionOfficer:
+          $ref: '#/components/schemas/DataProtectionOfficer'
       required:
         - id
         - externalId
@@ -1373,6 +1454,10 @@ components:
         taxCode:
           description: institution tax code
           type: string
+        paymentServiceProvider:
+          $ref: '#/components/schemas/PaymentServiceProvider'
+        dataProtectionOfficer:
+          $ref: '#/components/schemas/DataProtectionOfficer'
     Billing:
       type: object
       properties:
@@ -1444,6 +1529,38 @@ components:
       additionalProperties: false
       required:
         - id
+    PaymentServiceProvider:
+      type: object
+      additionalProperties: false
+      properties:
+        abiCode:
+          type: string
+          description: 'ABI Code'
+        businessRegisterNumber:
+          type: string
+          description: 'ID Registration Number on Business Register'
+        legalRegisterName:
+          type: string
+          description: 'Chairman name on Business Register'
+        legalRegisterNumber:
+          type: string
+          description: 'Chairman ID on Business Register'
+        vatNumberGroup:
+          type: boolean
+          description: 'true when vat number identify a group'
+    DataProtectionOfficer:
+      type: object
+      additionalProperties: false
+      properties:
+        address:
+          type: string
+          description: 'Data protection officer address'
+        email:
+          type: string
+          description: 'Data protection officer email'
+        pec:
+          type: string
+          description: 'Data protection officer digital address'
   securitySchemes:
     bearerAuth:
       type: http

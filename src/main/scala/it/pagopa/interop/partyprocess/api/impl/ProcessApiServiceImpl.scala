@@ -19,7 +19,7 @@ import it.pagopa.interop.partyprocess.api.converters.partymanagement.Institution
 import it.pagopa.interop.partyprocess.api.impl.Conversions._
 import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.partyprocess.error.PartyProcessErrors._
-import it.pagopa.interop.partyprocess.model._
+import it.pagopa.interop.partyprocess.model.{InstitutionSeed, _}
 import it.pagopa.interop.partyprocess.service._
 import it.pagopa.userreg.client.model.UserId
 
@@ -59,7 +59,7 @@ class ProcessApiServiceImpl(
     productName: String,
     onboardingMailParameters: Map[String, String]
   )(implicit contexts: Seq[(String, String)]): Future[Unit] = {
-    mailer.sendMail(mailTemplate.copy(subject = s"${productName}: Accordo di Adesione"))(
+    mailer.sendMail(mailTemplate.copy(subject = s"$productName: Accordo di Adesione"))(
       addresses,
       s"${productName}_accordo_adesione.pdf",
       file,
@@ -140,7 +140,7 @@ class ProcessApiServiceImpl(
         productRoles = Seq.empty
       )(bearer)
       onboardingData <- Future.traverse(relationships.items)(getOnboardingDataDetails(bearer))
-    } yield OnboardingInfo(Option(userId), onboardingData)
+    } yield OnboardingInfo(userId, onboardingData)
 
     onComplete(result) {
       case Success(res)                       => getOnboardingInfo200(res)
@@ -746,6 +746,30 @@ class ProcessApiServiceImpl(
       _ = logger.info("institution created {}", institution.externalId)
     } yield institution
 
+  private def createInstitutionInnerRaw(externalId: String, institutionSeed: InstitutionSeed)(implicit
+    bearer: String,
+    contexts: Seq[(String, String)]
+  ): Future[PartyManagementDependency.Institution] = {
+    val seed = PartyManagementDependency.InstitutionSeed(
+      externalId = externalId,
+      originId = "SELC",
+      description = institutionSeed.description,
+      digitalAddress = institutionSeed.digitalAddress,
+      taxCode = institutionSeed.taxCode,
+      attributes =
+        institutionSeed.attributes.map(a => PartyManagementDependency.Attribute(a.origin, a.code, a.description)),
+      address = institutionSeed.address,
+      zipCode = institutionSeed.zipCode,
+      institutionType = institutionSeed.institutionType,
+      origin = s"${institutionSeed.institutionType.getOrElse("SELC")}_${externalId}"
+    )
+
+    for {
+      institution <- partyManagementService.createInstitution(seed)(bearer)
+      _ = logger.info("institution created {}", institution.externalId)
+    } yield institution
+  }
+
   /** Code: 204, Message: Successful operation
     * Code: 400, Message: Invalid id supplied, DataType: Problem
     * Code: 404, Message: Not found, DataType: Problem
@@ -977,6 +1001,39 @@ class ProcessApiServiceImpl(
 
     onComplete(result) {
       case Success(institution)               => createInstitution201(InstitutionConverter.dependencyToApi(institution))
+      case Failure(ex: ResourceNotFoundError) =>
+        logger.error(s"Institution having externalId $externalId not exists in registry", ex)
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, CreateInstitutionNotFound)
+        complete(errorResponse.status, errorResponse)
+      case Failure(ex: ResourceConflictError) =>
+        logger.error(s"Institution having externalId $externalId already exists", ex)
+        val errorResponse: Problem = problemOf(StatusCodes.Conflict, CreateInstitutionConflict)
+        complete(errorResponse.status, errorResponse)
+      case Failure(ex)                        =>
+        logger.error(s"Error while creating institution having external id $externalId", ex)
+        val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, CreateInstitutionError)
+        complete(errorResponse.status, errorResponse)
+    }
+  }
+
+  /**
+    * Code: 201, Message: successful operation, DataType: Institution
+    * Code: 404, Message: Invalid externalId supplied, DataType: Problem
+    * Code: 409, Message: institution having externalId already exists, DataType: Problem
+    */
+  override def createInstitutionRaw(externalId: String, institutionSeed: InstitutionSeed)(implicit
+    toEntityMarshallerInstitution: ToEntityMarshaller[Institution],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    contexts: Seq[(String, String)]
+  ): Route = {
+    logger.info(s"Creating institution having external id $externalId")
+    val result = for {
+      bearer      <- getFutureBearer(contexts)
+      institution <- createInstitutionInnerRaw(externalId, institutionSeed)(bearer, contexts)
+    } yield institution
+
+    onComplete(result) {
+      case Success(institution) => createInstitutionRaw200(InstitutionConverter.dependencyToApi(institution))
       case Failure(ex: ResourceNotFoundError) =>
         logger.error(s"Institution having externalId $externalId not exists in registry", ex)
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, CreateInstitutionNotFound)

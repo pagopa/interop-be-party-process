@@ -10,6 +10,10 @@ project/target
 target
 .idea
 .openapi-generator
+.bloop
+.metals
+metals.sbt
+.vscode
 generated/target
 generated/src
 client/target

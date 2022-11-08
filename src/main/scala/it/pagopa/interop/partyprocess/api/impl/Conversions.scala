@@ -23,11 +23,12 @@ object Conversions {
 
   def relationshipStateToApi(status: PartyManagementDependency.RelationshipState): RelationshipState =
     status match {
-      case PartyManagementDependency.RelationshipState.PENDING   => RelationshipState.PENDING
-      case PartyManagementDependency.RelationshipState.ACTIVE    => RelationshipState.ACTIVE
-      case PartyManagementDependency.RelationshipState.SUSPENDED => RelationshipState.SUSPENDED
-      case PartyManagementDependency.RelationshipState.DELETED   => RelationshipState.DELETED
-      case PartyManagementDependency.RelationshipState.REJECTED  => RelationshipState.REJECTED
+      case PartyManagementDependency.RelationshipState.PENDING       => RelationshipState.PENDING
+      case PartyManagementDependency.RelationshipState.ACTIVE        => RelationshipState.ACTIVE
+      case PartyManagementDependency.RelationshipState.SUSPENDED     => RelationshipState.SUSPENDED
+      case PartyManagementDependency.RelationshipState.DELETED       => RelationshipState.DELETED
+      case PartyManagementDependency.RelationshipState.REJECTED      => RelationshipState.REJECTED
+      case PartyManagementDependency.RelationshipState.TOBEVALIDATED => RelationshipState.TOBEVALIDATED
     }
 
   def relationshipProductToApi(product: RelationshipProduct): ProductInfo = {
