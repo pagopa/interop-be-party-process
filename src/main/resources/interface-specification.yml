@@ -719,7 +719,7 @@ paths:
       tags:
         - process
       summary: Create an institution using external institution id without fetching data from party-registry
-      description: Create an institution using external institution id without fetching data from user-registry
+      description: Create an institution using external institution id without fetching data from party-registry
       operationId: createInstitutionRaw
       parameters:
         - name: externalId
