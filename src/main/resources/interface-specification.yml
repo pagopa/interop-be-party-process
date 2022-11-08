@@ -718,7 +718,7 @@ paths:
     post:
       tags:
         - process
-      summary: Create an institution using external institution id without fetching data from user-registry
+      summary: Create an institution using external institution id without fetching data from party-registry
       description: Create an institution using external institution id without fetching data from user-registry
       operationId: createInstitutionRaw
       parameters:
