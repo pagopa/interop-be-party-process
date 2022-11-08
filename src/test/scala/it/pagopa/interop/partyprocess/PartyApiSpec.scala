@@ -690,7 +690,7 @@ trait PartyApiSpec
       )
 
       val expected = OnboardingInfo(
-        userId = Option(uid),
+        userId = uid,
         institutions = Seq(
           OnboardingData(
             id = institution1.id,
@@ -825,7 +825,7 @@ trait PartyApiSpec
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship1))
 
       val expected = OnboardingInfo(
-        userId = Option(uid),
+        userId = uid,
         institutions = Seq(
           OnboardingData(
             id = institution.id,
@@ -1080,7 +1080,7 @@ trait PartyApiSpec
         .once()
 
       val expected = OnboardingInfo(
-        userId = Option(uid),
+        userId = uid,
         institutions = Seq(
           OnboardingData(
             id = institution.id,
@@ -1247,39 +1247,6 @@ trait PartyApiSpec
       val attribute2  = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2", origin)
       val attribute3  = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3", origin)
 
-      /*val institutionSeed1 = InstitutionSeed(
-        externalId = externalId1,
-        originId = originId1,
-        description = "org1",
-        digitalAddress = "digitalAddress1",
-        address = "address",
-        zipCode = "zipCode",
-        taxCode = "123",
-        origin = origin,
-        institutionType = Option("PSP"),
-        attributes = Seq(
-          Attribute(attribute1.origin, attribute1.code, attribute1.description),
-          Attribute(attribute2.origin, attribute2.code, attribute2.description),
-          Attribute(attribute3.origin, attribute3.code, attribute3.description)
-        ),
-        paymentServiceProvider = Option(
-          PaymentServiceProvider(
-            abiCode = Option("123"),
-            businessRegisterNumber = Option("12345"),
-            legalRegisterName = Option("Legal1"),
-            legalRegisterNumber = Option("123456"),
-            vatNumberGroup = Option(true)
-          )
-        ),
-        dataProtectionOfficer = Option(
-          DataProtectionOfficer(
-            address = Option("address1"),
-            email = Option("email1@where.com"),
-            pec = Option("pec1@where.com")
-          )
-        )
-      )*/
-
       val institution1 = PartyManagementDependency.Institution(
         id = orgPartyId1,
         externalId = externalId1,
@@ -1345,7 +1312,7 @@ trait PartyApiSpec
       val relationships = PartyManagementDependency.Relationships(items = Seq(relationship1))
 
       val expected = OnboardingInfo(
-        userId = Option(uid),
+        userId = uid,
         institutions = Seq(
           OnboardingData(
             id = institution1.id,

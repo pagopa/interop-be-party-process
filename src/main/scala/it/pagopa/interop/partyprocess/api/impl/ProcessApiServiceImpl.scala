@@ -1033,7 +1033,7 @@ class ProcessApiServiceImpl(
     } yield institution
 
     onComplete(result) {
-      case Success(institution)               => createInstitution201(InstitutionConverter.dependencyToApi(institution))
+      case Success(institution) => createInstitutionRaw200(InstitutionConverter.dependencyToApi(institution))
       case Failure(ex: ResourceNotFoundError) =>
         logger.error(s"Institution having externalId $externalId not exists in registry", ex)
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, CreateInstitutionNotFound)
