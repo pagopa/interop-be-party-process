@@ -1,4 +1,4 @@
-package it.pagopa.interop.partyprocess.api.impl
+wpackage it.pagopa.interop.partyprocess.api.impl
 
 import akka.http.scaladsl.marshalling.ToEntityMarshaller
 import akka.http.scaladsl.model.{ContentType, HttpEntity, MessageEntity, StatusCodes}
@@ -45,6 +45,7 @@ class ProcessApiServiceImpl(
     extends ProcessApiService {
 
   private val logger = Logger.takingImplicit[ContextFieldsToLog](this.getClass)
+  private val SELC   = "SELC"
 
   private final val validOnboardingStates: Seq[PartyManagementDependency.RelationshipState] =
     List(
@@ -394,7 +395,8 @@ class ProcessApiServiceImpl(
               productRole,
               onboardingRequest.pricingPlan,
               onboardingRequest.institutionUpdate,
-              onboardingRequest.billing
+              onboardingRequest.billing,
+              institution.origin
             )(bearer)
           case _                 =>
             createOrGetRelationship(
@@ -405,7 +407,7 @@ class ProcessApiServiceImpl(
               productRole,
               None,
               None,
-              None
+              None // ,  institution.origin
             )(bearer)
         }
       }
@@ -509,7 +511,8 @@ class ProcessApiServiceImpl(
     productRole: String,
     pricingPlan: Option[String],
     institutionUpdate: Option[InstitutionUpdate],
-    billing: Option[Billing]
+    billing: Option[Billing],
+    origin: String = SELC
   )(bearer: String)(implicit contexts: Seq[(String, String)]): Future[PartyManagementDependency.Relationship] = {
     val relationshipSeed: PartyManagementDependency.RelationshipSeed =
       PartyManagementDependency.RelationshipSeed(
@@ -529,12 +532,13 @@ class ProcessApiServiceImpl(
           )
         ),
         billing = billing.map(b =>
-          PartyManagementDependency.Billing(
-            vatNumber = b.vatNumber,
-            recipientCode = b.recipientCode,
-            publicServices = b.publicServices
-          )
-        )
+          PartyManagementDependency
+            .Billing(vatNumber = b.vatNumber, recipientCode = b.recipientCode, publicServices = b.publicServices)
+        ),
+        state = origin match {
+          case SELC => Option(PartyManagementDependency.RelationshipState.TOBEVALIDATED)
+          case _    => Option(PartyManagementDependency.RelationshipState.PENDING)
+        }
       )
 
     partyManagementService
@@ -687,7 +691,8 @@ class ProcessApiServiceImpl(
       relationship.product.id == product &&
       (
         relationship.state != PartyManagementDependency.RelationshipState.PENDING &&
-          relationship.state != PartyManagementDependency.RelationshipState.REJECTED
+          relationship.state != PartyManagementDependency.RelationshipState.REJECTED &&
+          relationship.state != PartyManagementDependency.RelationshipState.TOBEVALIDATED
       )
 
     }
@@ -752,7 +757,7 @@ class ProcessApiServiceImpl(
   ): Future[PartyManagementDependency.Institution] = {
     val seed = PartyManagementDependency.InstitutionSeed(
       externalId = externalId,
-      originId = "SELC",
+      originId = s"${institutionSeed.institutionType.getOrElse("SELC")}_${externalId}",
       description = institutionSeed.description,
       digitalAddress = institutionSeed.digitalAddress,
       taxCode = institutionSeed.taxCode,
@@ -761,7 +766,7 @@ class ProcessApiServiceImpl(
       address = institutionSeed.address,
       zipCode = institutionSeed.zipCode,
       institutionType = institutionSeed.institutionType,
-      origin = s"${institutionSeed.institutionType.getOrElse("SELC")}_${externalId}"
+      origin = SELC
     )
 
     for {
