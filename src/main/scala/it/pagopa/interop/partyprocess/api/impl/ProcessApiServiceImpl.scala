@@ -1,4 +1,4 @@
-wpackage it.pagopa.interop.partyprocess.api.impl
+package it.pagopa.interop.partyprocess.api.impl
 
 import akka.http.scaladsl.marshalling.ToEntityMarshaller
 import akka.http.scaladsl.model.{ContentType, HttpEntity, MessageEntity, StatusCodes}
@@ -39,6 +39,7 @@ class ProcessApiServiceImpl(
   signatureService: SignatureService,
   mailer: MailEngine,
   mailTemplate: PersistedTemplate,
+  mailNotificationTemplate: PersistedTemplate,
   relationshipService: RelationshipService,
   productService: ProductService
 )(implicit ec: ExecutionContext)
@@ -66,6 +67,20 @@ class ProcessApiServiceImpl(
       file,
       onboardingMailParameters
     )("onboarding-contract-email")
+  }
+
+  private def sendOnboardingNotificationMail(
+    addresses: Seq[String],
+    file: File,
+    productName: String,
+    onboardingMailParameters: Map[String, String]
+  )(implicit contexts: Seq[(String, String)]): Future[Unit] = {
+    mailer.sendMail(mailNotificationTemplate)(
+      addresses,
+      s"${productName}_accordo_adesione.pdf",
+      file,
+      onboardingMailParameters
+    )("onboarding-complete-email-notification")
   }
 
   /** Code: 204, Message: successful operation
@@ -421,11 +436,23 @@ class ProcessApiServiceImpl(
         onboardingRequest.contract.path
       )(bearer)
       _ = logger.info("Digest {}", digest)
-      onboardingMailParameters <- getOnboardingMailParameters(token.token, currentUser, onboardingRequest)
-      destinationMails = ApplicationConfiguration.destinationMails.getOrElse(
-        Seq(onboardingRequest.institutionUpdate.flatMap(_.digitalAddress).getOrElse(institution.digitalAddress))
-      )
-      _ <- sendOnboardingMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
+
+      onboardingMailParameters <- institution.origin match {
+        case SELC => getOnboardingMailNotificationParameters(token.token, currentUser, onboardingRequest)
+        case _    => getOnboardingMailParameters(token.token, currentUser, onboardingRequest)
+      }
+      destinationMails = institution.origin match {
+        case SELC => Seq(ApplicationConfiguration.onboardingMailNotificationInstitutionAdminEmailAddress)
+        case _    =>
+          ApplicationConfiguration.destinationMails.getOrElse(
+            Seq(onboardingRequest.institutionUpdate.flatMap(_.digitalAddress).getOrElse(institution.digitalAddress))
+          )
+      }
+      _                        <- institution.origin match {
+        case SELC =>
+          sendOnboardingNotificationMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
+        case _    => sendOnboardingMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
+      }
       _ = logger.info(s"$token")
     } yield ()
   }
@@ -445,6 +472,39 @@ class ProcessApiServiceImpl(
     Future
       .failed(OnboardingInvalidUpdates(institution.externalId))
       .unlessA(institution.origin != "IPA" || areIpaDataMatching)
+  }
+
+  private def getOnboardingMailNotificationParameters(
+    token: String,
+    currentUser: UserRegistryUser,
+    onboardingRequest: OnboardingSignedRequest
+  ): Future[Map[String, String]] = {
+    val tokenParameters: Map[String, String] = {
+      ApplicationConfiguration.onboardingMailNotificationPlaceholdersReplacement.map { case (k, placeholder) =>
+        (k, s"$placeholder$token")
+      }
+    }
+
+    val productParameters: Map[String, String] = Map(
+      ApplicationConfiguration.onboardingMailNotificationProductNamePlaceholder -> onboardingRequest.productName
+    )
+
+    val userParameters: Map[String, String] = Map(
+      ApplicationConfiguration.onboardingMailNotificationRequesterNamePlaceholder    -> currentUser.name.getOrElse(""),
+      ApplicationConfiguration.onboardingMailNotificationRequesterSurnamePlaceholder -> currentUser.surname.getOrElse(
+        ""
+      )
+    )
+
+    val institutionInfoParameters: Map[String, String] = {
+      onboardingRequest.institutionUpdate.fold(Map.empty[String, String]) { iu =>
+        Seq(
+          ApplicationConfiguration.onboardingMailNotificationInstitutionNamePlaceholder.some.zip(iu.description)
+        ).flatten.toMap
+      }
+    }
+
+    Future.successful(tokenParameters ++ productParameters ++ userParameters ++ institutionInfoParameters)
   }
 
   private def getOnboardingMailParameters(
@@ -528,7 +588,19 @@ class ProcessApiServiceImpl(
             digitalAddress = i.digitalAddress,
             address = i.address,
             zipCode = i.zipCode,
-            taxCode = i.taxCode
+            taxCode = i.taxCode,
+            paymentServiceProvider = i.paymentServiceProvider.map(p =>
+              PartyManagementDependency.PaymentServiceProvider(
+                abiCode = p.abiCode,
+                businessRegisterNumber = p.businessRegisterNumber,
+                legalRegisterName = p.legalRegisterName,
+                legalRegisterNumber = p.legalRegisterNumber,
+                vatNumberGroup = p.vatNumberGroup
+              )
+            ),
+            dataProtectionOfficer = i.dataProtectionOfficer.map(d =>
+              PartyManagementDependency.DataProtectionOfficer(address = d.address, email = d.email, pec = d.pec)
+            )
           )
         ),
         billing = billing.map(b =>

@@ -95,6 +95,26 @@ object ApplicationConfiguration {
   val onboardingMailBillingRecipientCodePlaceholder: String =
     config.getString("party-process.mail-template.onboarding-mail-placeholders.billing.recipientCode")
 
+  val onboardingMailNotificationPlaceholdersReplacement: Map[String, String] = {
+    Map(
+      config
+        .getString("party-process.mail-template.onboarding-notification-mail-placeholders.confirm-token.name") -> config
+        .getString("party-process.mail-template.onboarding-notification-mail-placeholders.confirm-token.placeholder")
+    )
+  }
+  val onboardingMailNotificationProductNamePlaceholder: String               =
+    config.getString("party-process.mail-template.onboarding-notification-mail-placeholders.productName")
+  val onboardingMailNotificationRequesterNamePlaceholder: String             =
+    config.getString("party-process.mail-template.onboarding-notification-mail-placeholders.requesterName")
+  val onboardingMailNotificationRequesterSurnamePlaceholder: String          =
+    config.getString("party-process.mail-template.onboarding-notification-mail-placeholders.requesterSurname")
+  val onboardingMailNotificationInstitutionNamePlaceholder: String           =
+    config.getString("party-process.mail-template.onboarding-notification-mail-placeholders.institutionName")
+  val onboardingMailNotificationInstitutionAdminEmailAddress: String         =
+    config.getString("party-process.mail-template.onboarding-notification-mail-placeholders.adminEmail")
+  val onboardingNotificationMailTemplatePath: String                         =
+    config.getString("party-process.mail-template.onboarding-notification-mail-placeholders.path")
+
   val storageContainer: String = config.getString("party-process.storage.container")
 
   val jwtAudience: Set[String] = config.getString("party-process.jwt.audience").split(",").toSet.filter(_.nonEmpty)

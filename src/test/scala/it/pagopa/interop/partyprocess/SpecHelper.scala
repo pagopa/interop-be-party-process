@@ -43,6 +43,7 @@ trait SpecHelper { self: MockFactory =>
   val mockReports: Reports                                       = mock[Reports]
   val mockSignedDocumentValidator: SignedDocumentValidator       = mock[SignedDocumentValidator]
   val mockMailTemplate: PersistedTemplate                        = PersistedTemplate("mock", "mock")
+  val mockMailNotificationTemplate: PersistedTemplate            = PersistedTemplate("mock", "mock")
 
   val token = UUID.randomUUID()
   val uid   = UUID.randomUUID()

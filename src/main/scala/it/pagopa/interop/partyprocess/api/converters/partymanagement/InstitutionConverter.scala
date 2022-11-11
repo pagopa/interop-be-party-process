@@ -17,8 +17,8 @@ object InstitutionConverter {
       institutionType = institution.institutionType,
       origin = institution.origin,
       attributes = institution.attributes.map(AttributeConverter.dependencyToApi),
-      paymentServiceProvider = None,
-      dataProtectionOfficer = None
+      paymentServiceProvider = institution.paymentServiceProvider.map(PaymentServiceProviderConverter.dependencyToApi),
+      dataProtectionOfficer = institution.dataProtectionOfficer.map(DataProtectionOfficerConverter.dependencyToApi)
     )
   }
 }
