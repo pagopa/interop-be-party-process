@@ -401,178 +401,6 @@ class ProcessApiServiceImpl(
       )*/
   }
 
-  /**
-    * Code: 204, Message: successful operation
-    * Code: 404, Message: Not found, DataType: Problem
-    * Code: 409, Message: Institution data not overwritable, DataType: Problem
-    * Code: 400, Message: Invalid ID supplied, DataType: Problem
-    */
-  override def onboardingEnable(tokenId: String, onboardingContract: OnboardingContract)(implicit
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
-    contexts: Seq[(String, String)]
-  ): Route = {
-    logger.info(s"Onboarding Enable having tokenId $tokenId")
-
-    val result: Future[Unit] = for {
-      bearer      <- getFutureBearer(contexts)
-      tokenIdUUID <- tokenId.toFutureUUID
-      token       <- partyManagementService.verifyToken(tokenIdUUID)
-      uid         <- getUidFuture(contexts)
-      userId      <- uid.toFutureUUID
-      currentUser <- userRegistryManagementService.getUserById(userId)
-
-      managerLegals = token.legals.filter(_.role == PartyManagementDependency.PartyRole.MANAGER)
-      managerRelationships <- Future.traverse(managerLegals)(relationship =>
-        partyManagementService.getInstitutionRelationships(relationship.relationshipId)(bearer)
-      )
-      _                    <- Future.traverse(managerLegals)(managerLegal =>
-        partyManagementService.enableRelationship(managerLegal.relationshipId)(bearer)
-      )
-      managerUsers         <- Future.traverse(managerLegals)(legal =>
-        userRegistryManagementService.getUserWithEmailById(legal.partyId)
-      )
-      institutions         <- Future.traverse(managerLegals)(legalUser =>
-        partyManagementService.retrieveInstitution(legalUser.relationshipId)(bearer)
-      )
-      institutionInternalId = institutions.headOption.map(_.id.toString).getOrElse("")
-
-      manager             = managerUsers.head;
-      managerRelationship = managerRelationships.head.items.filter(_.from == manager.id).head
-      managerUser         = User(
-        id = manager.id,
-        taxCode = manager.taxCode.getOrElse(""),
-        name = manager.name.getOrElse(""),
-        surname = manager.surname.getOrElse(""),
-        email = Option(manager.email.get(managerRelationship.to.toString)),
-        role = PartyRole.MANAGER,
-        productRole = managerRelationship.product.role
-      )
-
-      validUsersLegals = token.legals.filter(_.role != PartyManagementDependency.PartyRole.MANAGER)
-      validUsersRelationships <- Future.traverse(validUsersLegals)(legal =>
-        partyManagementService.getInstitutionRelationships(legal.relationshipId)(bearer)
-      )
-      validRegistryUsers      <- Future.traverse(validUsersLegals)(legal =>
-        userRegistryManagementService.getUserWithEmailById(legal.partyId)
-      )
-      validUsers = validRegistryUsers.map(validRegistryUser =>
-        User(
-          id = validRegistryUser.id,
-          taxCode = validRegistryUser.taxCode.getOrElse(""),
-          name = validRegistryUser.name.getOrElse(""),
-          surname = validRegistryUser.surname.getOrElse(""),
-          email = Option(validRegistryUser.email.get(institutionInternalId)),
-          role = PartyRole.MANAGER,
-          productRole = validUsersRelationships.head.items.filter(_.from == validRegistryUser.id).head.product.role
-        )
-      )
-      // <- getValidUsers(validRegistryUsers, validUsersRelationships.head, institutionInternalId)
-
-      allUsersLegals = token.legals.filter(_.role != PartyManagementDependency.PartyRole.MANAGER)
-      // allUsersRelationships <- Future.traverse(allUsersLegals)(legal =>
-      //   partyManagementService.getInstitutionRelationships(legal.relationshipId)(bearer)
-      // )
-      allRegistryUsers <- Future.traverse(allUsersLegals)(legal =>
-        userRegistryManagementService.getUserWithEmailById(legal.partyId)
-      )
-      allUsers = allRegistryUsers.map(validRegistryUser =>
-        User(
-          id = validRegistryUser.id,
-          taxCode = validRegistryUser.taxCode.getOrElse(""),
-          name = validRegistryUser.name.getOrElse(""),
-          surname = validRegistryUser.surname.getOrElse(""),
-          email = Option(validRegistryUser.email.get(institutionInternalId)),
-          role = PartyRole.MANAGER,
-          productRole = validUsersRelationships.head.items.filter(_.from == validRegistryUser.id).head.product.role
-        )
-      )
-
-      institutionUpdate = managerRelationship.institutionUpdate match {
-        case None => None
-        case _    =>
-          managerRelationship.institutionUpdate.map(i =>
-            InstitutionUpdate(
-              institutionType = i.institutionType,
-              description = i.description,
-              digitalAddress = i.digitalAddress,
-              address = i.address,
-              zipCode = i.zipCode,
-              taxCode = i.taxCode,
-              paymentServiceProvider = i.paymentServiceProvider.map(p =>
-                PaymentServiceProvider(
-                  abiCode = p.abiCode,
-                  businessRegisterNumber = p.businessRegisterNumber,
-                  legalRegisterName = p.legalRegisterName,
-                  legalRegisterNumber = p.legalRegisterNumber,
-                  vatNumberGroup = p.vatNumberGroup
-                )
-              ),
-              dataProtectionOfficer = i.dataProtectionOfficer.map(d =>
-                DataProtectionOfficer(address = d.address, email = d.email, pec = d.pec)
-              )
-            )
-          )
-
-      }
-
-      onboardingRequest = OnboardingSignedRequest(
-        productId = managerRelationship.product.id,
-        productName = managerRelationship.product.id,
-        users = allUsers,
-        institutionUpdate = institutionUpdate,
-        pricingPlan = managerRelationship.pricingPlan,
-        billing = managerRelationship.billing.map(b =>
-          Billing(vatNumber = b.vatNumber, recipientCode = b.recipientCode, publicServices = b.publicServices)
-        ),
-        contract = onboardingContract
-      )
-
-      contractTemplate <- getFileAsString(onboardingContract.path)
-      pdf <- pdfCreator.createContract(contractTemplate, managerUser, validUsers, institutions.head, onboardingRequest)
-
-      digest <- signatureService.createDigest(pdf)
-      _      <- partyManagementService.updateTokenDigest(tokenIdUUID, digest)(bearer)
-
-      onboardingMailParameters <- getOnboardingMailParameters(tokenId, currentUser, onboardingRequest)
-
-      destinationMails =
-        ApplicationConfiguration.destinationMails.getOrElse(
-          Seq(
-            onboardingRequest.institutionUpdate
-              .flatMap(_.digitalAddress)
-              .getOrElse(institutions.headOption.map(_.digitalAddress).getOrElse(""))
-          )
-        )
-
-      _ <- sendOnboardingMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
-
-    } yield ()
-
-    onComplete(result) {
-      case Success(_)                            => onboardingEnable204
-      case Failure(ex: ContractNotFound)         =>
-        logger.info(s"Error while enable onbarding with $tokenId", ex)
-        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
-        onboardingEnable404(errorResponse)
-      case Failure(ex: InstitutionNotFound)      =>
-        logger.error(s"Token $tokenId not found", ex)
-        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
-        onboardingEnable404(errorResponse)
-      case Failure(ex: OnboardingInvalidUpdates) =>
-        logger.error(s"Invalid institution updates for Token $tokenId", ex)
-        val errorResponse: Problem = problemOf(StatusCodes.Conflict, ex)
-        onboardingEnable409(errorResponse)
-      case Failure(ManagerFoundError)            =>
-        logger.error(s"Institution already onboarded for Token $tokenId", ManagerFoundError)
-        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, ManagerFoundError)
-        onboardingEnable400(errorResponse)
-      case Failure(ex)                           =>
-        logger.error(s"Error while updating Token $tokenId", ex)
-        val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, OnboardingOperationError)
-        complete(StatusCodes.InternalServerError, errorResponse)
-    }
-  }
-
   private def extractActiveManager(
     relationships: PartyManagementDependency.Relationships,
     product: String
@@ -1425,4 +1253,181 @@ class ProcessApiServiceImpl(
         complete(errorResponse.status, errorResponse)
     }
   }
+
+  override def onboardingApprove(
+    tokenId: String
+  )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
+    logger.info(s"Onboarding Enable having tokenId $tokenId")
+
+    val result: Future[Unit] = for {
+      bearer      <- getFutureBearer(contexts)
+      tokenIdUUID <- tokenId.toFutureUUID
+      token       <- partyManagementService.verifyToken(tokenIdUUID)
+      uid         <- getUidFuture(contexts)
+      userId      <- uid.toFutureUUID
+      currentUser <- userRegistryManagementService.getUserById(userId)
+
+      managerLegals = token.legals.filter(_.role == PartyManagementDependency.PartyRole.MANAGER)
+      managerRelationships <- Future.traverse(managerLegals)(relationship =>
+        partyManagementService.getInstitutionRelationships(relationship.relationshipId)(bearer)
+      )
+      // _                    <- Future.traverse(managerLegals)(managerLegal =>
+      //   partyManagementService.enableRelationship(managerLegal.relationshipId)(bearer)
+      // )
+      managerUsers         <- Future.traverse(managerLegals)(legal =>
+        userRegistryManagementService.getUserWithEmailById(legal.partyId)
+      )
+      institutions         <- Future.traverse(managerLegals)(legalUser =>
+        partyManagementService.retrieveInstitution(legalUser.relationshipId)(bearer)
+      )
+
+      institutionInternalId = institutions.headOption.map(_.to.toString).getOrElse("")
+
+      institution <- partyManagementService.retrieveInstitution(institutionInternalId)(bearer)
+
+      institutionEmail =
+        if (ApplicationConfiguration.sendEmailToInstitution) institutionId.headOption.map(_.digitalAddress)
+        else Some(ApplicationConfiguration.institutionAlternativeEmail)
+
+      manager             = managerUsers.head;
+      managerRelationship = managerRelationships.head.items.filter(_.from == manager.id).head
+      managerUser         = User(
+        id = manager.id,
+        taxCode = manager.taxCode.getOrElse(""),
+        name = manager.name.getOrElse(""),
+        surname = manager.surname.getOrElse(""),
+        email = Option(manager.email.get(managerRelationship.to.toString)),
+        role = PartyRole.MANAGER,
+        productRole = managerRelationship.product.role
+      )
+
+      validUsersLegals = token.legals.filter(_.role != PartyManagementDependency.PartyRole.MANAGER)
+      validUsersRelationships <- Future.traverse(validUsersLegals)(legal =>
+        partyManagementService.getInstitutionRelationships(legal.relationshipId)(bearer)
+      )
+      validRegistryUsers      <- Future.traverse(validUsersLegals)(legal =>
+        userRegistryManagementService.getUserWithEmailById(legal.partyId)
+      )
+      validUsers = validRegistryUsers.map(validRegistryUser =>
+        User(
+          id = validRegistryUser.id,
+          taxCode = validRegistryUser.taxCode.getOrElse(""),
+          name = validRegistryUser.name.getOrElse(""),
+          surname = validRegistryUser.surname.getOrElse(""),
+          email = Option(validRegistryUser.email.get(institutionInternalId)),
+          role = PartyRole.MANAGER,
+          productRole = validUsersRelationships.head.items.filter(_.from == validRegistryUser.id).head.product.role
+        )
+      )
+
+      allUsersLegals = token.legals.filter(_.role != PartyManagementDependency.PartyRole.MANAGER)
+      // allUsersRelationships <- Future.traverse(allUsersLegals)(legal =>
+      //   partyManagementService.getInstitutionRelationships(legal.relationshipId)(bearer)
+      // )
+      allRegistryUsers <- Future.traverse(allUsersLegals)(legal =>
+        userRegistryManagementService.getUserWithEmailById(legal.partyId)
+      )
+      allUsers = allRegistryUsers.map(validRegistryUser =>
+        User(
+          id = validRegistryUser.id,
+          taxCode = validRegistryUser.taxCode.getOrElse(""),
+          name = validRegistryUser.name.getOrElse(""),
+          surname = validRegistryUser.surname.getOrElse(""),
+          email = Option(validRegistryUser.email.get(institutionInternalId)),
+          role = PartyRole.MANAGER,
+          productRole = validUsersRelationships.head.items.filter(_.from == validRegistryUser.id).head.product.role
+        )
+      )
+
+      institutionUpdate = managerRelationship.institutionUpdate match {
+        case None => None
+        case _    =>
+          managerRelationship.institutionUpdate.map(i =>
+            InstitutionUpdate(
+              institutionType = i.institutionType,
+              description = i.description,
+              digitalAddress = i.digitalAddress,
+              address = i.address,
+              zipCode = i.zipCode,
+              taxCode = i.taxCode,
+              paymentServiceProvider = i.paymentServiceProvider.map(p =>
+                PaymentServiceProvider(
+                  abiCode = p.abiCode,
+                  businessRegisterNumber = p.businessRegisterNumber,
+                  legalRegisterName = p.legalRegisterName,
+                  legalRegisterNumber = p.legalRegisterNumber,
+                  vatNumberGroup = p.vatNumberGroup
+                )
+              ),
+              dataProtectionOfficer = i.dataProtectionOfficer.map(d =>
+                DataProtectionOfficer(address = d.address, email = d.email, pec = d.pec)
+              )
+            )
+          )
+
+      }
+
+      onboardingContract <- productService.p
+
+      onboardingRequest = OnboardingSignedRequest(
+        productId = managerRelationship.product.id,
+        productName = managerRelationship.product.id,
+        users = allUsers,
+        institutionUpdate = institutionUpdate,
+        pricingPlan = managerRelationship.pricingPlan,
+        billing = managerRelationship.billing.map(b =>
+          Billing(vatNumber = b.vatNumber, recipientCode = b.recipientCode, publicServices = b.publicServices)
+        ),
+        contract = onboardingContract
+      )
+
+      contractTemplate <- getFileAsString(onboardingContract.path)
+      pdf <- pdfCreator.createContract(contractTemplate, managerUser, validUsers, institutions.head, onboardingRequest)
+
+      // digest <- signatureService.createDigest(pdf)
+      // _      <- partyManagementService.updateTokenDigest(tokenIdUUID, digest)(bearer)
+
+      onboardingMailParameters <- getOnboardingMailParameters(tokenId, currentUser, onboardingRequest)
+
+      destinationMails =
+        ApplicationConfiguration.destinationMails.getOrElse(
+          Seq(
+            onboardingRequest.institutionUpdate
+              .flatMap(_.digitalAddress)
+              .getOrElse(institutions.headOption.map(_.digitalAddress).getOrElse(""))
+          )
+        )
+
+      _ <- sendOnboardingMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
+
+    } yield ()
+
+    onComplete(result) {
+      case Success(_)                            => onboardingApprove204
+      case Failure(ex: ContractNotFound)         =>
+        logger.info(s"Error while enable onbarding with $tokenId", ex)
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
+        onboardingApprove404(errorResponse)
+      case Failure(ex: InstitutionNotFound)      =>
+        logger.error(s"Token $tokenId not found", ex)
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
+        onboardingApprove404(errorResponse)
+      case Failure(ex: OnboardingInvalidUpdates) =>
+        logger.error(s"Invalid institution updates for Token $tokenId", ex)
+        val errorResponse: Problem = problemOf(StatusCodes.Conflict, ex)
+        onboardingApprove409(errorResponse)
+      case Failure(ManagerFoundError)            =>
+        logger.error(s"Institution already onboarded for Token $tokenId", ManagerFoundError)
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, ManagerFoundError)
+        onboardingApprove400(errorResponse)
+      case Failure(ex)                           =>
+        logger.error(s"Error while updating Token $tokenId", ex)
+        val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, OnboardingOperationError)
+        complete(StatusCodes.InternalServerError, errorResponse)
+    }
+  }
+
+  override def onboardingReject(
+    tokenId: String
+  )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = ???
 }
