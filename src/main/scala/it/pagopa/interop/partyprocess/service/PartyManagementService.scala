@@ -46,6 +46,10 @@ trait PartyManagementService {
     contexts: Seq[(String, String)]
   ): Future[Unit]
 
+  def enableRelationship(relationshipId: UUID)(bearerToken: String)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[Unit]
+
   def suspendRelationship(relationshipId: UUID)(bearerToken: String)(implicit
     contexts: Seq[(String, String)]
   ): Future[Unit]
@@ -59,6 +63,10 @@ trait PartyManagementService {
   def consumeToken(tokenId: UUID, fileParts: (FileInfo, File))(implicit contexts: Seq[(String, String)]): Future[Unit]
 
   def invalidateToken(tokenId: UUID)(implicit contexts: Seq[(String, String)]): Future[Unit]
+
+  def updateTokenDigest(tokenId: UUID, digest: String)(bearerToken: String)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[TokenText]
 
   def getRelationshipById(relationshipId: UUID)(bearerToken: String)(implicit
     contexts: Seq[(String, String)]

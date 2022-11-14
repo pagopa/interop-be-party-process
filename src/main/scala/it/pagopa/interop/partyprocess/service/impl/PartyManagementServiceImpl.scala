@@ -139,11 +139,25 @@ final case class PartyManagementServiceImpl(
     invoke(request, s"Invalidating token $tokenId", Some(tokenId.toString))
   }
 
+  override def updateTokenDigest(tokenId: UUID, digest: String)(
+    bearerToken: String
+  )(implicit contexts: Seq[(String, String)]): Future[TokenText] = {
+    val request = partyApi.updateTokenDigest(tokenId, digest)(BearerToken(bearerToken))
+    invoke(request, s"Update Token $tokenId with digest: $digest", Some(tokenId.toString))
+  }
+
   override def activateRelationship(
     relationshipId: UUID
   )(bearerToken: String)(implicit contexts: Seq[(String, String)]): Future[Unit] = {
     val request = partyApi.activatePartyRelationshipById(relationshipId)(BearerToken(bearerToken))
     invoke(request, s"Activating relationship $relationshipId", Some(relationshipId.toString))
+  }
+
+  override def enableRelationship(
+    relationshipId: UUID
+  )(bearerToken: String)(implicit contexts: Seq[(String, String)]): Future[Unit] = {
+    val request = partyApi.enablePartyRelationshipById(relationshipId)(BearerToken(bearerToken))
+    invoke(request, s"Enabling relationship $relationshipId", Some(relationshipId.toString))
   }
 
   override def suspendRelationship(

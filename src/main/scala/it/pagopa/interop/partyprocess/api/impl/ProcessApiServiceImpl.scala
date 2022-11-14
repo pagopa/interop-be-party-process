@@ -420,20 +420,24 @@ class ProcessApiServiceImpl(
       uid         <- getUidFuture(contexts)
       userId      <- uid.toFutureUUID
       currentUser <- userRegistryManagementService.getUserById(userId)
-      legalsRelationships = token.legals.filter(_.role == PartyManagementDependency.PartyRole.MANAGER)
-      relationships <- Future.traverse(legalsRelationships)(legalsRelationship =>
-        partyManagementService.getInstitutionRelationships(legalsRelationship.relationshipId)(bearer)
+
+      managerLegals = token.legals.filter(_.role == PartyManagementDependency.PartyRole.MANAGER)
+      managerRelationships <- Future.traverse(managerLegals)(relationship =>
+        partyManagementService.getInstitutionRelationships(relationship.relationshipId)(bearer)
       )
-      legalUsers    <- Future.traverse(legalsRelationships)(legal =>
+      _                    <- Future.traverse(managerLegals)(managerLegal =>
+        partyManagementService.enableRelationship(managerLegal.relationshipId)(bearer)
+      )
+      managerUsers         <- Future.traverse(managerLegals)(legal =>
         userRegistryManagementService.getUserWithEmailById(legal.partyId)
       )
-      institution   <- Future.traverse(legalsRelationships)(legalUser =>
+      institutions         <- Future.traverse(managerLegals)(legalUser =>
         partyManagementService.retrieveInstitution(legalUser.relationshipId)(bearer)
       )
-      institutionInternalId = institution.headOption.map(_.id.toString).getOrElse("")
+      institutionInternalId = institutions.headOption.map(_.id.toString).getOrElse("")
 
-      manager             = legalUsers.head;
-      managerRelationship = relationships.head.items.filter(_.from == manager.id).head
+      manager             = managerUsers.head;
+      managerRelationship = managerRelationships.head.items.filter(_.from == manager.id).head
       managerUser         = User(
         id = manager.id,
         taxCode = manager.taxCode.getOrElse(""),
@@ -465,10 +469,10 @@ class ProcessApiServiceImpl(
       // <- getValidUsers(validRegistryUsers, validUsersRelationships.head, institutionInternalId)
 
       allUsersLegals = token.legals.filter(_.role != PartyManagementDependency.PartyRole.MANAGER)
-      allUsersRelationships <- Future.traverse(allUsersLegals)(legal =>
-        partyManagementService.getInstitutionRelationships(legal.relationshipId)(bearer)
-      )
-      allRegistryUsers      <- Future.traverse(allUsersLegals)(legal =>
+      // allUsersRelationships <- Future.traverse(allUsersLegals)(legal =>
+      //   partyManagementService.getInstitutionRelationships(legal.relationshipId)(bearer)
+      // )
+      allRegistryUsers <- Future.traverse(allUsersLegals)(legal =>
         userRegistryManagementService.getUserWithEmailById(legal.partyId)
       )
       allUsers = allRegistryUsers.map(validRegistryUser =>
@@ -524,9 +528,10 @@ class ProcessApiServiceImpl(
       )
 
       contractTemplate <- getFileAsString(onboardingContract.path)
-      pdf <- pdfCreator.createContract(contractTemplate, managerUser, validUsers, institution.head, onboardingRequest)
+      pdf <- pdfCreator.createContract(contractTemplate, managerUser, validUsers, institutions.head, onboardingRequest)
 
       digest <- signatureService.createDigest(pdf)
+      _      <- partyManagementService.updateTokenDigest(tokenIdUUID, digest)(bearer)
 
       onboardingMailParameters <- getOnboardingMailParameters(tokenId, currentUser, onboardingRequest)
 
@@ -535,7 +540,7 @@ class ProcessApiServiceImpl(
           Seq(
             onboardingRequest.institutionUpdate
               .flatMap(_.digitalAddress)
-              .getOrElse(institution.headOption.map(_.digitalAddress).getOrElse(""))
+              .getOrElse(institutions.headOption.map(_.digitalAddress).getOrElse(""))
           )
         )
 
