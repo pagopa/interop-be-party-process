@@ -115,6 +115,9 @@ object ApplicationConfiguration {
   val onboardingNotificationMailTemplatePath: String                         =
     config.getString("party-process.mail-template.onboarding-notification-mail-placeholders.path")
 
+  val onboardingRejectMailProductNamePlaceholder: String               =
+    config.getString("party-process.mail-template.onboarding-reject-mail-placeholders.productName")
+
   val storageContainer: String = config.getString("party-process.storage.container")
 
   val jwtAudience: Set[String] = config.getString("party-process.jwt.audience").split(",").toSet.filter(_.nonEmpty)

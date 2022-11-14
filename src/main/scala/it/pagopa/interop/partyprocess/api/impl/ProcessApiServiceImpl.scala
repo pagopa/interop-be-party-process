@@ -553,6 +553,17 @@ class ProcessApiServiceImpl(
     Future.successful(tokenParameters ++ productParameters ++ userParameters ++ institutionInfoParameters)
   }
 
+  private def getOnboardingRejectMailParameters(
+    productId: String
+  ): Future[Map[String, String]] = {
+    val productParameters: Map[String, String] = Map(
+      ApplicationConfiguration.onboardingMailNotificationProductNamePlaceholder -> onboardingRequest.productName
+    )
+
+
+    Future.successful(tokenParameters ++ productParameters ++ userParameters ++ institutionInfoParameters)
+  }
+
   private def getOnboardingMailParameters(
     token: String,
     currentUser: UserRegistryUser,
@@ -1258,7 +1269,7 @@ class ProcessApiServiceImpl(
   override def onboardingApprove(
     tokenId: String
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
-    logger.info(s"Onboarding Enable having tokenId $tokenId")
+    logger.info(s"Onboarding Approve having tokenId $tokenId")
 
     val result: Future[Unit] = for {
       bearer      <- getFutureBearer(contexts)
@@ -1430,5 +1441,76 @@ class ProcessApiServiceImpl(
 
   override def onboardingReject(
     tokenId: String
-  )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = ???
+  )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
+    logger.info(s"Onboarding Reject having tokenId $tokenId")
+
+    val result: Future[Unit] = for {
+      bearer      <- getFutureBearer(contexts)
+      tokenIdUUID <- tokenId.toFutureUUID
+      token       <- partyManagementService.verifyToken(tokenIdUUID)
+      uid         <- getUidFuture(contexts)
+      userId      <- uid.toFutureUUID
+      currentUser <- userRegistryManagementService.getUserById(userId)
+
+      managerLegals = token.legals.filter(_.role == PartyManagementDependency.PartyRole.MANAGER)
+      managerRelationships <- Future.traverse(managerLegals)(relationship =>
+        partyManagementService.getInstitutionRelationships(relationship.relationshipId)(bearer)
+      )
+
+      institutions         <- Future.traverse(managerLegals)(legalUser =>
+        partyManagementService.retrieveInstitution(legalUser.relationshipId)(bearer)
+      )
+
+      institutionInternalId = institutions.headOption.map(_.id.toString).getOrElse("")
+
+      institutionEmail =
+        if (ApplicationConfiguration.sendEmailToInstitution) institutions.headOption.map(_.digitalAddress)
+        else Some(ApplicationConfiguration.institutionAlternativeEmail)
+
+
+      productId           = managerRelationships.head.items.head.product.id
+      
+
+      onboardingProduct <- productManagementService.getProductById(productId)
+
+      
+      onboardingMailParameters <- getOnboardingMailParameters(tokenId, currentUser, onboardingRequest)
+
+      destinationMails =
+        ApplicationConfiguration.destinationMails.getOrElse(
+          Seq(
+            onboardingRequest.institutionUpdate
+              .flatMap(_.digitalAddress)
+              .getOrElse(institutions.headOption.map(_.digitalAddress).getOrElse(""))
+          )
+        )
+
+      _ <- sendOnboardingMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
+
+    } yield ()
+
+    onComplete(result) {
+      case Success(_)                            => onboardingApprove204
+      case Failure(ex: ContractNotFound)         =>
+        logger.info(s"Error while enable onbarding with $tokenId", ex)
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
+        onboardingApprove404(errorResponse)
+      case Failure(ex: InstitutionNotFound)      =>
+        logger.error(s"Token $tokenId not found", ex)
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
+        onboardingApprove404(errorResponse)
+      case Failure(ex: OnboardingInvalidUpdates) =>
+        logger.error(s"Invalid institution updates for Token $tokenId", ex)
+        val errorResponse: Problem = problemOf(StatusCodes.Conflict, ex)
+        onboardingApprove409(errorResponse)
+      case Failure(ManagerFoundError)            =>
+        logger.error(s"Institution already onboarded for Token $tokenId", ManagerFoundError)
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, ManagerFoundError)
+        onboardingApprove400(errorResponse)
+      case Failure(ex)                           =>
+        logger.error(s"Error while updating Token $tokenId", ex)
+        val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, OnboardingOperationError)
+        complete(StatusCodes.InternalServerError, errorResponse)
+    }
+  }
 }
