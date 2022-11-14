@@ -58,6 +58,7 @@ object Main extends App with CORSSupport with Dependencies {
           sigService,
           partyProcService,
           userreg,
+          productmng,
           fileManager,
           onboardingInitMailTemplate,
           onboardingNotificationMailTemplate,

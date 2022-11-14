@@ -54,6 +54,6 @@ object ProcessApiMarshallerImpl extends ProcessApiMarshaller with SprayJsonSuppo
 
   override implicit def toEntityMarshallerProducts: ToEntityMarshaller[Products] = sprayJsonMarshaller[Products]
 
-  override implicit def fromEntityUnmarshallerOnboardingContract: FromEntityUnmarshaller[OnboardingContract] =
-    sprayJsonUnmarshaller[OnboardingContract]
+  // override implicit def fromEntityUnmarshallerOnboardingContract: FromEntityUnmarshaller[OnboardingContract] =
+  //   sprayJsonUnmarshaller[OnboardingContract]
 }

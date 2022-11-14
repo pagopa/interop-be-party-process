@@ -35,6 +35,7 @@ class ProcessApiServiceImpl(
   partyManagementService: PartyManagementService,
   partyRegistryService: PartyRegistryService,
   userRegistryManagementService: UserRegistryManagementService,
+  productManagementService: ProductManagementService,
   pdfCreator: PDFCreator,
   fileManager: FileManager,
   signatureService: SignatureService,
@@ -1281,16 +1282,15 @@ class ProcessApiServiceImpl(
         partyManagementService.retrieveInstitution(legalUser.relationshipId)(bearer)
       )
 
-      institutionInternalId = institutions.headOption.map(_.to.toString).getOrElse("")
-
-      institution <- partyManagementService.retrieveInstitution(institutionInternalId)(bearer)
+      institutionInternalId = institutions.headOption.map(_.id.toString).getOrElse("")
 
       institutionEmail =
-        if (ApplicationConfiguration.sendEmailToInstitution) institutionId.headOption.map(_.digitalAddress)
+        if (ApplicationConfiguration.sendEmailToInstitution) institutions.headOption.map(_.digitalAddress)
         else Some(ApplicationConfiguration.institutionAlternativeEmail)
 
       manager             = managerUsers.head;
       managerRelationship = managerRelationships.head.items.filter(_.from == manager.id).head
+      productId           = managerRelationships.head.items.head.product.id
       managerUser         = User(
         id = manager.id,
         taxCode = manager.taxCode.getOrElse(""),
@@ -1300,6 +1300,8 @@ class ProcessApiServiceImpl(
         role = PartyRole.MANAGER,
         productRole = managerRelationship.product.role
       )
+
+      onboardingProduct <- productManagementService.getProductById(productId)
 
       validUsersLegals = token.legals.filter(_.role != PartyManagementDependency.PartyRole.MANAGER)
       validUsersRelationships <- Future.traverse(validUsersLegals)(legal =>
@@ -1367,8 +1369,6 @@ class ProcessApiServiceImpl(
 
       }
 
-      onboardingContract <- productService.p
-
       onboardingRequest = OnboardingSignedRequest(
         productId = managerRelationship.product.id,
         productName = managerRelationship.product.id,
@@ -1378,10 +1378,11 @@ class ProcessApiServiceImpl(
         billing = managerRelationship.billing.map(b =>
           Billing(vatNumber = b.vatNumber, recipientCode = b.recipientCode, publicServices = b.publicServices)
         ),
-        contract = onboardingContract
+        contract =
+          OnboardingContract(version = onboardingProduct.version, path = onboardingProduct.contractTemplatePath)
       )
 
-      contractTemplate <- getFileAsString(onboardingContract.path)
+      contractTemplate <- getFileAsString(onboardingRequest.contract.path)
       pdf <- pdfCreator.createContract(contractTemplate, managerUser, validUsers, institutions.head, onboardingRequest)
 
       // digest <- signatureService.createDigest(pdf)

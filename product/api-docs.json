@@ -696,6 +696,14 @@
             "type": "string",
             "description": "Product's title"
           },
+          "contractTemplatePath": {
+            "type": "string",
+            "description": "Product's contract Template Path"
+          },
+          "version": {
+            "type": "string",
+            "description": "Product's contract Template version"
+          },
           "urlBO": {
             "type": "string",
             "description": "URL that redirects to the back-office section, where is possible to manage the product"
