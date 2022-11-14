@@ -554,14 +554,13 @@ class ProcessApiServiceImpl(
   }
 
   private def getOnboardingRejectMailParameters(
-    productId: String
+    productName: String
   ): Future[Map[String, String]] = {
     val productParameters: Map[String, String] = Map(
-      ApplicationConfiguration.onboardingMailNotificationProductNamePlaceholder -> onboardingRequest.productName
+      ApplicationConfiguration.onboardingRejectMailProductNamePlaceholder -> productName
     )
 
-
-    Future.successful(tokenParameters ++ productParameters ++ userParameters ++ institutionInfoParameters)
+    Future.successful(productParameters)
   }
 
   private def getOnboardingMailParameters(
@@ -1485,6 +1484,7 @@ class ProcessApiServiceImpl(
           )
         )
 
+      mailParamaters <- getOnboardingRejectMailParameters(onboardingProduct.productName)
       _ <- sendOnboardingMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
 
     } yield ()
