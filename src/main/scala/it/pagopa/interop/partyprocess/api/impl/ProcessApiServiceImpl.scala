@@ -902,7 +902,19 @@ class ProcessApiServiceImpl(
       address = institutionSeed.address,
       zipCode = institutionSeed.zipCode,
       institutionType = institutionSeed.institutionType,
-      origin = SELC
+      origin = SELC,
+      paymentServiceProvider = institutionSeed.paymentServiceProvider.map(p =>
+        PartyManagementDependency.PaymentServiceProvider(
+          abiCode = p.abiCode,
+          businessRegisterNumber = p.businessRegisterNumber,
+          legalRegisterName = p.legalRegisterName,
+          legalRegisterNumber = p.legalRegisterNumber,
+          vatNumberGroup = p.vatNumberGroup
+        )
+      ),
+      dataProtectionOfficer = institutionSeed.dataProtectionOfficer.map(d =>
+        PartyManagementDependency.DataProtectionOfficer(address = d.address, email = d.email, pec = d.pec)
+      )
     )
 
     for {
@@ -1287,17 +1299,18 @@ class ProcessApiServiceImpl(
       currentUser <- userRegistryManagementService.getUserById(userId)
 
       managerLegals = token.legals.filter(_.role == PartyManagementDependency.PartyRole.MANAGER)
-      managerRelationships <- Future.traverse(managerLegals)(relationship =>
-        partyManagementService.getInstitutionRelationships(relationship.relationshipId)(bearer)
-      )
+
       // _                    <- Future.traverse(managerLegals)(managerLegal =>
       //   partyManagementService.enableRelationship(managerLegal.relationshipId)(bearer)
       // )
       managerUsers         <- Future.traverse(managerLegals)(legal =>
         userRegistryManagementService.getUserWithEmailById(legal.partyId)
       )
-      institutions         <- Future.traverse(managerLegals)(legalUser =>
-        partyManagementService.retrieveInstitution(legalUser.relationshipId)(bearer)
+      managerRelationships <- Future.traverse(managerLegals)(relationship =>
+        partyManagementService.getRelationshipById(relationship.relationshipId)(bearer)
+      )
+      institutions         <- Future.traverse(managerRelationships)(legalUser =>
+        partyManagementService.retrieveInstitution(legalUser.to)(bearer)
       )
 
       institutionInternalId = institutions.headOption.map(_.id.toString).getOrElse("")
@@ -1307,14 +1320,16 @@ class ProcessApiServiceImpl(
         else Some(ApplicationConfiguration.institutionAlternativeEmail)
 
       manager             = managerUsers.head;
-      managerRelationship = managerRelationships.head.items.filter(_.from == manager.id).head
-      productId           = managerRelationships.head.items.head.product.id
+      managerRelationship = managerRelationships.filter(_.from == manager.id).head
+      productId           = managerRelationships.head.product.id
       managerUser         = User(
         id = manager.id,
         taxCode = manager.taxCode.getOrElse(""),
         name = manager.name.getOrElse(""),
         surname = manager.surname.getOrElse(""),
-        email = Option(manager.email.get(managerRelationship.to.toString)),
+        email =
+          if (manager.email.contains(institutionInternalId)) Option(manager.email.get(institutionInternalId))
+          else Option(""),
         role = PartyRole.MANAGER,
         productRole = managerRelationship.product.role
       )
@@ -1323,7 +1338,7 @@ class ProcessApiServiceImpl(
 
       validUsersLegals = token.legals.filter(_.role != PartyManagementDependency.PartyRole.MANAGER)
       validUsersRelationships <- Future.traverse(validUsersLegals)(legal =>
-        partyManagementService.getInstitutionRelationships(legal.relationshipId)(bearer)
+        partyManagementService.getRelationshipById(legal.relationshipId)(bearer)
       )
       validRegistryUsers      <- Future.traverse(validUsersLegals)(legal =>
         userRegistryManagementService.getUserWithEmailById(legal.partyId)
@@ -1334,28 +1349,35 @@ class ProcessApiServiceImpl(
           taxCode = validRegistryUser.taxCode.getOrElse(""),
           name = validRegistryUser.name.getOrElse(""),
           surname = validRegistryUser.surname.getOrElse(""),
-          email = Option(validRegistryUser.email.get(institutionInternalId)),
+          email =
+            if (validRegistryUser.email.contains(institutionInternalId))
+              Option(validRegistryUser.email.get(institutionInternalId))
+            else Option(""),
           role = PartyRole.MANAGER,
-          productRole = validUsersRelationships.head.items.filter(_.from == validRegistryUser.id).head.product.role
+          productRole = validUsersRelationships.filter(_.from == validRegistryUser.id).head.product.role
         )
       )
 
       allUsersLegals = token.legals.filter(_.role != PartyManagementDependency.PartyRole.MANAGER)
-      // allUsersRelationships <- Future.traverse(allUsersLegals)(legal =>
-      //   partyManagementService.getInstitutionRelationships(legal.relationshipId)(bearer)
-      // )
+      allUsersRelationships <- Future.traverse(allUsersLegals)(legal =>
+        partyManagementService.getRelationshipById(legal.relationshipId)(bearer)
+      )
       allRegistryUsers <- Future.traverse(allUsersLegals)(legal =>
         userRegistryManagementService.getUserWithEmailById(legal.partyId)
       )
+      // legalUserWithEmails   = legalUsers.filter(_.email.get(institutionInternalId.getOrElse("")).nonEmpty)
       allUsers = allRegistryUsers.map(validRegistryUser =>
         User(
           id = validRegistryUser.id,
           taxCode = validRegistryUser.taxCode.getOrElse(""),
           name = validRegistryUser.name.getOrElse(""),
           surname = validRegistryUser.surname.getOrElse(""),
-          email = Option(validRegistryUser.email.get(institutionInternalId)),
+          email =
+            if (validRegistryUser.email.contains(institutionInternalId))
+              Option(validRegistryUser.email.get(institutionInternalId))
+            else Option(""),
           role = PartyRole.MANAGER,
-          productRole = validUsersRelationships.head.items.filter(_.from == validRegistryUser.id).head.product.role
+          productRole = allUsersRelationships.filter(_.from == validRegistryUser.id).head.product.role
         )
       )
 

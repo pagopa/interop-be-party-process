@@ -2113,7 +2113,16 @@ trait PartyApiSpec
       (mockProductService
         .getProductById(_: String)(_: Seq[(String, String)]))
         .expects(productTestId, *)
-        .returning(Future.successful(ProductResourceProduct(id = productTestId, name = productTestName)))
+        .returning(
+          Future.successful(
+            ProductResourceProduct(
+              id = productTestId,
+              name = productTestName,
+              contractTemplatePath = "contractTemplatePath",
+              version = "version"
+            )
+          )
+        )
 
       (mockPartyManagementService
         .consumeToken(_: UUID, _: (FileInfo, File))(_: Seq[(String, String)]))
