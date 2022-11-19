@@ -1461,7 +1461,6 @@ class ProcessApiServiceImpl(
       tokenIdUUID <- tokenId.toFutureUUID
       token       <- partyManagementService.verifyToken(tokenIdUUID)
       uid         <- getUidFuture(contexts)
-      userId      <- uid.toFutureUUID
 
       managerLegals = token.legals.filter(_.role == PartyManagementDependency.PartyRole.MANAGER)
       managerRelationships <- Future.traverse(managerLegals)(relationship =>
