@@ -1464,11 +1464,11 @@ class ProcessApiServiceImpl(
 
       managerLegals = token.legals.filter(_.role == PartyManagementDependency.PartyRole.MANAGER)
       managerRelationships <- Future.traverse(managerLegals)(relationship =>
-        partyManagementService.getInstitutionRelationships(relationship.relationshipId)(bearer)
+        partyManagementService.getRelationshipById(relationship.relationshipId)(bearer)
       )
 
-      institutions <- Future.traverse(managerLegals)(legalUser =>
-        partyManagementService.retrieveInstitution(legalUser.relationshipId)(bearer)
+      institutions <- Future.traverse(managerRelationships)(legalUser =>
+        partyManagementService.retrieveInstitution(legalUser.to)(bearer)
       )
 
       destinationMails =
@@ -1480,7 +1480,7 @@ class ProcessApiServiceImpl(
           )
         )
 
-      productId = managerRelationships.head.items.head.product.id
+      productId = managerRelationships.head.product.id
       onboardingProduct <- productManagementService.getProductById(productId)
       mailParameters    <- getOnboardingRejectMailParameters(onboardingProduct.name)
       logo              <- LogoUtils.getLogoFile(fileManager, ApplicationConfiguration.emailLogoPath)(ec)
