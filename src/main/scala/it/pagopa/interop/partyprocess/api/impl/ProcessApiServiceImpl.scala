@@ -1404,7 +1404,7 @@ class ProcessApiServiceImpl(
       _                <- Future.traverse(managerLegals)(managerLegal =>
         partyManagementService.enableRelationship(managerLegal.relationshipId)(bearer)
       )
-      _ <- Future.traverse(otherUsersLegals)(otherUsersLegal =>
+      _                <- Future.traverse(otherUsersLegals)(otherUsersLegal =>
         partyManagementService.enableRelationship(otherUsersLegal.relationshipId)(bearer)
       )
       // Update contract's digest
@@ -1462,7 +1462,6 @@ class ProcessApiServiceImpl(
       token       <- partyManagementService.verifyToken(tokenIdUUID)
       uid         <- getUidFuture(contexts)
       userId      <- uid.toFutureUUID
-      currentUser <- userRegistryManagementService.getUserById(userId)
 
       managerLegals = token.legals.filter(_.role == PartyManagementDependency.PartyRole.MANAGER)
       managerRelationships <- Future.traverse(managerLegals)(relationship =>
@@ -1474,16 +1473,22 @@ class ProcessApiServiceImpl(
       )
 
       destinationMails =
-        if (ApplicationConfiguration.sendEmailToInstitution) institutions.headOption.map(_.digitalAddress)
-        else Some(ApplicationConfiguration.institutionAlternativeEmail)
+        ApplicationConfiguration.destinationMails.getOrElse(
+          Seq(
+            institutions.headOption
+              .map(_.digitalAddress)
+              .getOrElse(ApplicationConfiguration.institutionAlternativeEmail)
+          )
+        )
 
       productId = managerRelationships.head.items.head.product.id
       onboardingProduct <- productManagementService.getProductById(productId)
       mailParameters    <- getOnboardingRejectMailParameters(onboardingProduct.name)
       logo              <- LogoUtils.getLogoFile(fileManager, ApplicationConfiguration.emailLogoPath)(ec)
-      _                 <- sendOnboardingRejectEmail(destinationMails.toSeq, mailParameters, logo)
+      result            <- partyManagementService.invalidateToken(token.id)
+      _                 <- sendOnboardingRejectEmail(destinationMails, mailParameters, logo)
 
-    } yield ()
+    } yield result
 
     onComplete(result) {
       case Success(_)                            => onboardingReject204

@@ -154,7 +154,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
   /onboarding/reject/{tokenId}:
-    post:
+    delete:
       tags:
         - process
       summary: Institution onboarding update with operator review
