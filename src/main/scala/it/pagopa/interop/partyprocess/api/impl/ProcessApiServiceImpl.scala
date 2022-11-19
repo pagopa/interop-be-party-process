@@ -13,7 +13,7 @@ import it.pagopa.interop.commons.utils.AkkaUtils.{getFutureBearer, getUidFuture}
 import it.pagopa.interop.commons.utils.OpenapiUtils._
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.{ResourceConflictError, ResourceNotFoundError}
-import it.pagopa.interop.partymanagement.client.model.Relationships
+import it.pagopa.interop.partymanagement.client.model.{Relationship, Relationships}
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess.api.ProcessApiService
 import it.pagopa.interop.partyprocess.api.converters.partymanagement.InstitutionConverter
@@ -478,7 +478,7 @@ class ProcessApiServiceImpl(
               productRole,
               None,
               None,
-              None // ,  institution.origin
+              None
             )(bearer)
         }
       }
@@ -1290,6 +1290,28 @@ class ProcessApiServiceImpl(
   )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
     logger.info(s"Onboarding Approve having tokenId $tokenId")
 
+    def createUser(relationships: Seq[Relationship], institutionInternalId: String, u: UserRegistryUser) = {
+      // val email = u.email.filter(i => i == institutionInternalId)
+      val email = u.email match {
+        case Some(value) => value.getOrElse(institutionInternalId, "")
+        case _           => ""
+      }
+      /* val email = u.email.get.map {
+        case (institutionInternalId, str1) => str1
+        case _                             => ""
+      }*/
+
+      User(
+        id = u.id,
+        taxCode = u.taxCode.getOrElse(""),
+        name = u.name.getOrElse(""),
+        surname = u.surname.getOrElse(""),
+        email = Option(email),
+        role = PartyRoleAPIConverter.fromClientValue(relationships.filter(_.from == u.id).head.role.toString),
+        productRole = relationships.filter(_.from == u.id).head.product.role
+      )
+    }
+
     val result: Future[Unit] = for {
       bearer      <- getFutureBearer(contexts)
       tokenIdUUID <- tokenId.toFutureUUID
@@ -1300,10 +1322,7 @@ class ProcessApiServiceImpl(
 
       managerLegals = token.legals.filter(_.role == PartyManagementDependency.PartyRole.MANAGER)
 
-      // _                    <- Future.traverse(managerLegals)(managerLegal =>
-      //   partyManagementService.enableRelationship(managerLegal.relationshipId)(bearer)
-      // )
-      managerUsers         <- Future.traverse(managerLegals)(legal =>
+      managerRegistryUsers <- Future.traverse(managerLegals)(legal =>
         userRegistryManagementService.getUserWithEmailById(legal.partyId)
       )
       managerRelationships <- Future.traverse(managerLegals)(relationship =>
@@ -1315,71 +1334,22 @@ class ProcessApiServiceImpl(
 
       institutionInternalId = institutions.headOption.map(_.id.toString).getOrElse("")
 
-      institutionEmail =
-        if (ApplicationConfiguration.sendEmailToInstitution) institutions.headOption.map(_.digitalAddress)
-        else Some(ApplicationConfiguration.institutionAlternativeEmail)
+      productId    = managerRelationships.head.product.id
+      managerUsers = managerRegistryUsers.map(u => createUser(managerRelationships, institutionInternalId, u))
 
-      manager             = managerUsers.head;
+      manager             = managerRegistryUsers.head;
       managerRelationship = managerRelationships.filter(_.from == manager.id).head
-      productId           = managerRelationships.head.product.id
-      managerUser         = User(
-        id = manager.id,
-        taxCode = manager.taxCode.getOrElse(""),
-        name = manager.name.getOrElse(""),
-        surname = manager.surname.getOrElse(""),
-        email =
-          if (manager.email.contains(institutionInternalId)) Option(manager.email.get(institutionInternalId))
-          else Option(""),
-        role = PartyRole.MANAGER,
-        productRole = managerRelationship.product.role
-      )
 
       onboardingProduct <- productManagementService.getProductById(productId)
 
-      validUsersLegals = token.legals.filter(_.role != PartyManagementDependency.PartyRole.MANAGER)
-      validUsersRelationships <- Future.traverse(validUsersLegals)(legal =>
+      otherUsersLegals = token.legals.filter(_.role != PartyManagementDependency.PartyRole.MANAGER)
+      otherUsersRelationships <- Future.traverse(otherUsersLegals)(legal =>
         partyManagementService.getRelationshipById(legal.relationshipId)(bearer)
       )
-      validRegistryUsers      <- Future.traverse(validUsersLegals)(legal =>
+      otherRegistryUsers      <- Future.traverse(otherUsersLegals)(legal =>
         userRegistryManagementService.getUserWithEmailById(legal.partyId)
       )
-      validUsers = validRegistryUsers.map(validRegistryUser =>
-        User(
-          id = validRegistryUser.id,
-          taxCode = validRegistryUser.taxCode.getOrElse(""),
-          name = validRegistryUser.name.getOrElse(""),
-          surname = validRegistryUser.surname.getOrElse(""),
-          email =
-            if (validRegistryUser.email.contains(institutionInternalId))
-              Option(validRegistryUser.email.get(institutionInternalId))
-            else Option(""),
-          role = PartyRole.MANAGER,
-          productRole = validUsersRelationships.filter(_.from == validRegistryUser.id).head.product.role
-        )
-      )
-
-      allUsersLegals = token.legals.filter(_.role != PartyManagementDependency.PartyRole.MANAGER)
-      allUsersRelationships <- Future.traverse(allUsersLegals)(legal =>
-        partyManagementService.getRelationshipById(legal.relationshipId)(bearer)
-      )
-      allRegistryUsers <- Future.traverse(allUsersLegals)(legal =>
-        userRegistryManagementService.getUserWithEmailById(legal.partyId)
-      )
-      // legalUserWithEmails   = legalUsers.filter(_.email.get(institutionInternalId.getOrElse("")).nonEmpty)
-      allUsers = allRegistryUsers.map(validRegistryUser =>
-        User(
-          id = validRegistryUser.id,
-          taxCode = validRegistryUser.taxCode.getOrElse(""),
-          name = validRegistryUser.name.getOrElse(""),
-          surname = validRegistryUser.surname.getOrElse(""),
-          email =
-            if (validRegistryUser.email.contains(institutionInternalId))
-              Option(validRegistryUser.email.get(institutionInternalId))
-            else Option(""),
-          role = PartyRole.MANAGER,
-          productRole = allUsersRelationships.filter(_.from == validRegistryUser.id).head.product.role
-        )
-      )
+      otherUsers = otherRegistryUsers.map(u => createUser(otherUsersRelationships, institutionInternalId, u))
 
       institutionUpdate = managerRelationship.institutionUpdate match {
         case None => None
@@ -1406,13 +1376,12 @@ class ProcessApiServiceImpl(
               )
             )
           )
-
       }
 
       onboardingRequest = OnboardingSignedRequest(
         productId = managerRelationship.product.id,
-        productName = managerRelationship.product.id,
-        users = allUsers,
+        productName = onboardingProduct.name,
+        users = managerUsers ++ otherUsers,
         institutionUpdate = institutionUpdate,
         pricingPlan = managerRelationship.pricingPlan,
         billing = managerRelationship.billing.map(b =>
@@ -1423,10 +1392,24 @@ class ProcessApiServiceImpl(
       )
 
       contractTemplate <- getFileAsString(onboardingRequest.contract.path)
-      pdf <- pdfCreator.createContract(contractTemplate, managerUser, validUsers, institutions.head, onboardingRequest)
+      pdf              <- pdfCreator.createContract(
+        contractTemplate,
+        managerUsers.head,
+        managerUsers ++ otherUsers,
+        institutions.head,
+        onboardingRequest
+      )
 
-      // digest <- signatureService.createDigest(pdf)
-      // _      <- partyManagementService.updateTokenDigest(tokenIdUUID, digest)(bearer)
+      // Enabling Users relationship
+      _                <- Future.traverse(managerLegals)(managerLegal =>
+        partyManagementService.enableRelationship(managerLegal.relationshipId)(bearer)
+      )
+      _ <- Future.traverse(otherUsersLegals)(otherUsersLegal =>
+        partyManagementService.enableRelationship(otherUsersLegal.relationshipId)(bearer)
+      )
+      // Update contract's digest
+      digest           <- signatureService.createDigest(pdf)
+      _                <- partyManagementService.updateTokenDigest(tokenIdUUID, digest)(bearer)
 
       onboardingMailParameters <- getOnboardingMailParameters(tokenId, currentUser, onboardingRequest)
 
