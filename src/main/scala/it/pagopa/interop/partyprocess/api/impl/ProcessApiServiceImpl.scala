@@ -1247,15 +1247,10 @@ class ProcessApiServiceImpl(
     logger.info(s"Onboarding Approve having tokenId $tokenId")
 
     def createUser(relationships: Seq[Relationship], institutionInternalId: String, u: UserRegistryUser) = {
-      // val email = u.email.filter(i => i == institutionInternalId)
       val email = u.email match {
         case Some(value) => value.getOrElse(institutionInternalId, "")
         case _           => ""
       }
-      /* val email = u.email.get.map {
-        case (institutionInternalId, str1) => str1
-        case _                             => ""
-      }*/
 
       User(
         id = u.id,
@@ -1263,7 +1258,7 @@ class ProcessApiServiceImpl(
         name = u.name.getOrElse(""),
         surname = u.surname.getOrElse(""),
         email = Option(email),
-        role = PartyRoleAPIConverter.fromClientValue(relationships.filter(_.from == u.id).head.role.toString),
+        role = roleToApi(relationships.filter(_.from == u.id).head.role),
         productRole = relationships.filter(_.from == u.id).head.product.role
       )
     }
@@ -1293,7 +1288,7 @@ class ProcessApiServiceImpl(
       productId    = managerRelationships.head.product.id
       managerUsers = managerRegistryUsers.map(u => createUser(managerRelationships, institutionInternalId, u))
 
-      manager             = managerRegistryUsers.head;
+      manager             = managerRegistryUsers.head
       managerRelationship = managerRelationships.filter(_.from == manager.id).head
 
       onboardingProduct <- productManagementService.getProductById(productId)
@@ -1307,10 +1302,9 @@ class ProcessApiServiceImpl(
       )
       otherUsers = otherRegistryUsers.map(u => createUser(otherUsersRelationships, institutionInternalId, u))
 
-      institutionUpdate = managerRelationship.institutionUpdate match {
-        case None => None
-        case _    =>
-          managerRelationship.institutionUpdate.map(i =>
+      institutionUpdate = managerRelationship.institutionUpdate.as(
+        managerRelationship.institutionUpdate
+          .map(i =>
             InstitutionUpdate(
               institutionType = i.institutionType,
               description = i.description,
@@ -1332,7 +1326,8 @@ class ProcessApiServiceImpl(
               )
             )
           )
-      }
+          .get
+      )
 
       onboardingRequest = OnboardingSignedRequest(
         productId = managerRelationship.product.id,
