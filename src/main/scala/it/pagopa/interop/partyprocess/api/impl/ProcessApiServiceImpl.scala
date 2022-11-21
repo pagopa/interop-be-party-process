@@ -465,7 +465,7 @@ class ProcessApiServiceImpl(
           sendOnboardingNotificationMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
         case _    => sendOnboardingMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
       }
-      _ = logger.info(s"$token")
+      _ = logger.info(s"$token for institution: ${institution.id}")
     } yield ()
   }
 
@@ -1278,6 +1278,9 @@ class ProcessApiServiceImpl(
       )
       managerRelationships <- Future.traverse(managerLegals)(relationship =>
         partyManagementService.getRelationshipById(relationship.relationshipId)(bearer)
+      )
+      _                    <- Future.traverse(managerRelationships)(managerRelationship =>
+        getValidManager(Option(managerRelationship), Seq())
       )
       institutions         <- Future.traverse(managerRelationships)(legalUser =>
         partyManagementService.retrieveInstitution(legalUser.to)(bearer)
