@@ -13,7 +13,7 @@ import it.pagopa.interop.commons.utils.AkkaUtils.{getFutureBearer, getUidFuture}
 import it.pagopa.interop.commons.utils.OpenapiUtils._
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.{ResourceConflictError, ResourceNotFoundError}
-import it.pagopa.interop.partymanagement.client.model.{Relationship, Relationships}
+import it.pagopa.interop.partymanagement.client.model.Relationship
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess.api.ProcessApiService
 import it.pagopa.interop.partyprocess.api.converters.partymanagement.InstitutionConverter
@@ -366,50 +366,6 @@ class ProcessApiServiceImpl(
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, OnboardingLegalsError)
         onboardingLegalsOnInstitution400(errorResponse)
     }
-  }
-
-  def getValidUsers(
-    validRegistryUsers: Seq[UserRegistryUser],
-    validUsersRelationships: Relationships,
-    institutionId: String
-  ): Seq[User] = {
-    /*   val result: Future[Seq[User]] = for {
-        val users <- Future.traverse(validRegistryUsers)(validRegistryUser =>
-          User(
-          id = validRegistryUser.id,
-          taxCode = validRegistryUser.taxCode.getOrElse(""),
-          name = validRegistryUser.name.getOrElse(""),
-          surname = validRegistryUser.surname.getOrElse(""),
-          email = Option(validRegistryUser.email.get(institutionId)),
-          role = PartyRole.MANAGER,
-          productRole = validUsersRelationships.items.filter(_.from == validRegistryUser.id).head.product.role)
-        )
-
-    } yield ()*/
-
-    val users: Seq[User] = validRegistryUsers.map(validRegistryUser =>
-      User(
-        id = validRegistryUser.id,
-        taxCode = validRegistryUser.taxCode.getOrElse(""),
-        name = validRegistryUser.name.getOrElse(""),
-        surname = validRegistryUser.surname.getOrElse(""),
-        email = Option(validRegistryUser.email.get(institutionId)),
-        role = PartyRole.MANAGER,
-        productRole = validUsersRelationships.items.filter(_.from == validRegistryUser.id).head.product.role
-      )
-    )
-    users
-
-    /* Future.traverse(validRegistryUsers)(validRegistryUser =>
-        User(
-          id = validRegistryUser.id,
-          taxCode = validRegistryUser.taxCode.getOrElse(""),
-          name = validRegistryUser.name.getOrElse(""),
-          surname = validRegistryUser.surname.getOrElse(""),
-          email = Option(validRegistryUser.email.get(institutionId)),
-          role = PartyRole.MANAGER,
-          productRole = validUsersRelationships.items.filter(_.from == validRegistryUser.id).product.role)
-      )*/
   }
 
   private def extractActiveManager(
