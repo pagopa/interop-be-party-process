@@ -10,6 +10,6 @@ object ProductResourceProduct {
       id = resource.id,
       name = resource.title,
       contractTemplatePath = resource.contractTemplatePath.getOrElse(""),
-      version = resource.version.getOrElse("")
+      version = resource.contractTemplateVersion.getOrElse("")
     )
 }
