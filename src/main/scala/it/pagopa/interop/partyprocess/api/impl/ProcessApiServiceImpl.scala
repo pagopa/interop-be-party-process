@@ -1297,7 +1297,7 @@ class ProcessApiServiceImpl(
       managerUsers = managerRegistryUsers.map(u => createUser(managerRelationships, institutionInternalId, u))
       managerUser         <- managerUsers.headOption.toFuture(ManagerFoundError)
       manager             <- managerRegistryUsers.headOption.toFuture(ManagerFoundError)
-      managerRelationship <- managerRelationships.filter(_.from == manager.id).headOption.toFuture(ManagerFoundError)
+      managerRelationship <- managerRelationships.find(_.from == manager.id).toFuture(ManagerFoundError)
 
       onboardingProduct <- productManagementService.getProductById(productId)
 
