@@ -20,7 +20,9 @@ client/target
 client/src
 userreg/src
 userreg/target
+userreg/userreg.iml
 product/src
+product/product.iml
 product/target
 .bsp
 .DS_Store

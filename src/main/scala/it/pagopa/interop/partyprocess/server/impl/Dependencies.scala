@@ -115,21 +115,25 @@ trait Dependencies {
     signatureService: SignatureService,
     partyProcessService: PartyRegistryService,
     userRegistryManagementService: UserRegistryManagementService,
+    productManagementService: ProductManagementService,
     fileManager: FileManager,
     mailTemplate: PersistedTemplate,
     mailNotificationTemplate: PersistedTemplate,
+    mailRejectTemplate: PersistedTemplate,
     jwtReader: JWTReader
   )(implicit ec: ExecutionContext): ProcessApi = new ProcessApi(
     new ProcessApiServiceImpl(
       partyManagementService,
       partyProcessService,
       userRegistryManagementService,
+      productManagementService,
       pdfCreator = PDFCreatorImpl,
       fileManager,
       signatureService,
       onboardingInitMailer,
       mailTemplate,
       mailNotificationTemplate,
+      mailRejectTemplate,
       relationshipService,
       productService
     ),
@@ -194,6 +198,11 @@ trait Dependencies {
     ec: ExecutionContext
   ): Future[PersistedTemplate] =
     MailTemplate.get(ApplicationConfiguration.onboardingNotificationMailTemplatePath, fileManager)
+
+  def getOnboardingRejectMailTemplate(fileManager: FileManager)(implicit
+    ec: ExecutionContext
+  ): Future[PersistedTemplate] =
+    MailTemplate.get(ApplicationConfiguration.onboardingRejectMailTemplatePath, fileManager)
 
   def getJwtValidator()(implicit ec: ExecutionContext): Future[JWTReader] = JWTConfiguration.jwtReader
     .loadKeyset()

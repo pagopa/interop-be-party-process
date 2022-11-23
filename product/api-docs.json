@@ -677,10 +677,8 @@
       "ProductResource": {
         "title": "ProductResource",
         "required": [
-          "description",
           "id",
-          "title",
-          "urlBO"
+          "title"
         ],
         "type": "object",
         "properties": {
@@ -695,6 +693,14 @@
           "title": {
             "type": "string",
             "description": "Product's title"
+          },
+          "contractTemplatePath": {
+            "type": "string",
+            "description": "Product's contract Template Path"
+          },
+          "contractTemplateVersion": {
+            "type": "string",
+            "description": "Product's contract Template version"
           },
           "urlBO": {
             "type": "string",
