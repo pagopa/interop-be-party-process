@@ -142,7 +142,7 @@ final case class PartyManagementServiceImpl(
   override def updateTokenDigest(tokenId: UUID, digest: String)(
     bearerToken: String
   )(implicit contexts: Seq[(String, String)]): Future[TokenText] = {
-    val request = partyApi.updateTokenDigest(tokenId, digest)(BearerToken(bearerToken))
+    val request = partyApi.updateTokenDigest(tokenId, DigestSeed(digest))(BearerToken(bearerToken))
     invoke(request, s"Update Token $tokenId with digest: $digest", Some(tokenId.toString))
   }
 

@@ -1287,12 +1287,17 @@ class ProcessApiServiceImpl(
       )
 
       institutionInternalId = institutions.headOption.map(_.id.toString).getOrElse("")
+      institutionExternalId = institutions.headOption.map(_.externalId.toString).getOrElse("")
+
+      institution <- institutions.headOption.toFuture(
+        InstitutionNotFound(Option(institutionInternalId), Option(institutionExternalId))
+      )
 
       productId    = managerRelationships.head.product.id
       managerUsers = managerRegistryUsers.map(u => createUser(managerRelationships, institutionInternalId, u))
-
-      manager             = managerRegistryUsers.head
-      managerRelationship = managerRelationships.filter(_.from == manager.id).head
+      managerUser         <- managerUsers.headOption.toFuture(ManagerFoundError)
+      manager             <- managerRegistryUsers.headOption.toFuture(ManagerFoundError)
+      managerRelationship <- managerRelationships.filter(_.from == manager.id).headOption.toFuture(ManagerFoundError)
 
       onboardingProduct <- productManagementService.getProductById(productId)
 
@@ -1348,9 +1353,9 @@ class ProcessApiServiceImpl(
       contractTemplate <- getFileAsString(onboardingRequest.contract.path)
       pdf              <- pdfCreator.createContract(
         contractTemplate,
-        managerUsers.head,
+        managerUser,
         managerUsers ++ otherUsers,
-        institutions.head,
+        institution,
         onboardingRequest
       )
 
