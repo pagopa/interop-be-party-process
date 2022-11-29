@@ -30,7 +30,7 @@ import it.pagopa.interop.partyprocess.common.system.{classicActorSystem, executi
 import it.pagopa.interop.partyprocess.error.SignatureValidationError
 import it.pagopa.interop.partyprocess.model.PartyRole.{DELEGATE, MANAGER, OPERATOR, SUB_DELEGATE}
 import it.pagopa.interop.partyprocess.model.RelationshipState.ACTIVE
-import it.pagopa.interop.partyprocess.model.{Attribute, Billing, Institution, InstitutionUpdate, _}
+import it.pagopa.interop.partyprocess.model.{Attribute, Billing, Institution, InstitutionUpdate, GeographicTaxonomy, _}
 import it.pagopa.interop.partyregistryproxy.client.{model => PartyProxyDependencies}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
@@ -98,7 +98,8 @@ trait PartyApiSpec
       zipCode = "zipCode",
       origin = origin,
       institutionType = Option("PA"),
-      products = Map.empty
+      products = Map.empty,
+      geographicTaxonomies = Seq(PartyManagementDependency.GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
     )
 
     val managerId = UUID.randomUUID()
@@ -146,7 +147,9 @@ trait PartyApiSpec
           digitalAddress = Option("OVERRIDE_digitalAddress"),
           address = Option("OVERRIDE_address"),
           zipCode = Option("OVERRIDE_zipCode"),
-          taxCode = Option("OVERRIDE_taxCode")
+          taxCode = Option("OVERRIDE_taxCode"),
+          geographicTaxonomies =
+            Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
         )
       ),
       billing = Option(
@@ -220,7 +223,8 @@ trait PartyApiSpec
       zipCode = "zipCode",
       origin = origin,
       institutionType = Option("PA"),
-      products = Map.empty
+      products = Map.empty,
+      geographicTaxonomies = Seq(PartyManagementDependency.GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
     )
 
     val file = new File("src/test/resources/fake.file")
@@ -272,7 +276,10 @@ trait PartyApiSpec
                 digitalAddress = Option("OVERRIDE_digitalAddress"),
                 address = Option("OVERRIDE_address"),
                 zipCode = Option("OVERRIDE_zipCode"),
-                taxCode = Option("OVERRIDE_taxCode")
+                taxCode = Option("OVERRIDE_taxCode"),
+                geographicTaxonomies = Seq(
+                  PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC")
+                )
               )
             ),
             billing = Option(
@@ -304,7 +311,10 @@ trait PartyApiSpec
                 digitalAddress = Option("OVERRIDE_digitalAddress"),
                 address = Option("OVERRIDE_address"),
                 zipCode = Option("OVERRIDE_zipCode"),
-                taxCode = Option("OVERRIDE_taxCode")
+                taxCode = Option("OVERRIDE_taxCode"),
+                geographicTaxonomies = Seq(
+                  PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC")
+                )
               )
             ),
             billing = Option(
@@ -396,7 +406,8 @@ trait PartyApiSpec
           digitalAddress = Option("OVERRIDE_digitalAddress"),
           address = Option("OVERRIDE_address"),
           zipCode = Option("OVERRIDE_zipCode"),
-          taxCode = Option("OVERRIDE_taxCode")
+          taxCode = Option("OVERRIDE_taxCode"),
+          geographicTaxonomies = Seq(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
         )
       ),
       billing = Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
@@ -434,7 +445,8 @@ trait PartyApiSpec
         zipCode = "",
         origin = origin,
         institutionType = Option("PA"),
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq(PartyManagementDependency.GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
       )
 
       val relationship =
@@ -455,7 +467,9 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -528,7 +542,8 @@ trait PartyApiSpec
         zipCode = "",
         origin = origin,
         institutionType = Option("PA"),
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq(PartyManagementDependency.GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
       )
 
       (mockPartyManagementService
@@ -611,7 +626,9 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -649,7 +666,8 @@ trait PartyApiSpec
         zipCode = "zipCode",
         origin = origin,
         institutionType = Option("PA"),
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq(PartyManagementDependency.GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
       )
       val institution2 = PartyManagementDependency.Institution(
         id = orgPartyId2,
@@ -680,13 +698,11 @@ trait PartyApiSpec
           "p2"              -> PartyManagementDependency.InstitutionProduct(
             product = "p2",
             pricingPlan = Option("pricingPlan"),
-            billing = PartyManagementDependency.Billing(
-              vatNumber = "VATNUMBER",
-              recipientCode = "RECIPIENTCODE",
-              publicServices = Option(true)
-            )
+            billing = PartyManagementDependency
+              .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
           )
-        )
+        ),
+        geographicTaxonomies = Seq.empty
       )
 
       val expected = OnboardingInfo(
@@ -708,7 +724,8 @@ trait PartyApiSpec
             productInfo = defaultProductInfo,
             attributes = Seq(attribute1, attribute2, attribute3),
             billing = Option.empty,
-            pricingPlan = Option.empty
+            pricingPlan = Option.empty,
+            geographicTaxonomies = Seq(GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
           ),
           OnboardingData(
             id = institution2.id,
@@ -736,7 +753,8 @@ trait PartyApiSpec
                 publicServices = Option(true)
               )
             ),
-            pricingPlan = Option("INSTITUTIONSAVED_pricingPlan")
+            pricingPlan = Option("INSTITUTIONSAVED_pricingPlan"),
+            geographicTaxonomies = Seq.empty
           )
         )
       )
@@ -813,7 +831,9 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -843,7 +863,9 @@ trait PartyApiSpec
             productInfo = defaultProductInfo,
             attributes = Seq(attribute1, attribute2, attribute3),
             billing = billing,
-            pricingPlan = pricingPlan
+            pricingPlan = pricingPlan,
+            geographicTaxonomies =
+              institution.geographicTaxonomies.map(x => GeographicTaxonomy(code = x.code, desc = x.desc))
           )
         )
       )
@@ -921,7 +943,8 @@ trait PartyApiSpec
               publicServices = billing.publicServices
             )
           )
-        )
+        ),
+        geographicTaxonomies = Seq(PartyManagementDependency.GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
       )
       val expected    =
         configureOnboardingInfoTest(institution, attribute1, attribute2, attribute3, pricingPlan, Option(billing))
@@ -975,7 +998,8 @@ trait PartyApiSpec
             billing = PartyManagementDependency
               .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(false))
           )
-        )
+        ),
+        geographicTaxonomies = Seq(PartyManagementDependency.GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
       )
       val expected    = configureOnboardingInfoTest(institution, attribute1, attribute2, attribute3, None, None)
 
@@ -1025,7 +1049,9 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -1048,7 +1074,8 @@ trait PartyApiSpec
         zipCode = "zipCode",
         origin = origin,
         institutionType = Option("PA"),
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq.empty
       )
 
       (mockPartyManagementService
@@ -1102,7 +1129,8 @@ trait PartyApiSpec
               partyprocess.model.Attribute(attribute3.origin, attribute3.code, attribute3.description)
             ),
             billing = None,
-            pricingPlan = None
+            pricingPlan = None,
+            geographicTaxonomies = Seq.empty
           )
         )
       )
@@ -1279,7 +1307,8 @@ trait PartyApiSpec
             email = Option("email1@where.com"),
             pec = Option("pec1@where.com")
           )
-        )
+        ),
+        geographicTaxonomies = Seq(PartyManagementDependency.GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
       )
 
       val relationship1 =
@@ -1300,7 +1329,9 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -1330,7 +1361,8 @@ trait PartyApiSpec
             productInfo = defaultProductInfo,
             attributes = Seq(attribute1, attribute2, attribute3),
             billing = Option.empty,
-            pricingPlan = Option.empty
+            pricingPlan = Option.empty,
+            geographicTaxonomies = Seq(GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
           )
         )
       )
@@ -1395,7 +1427,8 @@ trait PartyApiSpec
         zipCode = "zipCode",
         origin = origin,
         institutionType = Option("PA"),
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq(PartyManagementDependency.GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
       )
 
       val managerId  = UUID.randomUUID()
@@ -1466,7 +1499,8 @@ trait PartyApiSpec
               else Option(institution.digitalAddress),
             address = if (overriddenField == "address") Option("OVERRIDE_address") else None,
             zipCode = if (overriddenField == "zipCode") Option("OVERRIDE_zipCode") else Option(institution.zipCode),
-            taxCode = if (overriddenField.equals("taxCode")) Option("OVERRIDE_taxCode") else None
+            taxCode = if (overriddenField.equals("taxCode")) Option("OVERRIDE_taxCode") else None,
+            geographicTaxonomies = Seq(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
           )
         ),
         billing = Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
@@ -1647,7 +1681,9 @@ trait PartyApiSpec
               zipCode = "zipCode",
               origin = origin,
               institutionType = Option("PA"),
-              products = Map.empty
+              products = Map.empty,
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
             )
           )
         )
@@ -1696,7 +1732,8 @@ trait PartyApiSpec
         zipCode = "zipCode",
         origin = origin,
         institutionType = Option("PA"),
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq(PartyManagementDependency.GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
       )
 
       val relationships =
@@ -1719,7 +1756,10 @@ trait PartyApiSpec
                   digitalAddress = Option("OVERRIDE_digitalAddress"),
                   address = Option("OVERRIDE_address"),
                   zipCode = Option("OVERRIDE_zipCode"),
-                  taxCode = Option("OVERRIDE_taxCode")
+                  taxCode = Option("OVERRIDE_taxCode"),
+                  geographicTaxonomies = Seq(
+                    PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC")
+                  )
                 )
               ),
               billing = Option(
@@ -1845,7 +1885,9 @@ trait PartyApiSpec
               zipCode = "zipCode",
               origin = origin,
               institutionType = Option("PA"),
-              products = Map.empty
+              products = Map.empty,
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
             )
           )
         )
@@ -1898,7 +1940,8 @@ trait PartyApiSpec
         zipCode = "zipCode",
         origin = origin,
         institutionType = Option("PA"),
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq(PartyManagementDependency.GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
       )
 
       val relationships =
@@ -1921,7 +1964,10 @@ trait PartyApiSpec
                   digitalAddress = Option("OVERRIDE_digitalAddress"),
                   address = Option("OVERRIDE_address"),
                   zipCode = Option("OVERRIDE_zipCode"),
-                  taxCode = Option("OVERRIDE_taxCode")
+                  taxCode = Option("OVERRIDE_taxCode"),
+                  geographicTaxonomies = Seq(
+                    PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC")
+                  )
                 )
               ),
               billing = Option(
@@ -2280,7 +2326,8 @@ trait PartyApiSpec
         zipCode = "",
         origin = "",
         institutionType = Option.empty,
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq(PartyManagementDependency.GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
       )
 
       val adminRelationship =
@@ -2313,7 +2360,9 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -2435,7 +2484,8 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies = Seq(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing =
@@ -2488,7 +2538,8 @@ trait PartyApiSpec
         zipCode = "",
         origin = "",
         institutionType = Option.empty,
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq(PartyManagementDependency.GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
       )
 
       val adminRelationship =
@@ -2634,7 +2685,8 @@ trait PartyApiSpec
         zipCode = "",
         origin = "",
         institutionType = Option.empty,
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq(PartyManagementDependency.GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -2671,7 +2723,9 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -2795,7 +2849,8 @@ trait PartyApiSpec
         zipCode = "",
         origin = "",
         institutionType = Option.empty,
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -2917,7 +2972,8 @@ trait PartyApiSpec
         zipCode = "",
         origin = "",
         institutionType = Option.empty,
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq.empty
       )
 
       val relationshipId1 = UUID.randomUUID()
@@ -2940,7 +2996,9 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -3037,7 +3095,8 @@ trait PartyApiSpec
             digitalAddress = Option("OVERRIDE_digitalAddress"),
             address = Option("OVERRIDE_address"),
             zipCode = Option("OVERRIDE_zipCode"),
-            taxCode = Option("OVERRIDE_taxCode")
+            taxCode = Option("OVERRIDE_taxCode"),
+            geographicTaxonomies = Seq(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
           )
         ),
         billing =
@@ -3064,7 +3123,8 @@ trait PartyApiSpec
         zipCode = "",
         origin = "",
         institutionType = Option.empty,
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -3088,7 +3148,9 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -3209,7 +3271,8 @@ trait PartyApiSpec
         zipCode = "",
         origin = "",
         institutionType = Option.empty,
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -3234,7 +3297,9 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -3382,7 +3447,8 @@ trait PartyApiSpec
         zipCode = "",
         origin = "",
         institutionType = Option.empty,
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq.empty
       )
 
       val adminRelationshipId = UUID.randomUUID()
@@ -4077,7 +4143,8 @@ trait PartyApiSpec
         zipCode = "zipCode",
         origin = origin,
         institutionType = Option("PA"),
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq.empty
       )
 
       val managerId = UUID.randomUUID()
@@ -4114,7 +4181,9 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -4175,7 +4244,8 @@ trait PartyApiSpec
         zipCode = "zipCode",
         origin = origin,
         institutionType = Option("PA"),
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq.empty
       )
 
       val managerId = UUID.randomUUID()
@@ -4222,7 +4292,9 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -4294,7 +4366,8 @@ trait PartyApiSpec
         zipCode = "",
         origin = "",
         institutionType = Option.empty,
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq.empty
       )
 
       val managerId        = UUID.randomUUID()
@@ -4323,7 +4396,9 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -4351,7 +4426,9 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -4379,7 +4456,9 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -4457,7 +4536,8 @@ trait PartyApiSpec
         zipCode = "",
         origin = "",
         institutionType = Option.empty,
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq.empty
       )
 
       val managerId        = UUID.randomUUID()
@@ -4487,7 +4567,9 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -4515,7 +4597,9 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -4543,7 +4627,9 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -4571,7 +4657,9 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -4648,7 +4736,8 @@ trait PartyApiSpec
         zipCode = "",
         origin = "",
         institutionType = Option.empty,
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq.empty
       )
 
       val managerId        = UUID.randomUUID()
@@ -4678,7 +4767,9 @@ trait PartyApiSpec
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -4705,7 +4796,9 @@ trait PartyApiSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -4732,7 +4825,9 @@ trait PartyApiSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -4759,7 +4854,9 @@ trait PartyApiSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -4786,7 +4883,9 @@ trait PartyApiSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -4867,7 +4966,8 @@ trait PartyApiSpec
         zipCode = "",
         origin = "",
         institutionType = Option.empty,
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq.empty
       )
 
       val managerId        = UUID.randomUUID()
@@ -4896,7 +4996,9 @@ trait PartyApiSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -4923,7 +5025,9 @@ trait PartyApiSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -4950,7 +5054,9 @@ trait PartyApiSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -4977,7 +5083,9 @@ trait PartyApiSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -5058,7 +5166,8 @@ trait PartyApiSpec
         zipCode = "",
         origin = "",
         institutionType = Option.empty,
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq.empty
       )
 
       val managerId       = UUID.randomUUID()
@@ -5085,7 +5194,9 @@ trait PartyApiSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -5112,7 +5223,9 @@ trait PartyApiSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -5189,7 +5302,8 @@ trait PartyApiSpec
         zipCode = "",
         origin = "",
         institutionType = Option.empty,
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies = Seq.empty
       )
 
       val managerId      = UUID.randomUUID()
@@ -5216,7 +5330,9 @@ trait PartyApiSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -5243,7 +5359,9 @@ trait PartyApiSpec
               description = Option("OVERRIDE_description"),
               digitalAddress = Option("OVERRIDE_digitalAddress"),
               address = Option("OVERRIDE_address"),
-              taxCode = Option("OVERRIDE_taxCode")
+              taxCode = Option("OVERRIDE_taxCode"),
+              geographicTaxonomies =
+                Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
             )
           ),
           billing = Option(
@@ -5320,7 +5438,9 @@ trait PartyApiSpec
         zipCode = "",
         origin = "",
         institutionType = Option.empty,
-        products = Map.empty
+        products = Map.empty,
+        geographicTaxonomies =
+          Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
       )
 
       (mockPartyManagementService
@@ -5418,7 +5538,9 @@ trait PartyApiSpec
       zipCode = institutionSeed.zipCode,
       origin = institutionSeed.origin,
       institutionType = institutionSeed.institutionType,
-      products = Map.empty
+      products = Map.empty,
+      geographicTaxonomies =
+        Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
     )
 
     val expected = Institution(
@@ -5432,7 +5554,8 @@ trait PartyApiSpec
       taxCode = institution.taxCode,
       origin = institution.origin,
       institutionType = institution.institutionType,
-      attributes = Seq(Attribute(origin, "C17", "attrs"))
+      attributes = Seq(Attribute(origin, "C17", "attrs")),
+      geographicTaxonomies = Seq(GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
     )
 
     def mockPartyRegistry(success: Boolean) = {
@@ -5523,7 +5646,8 @@ trait PartyApiSpec
       origin = origin,
       address = "address",
       zipCode = "zipCode",
-      products = Map.empty
+      products = Map.empty,
+      geographicTaxonomies = Seq.empty
     )
 
     val expected = Institution(
@@ -5537,7 +5661,8 @@ trait PartyApiSpec
       taxCode = institution.taxCode,
       origin = institution.origin,
       institutionType = institution.institutionType,
-      attributes = Seq(Attribute(origin, "C17", "attrs"))
+      attributes = Seq(Attribute(origin, "C17", "attrs")),
+      geographicTaxonomies = Seq.empty
     )
 
     def mockPartyManagement(success: Boolean) = {

@@ -231,7 +231,9 @@ class ProcessApiServiceImpl(
         billing = institution.products.get(relationship.product.id).map(m => billingToApi(m.billing)),
         pricingPlan = institution.products.get(relationship.product.id).flatMap(m => m.pricingPlan),
         attributes =
-          institution.attributes.map(attribute => Attribute(attribute.origin, attribute.code, attribute.description))
+          institution.attributes.map(attribute => Attribute(attribute.origin, attribute.code, attribute.description)),
+        geographicTaxonomies =
+          institution.geographicTaxonomies.map(x => GeographicTaxonomy(code = x.code, desc = x.desc))
       )
 
     }

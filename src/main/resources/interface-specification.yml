@@ -1240,6 +1240,10 @@ components:
           description: certified attributes bound to this institution
           items:
             $ref: '#/components/schemas/Attribute'
+        geographicTaxonomies:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeographicTaxonomy'
       additionalProperties: false
       required:
         - id
@@ -1255,6 +1259,7 @@ components:
         - role
         - productInfo
         - attributes
+        - geographicTaxonomies
     Attribute:
       type: object
       properties:
