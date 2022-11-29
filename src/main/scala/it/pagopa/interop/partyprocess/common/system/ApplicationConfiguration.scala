@@ -13,6 +13,7 @@ object ApplicationConfiguration {
   val getPartyProxyUrl: String      = config.getString("party-process.services.party-proxy")
   val getUserRegistryURL: String    = config.getString("party-process.services.user-registry-management")
   val getProductURL: String         = config.getString("party-process.services.product-management")
+  val getGeoTaxonomyURL: String     = config.getString("party-process.services.geo-taxonomy")
 
   /*
      _________  ________  ________  ________

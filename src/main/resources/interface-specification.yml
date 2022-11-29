@@ -1518,7 +1518,7 @@ components:
     InstitutionUpdate:
       type: object
       required:
-        - geographicTaxonomies
+        - geographicTaxonomyCodes
       properties:
         institutionType:
           type: string
@@ -1544,10 +1544,10 @@ components:
           $ref: '#/components/schemas/PaymentServiceProvider'
         dataProtectionOfficer:
           $ref: '#/components/schemas/DataProtectionOfficer'
-        geographicTaxonomies:
+        geographicTaxonomyCodes:
           type: array
           items:
-            $ref: '#/components/schemas/GeographicTaxonomy'
+            type: string
     Billing:
       type: object
       properties:

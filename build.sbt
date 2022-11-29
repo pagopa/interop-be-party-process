@@ -81,6 +81,17 @@ generateCode := {
              |                               -p dateLibrary=java8
              |                               -o product""".stripMargin).!!
 
+  Process(
+    s"""$openApiCommand generate -t template/scala-akka-http-client
+       |                               -i geoTaxonomy/api-docs.json
+       |                               -g scala-akka
+       |                               -p projectName=geoTaxonomy
+       |                               -p invokerPackage=it.pagopa.geotaxonomy.client.invoker
+       |                               -p modelPackage=it.pagopa.geotaxonomy.client.model
+       |                               -p apiPackage=it.pagopa.geotaxonomy.client.api
+       |                               -p dateLibrary=java8
+       |                               -o geotaxonomy""".stripMargin).!!
+
 }
 
 val runStandalone = inputKey[Unit]("Run the app using standalone configuration")
@@ -154,6 +165,16 @@ lazy val product = project
     updateOptions       := updateOptions.value.withGigahorse(false)
   )
 
+lazy val geoTaxonomy = project
+  .in(file("geoTaxonomy"))
+  .settings(
+    name := "geoTaxonomy",
+    scalacOptions := Seq(),
+    scalafmtOnCompile := true,
+    libraryDependencies := Dependencies.Jars.client,
+    updateOptions := updateOptions.value.withGigahorse(false)
+  )
+
 lazy val root = (project in file("."))
   .settings(
     name                        := "interop-be-party-process",
@@ -173,6 +194,7 @@ lazy val root = (project in file("."))
   .dependsOn(generated)
   .dependsOn(userreg)
   .dependsOn(product)
+  .dependsOn(geoTaxonomy)
   .enablePlugins(JavaAppPackaging, JavaAgent)
   .setupBuildInfo
 

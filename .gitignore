@@ -24,6 +24,9 @@ userreg/userreg.iml
 product/src
 product/product.iml
 product/target
+geoTaxonomy/src
+geoTaxonomy/target
+geoTaxonomy/userreg.iml
 .bsp
 .DS_Store
 snapshots

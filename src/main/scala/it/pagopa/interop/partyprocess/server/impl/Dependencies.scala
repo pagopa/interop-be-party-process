@@ -42,6 +42,7 @@ import it.pagopa.interop.partyprocess.service.impl._
 import it.pagopa.interop.partyregistryproxy.client.{api => partyregistryproxyApi}
 import it.pagopa.userreg.client.{api => userregistrymanagement}
 import it.pagopa.product.client.{api => productmanagement}
+import it.pagopa.geotaxonomy.client.{api => geotaxonomy}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 
@@ -81,6 +82,12 @@ trait Dependencies {
       productmanagement.ProductApi(ApplicationConfiguration.getProductURL)
     )(externalApiKey, ApplicationConfiguration.externalApiUser)
 
+  def geoTaxonomyService()(implicit actorSystem: ActorSystem[_]): GeoTaxonomyService =
+    GeoTaxonomyServiceImpl(
+      GeoTaxonomyInvoker()(actorSystem.classicSystem),
+      geotaxonomy.GeographicTaxonomyApi(ApplicationConfiguration.getGeoTaxonomyURL)
+    )
+
   def signatureValidationService(): SignatureValidationService =
     if (ApplicationConfiguration.signatureValidationEnabled) SignatureValidationServiceImpl
     else PassthroughSignatureValidationService
@@ -116,6 +123,7 @@ trait Dependencies {
     partyProcessService: PartyRegistryService,
     userRegistryManagementService: UserRegistryManagementService,
     productManagementService: ProductManagementService,
+    geoTaxonomy: GeoTaxonomyService,
     fileManager: FileManager,
     mailTemplate: PersistedTemplate,
     mailNotificationTemplate: PersistedTemplate,
@@ -135,7 +143,8 @@ trait Dependencies {
       mailNotificationTemplate,
       mailRejectTemplate,
       relationshipService,
-      productService
+      productService,
+      geoTaxonomy
     ),
     ProcessApiMarshallerImpl,
     jwtReader.OAuth2JWTValidatorAsContexts

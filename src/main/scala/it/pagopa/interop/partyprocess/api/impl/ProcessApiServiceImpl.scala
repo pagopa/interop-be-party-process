@@ -45,7 +45,8 @@ class ProcessApiServiceImpl(
   mailNotificationTemplate: PersistedTemplate,
   mailRejectTemplate: PersistedTemplate,
   relationshipService: RelationshipService,
-  productService: ProductService
+  productService: ProductService,
+  geoTaxonomyService: GeoTaxonomyService
 )(implicit ec: ExecutionContext)
     extends ProcessApiService {
 
@@ -596,67 +597,69 @@ class ProcessApiServiceImpl(
     billing: Option[Billing],
     origin: String = SELC
   )(bearer: String)(implicit contexts: Seq[(String, String)]): Future[PartyManagementDependency.Relationship] = {
-    val relationshipSeed: PartyManagementDependency.RelationshipSeed =
-      PartyManagementDependency.RelationshipSeed(
-        from = personId,
-        to = institutionId,
-        role = role,
-        product = PartyManagementDependency.RelationshipProductSeed(product, productRole),
-        pricingPlan = pricingPlan,
-        institutionUpdate = institutionUpdate.map(i =>
-          PartyManagementDependency.InstitutionUpdate(
-            institutionType = i.institutionType,
-            description = i.description,
-            digitalAddress = i.digitalAddress,
-            address = i.address,
-            zipCode = i.zipCode,
-            taxCode = i.taxCode,
-            paymentServiceProvider = i.paymentServiceProvider.map(p =>
-              PartyManagementDependency.PaymentServiceProvider(
-                abiCode = p.abiCode,
-                businessRegisterNumber = p.businessRegisterNumber,
-                legalRegisterName = p.legalRegisterName,
-                legalRegisterNumber = p.legalRegisterNumber,
-                vatNumberGroup = p.vatNumberGroup
+    for {
+      geoTaxonomies <- Future.traverse(institutionUpdate.map(i => i.geographicTaxonomyCodes).getOrElse(Seq.empty))(c => geoTaxonomyService.getByCode(c))
+      relationshipSeed: PartyManagementDependency.RelationshipSeed =
+        PartyManagementDependency.RelationshipSeed(
+          from = personId,
+          to = institutionId,
+          role = role,
+          product = PartyManagementDependency.RelationshipProductSeed(product, productRole),
+          pricingPlan = pricingPlan,
+          institutionUpdate = institutionUpdate.map(i =>
+            PartyManagementDependency.InstitutionUpdate(
+              institutionType = i.institutionType,
+              description = i.description,
+              digitalAddress = i.digitalAddress,
+              address = i.address,
+              zipCode = i.zipCode,
+              taxCode = i.taxCode,
+              paymentServiceProvider = i.paymentServiceProvider.map(p =>
+                PartyManagementDependency.PaymentServiceProvider(
+                  abiCode = p.abiCode,
+                  businessRegisterNumber = p.businessRegisterNumber,
+                  legalRegisterName = p.legalRegisterName,
+                  legalRegisterNumber = p.legalRegisterNumber,
+                  vatNumberGroup = p.vatNumberGroup
+                )
+              ),
+              dataProtectionOfficer = i.dataProtectionOfficer.map(d =>
+                PartyManagementDependency.DataProtectionOfficer(address = d.address, email = d.email, pec = d.pec)
+              ),
+              geographicTaxonomies = geoTaxonomies.map(d =>
+                PartyManagementDependency.GeographicTaxonomy(code = d.code, desc = d.desc)
               )
-            ),
-            dataProtectionOfficer = i.dataProtectionOfficer.map(d =>
-              PartyManagementDependency.DataProtectionOfficer(address = d.address, email = d.email, pec = d.pec)
-            ),
-            geographicTaxonomies = i.geographicTaxonomies.map(d =>
-              PartyManagementDependency.GeographicTaxonomy(code = d.code, desc = d.desc)
             )
-          )
-        ),
-        billing = billing.map(b =>
-          PartyManagementDependency
-            .Billing(vatNumber = b.vatNumber, recipientCode = b.recipientCode, publicServices = b.publicServices)
-        ),
-        state = origin match {
-          case SELC => Option(PartyManagementDependency.RelationshipState.TOBEVALIDATED)
-          case _    => Option(PartyManagementDependency.RelationshipState.PENDING)
+          ),
+          billing = billing.map(b =>
+            PartyManagementDependency
+              .Billing(vatNumber = b.vatNumber, recipientCode = b.recipientCode, publicServices = b.publicServices)
+          ),
+          state = origin match {
+            case SELC => Option(PartyManagementDependency.RelationshipState.TOBEVALIDATED)
+            case _ => Option(PartyManagementDependency.RelationshipState.PENDING)
+          }
+        )
+      relationship <- partyManagementService
+        .createRelationship(relationshipSeed)(bearer)
+        .recoverWith {
+          case _: ResourceConflictError =>
+            for {
+              relationships <- partyManagementService.retrieveRelationships(
+                from = Some(personId),
+                to = Some(institutionId),
+                roles = Seq(role),
+                states = Seq.empty,
+                products = Seq(product),
+                productRoles = Seq(productRole)
+              )(bearer)
+              relationship <- relationships.items.headOption.toFuture(
+                RelationshipNotFound(institutionId, personId, role.toString)
+              )
+            } yield relationship
+          case ex => Future.failed(ex)
         }
-      )
-
-    partyManagementService
-      .createRelationship(relationshipSeed)(bearer)
-      .recoverWith {
-        case _: ResourceConflictError =>
-          for {
-            relationships <- partyManagementService.retrieveRelationships(
-              from = Some(personId),
-              to = Some(institutionId),
-              roles = Seq(role),
-              states = Seq.empty,
-              products = Seq(product),
-              productRoles = Seq(productRole)
-            )(bearer)
-            relationship  <- relationships.items.headOption.toFuture(
-              RelationshipNotFound(institutionId, personId, role.toString)
-            )
-          } yield relationship
-        case ex                       => Future.failed(ex)
-      }
+    } yield relationship
 
   }
 
@@ -1337,7 +1340,7 @@ class ProcessApiServiceImpl(
               dataProtectionOfficer = i.dataProtectionOfficer.map(d =>
                 DataProtectionOfficer(address = d.address, email = d.email, pec = d.pec)
               ),
-              geographicTaxonomies = i.geographicTaxonomies.map(d => GeographicTaxonomy(code = d.code, desc = d.desc))
+              geographicTaxonomyCodes = i.geographicTaxonomies.map(d => d.code)
             )
           )
           .get
