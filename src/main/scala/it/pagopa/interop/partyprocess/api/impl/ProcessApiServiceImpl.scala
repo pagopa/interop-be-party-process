@@ -620,6 +620,9 @@ class ProcessApiServiceImpl(
             ),
             dataProtectionOfficer = i.dataProtectionOfficer.map(d =>
               PartyManagementDependency.DataProtectionOfficer(address = d.address, email = d.email, pec = d.pec)
+            ),
+            geographicTaxonomies = i.geographicTaxonomies.map(d =>
+              PartyManagementDependency.GeographicTaxonomy(code = d.code, desc = d.desc)
             )
           )
         ),
@@ -1331,7 +1334,8 @@ class ProcessApiServiceImpl(
               ),
               dataProtectionOfficer = i.dataProtectionOfficer.map(d =>
                 DataProtectionOfficer(address = d.address, email = d.email, pec = d.pec)
-              )
+              ),
+              geographicTaxonomies = i.geographicTaxonomies.map(d => GeographicTaxonomy(code = d.code, desc = d.desc))
             )
           )
           .get
