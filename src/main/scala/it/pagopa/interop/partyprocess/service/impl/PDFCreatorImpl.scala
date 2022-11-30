@@ -5,7 +5,7 @@ import it.pagopa.interop.commons.files.service.PDFManager
 import it.pagopa.interop.commons.utils.TypeConversions.OptionOps
 import it.pagopa.interop.partymanagement.client.model.Institution
 import it.pagopa.interop.partyprocess.api.impl.OnboardingSignedRequest
-import it.pagopa.interop.partyprocess.model.{PartyRole, User}
+import it.pagopa.interop.partyprocess.model.{GeographicTaxonomy, PartyRole, User}
 import it.pagopa.interop.partyprocess.service.PDFCreator
 
 import java.io.File
@@ -28,12 +28,13 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
     manager: User,
     users: Seq[User],
     institution: Institution,
-    onboardingRequest: OnboardingSignedRequest
+    onboardingRequest: OnboardingSignedRequest,
+    geoTaxonomies: Seq[GeographicTaxonomy]
   ): Future[File] =
     Future.fromTry {
       for {
         file <- createTempFile
-        data <- setupData(manager, users, institution, onboardingRequest)
+        data <- setupData(manager, users, institution, onboardingRequest, geoTaxonomies)
         pdf  <- getPDFAsFile(file.toPath, contractTemplate, data)
       } yield pdf
 
@@ -50,7 +51,8 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
     manager: User,
     users: Seq[User],
     institution: Institution,
-    onboardingRequest: OnboardingSignedRequest
+    onboardingRequest: OnboardingSignedRequest,
+    geoTaxonomies: Seq[GeographicTaxonomy]
   ): Try[Map[String, String]] = {
     for {
       managerEmail <- manager.email.toTry("Manager email not found")
@@ -80,7 +82,8 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
       "isPublicServicesManager"  -> onboardingRequest.billing
         .flatMap(_.publicServices)
         .map(if (_) "Y" else "N")
-        .getOrElse("")
+        .getOrElse(""),
+      "institutionGeoTaxonomies" -> geoTaxonomies.map(_.desc).mkString(", ")
     )
 
   }

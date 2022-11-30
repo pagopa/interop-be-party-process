@@ -20,7 +20,7 @@ import it.pagopa.interop.partyprocess.api.converters.partymanagement.Institution
 import it.pagopa.interop.partyprocess.api.impl.Conversions._
 import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.partyprocess.error.PartyProcessErrors._
-import it.pagopa.interop.partyprocess.model.{InstitutionSeed, User, _}
+import it.pagopa.interop.partyprocess.model._
 import it.pagopa.interop.partyprocess.service._
 import it.pagopa.interop.partyprocess.utils.LogoUtils
 import it.pagopa.userreg.client.model.UserId
@@ -280,7 +280,12 @@ class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_)                            => onboardingInstitution204
       case Failure(ex: ContractNotFound)         =>
-        logger.info("Error while onboarding institution {}", onboardingRequest.institutionExternalId, ex)
+        logger.info(
+          "Error while onboarding institution {} onto {}",
+          onboardingRequest.institutionExternalId,
+          onboardingRequest.productId,
+          ex
+        )
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         onboardingInstitution404(errorResponse)
       case Failure(ex: InstitutionNotFound)      =>
@@ -288,15 +293,37 @@ class ProcessApiServiceImpl(
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         onboardingInstitution404(errorResponse)
       case Failure(ex: OnboardingInvalidUpdates) =>
-        logger.error("Invalid institution updates for Institution {}", onboardingRequest.institutionExternalId, ex)
+        logger.error(
+          "Invalid institution updates for Institution {} when onboarding onto {}",
+          onboardingRequest.institutionExternalId,
+          onboardingRequest.productId,
+          ex
+        )
         val errorResponse: Problem = problemOf(StatusCodes.Conflict, ex)
         onboardingInstitution409(errorResponse)
       case Failure(ManagerFoundError)            =>
-        logger.error("Institution already onboarded {}", onboardingRequest.institutionExternalId, ManagerFoundError)
+        logger.error(
+          "Institution already onboarded {} onto {}",
+          onboardingRequest.institutionExternalId,
+          onboardingRequest.productId,
+          ManagerFoundError
+        )
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, ManagerFoundError)
         onboardingInstitution400(errorResponse)
+      case Failure(ex: GeoTaxonomyCodeNotFound)  =>
+        logger.error(
+          s"Geographic taxonomy code ${ex.code} not found when onboarding institution ${onboardingRequest.institutionExternalId} onto ${onboardingRequest.productId}",
+          ex
+        )
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, ex)
+        onboardingInstitution400(errorResponse)
       case Failure(ex)                           =>
-        logger.error("Error while onboarding institution {}", onboardingRequest.institutionExternalId, ex)
+        logger.error(
+          "Error while onboarding institution {} ont {}",
+          onboardingRequest.institutionExternalId,
+          onboardingRequest.productId,
+          ex
+        )
         val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, OnboardingOperationError)
         complete(StatusCodes.InternalServerError, errorResponse)
     }
@@ -349,21 +376,30 @@ class ProcessApiServiceImpl(
     } yield response
 
     onComplete(result) {
-      case Success(_)                       => onboardingLegalsOnInstitution204
-      case Failure(ex: InstitutionNotFound) =>
+      case Success(_)                           => onboardingLegalsOnInstitution204
+      case Failure(ex: InstitutionNotFound)     =>
         logger.error(
-          "Error while onboarding Legals of institution {} and/or externalId {} caused by not existent institution",
+          "Error while onboarding Legals of institution {} and/or externalId {} caused by not existent institution onto {}",
           onboardingRequest.institutionId,
           onboardingRequest.institutionExternalId,
+          onboardingRequest.productId,
           ex
         )
         val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
         onboardingLegalsOnInstitution404(errorResponse)
-      case Failure(ex)                      =>
+      case Failure(ex: GeoTaxonomyCodeNotFound) =>
         logger.error(
-          "Error while onboarding Legals of institution {} and/or externalId {}",
+          s"Geographic taxonomy code ${ex.code} not found when onboarding legals of institution ${onboardingRequest.institutionExternalId} onto ${onboardingRequest.productId}",
+          ex
+        )
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, ex)
+        onboardingLegalsOnInstitution404(errorResponse)
+      case Failure(ex)                          =>
+        logger.error(
+          "Error while onboarding Legals of institution {} and/or externalId {} onto {}",
           onboardingRequest.institutionId,
           onboardingRequest.institutionExternalId,
+          onboardingRequest.productId,
           ex
         )
         val errorResponse: Problem = problemOf(StatusCodes.BadRequest, OnboardingLegalsError)
@@ -411,6 +447,9 @@ class ProcessApiServiceImpl(
   )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Unit] = {
     for {
       _                  <- validateOverridingData(onboardingRequest, institution)
+      geoTaxonomies      <- Future.traverse(
+        onboardingRequest.institutionUpdate.map(i => i.geographicTaxonomyCodes).getOrElse(Seq.empty)
+      )(c => geoTaxonomyService.getByCode(c))
       validUsers         <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
       validManager       <- getValidManager(activeManager, validUsers)
       personIdsWithRoles <- Future.traverse(validUsers)(u => addUser(u, onboardingRequest.productId))
@@ -425,6 +464,7 @@ class ProcessApiServiceImpl(
               productRole,
               onboardingRequest.pricingPlan,
               onboardingRequest.institutionUpdate,
+              geoTaxonomies,
               onboardingRequest.billing,
               institution.origin
             )(bearer)
@@ -437,14 +477,22 @@ class ProcessApiServiceImpl(
               productRole,
               None,
               None,
+              Seq.empty,
               None
             )(bearer)
         }
       }
       contractTemplate   <- getFileAsString(onboardingRequest.contract.path)
-      pdf    <- pdfCreator.createContract(contractTemplate, validManager, validUsers, institution, onboardingRequest)
-      digest <- signatureService.createDigest(pdf)
-      token  <- partyManagementService.createToken(
+      pdf                <- pdfCreator.createContract(
+        contractTemplate,
+        validManager,
+        validUsers,
+        institution,
+        onboardingRequest,
+        geoTaxonomies
+      )
+      digest             <- signatureService.createDigest(pdf)
+      token              <- partyManagementService.createToken(
         PartyManagementDependency.Relationships(relationships),
         digest,
         onboardingRequest.contract.version,
@@ -453,8 +501,8 @@ class ProcessApiServiceImpl(
       _ = logger.info("Digest {}", digest)
 
       onboardingMailParameters <- institution.origin match {
-        case SELC => getOnboardingMailNotificationParameters(token.token, currentUser, onboardingRequest)
-        case _    => getOnboardingMailParameters(token.token, currentUser, onboardingRequest)
+        case SELC => getOnboardingMailNotificationParameters(token.token, currentUser, onboardingRequest, geoTaxonomies)
+        case _    => getOnboardingMailParameters(token.token, currentUser, onboardingRequest, geoTaxonomies)
       }
       destinationMails = institution.origin match {
         case SELC => Seq(ApplicationConfiguration.onboardingMailNotificationInstitutionAdminEmailAddress)
@@ -492,7 +540,8 @@ class ProcessApiServiceImpl(
   private def getOnboardingMailNotificationParameters(
     token: String,
     currentUser: UserRegistryUser,
-    onboardingRequest: OnboardingSignedRequest
+    onboardingRequest: OnboardingSignedRequest,
+    geoTaxonomies: Seq[GeographicTaxonomy]
   ): Future[Map[String, String]] = {
     val tokenParameters: Map[String, String] = {
       ApplicationConfiguration.onboardingMailNotificationPlaceholdersReplacement.map { case (k, placeholder) =>
@@ -519,7 +568,15 @@ class ProcessApiServiceImpl(
       }
     }
 
-    Future.successful(tokenParameters ++ productParameters ++ userParameters ++ institutionInfoParameters)
+    val geoTaxonomiesParameters: Map[String, String] = Map(
+      ApplicationConfiguration.onboardingNotificationMailInstitutionGeoTaxonomies -> geoTaxonomies
+        .map(_.desc)
+        .mkString(", ")
+    )
+
+    Future.successful(
+      tokenParameters ++ productParameters ++ userParameters ++ institutionInfoParameters ++ geoTaxonomiesParameters
+    )
   }
 
   private def getOnboardingRejectMailParameters(productName: String): Future[Map[String, String]] = {
@@ -533,7 +590,8 @@ class ProcessApiServiceImpl(
   private def getOnboardingMailParameters(
     token: String,
     currentUser: UserRegistryUser,
-    onboardingRequest: OnboardingSignedRequest
+    onboardingRequest: OnboardingSignedRequest,
+    geoTaxonomies: Seq[GeographicTaxonomy]
   ): Future[Map[String, String]] = {
 
     val tokenParameters: Map[String, String] = {
@@ -580,8 +638,14 @@ class ProcessApiServiceImpl(
       ).flatten.toMap
     }
 
+    val geoTaxonomiesParameters: Map[String, String] = Map(
+      ApplicationConfiguration.onboardingNotificationMailInstitutionGeoTaxonomies -> geoTaxonomies
+        .map(_.desc)
+        .mkString(", ")
+    )
+
     Future.successful(
-      tokenParameters ++ productParameters ++ userParameters ++ institutionInfoParameters ++ billingParameters
+      tokenParameters ++ productParameters ++ userParameters ++ institutionInfoParameters ++ billingParameters ++ geoTaxonomiesParameters
     )
 
   }
@@ -594,73 +658,70 @@ class ProcessApiServiceImpl(
     productRole: String,
     pricingPlan: Option[String],
     institutionUpdate: Option[InstitutionUpdate],
+    geoTaxonomies: Seq[GeographicTaxonomy],
     billing: Option[Billing],
     origin: String = SELC
   )(bearer: String)(implicit contexts: Seq[(String, String)]): Future[PartyManagementDependency.Relationship] = {
-    for {
-      geoTaxonomies <- Future.traverse(institutionUpdate.map(i => i.geographicTaxonomyCodes).getOrElse(Seq.empty))(c =>
-        geoTaxonomyService.getByCode(c)
-      )
-      relationshipSeed: PartyManagementDependency.RelationshipSeed =
-        PartyManagementDependency.RelationshipSeed(
-          from = personId,
-          to = institutionId,
-          role = role,
-          product = PartyManagementDependency.RelationshipProductSeed(product, productRole),
-          pricingPlan = pricingPlan,
-          institutionUpdate = institutionUpdate.map(i =>
-            PartyManagementDependency.InstitutionUpdate(
-              institutionType = i.institutionType,
-              description = i.description,
-              digitalAddress = i.digitalAddress,
-              address = i.address,
-              zipCode = i.zipCode,
-              taxCode = i.taxCode,
-              paymentServiceProvider = i.paymentServiceProvider.map(p =>
-                PartyManagementDependency.PaymentServiceProvider(
-                  abiCode = p.abiCode,
-                  businessRegisterNumber = p.businessRegisterNumber,
-                  legalRegisterName = p.legalRegisterName,
-                  legalRegisterNumber = p.legalRegisterNumber,
-                  vatNumberGroup = p.vatNumberGroup
-                )
-              ),
-              dataProtectionOfficer = i.dataProtectionOfficer.map(d =>
-                PartyManagementDependency.DataProtectionOfficer(address = d.address, email = d.email, pec = d.pec)
-              ),
-              geographicTaxonomies =
-                geoTaxonomies.map(d => PartyManagementDependency.GeographicTaxonomy(code = d.code, desc = d.desc))
-            )
-          ),
-          billing = billing.map(b =>
-            PartyManagementDependency
-              .Billing(vatNumber = b.vatNumber, recipientCode = b.recipientCode, publicServices = b.publicServices)
-          ),
-          state = origin match {
-            case SELC => Option(PartyManagementDependency.RelationshipState.TOBEVALIDATED)
-            case _    => Option(PartyManagementDependency.RelationshipState.PENDING)
-          }
-        )
-      relationship <- partyManagementService
-        .createRelationship(relationshipSeed)(bearer)
-        .recoverWith {
-          case _: ResourceConflictError =>
-            for {
-              relationships <- partyManagementService.retrieveRelationships(
-                from = Some(personId),
-                to = Some(institutionId),
-                roles = Seq(role),
-                states = Seq.empty,
-                products = Seq(product),
-                productRoles = Seq(productRole)
-              )(bearer)
-              relationship  <- relationships.items.headOption.toFuture(
-                RelationshipNotFound(institutionId, personId, role.toString)
+    val relationshipSeed: PartyManagementDependency.RelationshipSeed =
+      PartyManagementDependency.RelationshipSeed(
+        from = personId,
+        to = institutionId,
+        role = role,
+        product = PartyManagementDependency.RelationshipProductSeed(product, productRole),
+        pricingPlan = pricingPlan,
+        institutionUpdate = institutionUpdate.map(i =>
+          PartyManagementDependency.InstitutionUpdate(
+            institutionType = i.institutionType,
+            description = i.description,
+            digitalAddress = i.digitalAddress,
+            address = i.address,
+            zipCode = i.zipCode,
+            taxCode = i.taxCode,
+            paymentServiceProvider = i.paymentServiceProvider.map(p =>
+              PartyManagementDependency.PaymentServiceProvider(
+                abiCode = p.abiCode,
+                businessRegisterNumber = p.businessRegisterNumber,
+                legalRegisterName = p.legalRegisterName,
+                legalRegisterNumber = p.legalRegisterNumber,
+                vatNumberGroup = p.vatNumberGroup
               )
-            } yield relationship
-          case ex                       => Future.failed(ex)
+            ),
+            dataProtectionOfficer = i.dataProtectionOfficer.map(d =>
+              PartyManagementDependency.DataProtectionOfficer(address = d.address, email = d.email, pec = d.pec)
+            ),
+            geographicTaxonomies =
+              geoTaxonomies.map(x => PartyManagementDependency.GeographicTaxonomy(code = x.code, desc = x.desc))
+          )
+        ),
+        billing = billing.map(b =>
+          PartyManagementDependency
+            .Billing(vatNumber = b.vatNumber, recipientCode = b.recipientCode, publicServices = b.publicServices)
+        ),
+        state = origin match {
+          case SELC => Option(PartyManagementDependency.RelationshipState.TOBEVALIDATED)
+          case _    => Option(PartyManagementDependency.RelationshipState.PENDING)
         }
-    } yield relationship
+      )
+
+    partyManagementService
+      .createRelationship(relationshipSeed)(bearer)
+      .recoverWith {
+        case _: ResourceConflictError =>
+          for {
+            relationships <- partyManagementService.retrieveRelationships(
+              from = Some(personId),
+              to = Some(institutionId),
+              roles = Seq(role),
+              states = Seq.empty,
+              products = Seq(product),
+              productRoles = Seq(productRole)
+            )(bearer)
+            relationship  <- relationships.items.headOption.toFuture(
+              RelationshipNotFound(institutionId, personId, role.toString)
+            )
+          } yield relationship
+        case ex                       => Future.failed(ex)
+      }
 
   }
 
@@ -1361,26 +1422,30 @@ class ProcessApiServiceImpl(
       )
 
       contractTemplate <- getFileAsString(onboardingRequest.contract.path)
-      pdf              <- pdfCreator.createContract(
+      geoTaxonomies = managerRelationship.institutionUpdate.fold(Seq.empty[GeographicTaxonomy])(i =>
+        i.geographicTaxonomies.map(x => GeographicTaxonomy(code = x.code, desc = x.desc))
+      )
+      pdf    <- pdfCreator.createContract(
         contractTemplate,
         managerUser,
         managerUsers ++ otherUsers,
         institution,
-        onboardingRequest
+        onboardingRequest,
+        geoTaxonomies
       )
 
       // Enabling Users relationship
-      _                <- Future.traverse(managerLegals)(managerLegal =>
+      _      <- Future.traverse(managerLegals)(managerLegal =>
         partyManagementService.enableRelationship(managerLegal.relationshipId)(bearer)
       )
-      _                <- Future.traverse(otherUsersLegals)(otherUsersLegal =>
+      _      <- Future.traverse(otherUsersLegals)(otherUsersLegal =>
         partyManagementService.enableRelationship(otherUsersLegal.relationshipId)(bearer)
       )
       // Update contract's digest
-      digest           <- signatureService.createDigest(pdf)
-      _                <- partyManagementService.updateTokenDigest(tokenIdUUID, digest)(bearer)
+      digest <- signatureService.createDigest(pdf)
+      _      <- partyManagementService.updateTokenDigest(tokenIdUUID, digest)(bearer)
 
-      onboardingMailParameters <- getOnboardingMailParameters(tokenId, currentUser, onboardingRequest)
+      onboardingMailParameters <- getOnboardingMailParameters(tokenId, currentUser, onboardingRequest, geoTaxonomies)
 
       destinationMails =
         ApplicationConfiguration.destinationMails.getOrElse(

@@ -115,6 +115,8 @@ object ApplicationConfiguration {
     config.getString("party-process.mail-template.onboarding-notification-mail-placeholders.adminEmail")
   val onboardingNotificationMailTemplatePath: String                         =
     config.getString("party-process.mail-template.onboarding-notification-mail-placeholders.path")
+  val onboardingNotificationMailInstitutionGeoTaxonomies: String             =
+    config.getString("party-process.mail-template.onboarding-notification-mail-placeholders.institutionGeoTaxonomies")
 
   val onboardingRejectMailProductNamePlaceholder: String =
     config.getString("party-process.mail-template.onboarding-reject-mail-placeholders.productName")

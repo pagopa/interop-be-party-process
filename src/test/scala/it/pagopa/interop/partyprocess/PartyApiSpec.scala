@@ -27,6 +27,7 @@ import it.pagopa.interop.partyprocess
 import it.pagopa.interop.partyprocess.api.impl.Conversions._
 import it.pagopa.interop.partyprocess.api.impl.OnboardingSignedRequest
 import it.pagopa.interop.partyprocess.common.system.{classicActorSystem, executionContext}
+import it.pagopa.interop.partyprocess.error.PartyProcessErrors.GeoTaxonomyCodeNotFound
 import it.pagopa.interop.partyprocess.error.SignatureValidationError
 import it.pagopa.interop.partyprocess.model.PartyRole.{DELEGATE, MANAGER, OPERATOR, SUB_DELEGATE}
 import it.pagopa.interop.partyprocess.model.RelationshipState.ACTIVE
@@ -420,7 +421,14 @@ trait PartyApiSpec
     )
 
     (mockPdfCreator.createContract _)
-      .expects(*, *, *, *, OnboardingSignedRequest.fromApi(req))
+      .expects(
+        *,
+        *,
+        *,
+        *,
+        OnboardingSignedRequest.fromApi(req),
+        Seq(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
+      )
       .returning(Future.successful(file))
       .once()
 
@@ -1567,7 +1575,14 @@ trait PartyApiSpec
         .once()
 
       (mockPdfCreator.createContract _)
-        .expects(*, *, *, *, OnboardingSignedRequest.fromApi(req))
+        .expects(
+          *,
+          *,
+          *,
+          *,
+          OnboardingSignedRequest.fromApi(req),
+          Seq(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
+        )
         .returning(Future.successful(new File("src/test/resources/fake.file")))
         .once()
     }
@@ -1601,7 +1616,7 @@ trait PartyApiSpec
         .never()
 
       (mockPdfCreator.createContract _)
-        .expects(*, *, *, *, *)
+        .expects(*, *, *, *, *, *)
         .never()
     }
 
@@ -1633,6 +1648,18 @@ trait PartyApiSpec
       val response = performOnboardingOverridingIPAFields("taxCode")
 
       response.status mustBe StatusCodes.Conflict
+    }
+
+    "fail when onboarding with wrong geographic taxonomy code" in {
+      (mockGeoTaxonomyService
+        .getByCode(_: String)(_: Seq[(String, String)]))
+        .expects("OVERRIDE_GEOCODE", *)
+        .returning(Future.failed(GeoTaxonomyCodeNotFound("OVERRIDE_GEOCODE", "NotFound")))
+        .once()
+
+      val response = performOnboardingOverridingIPAFields("geographicTaxonomyCodes")
+
+      response.status mustBe StatusCodes.BadRequest
     }
 
     "succeed when onboarding IPA without data overriding" in {
