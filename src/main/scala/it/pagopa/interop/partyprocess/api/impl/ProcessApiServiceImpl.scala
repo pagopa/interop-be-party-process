@@ -598,7 +598,9 @@ class ProcessApiServiceImpl(
     origin: String = SELC
   )(bearer: String)(implicit contexts: Seq[(String, String)]): Future[PartyManagementDependency.Relationship] = {
     for {
-      geoTaxonomies <- Future.traverse(institutionUpdate.map(i => i.geographicTaxonomyCodes).getOrElse(Seq.empty))(c => geoTaxonomyService.getByCode(c))
+      geoTaxonomies <- Future.traverse(institutionUpdate.map(i => i.geographicTaxonomyCodes).getOrElse(Seq.empty))(c =>
+        geoTaxonomyService.getByCode(c)
+      )
       relationshipSeed: PartyManagementDependency.RelationshipSeed =
         PartyManagementDependency.RelationshipSeed(
           from = personId,
@@ -626,9 +628,8 @@ class ProcessApiServiceImpl(
               dataProtectionOfficer = i.dataProtectionOfficer.map(d =>
                 PartyManagementDependency.DataProtectionOfficer(address = d.address, email = d.email, pec = d.pec)
               ),
-              geographicTaxonomies = geoTaxonomies.map(d =>
-                PartyManagementDependency.GeographicTaxonomy(code = d.code, desc = d.desc)
-              )
+              geographicTaxonomies =
+                geoTaxonomies.map(d => PartyManagementDependency.GeographicTaxonomy(code = d.code, desc = d.desc))
             )
           ),
           billing = billing.map(b =>
@@ -637,7 +638,7 @@ class ProcessApiServiceImpl(
           ),
           state = origin match {
             case SELC => Option(PartyManagementDependency.RelationshipState.TOBEVALIDATED)
-            case _ => Option(PartyManagementDependency.RelationshipState.PENDING)
+            case _    => Option(PartyManagementDependency.RelationshipState.PENDING)
           }
         )
       relationship <- partyManagementService
@@ -653,11 +654,11 @@ class ProcessApiServiceImpl(
                 products = Seq(product),
                 productRoles = Seq(productRole)
               )(bearer)
-              relationship <- relationships.items.headOption.toFuture(
+              relationship  <- relationships.items.headOption.toFuture(
                 RelationshipNotFound(institutionId, personId, role.toString)
               )
             } yield relationship
-          case ex => Future.failed(ex)
+          case ex                       => Future.failed(ex)
         }
     } yield relationship
 

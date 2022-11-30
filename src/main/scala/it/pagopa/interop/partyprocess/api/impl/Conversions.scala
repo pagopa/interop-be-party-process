@@ -1,11 +1,6 @@
 package it.pagopa.interop.partyprocess.api.impl
 
-import it.pagopa.interop.partymanagement.client.model.{
-  InstitutionProduct,
-  Relationship,
-  RelationshipProduct,
-  GeographicTaxonomy => DependencyGeographicTaxonomy
-}
+import it.pagopa.interop.partymanagement.client.model.{InstitutionProduct, Relationship, RelationshipProduct}
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess.model._
 
@@ -52,7 +47,7 @@ object Conversions {
       address = institutionUpdate.address,
       zipCode = institutionUpdate.zipCode,
       taxCode = institutionUpdate.taxCode,
-      geographicTaxonomies = institutionUpdate.geographicTaxonomies.map(geographicTaxonomyConverter)
+      geographicTaxonomyCodes = institutionUpdate.geographicTaxonomies.map(_.code)
     )
   }
 
@@ -98,10 +93,6 @@ object Conversions {
       pricingPlan = institutionProduct.pricingPlan,
       billing = billingToApi(institutionProduct.billing)
     )
-  }
-
-  private def geographicTaxonomyConverter(geographicTaxonomy: DependencyGeographicTaxonomy): GeographicTaxonomy = {
-    GeographicTaxonomy(code = geographicTaxonomy.code, desc = geographicTaxonomy.desc)
   }
 
 }

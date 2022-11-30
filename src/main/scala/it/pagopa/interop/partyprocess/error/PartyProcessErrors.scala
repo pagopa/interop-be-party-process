@@ -136,5 +136,5 @@ object PartyProcessErrors {
       extends ComponentError("0048", s"Error on retrieve $tokenId: $error")
 
   final case class GeoTaxonomyCodeNotFound(geoTaxonomyCode: String, error: String)
-    extends ComponentError("0049", s"Error on retrieve geographic taxonomy code $geoTaxonomyCode: $error")
+      extends ComponentError("0049", s"Error on retrieve geographic taxonomy code $geoTaxonomyCode: $error")
 }

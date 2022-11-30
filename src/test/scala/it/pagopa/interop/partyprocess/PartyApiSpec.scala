@@ -30,7 +30,7 @@ import it.pagopa.interop.partyprocess.common.system.{classicActorSystem, executi
 import it.pagopa.interop.partyprocess.error.SignatureValidationError
 import it.pagopa.interop.partyprocess.model.PartyRole.{DELEGATE, MANAGER, OPERATOR, SUB_DELEGATE}
 import it.pagopa.interop.partyprocess.model.RelationshipState.ACTIVE
-import it.pagopa.interop.partyprocess.model.{Attribute, Billing, Institution, InstitutionUpdate, GeographicTaxonomy, _}
+import it.pagopa.interop.partyprocess.model.{Attribute, Billing, GeographicTaxonomy, Institution, InstitutionUpdate, _}
 import it.pagopa.interop.partyregistryproxy.client.{model => PartyProxyDependencies}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
@@ -392,6 +392,12 @@ trait PartyApiSpec
       .returning(Future.successful(PartyManagementDependency.TokenText("token")))
       .once()
 
+    (mockGeoTaxonomyService
+      .getByCode(_: String)(_: Seq[(String, String)]))
+      .expects("OVERRIDE_GEOCODE", *)
+      .returning(Future.successful(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC")))
+      .once()
+
     val req = OnboardingInstitutionRequest(
       productId = "productId",
       productName = "productName",
@@ -407,7 +413,7 @@ trait PartyApiSpec
           address = Option("OVERRIDE_address"),
           zipCode = Option("OVERRIDE_zipCode"),
           taxCode = Option("OVERRIDE_taxCode"),
-          geographicTaxonomies = Seq(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
+          geographicTaxonomyCodes = Seq("OVERRIDE_GEOCODE")
         )
       ),
       billing = Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
@@ -1500,7 +1506,7 @@ trait PartyApiSpec
             address = if (overriddenField == "address") Option("OVERRIDE_address") else None,
             zipCode = if (overriddenField == "zipCode") Option("OVERRIDE_zipCode") else Option(institution.zipCode),
             taxCode = if (overriddenField.equals("taxCode")) Option("OVERRIDE_taxCode") else None,
-            geographicTaxonomies = Seq(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
+            geographicTaxonomyCodes = Seq("OVERRIDE_GEOCODE")
           )
         ),
         billing = Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
@@ -1630,6 +1636,12 @@ trait PartyApiSpec
     }
 
     "succeed when onboarding IPA without data overriding" in {
+      (mockGeoTaxonomyService
+        .getByCode(_: String)(_: Seq[(String, String)]))
+        .expects("OVERRIDE_GEOCODE", *)
+        .returning(Future.successful(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC")))
+        .once()
+
       val response = performOnboardingOverridingIPAFields("")
 
       response.status mustBe StatusCodes.NoContent
@@ -2485,7 +2497,7 @@ trait PartyApiSpec
               address = Option("OVERRIDE_address"),
               zipCode = Option("OVERRIDE_zipCode"),
               taxCode = Option("OVERRIDE_taxCode"),
-              geographicTaxonomies = Seq(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
+              geographicTaxonomyCodes = Seq("OVERRIDE_GEOCODE")
             )
           ),
           billing =
@@ -3096,7 +3108,7 @@ trait PartyApiSpec
             address = Option("OVERRIDE_address"),
             zipCode = Option("OVERRIDE_zipCode"),
             taxCode = Option("OVERRIDE_taxCode"),
-            geographicTaxonomies = Seq(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
+            geographicTaxonomyCodes = Seq("OVERRIDE_GEOCODE")
           )
         ),
         billing =

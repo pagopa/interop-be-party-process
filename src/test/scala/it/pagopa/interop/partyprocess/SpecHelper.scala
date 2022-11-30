@@ -35,6 +35,7 @@ trait SpecHelper { self: MockFactory =>
   val mockPartyRegistryService: PartyRegistryService             = mock[PartyRegistryService]
   val mockUserRegistryService: UserRegistryManagementService     = mock[UserRegistryManagementService]
   val mockProductService: ProductManagementService               = mock[ProductManagementService]
+  val mockGeoTaxonomyService: GeoTaxonomyService                 = mock[GeoTaxonomyService]
   val mockMailer: MailEngine                                     = MockMailEngine
   val mockPdfCreator: PDFCreator                                 = mock[PDFCreator]
   val mockFileManager: FileManager                               = mock[FileManager]
