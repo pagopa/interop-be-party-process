@@ -10,16 +10,19 @@
       "url": "${uri}/{basePath}",
       "variables": {
         "basePath": {
-          "default": "/v1"
+          "default": "v1"
         }
       }
     }
   ],
   "tags": [
-    "geographicTaxonomy"
+    {
+      "name": "geographicTaxonomy",
+      "description": "Geographic Taxonomy Controller"
+    }
   ],
   "paths": {
-    "/{code}": {
+    "/geotaxcodes/{code}": {
       "get": {
         "tags": [
           "geographicTaxonomy"
@@ -56,6 +59,60 @@
         },
         "security": []
       }
+    },
+    "/geotaxcodes": {
+      "get": {
+        "tags": [
+          "geographicTaxonomy"
+        ],
+        "summary": "Get geographic taxonomy list",
+        "description": "Retrieve the geographic taxonomy list",
+        "operationId": "findAllUsingGET",
+        "parameters": [
+          {
+            "name": "startsWith",
+            "in": "query",
+            "description": "Description's geographic taxonomy incipit",
+            "required": true,
+            "style": "form",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "notIn",
+            "in": "query",
+            "description": "Geographic taxonomy codes to exclude",
+            "required": true,
+            "style": "form",
+            "schema": {
+              "type": "array",
+              "items": {
+                  "type": "string"
+                }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GeographicTaxonomy"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        },
+        "security": []
+      }
     }
   },
   "components": {
@@ -69,34 +126,53 @@
         "properties": {
           "code": {
             "type": "string",
+            "pattern": "\\d{1,6}",
+            "example": "058091",
             "description": "Code of the geographic taxonomy"
           },
           "desc": {
             "type": "string",
+            "example": "Roma - Comune",
             "description": "Description of the geographic taxonomy code"
           },
           "region": {
             "type": "string",
+            "pattern": "\\d{2}",
+            "example": "12",
             "description": "Region taxonomy code to which belong the current geographic taxonomy"
           },
           "province": {
             "type": "string",
+            "pattern": "\\d{3}",
+            "example": "058",
             "description": "Province taxonomy code to which belong the current geographic taxonomy"
           },
           "provinceAbbreviation": {
             "type": "string",
+            "pattern": "[A-Z]{2}",
+            "example": "RM",
             "description": "Abbreviation of the province to which belong the current geographic taxonomy"
           },
           "country": {
             "type": "string",
+            "pattern": "\\d{3}",
+            "example": "100",
             "description": "Country taxonomy code to which belong the current geographic taxonomy"
+          },
+          "countryAbbreviation": {
+            "type": "string",
+            "pattern": "[A-Z]{2}",
+            "example": "IT",
+            "description": "Country"
           },
           "startDate": {
             "type": "string",
+            "format": "date",
             "description": "Start date of the geographic taxonomy code"
           },
           "endDate": {
             "type": "string",
+            "format": "date",
             "description": "End date of the geographic taxonomy code"
           },
           "enable": {
