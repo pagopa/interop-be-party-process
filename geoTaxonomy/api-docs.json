@@ -73,7 +73,7 @@
             "name": "startsWith",
             "in": "query",
             "description": "Description's geographic taxonomy incipit",
-            "required": true,
+            "required": false,
             "style": "form",
             "schema": {
               "type": "string"
@@ -83,7 +83,7 @@
             "name": "notIn",
             "in": "query",
             "description": "Geographic taxonomy codes to exclude",
-            "required": true,
+            "required": false,
             "style": "form",
             "schema": {
               "type": "array",
@@ -168,6 +168,7 @@
           "startDate": {
             "type": "string",
             "format": "date",
+            "example": "1871-01-15",
             "description": "Start date of the geographic taxonomy code"
           },
           "endDate": {
