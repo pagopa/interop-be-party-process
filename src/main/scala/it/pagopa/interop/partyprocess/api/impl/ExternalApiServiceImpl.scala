@@ -23,7 +23,8 @@ import scala.util.{Failure, Success}
 class ExternalApiServiceImpl(
   partyManagementService: PartyManagementService,
   relationshipService: RelationshipService,
-  productService: ProductService
+  productService: ProductService,
+  geoTaxonomyService: GeoTaxonomyService
 )(implicit ec: ExecutionContext)
     extends ExternalApiService {
 
@@ -213,6 +214,53 @@ class ExternalApiServiceImpl(
       case Failure(ex)                       =>
         logger.error("Error while retrieving institution having externalId {}", externalId, ex)
         getBillingInstitutionByExternalId400(problemOf(StatusCodes.BadRequest, GetInstitutionBillingError(externalId)))
+    }
+  }
+
+  /**
+    * Code: 200, Message: successful operation, DataType: Seq[GeographicTaxonomyExt]
+    * Code: 404, Message: Institution not found, DataType: Problem
+    */
+  override def retrieveInstitutionGeoTaxonomiesByExternalId(externalId: String)(implicit
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerGeographicTaxonomyExtarray: ToEntityMarshaller[Seq[GeographicTaxonomyExt]],
+    contexts: Seq[(String, String)]
+  ): Route = {
+
+    logger.info("Retrieving geographic taxonomies for institution having externalId {}", externalId)
+    val result = for {
+      bearer        <- getFutureBearer(contexts)
+      institution   <- partyManagementService.retrieveInstitutionByExternalId(externalId)(bearer)
+      geoTaxonomies <- geoTaxonomyService.getExtByCodes(institution.geographicTaxonomies.map(_.code))
+    } yield geoTaxonomies
+
+    onComplete(result) {
+      case Success(geoTaxonomies)               => retrieveInstitutionGeoTaxonomiesByExternalId200(geoTaxonomies)
+      case Failure(ex: ResourceNotFoundError)   =>
+        logger.error(
+          "Error while retrieving geographic taxonomies for institution having externalId {}. Institution not found",
+          externalId,
+          ex
+        )
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
+        retrieveInstitutionGeoTaxonomiesByExternalId404(errorResponse)
+      case Failure(ex: GeoTaxonomyCodeNotFound) =>
+        logger.error(
+          "Error while retrieving geographic taxonomies for institution having externalId {}. At least one of the area doesn't exist ({})!",
+          externalId,
+          ex.code,
+          ex
+        )
+        val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, ex)
+        complete(errorResponse.status, errorResponse)
+      case Failure(ex)                          =>
+        logger.error(
+          "Error while retrieving geographic taxonomies for institution having externalId {}",
+          externalId,
+          ex
+        )
+        val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, GeoTaxonomyCodeError)
+        complete(errorResponse.status, errorResponse)
     }
   }
 }

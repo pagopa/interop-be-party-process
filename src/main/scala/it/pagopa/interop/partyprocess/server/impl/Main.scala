@@ -46,11 +46,11 @@ object Main extends App with CORSSupport with Dependencies {
         partyManService  = partyManagementService(blockingEc)
         relService       = relationshipService(partyManService)
         prodService      = productService(partyManService)
-        extApi           = externalApi(partyManService, relService, prodService, jwtReader)
+        geoTaxonomy      = geoTaxonomyService()
+        extApi           = externalApi(partyManService, relService, prodService, geoTaxonomy, jwtReader)
         partyProcService = partyProcessService()
         userreg          = userRegistryManagementService()
         productmng       = productManagementService()
-        geoTaxonomy      = geoTaxonomyService()
         sigService <- signatureService()
         sigValidationService = signatureValidationService()
         process              = processApi(

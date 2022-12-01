@@ -7,18 +7,9 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.ResourceNotFoundError
 import it.pagopa.interop.partymanagement.client.model.{InstitutionProduct, Relationships}
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
+import it.pagopa.interop.partyprocess.api.impl.geographicTaxonomyExtFormat
 import it.pagopa.interop.partyprocess.common.system.{classicActorSystem, executionContext}
-import it.pagopa.interop.partyprocess.model.{
-  Attribute,
-  Billing,
-  BillingData,
-  GeographicTaxonomy,
-  Institution,
-  PartyRole,
-  ProductInfo,
-  RelationshipInfo,
-  RelationshipState
-}
+import it.pagopa.interop.partyprocess.model._
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
@@ -398,4 +389,87 @@ trait ExternalApiSpec
 
   }
 
+  "Institution geographic taxonomies retrieval by external institution id" must {
+
+    "retrieve geotaxonomies" in {
+      val expectedGeographicTaxonomies = Seq(
+        GeographicTaxonomyExt(code = "GEOCODE", desc = "GEODESC", enable = true),
+        GeographicTaxonomyExt(code = "GEOCODE2", desc = "GEODESC2", enable = true)
+      )
+
+      val body = retrieveGeoTaxonomies(expectedGeographicTaxonomies)
+
+      body.toSet mustBe expectedGeographicTaxonomies.toSet
+    }
+
+    "retrieve empty list when no geotaxonomies" in {
+      val body = retrieveGeoTaxonomies(Seq.empty)
+
+      body.toSet mustBe Set.empty
+    }
+
+    def retrieveGeoTaxonomies(expectedGeographicTaxonomies: Seq[GeographicTaxonomyExt]): Seq[GeographicTaxonomyExt] = {
+      val institutionIdUUID = UUID.randomUUID()
+      val externalId        = UUID.randomUUID().toString
+      val originId          = UUID.randomUUID().toString
+
+      val institution = PartyManagementDependency.Institution(
+        id = institutionIdUUID,
+        externalId = externalId,
+        originId = originId,
+        description = "",
+        digitalAddress = "",
+        taxCode = "",
+        attributes = Seq.empty,
+        address = "",
+        zipCode = "",
+        origin = "",
+        institutionType = Option.empty,
+        products = Map.empty,
+        geographicTaxonomies = expectedGeographicTaxonomies.map(x =>
+          PartyManagementDependency.GeographicTaxonomy(code = x.code, desc = x.desc)
+        )
+      )
+
+      (mockPartyManagementService
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
+        .returning(Future.successful(institution))
+        .once()
+
+      (mockGeoTaxonomyService
+        .getExtByCodes(_: Seq[String])(_: Seq[(String, String)]))
+        .expects(expectedGeographicTaxonomies.map(_.code), *)
+        .returning(Future.successful(expectedGeographicTaxonomies))
+        .once()
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(uri = s"$url/external/institutions/$externalId/geotaxonomies", method = HttpMethods.GET)
+          )
+          .futureValue
+
+      Unmarshal(response.entity).to[Seq[GeographicTaxonomyExt]].futureValue
+    }
+
+    "return 404 when institution not exists" in {
+      val externalId = UUID.randomUUID().toString
+
+      (mockPartyManagementService
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
+        .returning(Future.failed(ResourceNotFoundError(externalId)))
+        .once()
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(uri = s"$url/external/institutions/$externalId/geotaxonomies", method = HttpMethods.GET)
+          )
+          .futureValue
+
+      response.status mustBe StatusCodes.NotFound
+    }
+  }
 }

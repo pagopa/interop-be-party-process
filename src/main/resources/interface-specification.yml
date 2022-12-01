@@ -593,6 +593,67 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /institutions/{id}/geotaxonomies:
+    get:
+      tags:
+        - process
+      summary: institution geographic taxonomies retrieval
+      description: retrieves the geographic taxonomies this institution is related to.
+      operationId: retrieveInstitutionGeoTaxonomies
+      parameters:
+        - name: id
+          in: path
+          description: The internal identifier of the institution
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: '#/components/schemas/GeographicTaxonomyExt'
+                }
+        '404':
+          description: Institution not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /external/institutions/{externalId}/geotaxonomies:
+    get:
+      tags:
+        - external
+      summary: institution geographic taxonomies retrieval
+      description: retrieves the geographic taxonomies this institution is related to.
+      operationId: retrieveInstitutionGeoTaxonomiesByExternalId
+      parameters:
+        - name: externalId
+          in: path
+          description: The external identifier of the institution
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: '#/components/schemas/GeographicTaxonomyExt'
+                }
+        '404':
+          description: Institution not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /relationships/{relationshipId}:
     get:
       tags:
@@ -1664,6 +1725,60 @@ components:
         desc:
           type: string
           description: 'Description of the geographic taxonomy code'
+    GeographicTaxonomyExt:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - desc
+        - enable
+      properties:
+        code:
+          type: string
+          pattern: \d{1,6}
+          example: '058091'
+          description: Code of the geographic taxonomy
+        desc:
+          type: string
+          example: Roma - Comune
+          description: Description of the geographic taxonomy code
+        region:
+          type: string
+          pattern: \d{2}
+          example: '12'
+          description: Region taxonomy code to which belong the current geographic taxonomy
+        province:
+          type: string
+          pattern: \d{3}
+          example: '058'
+          description: Province taxonomy code to which belong the current geographic taxonomy
+        provinceAbbreviation:
+          type: string
+          pattern: '[A-Z]{2}'
+          example: RM
+          description: Abbreviation of the province to which belong the current geographic taxonomy
+        country:
+          type: string
+          pattern: \d{3}
+          example: '100'
+          description: Country taxonomy code to which belong the current geographic taxonomy
+        countryAbbreviation:
+          type: string
+          pattern: '[A-Z]{2}'
+          example: IT
+          description: Country
+        startDate:
+          type: string
+          format: date
+          example: '1871-01-15'
+          description: Start date of the geographic taxonomy code
+        endDate:
+          type: string
+          format: date
+          description: End date of the geographic taxonomy code
+        enable:
+          type: boolean
+          description: If the current code is enabled
   securitySchemes:
     bearerAuth:
       type: http

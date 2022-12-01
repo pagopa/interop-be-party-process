@@ -23,4 +23,7 @@ object ExternalApiMarshallerImpl extends ExternalApiMarshaller with SprayJsonSup
 
   override implicit def toEntityMarshallerBillingData: ToEntityMarshaller[BillingData] =
     sprayJsonMarshaller[BillingData]
+
+  override implicit def toEntityMarshallerGeographicTaxonomyExtarray: ToEntityMarshaller[Seq[GeographicTaxonomyExt]] =
+    sprayJsonMarshaller[Seq[GeographicTaxonomyExt]]
 }

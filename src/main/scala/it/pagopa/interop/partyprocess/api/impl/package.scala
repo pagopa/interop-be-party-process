@@ -1,5 +1,6 @@
 package it.pagopa.interop.partyprocess.api
 
+import spray.json.{JsString, JsValue, JsonFormat, deserializationError}
 import akka.http.scaladsl.model.StatusCode
 import it.pagopa.interop.commons.utils.SprayCommonFormats.{offsetDateTimeFormat, uuidFormat}
 import it.pagopa.interop.commons.utils.errors.ComponentError
@@ -10,7 +11,31 @@ import it.pagopa.userreg.client.model.CertifiableFieldResourceOfstringEnums.Cert
 }
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import scala.util.{Failure, Success, Try}
+
 package object impl extends DefaultJsonProtocol {
+
+  private lazy val dateFormatter: DateTimeFormatter = DateTimeFormatter.ISO_DATE
+
+  /** Defines the JsonFormat for <code>LocalDate</code> data type
+    */
+  implicit val localDateFormat: JsonFormat[LocalDate] =
+    new JsonFormat[LocalDate] {
+      override def write(obj: LocalDate): JsValue = JsString(obj.format(dateFormatter))
+
+      override def read(json: JsValue): LocalDate = json match {
+        case JsString(s)  =>
+          Try { LocalDate.parse(s, dateFormatter) } match {
+            case Success(result)    => result
+            case Failure(exception) =>
+              deserializationError(s"could not parse $s as java OffsetDateTime", exception)
+          }
+        case notAJsString =>
+          deserializationError(s"expected a String but got a ${notAJsString.compactPrint}")
+      }
+    }
 
   implicit val paymentServiceProviderDataFormat: RootJsonFormat[PaymentServiceProvider] = jsonFormat5(
     PaymentServiceProvider
@@ -18,14 +43,15 @@ package object impl extends DefaultJsonProtocol {
   implicit val dataProtectionOfficerDataFormat: RootJsonFormat[DataProtectionOfficer]   = jsonFormat3(
     DataProtectionOfficer
   )
-  implicit val geographicTaxonomyFormat: RootJsonFormat[GeographicTaxonomy] = jsonFormat2(GeographicTaxonomy)
-  implicit val institutionUpdateFormat: RootJsonFormat[InstitutionUpdate]   = jsonFormat9(InstitutionUpdate)
-  implicit val billingFormat: RootJsonFormat[Billing]                       = jsonFormat3(Billing)
-  implicit val tokenChecksumFormat: RootJsonFormat[TokenChecksum]           = jsonFormat1(TokenChecksum)
-  implicit val problemErrorFormat: RootJsonFormat[ProblemError]             = jsonFormat2(ProblemError)
-  implicit val problemFormat: RootJsonFormat[Problem]                       = jsonFormat5(Problem)
-  implicit val userFormat: RootJsonFormat[User]                             = jsonFormat7(User)
-  implicit val onboardingContractFormat: RootJsonFormat[OnboardingContract] = jsonFormat2(OnboardingContract)
+  implicit val geographicTaxonomyExtFormat: RootJsonFormat[GeographicTaxonomyExt] = jsonFormat10(GeographicTaxonomyExt)
+  implicit val geographicTaxonomyFormat: RootJsonFormat[GeographicTaxonomy]       = jsonFormat2(GeographicTaxonomy)
+  implicit val institutionUpdateFormat: RootJsonFormat[InstitutionUpdate]         = jsonFormat9(InstitutionUpdate)
+  implicit val billingFormat: RootJsonFormat[Billing]                             = jsonFormat3(Billing)
+  implicit val tokenChecksumFormat: RootJsonFormat[TokenChecksum]                 = jsonFormat1(TokenChecksum)
+  implicit val problemErrorFormat: RootJsonFormat[ProblemError]                   = jsonFormat2(ProblemError)
+  implicit val problemFormat: RootJsonFormat[Problem]                             = jsonFormat5(Problem)
+  implicit val userFormat: RootJsonFormat[User]                                   = jsonFormat7(User)
+  implicit val onboardingContractFormat: RootJsonFormat[OnboardingContract]       = jsonFormat2(OnboardingContract)
 
   implicit val onboardingInstitutionRequestFormat: RootJsonFormat[OnboardingInstitutionRequest] =
     jsonFormat8(OnboardingInstitutionRequest)
