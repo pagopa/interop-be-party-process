@@ -22,7 +22,7 @@
     }
   ],
   "paths": {
-    "/geotaxcodes/{code}": {
+    "/geotaxonomy/{code}": {
       "get": {
         "tags": [
           "geographicTaxonomy"
@@ -60,7 +60,7 @@
         "security": []
       }
     },
-    "/geotaxcodes": {
+    "/geotaxonomy": {
       "get": {
         "tags": [
           "geographicTaxonomy"
