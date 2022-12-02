@@ -229,14 +229,18 @@ class ExternalApiServiceImpl(
 
     logger.info("Retrieving geographic taxonomies for institution having externalId {}", externalId)
     val result = for {
-      bearer        <- getFutureBearer(contexts)
-      institution   <- partyManagementService.retrieveInstitutionByExternalId(externalId)(bearer)
+      bearer      <- getFutureBearer(contexts)
+      institution <- partyManagementService.retrieveInstitutionByExternalId(externalId)(bearer).recoverWith {
+        case _: ResourceNotFoundError => Future.failed(InstitutionNotFound(None, Option(externalId)))
+        case ex                       => Future.failed(ex)
+      }
+
       geoTaxonomies <- geoTaxonomyService.getExtByCodes(institution.geographicTaxonomies.map(_.code))
     } yield geoTaxonomies
 
     onComplete(result) {
       case Success(geoTaxonomies)               => retrieveInstitutionGeoTaxonomiesByExternalId200(geoTaxonomies)
-      case Failure(ex: ResourceNotFoundError)   =>
+      case Failure(ex: InstitutionNotFound)     =>
         logger.error(
           "Error while retrieving geographic taxonomies for institution having externalId {}. Institution not found",
           externalId,

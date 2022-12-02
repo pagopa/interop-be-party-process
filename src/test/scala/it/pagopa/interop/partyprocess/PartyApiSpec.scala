@@ -28,7 +28,7 @@ import it.pagopa.interop.partyprocess.api.converters.partymanagement.Institution
 import it.pagopa.interop.partyprocess.api.impl.Conversions._
 import it.pagopa.interop.partyprocess.api.impl.{OnboardingSignedRequest, geographicTaxonomyExtFormat}
 import it.pagopa.interop.partyprocess.common.system.{classicActorSystem, executionContext}
-import it.pagopa.interop.partyprocess.error.PartyProcessErrors.{GeoTaxonomyCodeNotFound, InstitutionNotFound}
+import it.pagopa.interop.partyprocess.error.PartyProcessErrors.GeoTaxonomyCodeNotFound
 import it.pagopa.interop.partyprocess.error.SignatureValidationError
 import it.pagopa.interop.partyprocess.model.PartyRole.{DELEGATE, MANAGER, OPERATOR, SUB_DELEGATE}
 import it.pagopa.interop.partyprocess.model.RelationshipState.ACTIVE
@@ -37,6 +37,7 @@ import it.pagopa.interop.partyregistryproxy.client.{model => PartyProxyDependenc
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.must.Matchers
+import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.wordspec.AnyWordSpecLike
 import spray.json.DefaultJsonProtocol
 
@@ -46,7 +47,6 @@ import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
-import org.scalatest.time.{Millis, Seconds, Span}
 
 trait PartyApiSpec
     extends MockFactory
@@ -5811,7 +5811,7 @@ trait PartyApiSpec
       (mockPartyManagementService
         .retrieveInstitution(_: UUID)(_: String)(_: Seq[(String, String)]))
         .expects(institutionIdUUID, *, *)
-        .returning(Future.failed(InstitutionNotFound(Some(institutionIdUUID.toString), None)))
+        .returning(Future.failed(ResourceNotFoundError(institutionIdUUID.toString)))
         .once()
 
       val response =
