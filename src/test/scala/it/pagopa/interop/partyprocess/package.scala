@@ -40,6 +40,8 @@ package object partyprocess extends SprayJsonSupport {
     jsonFormat6(OnboardingLegalUsersRequest)
   implicit val onboardingUsersRequestFormat: RootJsonFormat[OnboardingUsersRequest]             =
     jsonFormat3(OnboardingUsersRequest)
+  implicit val InstitutionPutRequestFormat: RootJsonFormat[InstitutionPut]                      =
+    jsonFormat1(InstitutionPut)
 
   implicit def fromEntityUnmarshallerOnboardingInstitutionRequest: ToEntityMarshaller[OnboardingInstitutionRequest] =
     sprayJsonMarshaller[OnboardingInstitutionRequest]

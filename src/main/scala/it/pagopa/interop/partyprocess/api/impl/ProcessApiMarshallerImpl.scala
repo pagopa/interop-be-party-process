@@ -56,4 +56,7 @@ object ProcessApiMarshallerImpl extends ProcessApiMarshaller with SprayJsonSuppo
 
   override implicit def toEntityMarshallerGeographicTaxonomyExtarray: ToEntityMarshaller[Seq[GeographicTaxonomyExt]] =
     sprayJsonMarshaller[Seq[GeographicTaxonomyExt]]
+
+  override implicit def fromEntityUnmarshallerInstitutionPut: FromEntityUnmarshaller[InstitutionPut] =
+    sprayJsonUnmarshaller[InstitutionPut]
 }

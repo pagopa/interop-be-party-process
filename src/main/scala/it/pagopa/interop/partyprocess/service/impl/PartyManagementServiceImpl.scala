@@ -188,6 +188,14 @@ final case class PartyManagementServiceImpl(
     invoke(request, s"Deleting relationship $relationshipId", Some(relationshipId.toString))
   }
 
+  override def updateInstitution(
+    institution: Institution
+  )(bearerToken: String)(implicit contexts: Seq[(String, String)]): Future[Institution] = {
+    val request: ApiRequest[Institution] =
+      partyApi.updateInstitutionById(institution.id, institution)(BearerToken(bearerToken))
+    invoke(request, s"Institution update with institution id ${institution.id}", Some(institution.id.toString))
+  }
+
   private def invoke[T](request: ApiRequest[T], logMessage: String, entityId: Option[String])(implicit
     m: Manifest[T],
     contexts: Seq[(String, String)]

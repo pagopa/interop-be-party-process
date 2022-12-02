@@ -24,6 +24,7 @@ import it.pagopa.interop.partymanagement.client.model.{
 }
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess
+import it.pagopa.interop.partyprocess.api.converters.partymanagement.InstitutionConverter
 import it.pagopa.interop.partyprocess.api.impl.Conversions._
 import it.pagopa.interop.partyprocess.api.impl.{OnboardingSignedRequest, geographicTaxonomyExtFormat}
 import it.pagopa.interop.partyprocess.common.system.{classicActorSystem, executionContext}
@@ -5822,5 +5823,203 @@ trait PartyApiSpec
 
       response.status mustBe StatusCodes.NotFound
     }
+  }
+
+  "Update institution" must {
+    val orgPartyId          = UUID.randomUUID()
+    val adminRelationshipId = UUID.randomUUID()
+    val originId            = UUID.randomUUID().toString
+    val externalId          = UUID.randomUUID().toString
+    val origin              = "ORIGIN"
+
+    val institution = PartyManagementDependency.Institution(
+      id = orgPartyId,
+      externalId = externalId,
+      originId = originId,
+      description = "description",
+      digitalAddress = "digitalAddress",
+      attributes = Seq(PartyManagementDependency.Attribute(origin, "C17", "attrs")),
+      taxCode = "taxCode",
+      origin = origin,
+      address = "address",
+      zipCode = "zipCode",
+      products = Map.empty,
+      geographicTaxonomies = Seq.empty
+    )
+
+    val adminRelationship =
+      PartyManagementDependency.Relationship(
+        id = adminRelationshipId,
+        from = uid,
+        to = orgPartyId,
+        role = PartyManagementDependency.PartyRole.DELEGATE,
+        product = defaultProduct,
+        state = PartyManagementDependency.RelationshipState.ACTIVE,
+        createdAt = defaultRelationshipTimestamp,
+        updatedAt = None
+      )
+
+    val stored = PartyManagementDependency.Institution(
+      id = institution.id,
+      externalId = institution.externalId,
+      originId = institution.originId,
+      description = institution.description,
+      digitalAddress = institution.digitalAddress,
+      address = institution.address,
+      zipCode = institution.zipCode,
+      taxCode = institution.taxCode,
+      origin = institution.origin,
+      institutionType = institution.institutionType,
+      attributes = Seq(PartyManagementDependency.Attribute(origin, "C17", "attrs")),
+      geographicTaxonomies = Seq(PartyManagementDependency.GeographicTaxonomy("GEOCODE", "GEODESC")),
+      products = Map.empty
+    )
+
+    val expected = InstitutionConverter.dependencyToApi(stored)
+
+    def mockPartyManagementRetrieveInstitution(success: Boolean) = {
+      (mockPartyManagementService
+        .retrieveInstitution(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(orgPartyId, *, *)
+        .returning(if (success) Future.successful(institution) else Future.failed(ResourceNotFoundError(externalId)))
+        .once()
+    }
+
+    def mockPartyManagementRetrieveRelationships(success: Boolean) = {
+      (mockPartyManagementService
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String)(_: Seq[(String, String)]))
+        .expects(
+          Some(uid),
+          Some(orgPartyId),
+          Seq(
+            PartyManagementDependency.PartyRole.MANAGER,
+            PartyManagementDependency.PartyRole.DELEGATE,
+            PartyManagementDependency.PartyRole.SUB_DELEGATE
+          ),
+          Seq(PartyManagementDependency.RelationshipState.ACTIVE),
+          *,
+          *,
+          *,
+          *
+        )
+        .returning(
+          if (success) Future.successful(Relationships(Seq(adminRelationship)))
+          else Future.failed(ResourceNotFoundError(externalId))
+        )
+        .once()
+    }
+
+    "NotFoundError when institution not exists" in {
+      mockPartyManagementRetrieveInstitution(false)
+
+      val data = Marshal(InstitutionPut()).to[MessageEntity].map(_.dataBytes).futureValue
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/institutions/$orgPartyId",
+              method = HttpMethods.PUT,
+              entity = HttpEntity(ContentTypes.`application/json`, data)
+            )
+          )
+          .futureValue
+
+      response.status mustBe StatusCodes.NotFound
+    }
+
+    "Forbidden when not admin" in {
+      mockPartyManagementRetrieveInstitution(true)
+      mockPartyManagementRetrieveRelationships(false)
+
+      val data = Marshal(InstitutionPut()).to[MessageEntity].map(_.dataBytes).futureValue
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/institutions/$orgPartyId",
+              method = HttpMethods.PUT,
+              entity = HttpEntity(ContentTypes.`application/json`, data)
+            )
+          )
+          .futureValue
+
+      response.status mustBe StatusCodes.Forbidden
+    }
+
+    "BadRequest if any geographic taxonomy code doesn't exist" in {
+      mockPartyManagementRetrieveInstitution(true)
+      mockPartyManagementRetrieveRelationships(true)
+
+      (mockGeoTaxonomyService
+        .getByCodes(_: Seq[String])(_: Seq[(String, String)]))
+        .expects(Seq("GEOCODE"), *)
+        .returning(Future.failed(GeoTaxonomyCodeNotFound("GEOCODE", "Not Found")))
+        .once()
+
+      val put = InstitutionPut(geographicTaxonomyCodes = Some(Seq("GEOCODE")))
+
+      val data = Marshal(put).to[MessageEntity].map(_.dataBytes).futureValue
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/institutions/$orgPartyId",
+              method = HttpMethods.PUT,
+              entity = HttpEntity(ContentTypes.`application/json`, data)
+            )
+          )
+          .futureValue
+
+      response.status mustBe StatusCodes.BadRequest
+    }
+
+    "succeed when exists" in {
+      mockPartyManagementRetrieveInstitution(true)
+      mockPartyManagementRetrieveRelationships(true)
+
+      (mockGeoTaxonomyService
+        .getByCodes(_: Seq[String])(_: Seq[(String, String)]))
+        .expects(Seq("GEOCODE"), *)
+        .returning(Future.successful(Seq(GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))))
+        .once()
+
+      (mockPartyManagementService
+        .updateInstitution(_: PartyManagementDependency.Institution)(_: String)(_: Seq[(String, String)]))
+        .expects(stored, *, *)
+        .returning(Future.successful(stored))
+        .once()
+
+      val put = InstitutionPut(geographicTaxonomyCodes = Some(Seq("GEOCODE")))
+
+      val data = Marshal(put).to[MessageEntity].map(_.dataBytes).futureValue
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$url/institutions/$orgPartyId",
+              method = HttpMethods.PUT,
+              entity = HttpEntity(ContentTypes.`application/json`, data)
+            )
+          )
+          .futureValue
+
+      response.status mustBe StatusCodes.OK
+
+      val body = Unmarshal(response.entity).to[Institution].futureValue
+
+      body equals expected
+    }
+
   }
 }

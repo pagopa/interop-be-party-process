@@ -16,7 +16,7 @@ import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.{ResourceCo
 import it.pagopa.interop.partymanagement.client.model.Relationship
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess.api.ProcessApiService
-import it.pagopa.interop.partyprocess.api.converters.partymanagement.InstitutionConverter
+import it.pagopa.interop.partyprocess.api.converters.partymanagement.{GeographicTaxonomyConverter, InstitutionConverter}
 import it.pagopa.interop.partyprocess.api.impl.Conversions._
 import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.partyprocess.error.PartyProcessErrors._
@@ -689,8 +689,7 @@ class ProcessApiServiceImpl(
             dataProtectionOfficer = i.dataProtectionOfficer.map(d =>
               PartyManagementDependency.DataProtectionOfficer(address = d.address, email = d.email, pec = d.pec)
             ),
-            geographicTaxonomies =
-              geoTaxonomies.map(x => PartyManagementDependency.GeographicTaxonomy(code = x.code, desc = x.desc))
+            geographicTaxonomies = geoTaxonomies.map(GeographicTaxonomyConverter.dependencyFromApi)
           )
         ),
         billing = billing.map(b =>
@@ -1590,5 +1589,93 @@ class ProcessApiServiceImpl(
         val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, GeoTaxonomyCodeError)
         complete(errorResponse.status, errorResponse)
     }
+  }
+
+  /**
+    * Code: 200, Message: successful operation, DataType: Institution
+    * Code: 404, Message: Not found, DataType: Problem
+    */
+  override def putInstitution(institutionId: String, institutionPut: InstitutionPut)(implicit
+    toEntityMarshallerInstitution: ToEntityMarshaller[Institution],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    contexts: Seq[(String, String)]
+  ): Route = {
+
+    logger.info("Updating institution {} with {}", institutionId, institutionPut)
+    val result = for {
+      bearer <- getFutureBearer(contexts)
+
+      institutionUid <- institutionId.toFutureUUID
+      institution    <- partyManagementService.retrieveInstitution(institutionUid)(bearer).recoverWith {
+        case _: ResourceNotFoundError => Future.failed(InstitutionNotFound(Option(institutionId), None))
+        case ex                       => Future.failed(ex)
+      }
+
+      uid    <- getUidFuture(contexts)
+      userId <- uid.toFutureUUID
+      _      <- partyManagementService
+        .retrieveRelationships(
+          from = Some(userId),
+          to = Some(institution.id),
+          roles = Seq(
+            PartyManagementDependency.PartyRole.MANAGER,
+            PartyManagementDependency.PartyRole.DELEGATE,
+            PartyManagementDependency.PartyRole.SUB_DELEGATE
+          ),
+          states = Seq(PartyManagementDependency.RelationshipState.ACTIVE),
+          products = Seq.empty,
+          productRoles = Seq.empty
+        )(bearer)
+        .recoverWith {
+          case _: ResourceNotFoundError => Future.failed(RelationshipNotFound(institutionUid, userId, "admin roles"))
+          case ex                       => Future.failed(ex)
+        }
+
+      nextInstitution    <- resolveInstitutionPut(institutionPut, institution)
+      updatedInstitution <- partyManagementService.updateInstitution(nextInstitution)(bearer)
+    } yield updatedInstitution
+
+    onComplete(result) {
+      case Success(updatedInstitution) => putInstitution200(InstitutionConverter.dependencyToApi(updatedInstitution))
+      case Failure(ex: InstitutionNotFound)     =>
+        logger.error(
+          "Error while retrieving geographic taxonomies for institution {}. Institution not found",
+          institutionId,
+          ex
+        )
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
+        putInstitution404(errorResponse)
+      case Failure(ex: RelationshipNotFound)    =>
+        logger.error("The logged user is not authorized to perform updates on institution {}", institutionId, ex)
+        val errorResponse: Problem = problemOf(StatusCodes.Forbidden, ex)
+        putInstitution403(errorResponse)
+      case Failure(ex: GeoTaxonomyCodeNotFound) =>
+        logger.error(
+          "Error while retrieving geographic taxonomies for institution {}. At least one of the area doesn't exist ({})!",
+          institutionId,
+          institutionPut,
+          ex
+        )
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, ex)
+        putInstitution400(errorResponse)
+      case Failure(ex)                          =>
+        logger.error("Error while updating institution {} with {}", institutionId, institutionPut, ex)
+        val errorResponse: Problem =
+          problemOf(StatusCodes.InternalServerError, PutInstitutionError(institutionId, institutionPut))
+        complete(errorResponse.status, errorResponse)
+    }
+  }
+
+  private def resolveInstitutionPut(institutionPut: InstitutionPut, institution: PartyManagementDependency.Institution)(
+    implicit contexts: Seq[(String, String)]
+  ): Future[PartyManagementDependency.Institution] = {
+
+    for {
+      geoTaxonomies <- institutionPut.geographicTaxonomyCodes
+        .map(x => geoTaxonomyService.getByCodes(x).map(_.map(GeographicTaxonomyConverter.dependencyFromApi)))
+        .getOrElse(Future.successful(institution.geographicTaxonomies))
+
+      nextInstitution = institution.copy(geographicTaxonomies = geoTaxonomies)
+    } yield nextInstitution
   }
 }
