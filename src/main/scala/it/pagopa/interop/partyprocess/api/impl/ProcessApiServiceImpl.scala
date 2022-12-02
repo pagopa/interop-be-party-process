@@ -1562,8 +1562,12 @@ class ProcessApiServiceImpl(
     val result = for {
       bearer         <- getFutureBearer(contexts)
       institutionUid <- institutionId.toFutureUUID
-      institution    <- partyManagementService.retrieveInstitution(institutionUid)(bearer)
-      geoTaxonomies  <- geoTaxonomyService.getExtByCodes(institution.geographicTaxonomies.map(_.code))
+      institution    <- partyManagementService.retrieveInstitution(institutionUid)(bearer).recoverWith {
+        case _: ResourceNotFoundError => Future.failed(InstitutionNotFound(Option(institutionId), None))
+        case ex                       => Future.failed(ex)
+      }
+
+      geoTaxonomies <- geoTaxonomyService.getExtByCodes(institution.geographicTaxonomies.map(_.code))
     } yield geoTaxonomies
 
     onComplete(result) {
