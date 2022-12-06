@@ -5,13 +5,12 @@ ThisBuild / scalaVersion        := "2.13.8"
 ThisBuild / organization        := "it.pagopa"
 ThisBuild / organizationName    := "Pagopa S.p.A."
 ThisBuild / libraryDependencies := Dependencies.Jars.`server`
-Global / onChangedBuildSource := ReloadOnSourceChanges
+Global / onChangedBuildSource   := ReloadOnSourceChanges
+ThisBuild / version             := ComputeVersion.version
 
-
-ThisBuild / version := ComputeVersion.version
-
-ThisBuild / resolvers += "Pagopa Nexus Snapshots" at s"https://${System.getenv("MAVEN_REPO")}/nexus/repository/maven-snapshots/"
-ThisBuild / resolvers += "Pagopa Nexus Releases" at s"https://${System.getenv("MAVEN_REPO")}/nexus/repository/maven-releases/"
+ThisBuild / githubOwner      := "pagopa"
+ThisBuild / githubRepository := "interop-be-party-process"
+ThisBuild / resolvers += Resolver.githubPackages("pagopa")
 ThisBuild / resolvers += "cefdigital" at s"https://ec.europa.eu/cefdigital/artifact/content/repositories/esignaturedss"
 
 lazy val generateCode = taskKey[Unit]("A task for generating the code starting from the swagger definition")
@@ -33,7 +32,7 @@ generateCode := {
   import sys.process._
 
   val openApiCommand: String = {
-    if(System.getProperty("os.name").toLowerCase.contains("win")) {
+    if (System.getProperty("os.name").toLowerCase.contains("win")) {
       "openapi-generator-cli-win.bat"
     } else {
       "openapi-generator-cli"
@@ -119,8 +118,6 @@ cleanFiles += baseDirectory.value / "product" / "src"
 
 cleanFiles += baseDirectory.value / "product" / "target"
 
-ThisBuild / credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
-
 lazy val generated = project
   .in(file("generated"))
   .settings(scalacOptions := Seq())
@@ -134,15 +131,7 @@ lazy val client = project
     scalafmtOnCompile   := true,
     libraryDependencies := Dependencies.Jars.client,
     updateOptions       := updateOptions.value.withGigahorse(false),
-    Docker / publish    := {},
-    publishTo           := {
-      val nexus = s"https://${System.getenv("MAVEN_REPO")}/nexus/repository/"
-
-      if (isSnapshot.value)
-        Some("snapshots" at nexus + "maven-snapshots/")
-      else
-        Some("releases" at nexus + "maven-releases/")
-    }
+    Docker / publish    := {}
   )
 
 lazy val userreg = project
@@ -200,6 +189,6 @@ lazy val root = (project in file("."))
 
 javaAgents += "io.kamon" % "kanela-agent" % "1.0.14"
 
-Test / fork := true
+Test / fork              := true
 Test / javaOptions += "-Dconfig.file=src/test/resources/application-test.conf"
-Test / parallelExecution    := false
+Test / parallelExecution := false
