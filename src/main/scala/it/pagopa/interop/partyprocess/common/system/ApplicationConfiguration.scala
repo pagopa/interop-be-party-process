@@ -13,6 +13,7 @@ object ApplicationConfiguration {
   val getPartyProxyUrl: String      = config.getString("party-process.services.party-proxy")
   val getUserRegistryURL: String    = config.getString("party-process.services.user-registry-management")
   val getProductURL: String         = config.getString("party-process.services.product-management")
+  val getGeoTaxonomyURL: String     = config.getString("party-process.services.geo-taxonomy")
 
   /*
      _________  ________  ________  ________
@@ -114,6 +115,8 @@ object ApplicationConfiguration {
     config.getString("party-process.mail-template.onboarding-notification-mail-placeholders.adminEmail")
   val onboardingNotificationMailTemplatePath: String                         =
     config.getString("party-process.mail-template.onboarding-notification-mail-placeholders.path")
+  val onboardingNotificationMailInstitutionGeoTaxonomies: String             =
+    config.getString("party-process.mail-template.onboarding-notification-mail-placeholders.institutionGeoTaxonomies")
 
   val onboardingRejectMailProductNamePlaceholder: String =
     config.getString("party-process.mail-template.onboarding-reject-mail-placeholders.productName")

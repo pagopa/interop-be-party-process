@@ -14,6 +14,7 @@ package object service {
   type PartyManagementInvoker        = partymanagement.client.invoker.ApiInvoker
   type ProductManagementInvoker      = product.client.invoker.ApiInvoker
   type UserRegistryManagementInvoker = userreg.client.invoker.ApiInvoker
+  type GeoTaxonomyInvoker            = geotaxonomy.client.invoker.ApiInvoker
 
   object PartyProxyInvoker {
     def apply()(implicit actorSystem: ActorSystem): PartyProxyInvoker =
@@ -33,5 +34,10 @@ package object service {
   object UserRegistryManagementInvoker {
     def apply()(implicit actorSystem: ActorSystem): UserRegistryManagementInvoker =
       userreg.client.invoker.ApiInvoker(userreg.client.api.EnumsSerializers.all)
+  }
+
+  object GeoTaxonomyInvoker {
+    def apply()(implicit actorSystem: ActorSystem): GeoTaxonomyInvoker =
+      geotaxonomy.client.invoker.ApiInvoker(product.client.api.EnumsSerializers.all)
   }
 }

@@ -2,7 +2,7 @@ package it.pagopa.interop.partyprocess.service
 
 import it.pagopa.interop.partymanagement.client.model.Institution
 import it.pagopa.interop.partyprocess.api.impl.OnboardingSignedRequest
-import it.pagopa.interop.partyprocess.model.User
+import it.pagopa.interop.partyprocess.model.{GeographicTaxonomy, User}
 
 import java.io.File
 import scala.concurrent.Future
@@ -13,6 +13,7 @@ trait PDFCreator {
     manager: User,
     users: Seq[User],
     institution: Institution,
-    onboardingRequest: OnboardingSignedRequest
+    onboardingRequest: OnboardingSignedRequest,
+    geoTaxonomies: Seq[GeographicTaxonomy]
   ): Future[File]
 }

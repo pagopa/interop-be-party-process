@@ -32,11 +32,8 @@ generateCode := {
   import sys.process._
 
   val openApiCommand: String = {
-    if (System.getProperty("os.name").toLowerCase.contains("win")) {
-      "openapi-generator-cli-win.bat"
-    } else {
-      "openapi-generator-cli"
-    }
+    if (System.getProperty("os.name").toLowerCase.contains("win")) "openapi-generator-cli-win.bat"
+    else "openapi-generator-cli"
   }
 
   Process(s"""$openApiCommand generate -t template/scala-akka-http-server
@@ -80,6 +77,16 @@ generateCode := {
              |                               -p dateLibrary=java8
              |                               -o product""".stripMargin).!!
 
+  Process(s"""$openApiCommand generate -t template/scala-akka-http-client
+             |                               -i geo-taxonomy/api-docs.json
+             |                               -g scala-akka
+             |                               -p projectName=geoTaxonomy
+             |                               -p invokerPackage=it.pagopa.geotaxonomy.client.invoker
+             |                               -p modelPackage=it.pagopa.geotaxonomy.client.model
+             |                               -p apiPackage=it.pagopa.geotaxonomy.client.api
+             |                               -p dateLibrary=java8
+             |                               -o geo-taxonomy""".stripMargin).!!
+
 }
 
 val runStandalone = inputKey[Unit]("Run the app using standalone configuration")
@@ -106,6 +113,10 @@ cleanFiles += baseDirectory.value / "userreg" / "target"
 cleanFiles += baseDirectory.value / "product" / "src"
 
 cleanFiles += baseDirectory.value / "product" / "target"
+
+cleanFiles += baseDirectory.value / "geo-taxonomy" / "src"
+
+cleanFiles += baseDirectory.value / "geo-taxonomy" / "target"
 
 lazy val generated = project
   .in(file("generated"))
@@ -143,6 +154,16 @@ lazy val product = project
     updateOptions       := updateOptions.value.withGigahorse(false)
   )
 
+lazy val geoTaxonomy = project
+  .in(file("geo-taxonomy"))
+  .settings(
+    name                := "geoTaxonomy",
+    scalacOptions       := Seq(),
+    scalafmtOnCompile   := true,
+    libraryDependencies := Dependencies.Jars.client,
+    updateOptions       := updateOptions.value.withGigahorse(false)
+  )
+
 lazy val root = (project in file("."))
   .settings(
     name                        := "interop-be-party-process",
@@ -162,6 +183,7 @@ lazy val root = (project in file("."))
   .dependsOn(generated)
   .dependsOn(userreg)
   .dependsOn(product)
+  .dependsOn(geoTaxonomy)
   .enablePlugins(JavaAppPackaging, JavaAgent)
   .setupBuildInfo
 

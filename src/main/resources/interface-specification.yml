@@ -1240,6 +1240,10 @@ components:
           description: certified attributes bound to this institution
           items:
             $ref: '#/components/schemas/Attribute'
+        geographicTaxonomies:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeographicTaxonomy'
       additionalProperties: false
       required:
         - id
@@ -1255,6 +1259,7 @@ components:
         - role
         - productInfo
         - attributes
+        - geographicTaxonomies
     Attribute:
       type: object
       properties:
@@ -1382,6 +1387,10 @@ components:
           $ref: '#/components/schemas/PaymentServiceProvider'
         dataProtectionOfficer:
           $ref: '#/components/schemas/DataProtectionOfficer'
+        geographicTaxonomies:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeographicTaxonomy'
       required:
         - description
         - digitalAddress
@@ -1435,6 +1444,10 @@ components:
           $ref: '#/components/schemas/PaymentServiceProvider'
         dataProtectionOfficer:
           $ref: '#/components/schemas/DataProtectionOfficer'
+        geographicTaxonomies:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeographicTaxonomy'
       required:
         - id
         - externalId
@@ -1446,6 +1459,7 @@ components:
         - taxCode
         - attributes
         - origin
+        - geographicTaxonomies
       additionalProperties: false
     Problem:
       properties:
@@ -1503,6 +1517,8 @@ components:
         - detail
     InstitutionUpdate:
       type: object
+      required:
+        - geographicTaxonomyCodes
       properties:
         institutionType:
           type: string
@@ -1528,6 +1544,10 @@ components:
           $ref: '#/components/schemas/PaymentServiceProvider'
         dataProtectionOfficer:
           $ref: '#/components/schemas/DataProtectionOfficer'
+        geographicTaxonomyCodes:
+          type: array
+          items:
+            type: string
     Billing:
       type: object
       properties:
@@ -1631,6 +1651,19 @@ components:
         pec:
           type: string
           description: 'Data protection officer digital address'
+    GeographicTaxonomy:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - desc
+      properties:
+        code:
+          type: string
+          description: 'Code of the geographic taxonomy'
+        desc:
+          type: string
+          description: 'Description of the geographic taxonomy code'
   securitySchemes:
     bearerAuth:
       type: http

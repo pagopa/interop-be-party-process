@@ -12,6 +12,7 @@ import it.pagopa.interop.partyprocess.model.{
   Attribute,
   Billing,
   BillingData,
+  GeographicTaxonomy,
   Institution,
   PartyRole,
   ProductInfo,
@@ -58,7 +59,8 @@ trait ExternalApiSpec
       origin = origin,
       address = "address",
       zipCode = "zipCode",
-      products = Map.empty
+      products = Map.empty,
+      geographicTaxonomies = Seq(PartyManagementDependency.GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
     )
 
     val expected = Institution(
@@ -72,7 +74,8 @@ trait ExternalApiSpec
       taxCode = institution.taxCode,
       origin = institution.origin,
       institutionType = institution.institutionType,
-      attributes = Seq(Attribute(origin, "C17", "attrs"))
+      attributes = Seq(Attribute(origin, "C17", "attrs")),
+      geographicTaxonomies = Seq(GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
     )
 
     def mockPartyManagement(success: Boolean) = {
@@ -132,7 +135,8 @@ trait ExternalApiSpec
       origin = origin,
       address = "address",
       zipCode = "zipCode",
-      products = Map.empty
+      products = Map.empty,
+      geographicTaxonomies = Seq.empty
     )
 
     val manager = PartyManagementDependency.Relationship(
@@ -283,7 +287,9 @@ trait ExternalApiSpec
           billing = PartyManagementDependency
             .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
         )
-      )
+      ),
+      geographicTaxonomies =
+        Seq(PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
     )
 
     val expected = BillingData(

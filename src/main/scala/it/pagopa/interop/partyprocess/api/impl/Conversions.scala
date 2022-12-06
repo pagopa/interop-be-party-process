@@ -46,7 +46,8 @@ object Conversions {
       digitalAddress = institutionUpdate.digitalAddress,
       address = institutionUpdate.address,
       zipCode = institutionUpdate.zipCode,
-      taxCode = institutionUpdate.taxCode
+      taxCode = institutionUpdate.taxCode,
+      geographicTaxonomyCodes = institutionUpdate.geographicTaxonomies.map(_.code)
     )
   }
 

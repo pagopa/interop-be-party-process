@@ -134,4 +134,7 @@ object PartyProcessErrors {
 
   final case class TokenVerificationFatalError(tokenId: String, error: String)
       extends ComponentError("0048", s"Error on retrieve $tokenId: $error")
+
+  final case class GeoTaxonomyCodeNotFound(geoTaxonomyCode: String, error: String)
+      extends ComponentError("0049", s"Error on retrieve geographic taxonomy code $geoTaxonomyCode: $error")
 }
