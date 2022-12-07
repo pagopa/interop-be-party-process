@@ -120,7 +120,8 @@
       "GeographicTaxonomy": {
         "required": [
           "code",
-          "desc"
+          "desc",
+          "enable"
         ],
         "type": "object",
         "properties": {
