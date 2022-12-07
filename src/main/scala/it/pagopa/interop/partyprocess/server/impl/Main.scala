@@ -51,6 +51,7 @@ object Main extends App with CORSSupport with Dependencies {
         partyProcService = partyProcessService()
         userreg          = userRegistryManagementService()
         productmng       = productManagementService()
+        geoTaxonomy      = geoTaxonomyService()
         sigService <- signatureService()
         sigValidationService = signatureValidationService()
         process              = processApi(

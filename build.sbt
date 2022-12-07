@@ -5,13 +5,12 @@ ThisBuild / scalaVersion        := "2.13.8"
 ThisBuild / organization        := "it.pagopa"
 ThisBuild / organizationName    := "Pagopa S.p.A."
 ThisBuild / libraryDependencies := Dependencies.Jars.`server`
-Global / onChangedBuildSource := ReloadOnSourceChanges
+Global / onChangedBuildSource   := ReloadOnSourceChanges
+ThisBuild / version             := ComputeVersion.version
 
-
-ThisBuild / version := ComputeVersion.version
-
-ThisBuild / resolvers += "Pagopa Nexus Snapshots" at s"https://${System.getenv("MAVEN_REPO")}/nexus/repository/maven-snapshots/"
-ThisBuild / resolvers += "Pagopa Nexus Releases" at s"https://${System.getenv("MAVEN_REPO")}/nexus/repository/maven-releases/"
+ThisBuild / githubOwner      := "pagopa"
+ThisBuild / githubRepository := "interop-be-party-process"
+ThisBuild / resolvers += Resolver.githubPackages("pagopa")
 ThisBuild / resolvers += "cefdigital" at s"https://ec.europa.eu/cefdigital/artifact/content/repositories/esignaturedss"
 
 lazy val generateCode = taskKey[Unit]("A task for generating the code starting from the swagger definition")
@@ -33,11 +32,8 @@ generateCode := {
   import sys.process._
 
   val openApiCommand: String = {
-    if(System.getProperty("os.name").toLowerCase.contains("win")) {
-      "openapi-generator-cli-win.bat"
-    } else {
-      "openapi-generator-cli"
-    }
+    if (System.getProperty("os.name").toLowerCase.contains("win")) "openapi-generator-cli-win.bat"
+    else "openapi-generator-cli"
   }
 
   Process(s"""$openApiCommand generate -t template/scala-akka-http-server
@@ -81,16 +77,15 @@ generateCode := {
              |                               -p dateLibrary=java8
              |                               -o product""".stripMargin).!!
 
-  Process(
-    s"""$openApiCommand generate -t template/scala-akka-http-client
-       |                               -i geoTaxonomy/api-docs.json
-       |                               -g scala-akka
-       |                               -p projectName=geoTaxonomy
-       |                               -p invokerPackage=it.pagopa.geotaxonomy.client.invoker
-       |                               -p modelPackage=it.pagopa.geotaxonomy.client.model
-       |                               -p apiPackage=it.pagopa.geotaxonomy.client.api
-       |                               -p dateLibrary=java8
-       |                               -o geotaxonomy""".stripMargin).!!
+  Process(s"""$openApiCommand generate -t template/scala-akka-http-client
+             |                               -i geo-taxonomy/api-docs.json
+             |                               -g scala-akka
+             |                               -p projectName=geoTaxonomy
+             |                               -p invokerPackage=it.pagopa.geotaxonomy.client.invoker
+             |                               -p modelPackage=it.pagopa.geotaxonomy.client.model
+             |                               -p apiPackage=it.pagopa.geotaxonomy.client.api
+             |                               -p dateLibrary=java8
+             |                               -o geo-taxonomy""".stripMargin).!!
 
 }
 
@@ -119,7 +114,9 @@ cleanFiles += baseDirectory.value / "product" / "src"
 
 cleanFiles += baseDirectory.value / "product" / "target"
 
-ThisBuild / credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
+cleanFiles += baseDirectory.value / "geo-taxonomy" / "src"
+
+cleanFiles += baseDirectory.value / "geo-taxonomy" / "target"
 
 lazy val generated = project
   .in(file("generated"))
@@ -134,15 +131,7 @@ lazy val client = project
     scalafmtOnCompile   := true,
     libraryDependencies := Dependencies.Jars.client,
     updateOptions       := updateOptions.value.withGigahorse(false),
-    Docker / publish    := {},
-    publishTo           := {
-      val nexus = s"https://${System.getenv("MAVEN_REPO")}/nexus/repository/"
-
-      if (isSnapshot.value)
-        Some("snapshots" at nexus + "maven-snapshots/")
-      else
-        Some("releases" at nexus + "maven-releases/")
-    }
+    Docker / publish    := {}
   )
 
 lazy val userreg = project
@@ -166,13 +155,13 @@ lazy val product = project
   )
 
 lazy val geoTaxonomy = project
-  .in(file("geoTaxonomy"))
+  .in(file("geo-taxonomy"))
   .settings(
-    name := "geoTaxonomy",
-    scalacOptions := Seq(),
-    scalafmtOnCompile := true,
+    name                := "geoTaxonomy",
+    scalacOptions       := Seq(),
+    scalafmtOnCompile   := true,
     libraryDependencies := Dependencies.Jars.client,
-    updateOptions := updateOptions.value.withGigahorse(false)
+    updateOptions       := updateOptions.value.withGigahorse(false)
   )
 
 lazy val root = (project in file("."))
@@ -200,6 +189,6 @@ lazy val root = (project in file("."))
 
 javaAgents += "io.kamon" % "kanela-agent" % "1.0.14"
 
-Test / fork := true
+Test / fork              := true
 Test / javaOptions += "-Dconfig.file=src/test/resources/application-test.conf"
-Test / parallelExecution    := false
+Test / parallelExecution := false
