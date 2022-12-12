@@ -24,9 +24,8 @@ final case class GeoTaxonomyServiceImpl(invoker: GeoTaxonomyInvoker, api: Geogra
 
   override def getByCodes(
     geoTaxonomycodes: Seq[String]
-  )(implicit contexts: Seq[(String, String)]): Future[Seq[GeographicTaxonomy]] = {
-    Future.traverse(geoTaxonomycodes)(c => getByCode(c))
-  }
+  )(implicit contexts: Seq[(String, String)]): Future[Seq[GeographicTaxonomy]] = 
+    Future.traverse(geoTaxonomycodes)(getByCode)
 
   override def getExtByCode(code: String)(implicit context: Seq[(String, String)]): Future[GeographicTaxonomyExt] = {
     val request: ApiRequest[DependencyGeographicTaxonomy] = api.findByIdUsingGET(code)
@@ -49,9 +48,8 @@ final case class GeoTaxonomyServiceImpl(invoker: GeoTaxonomyInvoker, api: Geogra
 
   override def getExtByCodes(
     geoTaxonomycodes: Seq[String]
-  )(implicit contexts: Seq[(String, String)]): Future[Seq[GeographicTaxonomyExt]] = {
-    Future.traverse(geoTaxonomycodes)(c => getExtByCode(c))
-  }
+  )(implicit contexts: Seq[(String, String)]): Future[Seq[GeographicTaxonomyExt]] =
+    Future.traverse(geoTaxonomycodes)(getExtByCode)
 
   private def invokeAPI[T](request: ApiRequest[T], logMessage: String, entityId: Option[String])(implicit
     context: ContextFieldsToLog,
