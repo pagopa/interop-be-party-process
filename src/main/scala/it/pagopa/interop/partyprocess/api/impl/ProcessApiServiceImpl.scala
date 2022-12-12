@@ -447,9 +447,9 @@ class ProcessApiServiceImpl(
   )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Unit] = {
     for {
       _                  <- validateOverridingData(onboardingRequest, institution)
-      geoTaxonomies      <- Future.traverse(
+      geoTaxonomies      <- geoTaxonomyService.getByCodes(
         onboardingRequest.institutionUpdate.map(i => i.geographicTaxonomyCodes).getOrElse(Seq.empty)
-      )(c => geoTaxonomyService.getByCode(c))
+      )
       validUsers         <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
       validManager       <- getValidManager(activeManager, validUsers)
       personIdsWithRoles <- Future.traverse(validUsers)(u => addUser(u, onboardingRequest.productId))
@@ -1545,6 +1545,54 @@ class ProcessApiServiceImpl(
         logger.error(s"Error while updating Token $tokenId", ex)
         val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, OnboardingOperationError)
         complete(StatusCodes.InternalServerError, errorResponse)
+    }
+  }
+
+  /**
+    * Code: 200, Message: successful operation, DataType: Seq[GeographicTaxonomyExt]
+    * Code: 404, Message: Institution not found, DataType: Problem
+    */
+  override def retrieveInstitutionGeoTaxonomies(institutionId: String)(implicit
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerGeographicTaxonomyExtarray: ToEntityMarshaller[Seq[GeographicTaxonomyExt]],
+    contexts: Seq[(String, String)]
+  ): Route = {
+
+    logger.info("Retrieving geographic taxonomies for institution {}", institutionId)
+    val result = for {
+      bearer         <- getFutureBearer(contexts)
+      institutionUid <- institutionId.toFutureUUID
+      institution    <- partyManagementService.retrieveInstitution(institutionUid)(bearer).recoverWith {
+        case _: ResourceNotFoundError => Future.failed(InstitutionNotFound(Option(institutionId), None))
+        case ex                       => Future.failed(ex)
+      }
+
+      geoTaxonomies <- geoTaxonomyService.getExtByCodes(institution.geographicTaxonomies.map(_.code))
+    } yield geoTaxonomies
+
+    onComplete(result) {
+      case Success(geoTaxonomies)               => retrieveInstitutionGeoTaxonomies200(geoTaxonomies)
+      case Failure(ex: InstitutionNotFound)     =>
+        logger.error(
+          "Error while retrieving geographic taxonomies for institution {}. Institution not found",
+          institutionId,
+          ex
+        )
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
+        retrieveInstitutionGeoTaxonomies404(errorResponse)
+      case Failure(ex: GeoTaxonomyCodeNotFound) =>
+        logger.error(
+          "Error while retrieving geographic taxonomies for institution {}. At least one of the area doesn't exist ({})!",
+          institutionId,
+          ex.code,
+          ex
+        )
+        val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, ex)
+        complete(errorResponse.status, errorResponse)
+      case Failure(ex)                          =>
+        logger.error("Error while retrieving geographic taxonomies for institution {}", institutionId, ex)
+        val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, GeoTaxonomyCodeError)
+        complete(errorResponse.status, errorResponse)
     }
   }
 }

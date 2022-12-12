@@ -154,9 +154,10 @@ trait Dependencies {
     partyManagementService: PartyManagementService,
     relationshipService: RelationshipService,
     productService: ProductService,
+    geoTaxonomyService: GeoTaxonomyService,
     jwtReader: JWTReader
   )(implicit ec: ExecutionContext): ExternalApi = new ExternalApi(
-    new ExternalApiServiceImpl(partyManagementService, relationshipService, productService),
+    new ExternalApiServiceImpl(partyManagementService, relationshipService, productService, geoTaxonomyService),
     ExternalApiMarshallerImpl,
     jwtReader.OAuth2JWTValidatorAsContexts
   )

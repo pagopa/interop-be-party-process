@@ -25,7 +25,7 @@ import it.pagopa.interop.partymanagement.client.model.{
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess
 import it.pagopa.interop.partyprocess.api.impl.Conversions._
-import it.pagopa.interop.partyprocess.api.impl.OnboardingSignedRequest
+import it.pagopa.interop.partyprocess.api.impl.{OnboardingSignedRequest, geographicTaxonomyExtFormat}
 import it.pagopa.interop.partyprocess.common.system.{classicActorSystem, executionContext}
 import it.pagopa.interop.partyprocess.error.PartyProcessErrors.GeoTaxonomyCodeNotFound
 import it.pagopa.interop.partyprocess.error.SignatureValidationError
@@ -36,6 +36,7 @@ import it.pagopa.interop.partyregistryproxy.client.{model => PartyProxyDependenc
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.must.Matchers
+import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.wordspec.AnyWordSpecLike
 import spray.json.DefaultJsonProtocol
 
@@ -45,7 +46,6 @@ import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
-import org.scalatest.time.{Millis, Seconds, Span}
 
 trait PartyApiSpec
     extends MockFactory
@@ -394,9 +394,9 @@ trait PartyApiSpec
       .once()
 
     (mockGeoTaxonomyService
-      .getByCode(_: String)(_: Seq[(String, String)]))
-      .expects("OVERRIDE_GEOCODE", *)
-      .returning(Future.successful(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC")))
+      .getByCodes(_: Seq[String])(_: Seq[(String, String)]))
+      .expects(Seq("OVERRIDE_GEOCODE"), *)
+      .returning(Future.successful(Seq(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))))
       .once()
 
     val req = OnboardingInstitutionRequest(
@@ -1652,8 +1652,8 @@ trait PartyApiSpec
 
     "fail when onboarding with wrong geographic taxonomy code" in {
       (mockGeoTaxonomyService
-        .getByCode(_: String)(_: Seq[(String, String)]))
-        .expects("OVERRIDE_GEOCODE", *)
+        .getByCodes(_: Seq[String])(_: Seq[(String, String)]))
+        .expects(Seq("OVERRIDE_GEOCODE"), *)
         .returning(Future.failed(GeoTaxonomyCodeNotFound("OVERRIDE_GEOCODE", "NotFound")))
         .once()
 
@@ -1664,9 +1664,9 @@ trait PartyApiSpec
 
     "succeed when onboarding IPA without data overriding" in {
       (mockGeoTaxonomyService
-        .getByCode(_: String)(_: Seq[(String, String)]))
-        .expects("OVERRIDE_GEOCODE", *)
-        .returning(Future.successful(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC")))
+        .getByCodes(_: Seq[String])(_: Seq[(String, String)]))
+        .expects(Seq("OVERRIDE_GEOCODE"), *)
+        .returning(Future.successful(Seq(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))))
         .once()
 
       val response = performOnboardingOverridingIPAFields("")
@@ -5740,4 +5740,87 @@ trait PartyApiSpec
 
   }
 
+  "Institution geographic taxonomies retrieval" must {
+
+    "retrieve geotaxonomies" in {
+      val expectedGeographicTaxonomies = Seq(
+        GeographicTaxonomyExt(code = "GEOCODE", desc = "GEODESC", enable = true),
+        GeographicTaxonomyExt(code = "GEOCODE2", desc = "GEODESC2", enable = true)
+      )
+
+      val body = retrieveGeoTaxonomies(expectedGeographicTaxonomies)
+
+      body.toSet mustBe expectedGeographicTaxonomies.toSet
+    }
+
+    "retrieve empty list when no geotaxonomies" in {
+      val body = retrieveGeoTaxonomies(Seq.empty)
+
+      body.toSet mustBe Set.empty
+    }
+
+    def retrieveGeoTaxonomies(expectedGeographicTaxonomies: Seq[GeographicTaxonomyExt]): Seq[GeographicTaxonomyExt] = {
+      val institutionIdUUID = UUID.randomUUID()
+      val externalId        = UUID.randomUUID().toString
+      val originId          = UUID.randomUUID().toString
+
+      val institution = PartyManagementDependency.Institution(
+        id = institutionIdUUID,
+        externalId = externalId,
+        originId = originId,
+        description = "",
+        digitalAddress = "",
+        taxCode = "",
+        attributes = Seq.empty,
+        address = "",
+        zipCode = "",
+        origin = "",
+        institutionType = Option.empty,
+        products = Map.empty,
+        geographicTaxonomies = expectedGeographicTaxonomies.map(x =>
+          PartyManagementDependency.GeographicTaxonomy(code = x.code, desc = x.desc)
+        )
+      )
+
+      (mockPartyManagementService
+        .retrieveInstitution(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(institutionIdUUID, *, *)
+        .returning(Future.successful(institution))
+        .once()
+
+      (mockGeoTaxonomyService
+        .getExtByCodes(_: Seq[String])(_: Seq[(String, String)]))
+        .expects(expectedGeographicTaxonomies.map(_.code), *)
+        .returning(Future.successful(expectedGeographicTaxonomies))
+        .once()
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(uri = s"$url/institutions/$institutionIdUUID/geotaxonomies", method = HttpMethods.GET)
+          )
+          .futureValue
+
+      Unmarshal(response.entity).to[Seq[GeographicTaxonomyExt]].futureValue
+    }
+
+    "return 404 when institution not exists" in {
+      val institutionIdUUID = UUID.randomUUID()
+
+      (mockPartyManagementService
+        .retrieveInstitution(_: UUID)(_: String)(_: Seq[(String, String)]))
+        .expects(institutionIdUUID, *, *)
+        .returning(Future.failed(ResourceNotFoundError(institutionIdUUID.toString)))
+        .once()
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(uri = s"$url/institutions/$institutionIdUUID/geotaxonomies", method = HttpMethods.GET)
+          )
+          .futureValue
+
+      response.status mustBe StatusCodes.NotFound
+    }
+  }
 }

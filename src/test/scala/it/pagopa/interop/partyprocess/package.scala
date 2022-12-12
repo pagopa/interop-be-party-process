@@ -59,6 +59,9 @@ package object partyprocess extends SprayJsonSupport {
   implicit val fromEntityUnmarshallerBillingData: FromEntityUnmarshaller[BillingData] =
     sprayJsonUnmarshaller[BillingData]
 
+  implicit val fromEntityUnmarshallerGeoTaxonomiesExt: FromEntityUnmarshaller[GeographicTaxonomyExt] =
+    sprayJsonUnmarshaller[GeographicTaxonomyExt]
+
   def request(data: Source[ByteString, Any], path: String, verb: HttpMethod)(implicit
     system: ClassicActorSystemProvider
   ): HttpResponse = {

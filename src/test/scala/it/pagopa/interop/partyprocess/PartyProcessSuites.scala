@@ -61,7 +61,8 @@ class PartyProcessSuites extends ExternalApiSpec with PartyApiSpec with BeforeAn
       new ExternalApiServiceImpl(
         partyManagementService = mockPartyManagementService,
         relationshipService = relationshipService,
-        productService = productService
+        productService = productService,
+        geoTaxonomyService = mockGeoTaxonomyService
       ),
       externalApiMarshaller,
       wrappingDirective
