@@ -812,6 +812,52 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+    put:
+      security: [ { } ]
+      tags:
+        - process
+      summary: Update the corresponding institution searched using internal institution id
+      description: Update institution using internal institution id
+      operationId: putInstitution
+      parameters:
+        - name: id
+          in: path
+          description: The internal identifier of the institution
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstitutionPut'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Institution'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   '/institutions/{externalId}':
     post:
       tags:
@@ -1779,6 +1825,14 @@ components:
         enable:
           type: boolean
           description: If the current code is enabled
+    InstitutionPut:
+      type: object
+      additionalProperties: false
+      properties:
+        geographicTaxonomyCodes:
+          type: array
+          items:
+            type: string
   securitySchemes:
     bearerAuth:
       type: http

@@ -6,4 +6,7 @@ import it.pagopa.interop.partyprocess.model.GeographicTaxonomy
 object GeographicTaxonomyConverter {
   def dependencyToApi(geographicTaxonomy: DependencyGeographicTaxonomy): GeographicTaxonomy =
     GeographicTaxonomy(code = geographicTaxonomy.code, desc = geographicTaxonomy.desc)
+
+  def dependencyFromApi(geographicTaxonomy: GeographicTaxonomy): DependencyGeographicTaxonomy =
+    DependencyGeographicTaxonomy(code = geographicTaxonomy.code, desc = geographicTaxonomy.desc)
 }

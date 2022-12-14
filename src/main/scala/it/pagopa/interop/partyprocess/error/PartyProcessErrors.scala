@@ -2,7 +2,7 @@ package it.pagopa.interop.partyprocess.error
 
 import akka.http.scaladsl.model.ErrorInfo
 import it.pagopa.interop.commons.utils.errors.ComponentError
-import it.pagopa.interop.partyprocess.model.{PartyRole, User}
+import it.pagopa.interop.partyprocess.model.{InstitutionPut, PartyRole, User}
 
 import java.util.UUID
 
@@ -140,4 +140,7 @@ object PartyProcessErrors {
 
   final case object GeoTaxonomyCodeError
       extends ComponentError("0050", "Error while retrieving institution geographic taxonomy")
+
+  final case class PutInstitutionError(id: String, put: InstitutionPut)
+      extends ComponentError("0051", s"Error while updating institution $id with $put")
 }
