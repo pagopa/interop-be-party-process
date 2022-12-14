@@ -1,6 +1,6 @@
 package it.pagopa.interop.partyprocess.service.impl
 
-import com.typesafe.scalalogging.Logger
+import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
 import it.pagopa.geotaxonomy.client.api.GeographicTaxonomyApi
 import it.pagopa.geotaxonomy.client.invoker.{ApiError, ApiRequest}
 import it.pagopa.geotaxonomy.client.model.{GeographicTaxonomy => DependencyGeographicTaxonomy}
@@ -14,23 +14,22 @@ import scala.concurrent.Future
 
 final case class GeoTaxonomyServiceImpl(invoker: GeoTaxonomyInvoker, api: GeographicTaxonomyApi)
     extends GeoTaxonomyService {
-  implicit val logger = Logger.takingImplicit[ContextFieldsToLog](this.getClass())
+  implicit val logger: LoggerTakingImplicit[ContextFieldsToLog] = Logger.takingImplicit[ContextFieldsToLog](this.getClass)
 
   override def getByCode(code: String)(implicit context: Seq[(String, String)]): Future[GeographicTaxonomy] = {
     val request: ApiRequest[DependencyGeographicTaxonomy] = api.findByIdUsingGET(code)
-    invokeAPI(request, s"Retrieve Geographic Taxonomy By Code ${code}", Some(code))
+    invokeAPI(request, s"Retrieve Geographic Taxonomy By Code $code", Some(code))
       .map(u => GeographicTaxonomy(code = u.code, desc = u.desc))
   }
 
   override def getByCodes(
     geoTaxonomycodes: Seq[String]
-  )(implicit contexts: Seq[(String, String)]): Future[Seq[GeographicTaxonomy]] = {
+  )(implicit contexts: Seq[(String, String)]): Future[Seq[GeographicTaxonomy]] =
     Future.traverse(geoTaxonomycodes)(getByCode)
-  }
 
   override def getExtByCode(code: String)(implicit context: Seq[(String, String)]): Future[GeographicTaxonomyExt] = {
     val request: ApiRequest[DependencyGeographicTaxonomy] = api.findByIdUsingGET(code)
-    invokeAPI(request, s"Retrieve Geographic Taxonomy By Code ${code}", Some(code))
+    invokeAPI(request, s"Retrieve Geographic Taxonomy By Code $code", Some(code))
       .map(u =>
         GeographicTaxonomyExt(
           code = u.code,
@@ -49,9 +48,8 @@ final case class GeoTaxonomyServiceImpl(invoker: GeoTaxonomyInvoker, api: Geogra
 
   override def getExtByCodes(
     geoTaxonomycodes: Seq[String]
-  )(implicit contexts: Seq[(String, String)]): Future[Seq[GeographicTaxonomyExt]] = {
+  )(implicit contexts: Seq[(String, String)]): Future[Seq[GeographicTaxonomyExt]] =
     Future.traverse(geoTaxonomycodes)(getExtByCode)
-  }
 
   private def invokeAPI[T](request: ApiRequest[T], logMessage: String, entityId: Option[String])(implicit
     context: ContextFieldsToLog,
