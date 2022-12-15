@@ -813,7 +813,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
     put:
-      security: [ { } ]
       tags:
         - process
       summary: Update the corresponding institution searched using internal institution id
