@@ -591,7 +591,7 @@ class ProcessApiServiceImpl(
 
     val onboardingUrlParameters: Map[String, String] = Map(
       ApplicationConfiguration.onboardingRejectMailOnboardingUrlPlaceholder ->
-        s"${ApplicationConfiguration.onboardingRejectMailOnboardingUrlPlaceholder}$prodId"
+        s"${ApplicationConfiguration.onboardingRejectMailOnboardingUrlValue}$prodId"
     )
 
     Future.successful(productParameters ++ onboardingUrlParameters)
