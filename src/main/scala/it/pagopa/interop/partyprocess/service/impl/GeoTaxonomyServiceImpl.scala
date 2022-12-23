@@ -14,7 +14,8 @@ import scala.concurrent.Future
 
 final case class GeoTaxonomyServiceImpl(invoker: GeoTaxonomyInvoker, api: GeographicTaxonomyApi)
     extends GeoTaxonomyService {
-  implicit val logger: LoggerTakingImplicit[ContextFieldsToLog] = Logger.takingImplicit[ContextFieldsToLog](this.getClass)
+  implicit val logger: LoggerTakingImplicit[ContextFieldsToLog] =
+    Logger.takingImplicit[ContextFieldsToLog](this.getClass)
 
   override def getByCode(code: String)(implicit context: Seq[(String, String)]): Future[GeographicTaxonomy] = {
     val request: ApiRequest[DependencyGeographicTaxonomy] = api.findByIdUsingGET(code)
@@ -22,9 +23,9 @@ final case class GeoTaxonomyServiceImpl(invoker: GeoTaxonomyInvoker, api: Geogra
       .map(u => GeographicTaxonomy(code = u.code, desc = u.desc))
   }
 
-  override def getByCodes(
-    geoTaxonomycodes: Seq[String]
-  )(implicit contexts: Seq[(String, String)]): Future[Seq[GeographicTaxonomy]] =
+  override def getByCodes(geoTaxonomycodes: Seq[String])(implicit
+    contexts: Seq[(String, String)]
+  ): Future[Seq[GeographicTaxonomy]] =
     Future.traverse(geoTaxonomycodes)(getByCode)
 
   override def getExtByCode(code: String)(implicit context: Seq[(String, String)]): Future[GeographicTaxonomyExt] = {
@@ -46,9 +47,9 @@ final case class GeoTaxonomyServiceImpl(invoker: GeoTaxonomyInvoker, api: Geogra
       )
   }
 
-  override def getExtByCodes(
-    geoTaxonomycodes: Seq[String]
-  )(implicit contexts: Seq[(String, String)]): Future[Seq[GeographicTaxonomyExt]] =
+  override def getExtByCodes(geoTaxonomycodes: Seq[String])(implicit
+    contexts: Seq[(String, String)]
+  ): Future[Seq[GeographicTaxonomyExt]] =
     Future.traverse(geoTaxonomycodes)(getExtByCode)
 
   private def invokeAPI[T](request: ApiRequest[T], logMessage: String, entityId: Option[String])(implicit

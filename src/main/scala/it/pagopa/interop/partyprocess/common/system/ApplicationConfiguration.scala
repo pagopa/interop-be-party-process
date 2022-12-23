@@ -118,10 +118,14 @@ object ApplicationConfiguration {
   val onboardingNotificationMailInstitutionGeoTaxonomies: String             =
     config.getString("party-process.mail-template.onboarding-notification-mail-placeholders.institutionGeoTaxonomies")
 
-  val onboardingRejectMailProductNamePlaceholder: String =
+  val onboardingRejectMailProductNamePlaceholder: String   =
     config.getString("party-process.mail-template.onboarding-reject-mail-placeholders.productName")
-  val onboardingRejectMailTemplatePath: String           =
+  val onboardingRejectMailTemplatePath: String             =
     config.getString("party-process.mail-template.onboarding-reject-mail-placeholders.path")
+  val onboardingRejectMailOnboardingUrlPlaceholder: String =
+    config.getString("party-process.mail-template.onboarding-reject-mail-placeholders.onboardingUrlPlaceholder")
+  val onboardingRejectMailOnboardingUrlValue: String       =
+    config.getString("party-process.mail-template.onboarding-reject-mail-placeholders.onboardingUrlValue")
 
   val storageContainer: String = config.getString("party-process.storage.container")
 

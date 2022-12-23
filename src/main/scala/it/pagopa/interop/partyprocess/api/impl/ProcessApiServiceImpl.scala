@@ -52,6 +52,8 @@ class ProcessApiServiceImpl(
 
   private val logger = Logger.takingImplicit[ContextFieldsToLog](this.getClass)
   private val SELC   = "SELC"
+  private val PA     = "PA"
+  private val OTHER  = "OTHER"
 
   private final val validOnboardingStates: Seq[PartyManagementDependency.RelationshipState] =
     List(
@@ -500,21 +502,24 @@ class ProcessApiServiceImpl(
       )(bearer)
       _ = logger.info("Digest {}", digest)
 
-      onboardingMailParameters <- institution.origin match {
-        case SELC => getOnboardingMailNotificationParameters(token.token, currentUser, onboardingRequest, geoTaxonomies)
-        case _    => getOnboardingMailParameters(token.token, currentUser, onboardingRequest, geoTaxonomies)
+      onboardingMailParameters <- institution.institutionType.getOrElse("") match {
+        case PA => getOnboardingMailParameters(token.token, currentUser, onboardingRequest, geoTaxonomies)
+        case _  => getOnboardingMailNotificationParameters(token.token, currentUser, onboardingRequest, geoTaxonomies)
       }
-      destinationMails = institution.origin match {
-        case SELC => Seq(ApplicationConfiguration.onboardingMailNotificationInstitutionAdminEmailAddress)
-        case _    =>
-          ApplicationConfiguration.destinationMails.getOrElse(
-            Seq(onboardingRequest.institutionUpdate.flatMap(_.digitalAddress).getOrElse(institution.digitalAddress))
-          )
+      destinationMails = institution.institutionType.getOrElse("") match {
+        case PA =>
+          ApplicationConfiguration.destinationMails
+            .getOrElse(
+              Seq(onboardingRequest.institutionUpdate.flatMap(_.digitalAddress).getOrElse(institution.digitalAddress))
+            )
+            .toSeq
+        case _  => Seq(ApplicationConfiguration.onboardingMailNotificationInstitutionAdminEmailAddress)
       }
-      _                        <- institution.origin match {
-        case SELC =>
+      _                        <- institution.institutionType.getOrElse("") match {
+        case PA => sendOnboardingMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
+        case _  =>
           sendOnboardingNotificationMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
-        case _    => sendOnboardingMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
+
       }
       _ = logger.info(s"$token for institution: ${institution.id}")
     } yield ()
@@ -579,12 +584,17 @@ class ProcessApiServiceImpl(
     )
   }
 
-  private def getOnboardingRejectMailParameters(productName: String): Future[Map[String, String]] = {
+  private def getOnboardingRejectMailParameters(productName: String, prodId: String): Future[Map[String, String]] = {
     val productParameters: Map[String, String] = Map(
       ApplicationConfiguration.onboardingRejectMailProductNamePlaceholder -> productName
     )
 
-    Future.successful(productParameters)
+    val onboardingUrlParameters: Map[String, String] = Map(
+      ApplicationConfiguration.onboardingRejectMailOnboardingUrlPlaceholder ->
+        s"${ApplicationConfiguration.onboardingRejectMailOnboardingUrlPlaceholder}$prodId"
+    )
+
+    Future.successful(productParameters ++ onboardingUrlParameters)
   }
 
   private def getOnboardingMailParameters(
@@ -660,7 +670,7 @@ class ProcessApiServiceImpl(
     institutionUpdate: Option[InstitutionUpdate],
     geoTaxonomies: Seq[GeographicTaxonomy],
     billing: Option[Billing],
-    origin: String = SELC
+    institutionType: String = OTHER
   )(bearer: String)(implicit contexts: Seq[(String, String)]): Future[PartyManagementDependency.Relationship] = {
     val relationshipSeed: PartyManagementDependency.RelationshipSeed =
       PartyManagementDependency.RelationshipSeed(
@@ -696,9 +706,9 @@ class ProcessApiServiceImpl(
           PartyManagementDependency
             .Billing(vatNumber = b.vatNumber, recipientCode = b.recipientCode, publicServices = b.publicServices)
         ),
-        state = origin match {
-          case SELC => Option(PartyManagementDependency.RelationshipState.TOBEVALIDATED)
-          case _    => Option(PartyManagementDependency.RelationshipState.PENDING)
+        state = institutionType match {
+          case PA => Option(PartyManagementDependency.RelationshipState.PENDING)
+          case _  => Option(PartyManagementDependency.RelationshipState.TOBEVALIDATED)
         }
       )
 
@@ -1447,13 +1457,15 @@ class ProcessApiServiceImpl(
       onboardingMailParameters <- getOnboardingMailParameters(tokenId, currentUser, onboardingRequest, geoTaxonomies)
 
       destinationMails =
-        ApplicationConfiguration.destinationMails.getOrElse(
-          Seq(
-            onboardingRequest.institutionUpdate
-              .flatMap(_.digitalAddress)
-              .getOrElse(institutions.headOption.map(_.digitalAddress).getOrElse(""))
+        ApplicationConfiguration.destinationMails
+          .getOrElse(
+            Seq(
+              onboardingRequest.institutionUpdate
+                .flatMap(_.digitalAddress)
+                .getOrElse(institutions.headOption.map(_.digitalAddress).getOrElse(""))
+            )
           )
-        )
+          .toSeq
 
       _ <- sendOnboardingMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
 
@@ -1505,17 +1517,19 @@ class ProcessApiServiceImpl(
       )
 
       destinationMails =
-        ApplicationConfiguration.destinationMails.getOrElse(
-          Seq(
-            institutions.headOption
-              .map(_.digitalAddress)
-              .getOrElse(ApplicationConfiguration.institutionAlternativeEmail)
+        ApplicationConfiguration.destinationMails
+          .getOrElse(
+            Seq(
+              institutions.headOption
+                .map(_.digitalAddress)
+                .getOrElse(ApplicationConfiguration.institutionAlternativeEmail)
+            )
           )
-        )
+          .toSeq
 
       productId = managerRelationships.head.product.id
       onboardingProduct <- productManagementService.getProductById(productId)
-      mailParameters    <- getOnboardingRejectMailParameters(onboardingProduct.name)
+      mailParameters    <- getOnboardingRejectMailParameters(onboardingProduct.name, onboardingProduct.id)
       logo              <- LogoUtils.getLogoFile(fileManager, ApplicationConfiguration.emailLogoPath)(ec)
       result            <- partyManagementService.invalidateToken(token.id)
       _                 <- sendOnboardingRejectEmail(destinationMails, mailParameters, logo)
