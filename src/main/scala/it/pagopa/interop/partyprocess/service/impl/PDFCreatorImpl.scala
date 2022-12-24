@@ -34,7 +34,11 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
     Future.fromTry {
       for {
         file <- createTempFile
-        data <- setupData(manager, users, institution, onboardingRequest, geoTaxonomies)
+        data <- onboardingRequest.productId match {
+          case "prod-pagopa" if institution.institutionType.equals("PSP") =>
+            setupPSPData(manager, users, institution, onboardingRequest, geoTaxonomies)
+          case _ => setupData(manager, users, institution, onboardingRequest, geoTaxonomies)
+        }
         pdf  <- getPDFAsFile(file.toPath, contractTemplate, data)
       } yield pdf
 
@@ -86,6 +90,56 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
       "institutionGeoTaxonomies" -> geoTaxonomies.map(_.desc).mkString(", ")
     )
 
+  }
+
+  private def setupPSPData(
+    manager: User,
+    users: Seq[User],
+    institution: Institution,
+    onboardingRequest: OnboardingSignedRequest,
+    geoTaxonomies: Seq[GeographicTaxonomy]
+  ): Try[Map[String, String]] = {
+    for {
+      managerEmail <- manager.email.toTry("Manager email not found")
+    } yield Map(
+      "institutionName"      -> onboardingRequest.institutionUpdate
+        .flatMap(_.description)
+        .getOrElse(institution.description),
+      "institutionTaxCode"   -> onboardingRequest.institutionUpdate.flatMap(_.taxCode).getOrElse(institution.taxCode),
+      "originId"             -> institution.originId,
+      "institutionMail"      -> institution.digitalAddress,
+      "managerName"          -> manager.name,
+      "managerSurname"       -> manager.surname,
+      "managerTaxCode"       -> manager.taxCode,
+      "managerEmail"         -> managerEmail,
+      "manager"              -> userToText(manager),
+      "delegates"            -> delegatesToText(users),
+      "institutionType"      -> onboardingRequest.institutionUpdate
+        .flatMap(_.institutionType)
+        .orElse(institution.institutionType)
+        .map(transcodeInstitutionType)
+        .getOrElse(""),
+      "address"              -> onboardingRequest.institutionUpdate.flatMap(_.address).getOrElse(institution.address),
+      "zipCode"              -> onboardingRequest.institutionUpdate.flatMap(_.zipCode).getOrElse(institution.zipCode),
+      "pricingPlan"          -> onboardingRequest.pricingPlan.getOrElse(""),
+      "institutionVatNumber" -> onboardingRequest.billing.map(_.vatNumber).getOrElse(""),
+      "institutionRecipientCode" -> onboardingRequest.billing.map(_.recipientCode).getOrElse(""),
+      "isPublicServicesManager"  -> onboardingRequest.billing
+        .flatMap(_.publicServices)
+        .map(if (_) "Y" else "N")
+        .getOrElse(""),
+      "institutionGeoTaxonomies" -> geoTaxonomies.map(_.desc).mkString(", "),
+      "legalRegisterNumber"      -> institution.paymentServiceProvider.flatMap(_.legalRegisterNumber).getOrElse(""),
+      "vatNumberGroup"           -> institution.paymentServiceProvider
+        .flatMap(_.vatNumberGroup)
+        .map(if (_) "partita iva di gruppo" else "")
+        .getOrElse(""),
+      "institutionRegister"      -> institution.paymentServiceProvider.flatMap(_.businessRegisterNumber).getOrElse(""),
+      "institutionAbi"           -> institution.paymentServiceProvider.flatMap(_.abiCode).getOrElse(""),
+      "dataProtectionOfficerAddress" -> institution.dataProtectionOfficer.flatMap(_.address).getOrElse(""),
+      "dataProtectionOfficerEmail"   -> institution.dataProtectionOfficer.flatMap(_.email).getOrElse(""),
+      "dataProtectionOfficerPec"     -> institution.dataProtectionOfficer.flatMap(_.pec).getOrElse("")
+    )
   }
 
   def delegatesToText(users: Seq[User]): String = {
