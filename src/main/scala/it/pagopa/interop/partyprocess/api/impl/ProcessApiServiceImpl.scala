@@ -512,7 +512,6 @@ class ProcessApiServiceImpl(
             .getOrElse(
               Seq(onboardingRequest.institutionUpdate.flatMap(_.digitalAddress).getOrElse(institution.digitalAddress))
             )
-            .toSeq
         case _  => Seq(ApplicationConfiguration.onboardingMailNotificationInstitutionAdminEmailAddress)
       }
       _                        <- institution.institutionType.getOrElse("") match {

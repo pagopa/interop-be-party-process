@@ -95,8 +95,8 @@ runStandalone := {
   (Compile / run).evaluated
 }
 
-(Compile / compile) := ((Compile / compile)).value //dependsOn generateCode
-(Test / test)       := ((Test / test)).value //dependsOn generateCode
+(Compile / compile) := ((Compile / compile) dependsOn generateCode).value //
+(Test / test)       := ((Test / test) dependsOn generateCode).value //
 
 cleanFiles += baseDirectory.value / "generated" / "src"
 
