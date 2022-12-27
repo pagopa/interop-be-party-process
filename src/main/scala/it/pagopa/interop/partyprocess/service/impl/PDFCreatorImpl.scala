@@ -35,7 +35,7 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
       for {
         file <- createTempFile
         data <- onboardingRequest.productId match {
-          case "prod-pagopa" if institution.institutionType.equals("PSP") =>
+          case "prod-pagopa" if institution.institutionType.getOrElse("").equals("PSP") =>
             setupPSPData(manager, users, institution, onboardingRequest, geoTaxonomies)
           case _ => setupData(manager, users, institution, onboardingRequest, geoTaxonomies)
         }
