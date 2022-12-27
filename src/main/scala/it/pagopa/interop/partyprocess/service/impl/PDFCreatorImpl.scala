@@ -132,13 +132,14 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
       "legalRegisterNumber"      -> institution.paymentServiceProvider.flatMap(_.legalRegisterNumber).getOrElse(""),
       "vatNumberGroup"           -> institution.paymentServiceProvider
         .flatMap(_.vatNumberGroup)
-        .map(if (_) "partita iva di gruppo" else "")
+        .map(if (_) "partita iva di gruppo " else "")
         .getOrElse(""),
       "institutionRegister"      -> institution.paymentServiceProvider.flatMap(_.businessRegisterNumber).getOrElse(""),
       "institutionAbi"           -> institution.paymentServiceProvider.flatMap(_.abiCode).getOrElse(""),
       "dataProtectionOfficerAddress" -> institution.dataProtectionOfficer.flatMap(_.address).getOrElse(""),
       "dataProtectionOfficerEmail"   -> institution.dataProtectionOfficer.flatMap(_.email).getOrElse(""),
-      "dataProtectionOfficerPec"     -> institution.dataProtectionOfficer.flatMap(_.pec).getOrElse("")
+      "dataProtectionOfficerPec"     -> institution.dataProtectionOfficer.flatMap(_.pec).getOrElse(""),
+      "managerPEC"                   -> manager.email.getOrElse("")
     )
   }
 
