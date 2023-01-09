@@ -52,8 +52,8 @@ class ProcessApiServiceImpl(
 
   private val logger = Logger.takingImplicit[ContextFieldsToLog](this.getClass)
   private val SELC   = "SELC"
+  private val IPA    = "IPA"
   private val PA     = "PA"
-  private val OTHER  = "OTHER"
 
   private final val validOnboardingStates: Seq[PartyManagementDependency.RelationshipState] =
     List(
@@ -480,7 +480,8 @@ class ProcessApiServiceImpl(
               None,
               None,
               Seq.empty,
-              None
+              None,
+              institution.origin
             )(bearer)
         }
       }
@@ -669,7 +670,7 @@ class ProcessApiServiceImpl(
     institutionUpdate: Option[InstitutionUpdate],
     geoTaxonomies: Seq[GeographicTaxonomy],
     billing: Option[Billing],
-    institutionType: String = OTHER
+    institutionType: String
   )(bearer: String)(implicit contexts: Seq[(String, String)]): Future[PartyManagementDependency.Relationship] = {
     val relationshipSeed: PartyManagementDependency.RelationshipSeed =
       PartyManagementDependency.RelationshipSeed(
@@ -706,8 +707,8 @@ class ProcessApiServiceImpl(
             .Billing(vatNumber = b.vatNumber, recipientCode = b.recipientCode, publicServices = b.publicServices)
         ),
         state = institutionType match {
-          case PA => Option(PartyManagementDependency.RelationshipState.PENDING)
-          case _  => Option(PartyManagementDependency.RelationshipState.TOBEVALIDATED)
+          case IPA => Option(PartyManagementDependency.RelationshipState.PENDING)
+          case _   => Option(PartyManagementDependency.RelationshipState.TOBEVALIDATED)
         }
       )
 
