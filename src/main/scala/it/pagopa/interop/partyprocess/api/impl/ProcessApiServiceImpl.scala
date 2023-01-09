@@ -503,11 +503,13 @@ class ProcessApiServiceImpl(
       )(bearer)
       _ = logger.info("Digest {}", digest)
 
-      onboardingMailParameters <- institution.institutionType.getOrElse("") match {
+      institutionType = onboardingRequest.institutionUpdate.flatMap(_.institutionType).getOrElse("")
+
+      onboardingMailParameters <- institutionType match {
         case PA => getOnboardingMailParameters(token.token, currentUser, onboardingRequest, geoTaxonomies)
         case _  => getOnboardingMailNotificationParameters(token.token, currentUser, onboardingRequest, geoTaxonomies)
       }
-      destinationMails = institution.institutionType.getOrElse("") match {
+      destinationMails = institutionType match {
         case PA =>
           ApplicationConfiguration.destinationMails
             .getOrElse(
@@ -515,7 +517,7 @@ class ProcessApiServiceImpl(
             )
         case _  => Seq(ApplicationConfiguration.onboardingMailNotificationInstitutionAdminEmailAddress)
       }
-      _                        <- institution.institutionType.getOrElse("") match {
+      _                        <- institutionType match {
         case PA => sendOnboardingMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
         case _  =>
           sendOnboardingNotificationMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
