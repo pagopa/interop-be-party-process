@@ -5,7 +5,7 @@ object Versions {
   lazy val akkaVersion           = "2.6.17"
   lazy val catsVersion           = "2.8.0"
   lazy val courierVersion        = "3.0.1"
-  lazy val dssVersion            = "5.10.1"
+  lazy val dssVersion            = "5.11.1"
   lazy val jacksonVersion        = "2.11.4"
   lazy val json4sVersion         = "4.0.4"
   lazy val kamonVersion          = "2.5.5"
@@ -17,6 +17,6 @@ object Versions {
 
 object PagopaVersions {
   lazy val commonsVersion         = "0.1.7"
-  lazy val partyManagementVersion = "0.1.x-SNAPSHOT"
+  lazy val partyManagementVersion = "0.1.38"
   lazy val partyProxyVersion      = "0.1.14"
 }
