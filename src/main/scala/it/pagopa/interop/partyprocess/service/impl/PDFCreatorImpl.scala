@@ -37,7 +37,7 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
         data <- onboardingRequest.productId match {
           case "prod-pagopa" if institution.institutionType.getOrElse("").equals("PSP") =>
             setupPSPData(manager, users, institution, onboardingRequest, geoTaxonomies)
-          case "prod-io" => setupProdIOData(manager, users, institution, onboardingRequest, geoTaxonomies)
+          case "prod-io" | "prod-io-premium" => setupProdIOData(manager, users, institution, onboardingRequest, geoTaxonomies)
           case _         => setupData(manager, users, institution, onboardingRequest, geoTaxonomies)
         }
         pdf  <- getPDFAsFile(file.toPath, contractTemplate, data)
@@ -151,7 +151,7 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
       "managerEmail"         -> managerEmail,
       "manager"              -> userToText(manager),
       "delegates"            -> delegatesToText(users),
-      "institutionType"      -> getInstitutionType(institution, onboardingRequest),
+      "institutionType"      -> getInstitutionTypeCode(institution, onboardingRequest),
       "address"              -> onboardingRequest.institutionUpdate.flatMap(_.address).getOrElse(institution.address),
       "zipCode"              -> onboardingRequest.institutionUpdate.flatMap(_.zipCode).getOrElse(institution.zipCode),
       "pricingPlan"          -> (onboardingRequest.pricingPlan.getOrElse("") match {
@@ -166,15 +166,11 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
         .map(if (_) "Y" else "N")
         .getOrElse(""),
       "institutionGeoTaxonomies"      -> geoTaxonomies.map(_.desc).mkString(", "),
-      "originIdLabelValue"            -> institution.origin
-        .map(o =>
-          if (o.equals("IPA"))
-            s"""
-               |<li class="c19 c39 li-bullet-0"><span class="c1">codice di iscrizione all&rsquo;Indice delle Pubbliche Amministrazioni e dei gestori di pubblici servizi (I.P.A.) <span class="c3">$institution.originId</span> </span><span class="c1"></span></li>
-               |""".stripMargin
-          else ""
-        )
-        .mkString("\n"),
+      "originIdLabelValue"            -> (if (institution.origin.equals("IPA"))
+                                 s"""
+                                    |<li class="c19 c39 li-bullet-0"><span class="c1">codice di iscrizione all&rsquo;Indice delle Pubbliche Amministrazioni e dei gestori di pubblici servizi (I.P.A.) <span class="c3">${institution.originId}</span> </span><span class="c1"></span></li>
+                                    |""".stripMargin
+                               else "").mkString,
       "institutionRegisterLabelValue" -> institution.paymentServiceProvider
         .flatMap(_.businessRegisterNumber)
         .map(number =>
