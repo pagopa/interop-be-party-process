@@ -151,9 +151,10 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
       "managerEmail"         -> managerEmail,
       "manager"              -> userToText(manager),
       "delegates"            -> delegatesToText(users),
-      "institutionType"      -> getInstitutionTypeCode(institution, onboardingRequest),
+      "institutionType"      -> getInstitutionType(institution, onboardingRequest),
       "address"              -> onboardingRequest.institutionUpdate.flatMap(_.address).getOrElse(institution.address),
       "zipCode"              -> onboardingRequest.institutionUpdate.flatMap(_.zipCode).getOrElse(institution.zipCode),
+      "institutionTypeCode"  -> getInstitutionTypeCode(institution, onboardingRequest),
       "pricingPlan"          -> (onboardingRequest.pricingPlan.getOrElse("") match {
         case "FA"                                                 => "FAST"
         case _ if (onboardingRequest.productId.equals("prod-io")) => "BASE"
