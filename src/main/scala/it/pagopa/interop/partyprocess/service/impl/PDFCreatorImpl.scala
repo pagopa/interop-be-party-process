@@ -222,11 +222,11 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
       .map { delegate =>
         s"""
            |<p class="c141"><span class="c6">Nome e Cognome: ${userToText(delegate)}&nbsp;</span></p>
-           |<p class="c158"><span class="c6">Codice Fiscale: ${delegate.taxCode}</span></p>
-           |<p class="c24"><span class="c6">Amm.ne/Ente/Societ&agrave;: </span></p>
-           |<p class="c229"><span class="c6">Qualifica/Posizione: </span></p>
-           |<p class="c255"><span class="c6">e-mail: ${delegate.email.getOrElse("")}&nbsp;</span></p>
-           |<p class="c74"><span class="c6">PEC: &nbsp;</span></p>
+           |<p class="c141"><span class="c6">Codice Fiscale: ${delegate.taxCode}</span></p>
+           |<p class="c141"><span class="c6">Amm.ne/Ente/Societ&agrave;: </span></p>
+           |<p class="c141"><span class="c6">Qualifica/Posizione: </span></p>
+           |<p class="c141"><span class="c6">e-mail: ${delegate.email.getOrElse("")}&nbsp;</span></p>
+           |<p class="c141"><span class="c6">PEC: &nbsp;</span></p>
            |""".stripMargin
       }
       .mkString("\n")
