@@ -1,9 +1,8 @@
 package it.pagopa.interop.partyprocess.service.impl
 
-import com.typesafe.config.{Config, ConfigFactory}
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
-import it.pagopa.interop.partyprocess.SpecConfig.testDataConfig
 import it.pagopa.interop.partyprocess.api.impl.OnboardingSignedRequest
+import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.partyprocess.model._
 import it.pagopa.interop.partyprocess.service.PDFCreator
 import it.pagopa.selfcare.commons.utils.crypto.model.SignatureInformation
@@ -11,18 +10,15 @@ import it.pagopa.selfcare.commons.utils.crypto.service.PadesSignService
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.text.PDFTextStripper
 import org.scalamock.scalatest.MockFactory
-import org.scalatest.Assertion
+import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import java.io.File
+import java.lang.reflect.{Field, Modifier}
 
-class PDFCreatorImplSpec extends AnyWordSpecLike with Matchers with ScalaFutures with MockFactory {
-
-  val config: Config = ConfigFactory
-    .parseResourcesAnySyntax("application-test")
-    .withFallback(testDataConfig)
+class PDFCreatorImplSpec extends AnyWordSpecLike with Matchers with ScalaFutures with MockFactory with BeforeAndAfterEach {
 
   val mockPadesSignService: PadesSignService = mock[PadesSignService]
 
@@ -119,10 +115,43 @@ class PDFCreatorImplSpec extends AnyWordSpecLike with Matchers with ScalaFutures
     f"pricingPlan -> $${pricingPlan},<br/>" +
     f"institutionName -> $${institutionName}"
 
+  val expectedContractLines: Seq[String] = Seq(
+    "institutionTaxCode -> taxCode,",
+    "managerName -> manager,",
+    "institutionVatNumber -> VATNUMBER,",
+    "managerEmail -> managerEmail,",
+    "institutionRecipientCode -> RECIPIENTCODE,",
+    "manager -> manager manager,",
+    "originId -> originId,",
+    "institutionType -> Pubblica Amministrazione,",
+    "zipCode -> zipCode,",
+    "managerTaxCode -> taxCode,",
+    "delegates ->",
+    "Nome e Cognome: user1 user1",
+    "Codice Fiscale: taxCode1",
+    "Amm.ne/Ente/Società:",
+    "Qualifica/Posizione:",
+    "e-mail: user1Email",
+    "PEC:",
+    ",",
+    "institutionMail -> digitalAddress,",
+    "address -> address,",
+    "institutionGeoTaxonomies -> GEODESC_REQUEST,",
+    "isPublicServicesManager -> ,",
+    "managerSurname -> manager,",
+    "pricingPlan -> pricingPlan,",
+    "institutionName -> description"
+  )
+
   val expectedSignatureInformation: SignatureInformation =
     new SignatureInformation("PagoPaSigner", "Rome", "Onboarding institution description into product productName")
 
-  "A request" should {
+  override protected def afterEach(): Unit = {
+    setFinalStaticField(ApplicationConfiguration, "pagopaSignatureEnabled", true)
+    setFinalStaticField(ApplicationConfiguration, "pagopaSignatureOnboardingEnabled", true)
+  }
+
+  "An contract creation request" should {
     "be signed if configured" in {
       (mockPadesSignService
         .padesSign(_: File, _: File, _: SignatureInformation))
@@ -146,55 +175,82 @@ class PDFCreatorImplSpec extends AnyWordSpecLike with Matchers with ScalaFutures
       checkPdfContent(pdf)
     }
 
-    "be NOT to be signed if NOT configured" in {
+    "be NOT signed if NOT configured" in {
       (mockPadesSignService
         .padesSign(_: File, _: File, _: SignatureInformation))
         .expects(*, *, *)
         .never()
 
-      service.createContract(
-        contractTemplate,
-        manager,
-        Seq(user1),
-        institution,
-        baseOnboardingRequest.copy(applyPagoPaSign = false),
-        geoTaxonomies
-      )(Seq.empty)
+      val pdf: File = service
+        .createContract(
+          contractTemplate,
+          manager,
+          Seq(user1),
+          institution,
+          baseOnboardingRequest.copy(applyPagoPaSign = false),
+          geoTaxonomies
+        )(Seq.empty)
+        .value
+        .get
+        .get
+
+      pdf.getName.endsWith("-signed.pdf") shouldBe false
+      checkPdfContent(pdf)
     }
 
-    "be NOT to be signed if globally disabled" in {
-      ConfigFactory
-        .parseString("party-process.pagopaSignature.enabled=false")
-        .withFallback(testDataConfig)
+    "be NOT signed if globally disabled" in {
+      setFinalStaticField(ApplicationConfiguration, "pagopaSignatureEnabled", false)
+      setFinalStaticField(ApplicationConfiguration, "pagopaSignatureOnboardingEnabled", true)
 
       (mockPadesSignService
         .padesSign(_: File, _: File, _: SignatureInformation))
         .expects(*, *, *)
         .never()
 
-      service.createContract(contractTemplate, manager, Seq(user1), institution, baseOnboardingRequest, geoTaxonomies)(
-        Seq.empty
-      )
-    }
-
-    "be NOT to be signed if contract sign is globally disabled" in {
-      ConfigFactory
-        .parseString(
-          "party-process.pagopaSignature.enabled=true\n" +
-            "party-process.pagopaSignature.apply.onboarding.enabled=false"
+      val pdf: File = new PDFCreatorImpl(mockPadesSignService)
+        .createContract(contractTemplate, manager, Seq(user1), institution, baseOnboardingRequest, geoTaxonomies)(
+          Seq.empty
         )
-        .withFallback(testDataConfig)
+        .value
+        .get
+        .get
+
+      pdf.getName.endsWith("-signed.pdf") shouldBe false
+      checkPdfContent(pdf)
+    }
+
+    "be NOT signed if contract sign is globally disabled" in {
+      setFinalStaticField(ApplicationConfiguration, "pagopaSignatureEnabled", true)
+      setFinalStaticField(ApplicationConfiguration, "pagopaSignatureOnboardingEnabled", false)
 
       (mockPadesSignService
         .padesSign(_: File, _: File, _: SignatureInformation))
         .expects(*, *, *)
         .never()
 
-      service.createContract(contractTemplate, manager, Seq(user1), institution, baseOnboardingRequest, geoTaxonomies)(
-        Seq.empty
-      )
+      val pdf: File = service
+        .createContract(contractTemplate, manager, Seq(user1), institution, baseOnboardingRequest, geoTaxonomies)(
+          Seq.empty
+        )
+        .value
+        .get
+        .get
+
+      pdf.getName.endsWith("-signed.pdf") shouldBe false
+      checkPdfContent(pdf)
     }
 
+  }
+
+
+  // To test global feature disabling, based on env vars, we have to change static final field! this will brought to a warning in JDK <= 11. Starting from JDK 12 this will not more work
+  private def setFinalStaticField(obj: Any, fieldName: String, value: Any): Unit = {
+    val field                 = ApplicationConfiguration.getClass.getDeclaredField(fieldName)
+    field.setAccessible(true)
+    val modifiersField: Field = classOf[Field].getDeclaredField("modifiers")
+    modifiersField.setAccessible(true)
+    modifiersField.setInt(field, field.getModifiers & ~Modifier.FINAL)
+    field.set(obj, value)
   }
 
   def getPdfText(pdfFile: File): String = {
@@ -202,11 +258,17 @@ class PDFCreatorImplSpec extends AnyWordSpecLike with Matchers with ScalaFutures
     new PDFTextStripper().getText(doc)
   }
 
-  def checkPdfContent(pdf: File): Assertion = {
-    getPdfText(pdf)
+  def checkPdfContent(pdf: File): Unit = {
+    val result = getPdfText(pdf)
       .replaceAll("user1 user1.*", "user1 user1")
       .replaceAll("user1Email.*", "user1Email")
       .replaceAll("PEC:.*", "PEC:")
-      .trim.split("\n").toSeq shouldBe "institutionTaxCode -> taxCode,\nmanagerName -> manager,\ninstitutionVatNumber -> VATNUMBER,\nmanagerEmail -> managerEmail,\ninstitutionRecipientCode -> RECIPIENTCODE,\nmanager -> manager manager,\noriginId -> originId,\ninstitutionType -> Pubblica Amministrazione,\nzipCode -> zipCode,\nmanagerTaxCode -> taxCode,\ndelegates ->\nNome e Cognome: user1 user1\nCodice Fiscale: taxCode1\nAmm.ne/Ente/Società:\nQualifica/Posizione:\ne-mail: user1Email\nPEC:\n,\ninstitutionMail -> digitalAddress,\naddress -> address,\ninstitutionGeoTaxonomies -> GEODESC_REQUEST,\nisPublicServicesManager -> ,\nmanagerSurname -> manager,\npricingPlan -> pricingPlan,\ninstitutionName -> description".split("\n").toSeq
+      .trim
+      .split("\n")
+      .toSeq
+
+    result.zipWithIndex.foreach { case (elem, idx) =>
+      assert(elem.trim == expectedContractLines(idx), s"Element at index$idx is not matching")
+    }
   }
 }
