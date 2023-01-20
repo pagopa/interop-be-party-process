@@ -1429,7 +1429,8 @@ class ProcessApiServiceImpl(
           Billing(vatNumber = b.vatNumber, recipientCode = b.recipientCode, publicServices = b.publicServices)
         ),
         contract =
-          OnboardingContract(version = onboardingProduct.version, path = onboardingProduct.contractTemplatePath)
+          OnboardingContract(version = onboardingProduct.version, path = onboardingProduct.contractTemplatePath),
+        applyPagoPaSign = true
       )
 
       contractTemplate <- getFileAsString(onboardingRequest.contract.path)

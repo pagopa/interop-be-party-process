@@ -17,7 +17,8 @@ final case class OnboardingSignedRequest(
   institutionUpdate: Option[InstitutionUpdate] = None,
   pricingPlan: Option[String] = None,
   billing: Option[Billing],
-  contract: OnboardingContract
+  contract: OnboardingContract,
+  applyPagoPaSign: Boolean
 )
 
 object OnboardingSignedRequest {
@@ -29,7 +30,8 @@ object OnboardingSignedRequest {
       institutionUpdate = onboardingRequest.institutionUpdate,
       pricingPlan = onboardingRequest.pricingPlan,
       billing = Option(onboardingRequest.billing),
-      contract = onboardingRequest.contract
+      contract = onboardingRequest.contract,
+      applyPagoPaSign = onboardingRequest.signContract.getOrElse(true)
     )
 
   def fromApi(onboardingRequest: OnboardingLegalUsersRequest): OnboardingSignedRequest =
@@ -40,6 +42,7 @@ object OnboardingSignedRequest {
       institutionUpdate = Option.empty,
       pricingPlan = Option.empty,
       billing = Option.empty,
-      contract = onboardingRequest.contract
+      contract = onboardingRequest.contract,
+      applyPagoPaSign = onboardingRequest.signContract.getOrElse(true)
     )
 }

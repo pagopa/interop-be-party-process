@@ -43,6 +43,14 @@ import it.pagopa.interop.partyregistryproxy.client.{api => partyregistryproxyApi
 import it.pagopa.userreg.client.{api => userregistrymanagement}
 import it.pagopa.product.client.{api => productmanagement}
 import it.pagopa.geotaxonomy.client.{api => geotaxonomy}
+import it.pagopa.selfcare.commons.connector.soap.aruba.sign.config.ArubaSignConfig
+import it.pagopa.selfcare.commons.connector.soap.aruba.sign.generated.client.Auth
+import it.pagopa.selfcare.commons.connector.soap.aruba.sign.service.{
+  ArubaPkcs7HashSignServiceImpl,
+  ArubaSignServiceImpl
+}
+import it.pagopa.selfcare.commons.connector.soap.utils.SoapLoggingHandler
+import it.pagopa.selfcare.commons.utils.crypto.service.{PadesSignService, PadesSignServiceImpl}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 
@@ -128,14 +136,15 @@ trait Dependencies {
     mailTemplate: PersistedTemplate,
     mailNotificationTemplate: PersistedTemplate,
     mailRejectTemplate: PersistedTemplate,
-    jwtReader: JWTReader
+    jwtReader: JWTReader,
+    PDFCreator: PDFCreator
   )(implicit ec: ExecutionContext): ProcessApi = new ProcessApi(
     new ProcessApiServiceImpl(
       partyManagementService,
       partyProcessService,
       userRegistryManagementService,
       productManagementService,
-      pdfCreator = PDFCreatorImpl,
+      pdfCreator = PDFCreator,
       fileManager,
       signatureService,
       onboardingInitMailer,
@@ -229,6 +238,35 @@ trait Dependencies {
     val error =
       problemOf(StatusCodes.BadRequest, ValidationRequestError(OpenapiUtils.errorFromRequestValidationReport(report)))
     complete(error.status, error)(HealthApiMarshallerImpl.toEntityMarshallerProblem)
+  }
+
+  def padesSignService: () => PadesSignService = () => {
+    new PadesSignServiceImpl(
+      new ArubaPkcs7HashSignServiceImpl(new ArubaSignServiceImpl(buildArubaConfig(), new SoapLoggingHandler()))
+    )
+  }
+
+  def buildArubaConfig(): ArubaSignConfig = {
+    val config = new ArubaSignConfig()
+    config.setBaseUrl(ApplicationConfiguration.arubaServiceUrl)
+    config.setConnectTimeoutMs(0)
+    config.setRequestTimeoutMs(0)
+
+    val arubaAuth = new Auth()
+    arubaAuth.setOtpPwd(ApplicationConfiguration.arubaOtpPwd)
+    arubaAuth.setTypeHSM("COSIGN")
+    arubaAuth.setTypeOtpAuth(ApplicationConfiguration.arubaTypeOtpAuth)
+    arubaAuth.setUser(ApplicationConfiguration.arubaUser)
+    arubaAuth.setDelegatedUser(ApplicationConfiguration.arubaDelegatedUser)
+    arubaAuth.setDelegatedPassword(ApplicationConfiguration.arubaDelegatedPassword)
+    arubaAuth.setDelegatedDomain(ApplicationConfiguration.arubaDelegatedDomain)
+    config.setAuth(arubaAuth)
+
+    config
+  }
+
+  def pdfCreator(padesSignService: PadesSignService): PDFCreator = {
+    new PDFCreatorImpl(padesSignService)
   }
 
 }

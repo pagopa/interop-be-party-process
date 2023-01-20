@@ -1,12 +1,17 @@
 package it.pagopa.interop.partyprocess.service.impl
 
 import com.openhtmltopdf.util.XRLog
+import com.typesafe.scalalogging.Logger
 import it.pagopa.interop.commons.files.service.PDFManager
+import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.interop.commons.utils.TypeConversions.OptionOps
 import it.pagopa.interop.partymanagement.client.model.Institution
 import it.pagopa.interop.partyprocess.api.impl.OnboardingSignedRequest
+import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.partyprocess.model.{GeographicTaxonomy, PartyRole, User}
 import it.pagopa.interop.partyprocess.service.PDFCreator
+import it.pagopa.selfcare.commons.utils.crypto.model.SignatureInformation
+import it.pagopa.selfcare.commons.utils.crypto.service.PadesSignService
 
 import java.io.File
 import java.time.LocalDateTime
@@ -16,7 +21,9 @@ import scala.concurrent.Future
 import scala.jdk.CollectionConverters.IterableHasAsScala
 import scala.util.Try
 
-object PDFCreatorImpl extends PDFCreator with PDFManager {
+class PDFCreatorImpl(padesSignService: PadesSignService) extends PDFCreator with PDFManager {
+
+  private val logger = Logger.takingImplicit[ContextFieldsToLog](this.getClass)
 
   // Suppressing openhtmltopdf log
   XRLog.listRegisteredLoggers.asScala.foreach((logger: String) =>
@@ -30,7 +37,7 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
     institution: Institution,
     onboardingRequest: OnboardingSignedRequest,
     geoTaxonomies: Seq[GeographicTaxonomy]
-  ): Future[File] =
+  )(implicit contexts: Seq[(String, String)]): Future[File] =
     Future.fromTry {
       for {
         file <- createTempFile
@@ -40,14 +47,54 @@ object PDFCreatorImpl extends PDFCreator with PDFManager {
           case _ => setupData(manager, users, institution, onboardingRequest, geoTaxonomies)
         }
         pdf  <- getPDFAsFile(file.toPath, contractTemplate, data)
-      } yield pdf
+        signedPdf = signContract(institution, onboardingRequest, pdf)
+      } yield signedPdf
 
     }
+
+  private def signContract(institution: Institution, onboardingRequest: OnboardingSignedRequest, pdf: File)(implicit
+    contexts: Seq[(String, String)]
+  ): File = {
+    if (ApplicationConfiguration.pagopaSignatureOnboardingEnabled && onboardingRequest.applyPagoPaSign)
+      signPdf(pdf, buildSignatureReason(institution, onboardingRequest))
+    else {
+      if (!ApplicationConfiguration.pagopaSignatureOnboardingEnabled && onboardingRequest.applyPagoPaSign) {
+        logger.info("Skipping PagoPA contract pdf sign due to global disabling")
+      }
+      pdf
+    }
+  }
 
   private def createTempFile: Try[File] = {
     Try {
       val fileTimestamp: String = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
       File.createTempFile(s"${fileTimestamp}_${UUID.randomUUID().toString}_contratto_interoperabilita.", ".pdf")
+    }
+  }
+
+  def buildSignatureReason(institution: Institution, onboardingSignedRequest: OnboardingSignedRequest): String = {
+    ApplicationConfiguration.pagopaSignatureOnboardingTemplateReason
+      .replace("${institutionName}", institution.description)
+      .replace("${productName}", onboardingSignedRequest.productName)
+  }
+
+  def buildSignatureInfo(signReason: String): SignatureInformation = {
+    new SignatureInformation(
+      ApplicationConfiguration.pagopaSigner,
+      ApplicationConfiguration.pagopaSignerLocation,
+      signReason
+    )
+  }
+
+  def signPdf(pdf: File, signReason: String)(implicit contexts: Seq[(String, String)]): File = {
+    if (ApplicationConfiguration.pagopaSignatureEnabled) {
+      logger.info("Signing input file {} using reason {}", pdf.getName, signReason)
+      val signedPdf = new File(pdf.getAbsolutePath.replace(".pdf", "-signed.pdf"))
+      padesSignService.padesSign(pdf, signedPdf, buildSignatureInfo(signReason))
+      signedPdf
+    } else {
+      logger.info("Skipping PagoPA pdf sign due to global disabling")
+      pdf
     }
   }
 
