@@ -44,12 +44,12 @@ class PDFCreatorImpl(padesSignService: PadesSignService) extends PDFCreator with
         data <- onboardingRequest.productId match {
           case "prod-pagopa" if institution.institutionType.getOrElse("").equals("PSP") =>
             setupPSPData(manager, users, institution, onboardingRequest, geoTaxonomies)
-          case _ => setupData(manager, users, institution, onboardingRequest, geoTaxonomies)
+          case "prod-io" | "prod-io-premium" => setupProdIOData(manager, users, institution, onboardingRequest, geoTaxonomies)
+          case _         => setupData(manager, users, institution, onboardingRequest, geoTaxonomies)
         }
         pdf  <- getPDFAsFile(file.toPath, contractTemplate, data)
         signedPdf = signContract(institution, onboardingRequest, pdf)
       } yield signedPdf
-
     }
 
   private def createTempFile: Try[File] = {
@@ -108,9 +108,7 @@ class PDFCreatorImpl(padesSignService: PadesSignService) extends PDFCreator with
     for {
       managerEmail <- manager.email.toTry("Manager email not found")
     } yield Map(
-      "institutionName"      -> onboardingRequest.institutionUpdate
-        .flatMap(_.description)
-        .getOrElse(institution.description),
+      "institutionName"      -> getInstitutionName(institution, onboardingRequest),
       "institutionTaxCode"   -> onboardingRequest.institutionUpdate.flatMap(_.taxCode).getOrElse(institution.taxCode),
       "originId"             -> institution.originId,
       "institutionMail"      -> institution.digitalAddress,
@@ -120,11 +118,7 @@ class PDFCreatorImpl(padesSignService: PadesSignService) extends PDFCreator with
       "managerEmail"         -> managerEmail,
       "manager"              -> userToText(manager),
       "delegates"            -> delegatesToText(users),
-      "institutionType"      -> onboardingRequest.institutionUpdate
-        .flatMap(_.institutionType)
-        .orElse(institution.institutionType)
-        .map(transcodeInstitutionType)
-        .getOrElse(""),
+      "institutionType"      -> getInstitutionType(institution, onboardingRequest),
       "address"              -> onboardingRequest.institutionUpdate.flatMap(_.address).getOrElse(institution.address),
       "zipCode"              -> onboardingRequest.institutionUpdate.flatMap(_.zipCode).getOrElse(institution.zipCode),
       "pricingPlan"          -> onboardingRequest.pricingPlan.getOrElse(""),
@@ -149,9 +143,7 @@ class PDFCreatorImpl(padesSignService: PadesSignService) extends PDFCreator with
     for {
       managerEmail <- manager.email.toTry("Manager email not found")
     } yield Map(
-      "institutionName"      -> onboardingRequest.institutionUpdate
-        .flatMap(_.description)
-        .getOrElse(institution.description),
+      "institutionName"      -> getInstitutionName(institution, onboardingRequest),
       "institutionTaxCode"   -> onboardingRequest.institutionUpdate.flatMap(_.taxCode).getOrElse(institution.taxCode),
       "originId"             -> institution.originId,
       "institutionMail"      -> institution.digitalAddress,
@@ -161,11 +153,7 @@ class PDFCreatorImpl(padesSignService: PadesSignService) extends PDFCreator with
       "managerEmail"         -> managerEmail,
       "manager"              -> userToText(manager),
       "delegates"            -> delegatesToText(users),
-      "institutionType"      -> onboardingRequest.institutionUpdate
-        .flatMap(_.institutionType)
-        .orElse(institution.institutionType)
-        .map(transcodeInstitutionType)
-        .getOrElse(""),
+      "institutionType"      -> getInstitutionType(institution, onboardingRequest),
       "address"              -> onboardingRequest.institutionUpdate.flatMap(_.address).getOrElse(institution.address),
       "zipCode"              -> onboardingRequest.institutionUpdate.flatMap(_.zipCode).getOrElse(institution.zipCode),
       "pricingPlan"          -> onboardingRequest.pricingPlan.getOrElse(""),
@@ -190,6 +178,90 @@ class PDFCreatorImpl(padesSignService: PadesSignService) extends PDFCreator with
     )
   }
 
+  private def setupProdIOData(
+    manager: User,
+    users: Seq[User],
+    institution: Institution,
+    onboardingRequest: OnboardingSignedRequest,
+    geoTaxonomies: Seq[GeographicTaxonomy]
+  ): Try[Map[String, String]] = {
+    for {
+      managerEmail <- manager.email.toTry("Manager email not found")
+    } yield Map(
+      "institutionName"      -> getInstitutionName(institution, onboardingRequest),
+      "institutionTaxCode"   -> onboardingRequest.institutionUpdate.flatMap(_.taxCode).getOrElse(institution.taxCode),
+      "originId"             -> institution.originId,
+      "institutionMail"      -> institution.digitalAddress,
+      "managerName"          -> manager.name,
+      "managerSurname"       -> manager.surname,
+      "managerTaxCode"       -> manager.taxCode,
+      "managerEmail"         -> managerEmail,
+      "manager"              -> userToText(manager),
+      "delegates"            -> delegatesToText(users),
+      "institutionType"      -> getInstitutionType(institution, onboardingRequest),
+      "address"              -> onboardingRequest.institutionUpdate.flatMap(_.address).getOrElse(institution.address),
+      "zipCode"              -> onboardingRequest.institutionUpdate.flatMap(_.zipCode).getOrElse(institution.zipCode),
+      "institutionTypeCode"  -> getInstitutionTypeCode(institution, onboardingRequest),
+      "pricingPlan"          -> (onboardingRequest.pricingPlan.getOrElse("") match {
+        case "FA"                                                 => "FAST"
+        case _ if (onboardingRequest.productId.equals("prod-io")) => "BASE"
+        case _                                                    => "PREMIUM"
+      }).mkString,
+      "institutionVatNumber" -> onboardingRequest.billing.map(_.vatNumber).getOrElse(""),
+      "institutionRecipientCode"      -> onboardingRequest.billing.map(_.recipientCode).getOrElse(""),
+      "isPublicServicesManager"       -> onboardingRequest.billing
+        .flatMap(_.publicServices)
+        .map(if (_) "Y" else "N")
+        .getOrElse(""),
+      "institutionGeoTaxonomies"      -> geoTaxonomies.map(_.desc).mkString(", "),
+      "originIdLabelValue"            -> (if (institution.origin.equals("IPA"))
+                                 s"""
+                                    |<li class="c19 c39 li-bullet-0"><span class="c1">codice di iscrizione all&rsquo;Indice delle Pubbliche Amministrazioni e dei gestori di pubblici servizi (I.P.A.) <span class="c3">${institution.originId}</span> </span><span class="c1"></span></li>
+                                    |""".stripMargin
+                               else "").mkString,
+      "institutionRegisterLabelValue" -> institution.paymentServiceProvider
+        .flatMap(_.businessRegisterNumber)
+        .map(number =>
+          if (!number.isEmpty)
+            s"""
+               |<li class="c19 c39 li-bullet-0"><span class="c1">codice di iscrizione all&rsquo;Indice delle Pubbliche Amministrazioni e dei gestori di pubblici servizi (I.P.A.) <span class="c3">$number</span> </span><span class="c1"></span></li>
+               |""".stripMargin
+          else ""
+        )
+        .getOrElse(""),
+      "GPSinstitutionName"            -> (if (getInstitutionTypeCode(institution, onboardingRequest).equals("GSP"))
+                                 getInstitutionName(institution, onboardingRequest)
+                               else "_______________").mkString,
+      "GPSmanagerName"    -> (if (getInstitutionTypeCode(institution, onboardingRequest).equals("GSP")) manager.name
+                           else "_______________").mkString,
+      "GPSmanagerSurname" -> (if (getInstitutionTypeCode(institution, onboardingRequest).equals("GSP")) manager.surname
+                              else "_______________").mkString,
+      "GPSmanagerTaxCode" -> (if (getInstitutionTypeCode(institution, onboardingRequest).equals("GSP")) manager.taxCode
+                              else "_______________").mkString
+    )
+  }
+
+  private def getInstitutionName(institution: Institution, onboardingRequest: OnboardingSignedRequest) = {
+    onboardingRequest.institutionUpdate
+      .flatMap(_.description)
+      .getOrElse(institution.description)
+  }
+
+  private def getInstitutionType(institution: Institution, onboardingRequest: OnboardingSignedRequest) = {
+    onboardingRequest.institutionUpdate
+      .flatMap(_.institutionType)
+      .orElse(institution.institutionType)
+      .map(transcodeInstitutionType)
+      .getOrElse("")
+  }
+
+  private def getInstitutionTypeCode(institution: Institution, onboardingRequest: OnboardingSignedRequest) = {
+    onboardingRequest.institutionUpdate
+      .flatMap(_.institutionType)
+      .orElse(institution.institutionType)
+      .getOrElse("")
+  }
+
   def delegatesToText(users: Seq[User]): String = {
     val delegates: Seq[User] = users.filter(_.role == PartyRole.DELEGATE)
 
@@ -197,11 +269,11 @@ class PDFCreatorImpl(padesSignService: PadesSignService) extends PDFCreator with
       .map { delegate =>
         s"""
            |<p class="c141"><span class="c6">Nome e Cognome: ${userToText(delegate)}&nbsp;</span></p>
-           |<p class="c158"><span class="c6">Codice Fiscale: ${delegate.taxCode}</span></p>
-           |<p class="c24"><span class="c6">Amm.ne/Ente/Societ&agrave;: </span></p>
-           |<p class="c229"><span class="c6">Qualifica/Posizione: </span></p>
-           |<p class="c255"><span class="c6">e-mail: ${delegate.email.getOrElse("")}&nbsp;</span></p>
-           |<p class="c74"><span class="c6">PEC: &nbsp;</span></p>
+           |<p class="c141"><span class="c6">Codice Fiscale: ${delegate.taxCode}</span></p>
+           |<p class="c141"><span class="c6">Amm.ne/Ente/Societ&agrave;: </span></p>
+           |<p class="c141"><span class="c6">Qualifica/Posizione: </span></p>
+           |<p class="c141"><span class="c6">e-mail: ${delegate.email.getOrElse("")}&nbsp;</span></p>
+           |<p class="c141"><span class="c6">PEC: &nbsp;</span></p>
            |""".stripMargin
       }
       .mkString("\n")
