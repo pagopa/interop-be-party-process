@@ -52,8 +52,15 @@ class PDFCreatorImpl(padesSignService: PadesSignService) extends PDFCreator with
 
     }
 
+  private def createTempFile: Try[File] = {
+    Try {
+      val fileTimestamp: String = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+      File.createTempFile(s"${fileTimestamp}_${UUID.randomUUID().toString}_contratto_interoperabilita.", ".pdf")
+    }
+  }
+
   private def signContract(institution: Institution, onboardingRequest: OnboardingSignedRequest, pdf: File)(implicit
-    contexts: Seq[(String, String)]
+                                                                                                            contexts: Seq[(String, String)]
   ): File = {
     if (ApplicationConfiguration.pagopaSignatureOnboardingEnabled && onboardingRequest.applyPagoPaSign)
       signPdf(pdf, buildSignatureReason(institution, onboardingRequest))
@@ -62,13 +69,6 @@ class PDFCreatorImpl(padesSignService: PadesSignService) extends PDFCreator with
         logger.info("Skipping PagoPA contract pdf sign due to global disabling")
       }
       pdf
-    }
-  }
-
-  private def createTempFile: Try[File] = {
-    Try {
-      val fileTimestamp: String = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-      File.createTempFile(s"${fileTimestamp}_${UUID.randomUUID().toString}_contratto_interoperabilita.", ".pdf")
     }
   }
 

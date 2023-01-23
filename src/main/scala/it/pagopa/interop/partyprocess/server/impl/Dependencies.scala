@@ -137,14 +137,14 @@ trait Dependencies {
     mailNotificationTemplate: PersistedTemplate,
     mailRejectTemplate: PersistedTemplate,
     jwtReader: JWTReader,
-    PDFCreator: PDFCreator
+    pdfCreator: PDFCreator
   )(implicit ec: ExecutionContext): ProcessApi = new ProcessApi(
     new ProcessApiServiceImpl(
       partyManagementService,
       partyProcessService,
       userRegistryManagementService,
       productManagementService,
-      pdfCreator = PDFCreator,
+      pdfCreator = pdfCreator,
       fileManager,
       signatureService,
       onboardingInitMailer,
