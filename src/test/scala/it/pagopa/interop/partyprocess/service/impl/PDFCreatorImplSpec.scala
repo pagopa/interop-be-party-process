@@ -18,7 +18,12 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import java.io.File
 import java.lang.reflect.{Field, Modifier}
 
-class PDFCreatorImplSpec extends AnyWordSpecLike with Matchers with ScalaFutures with MockFactory with BeforeAndAfterEach {
+class PDFCreatorImplSpec
+    extends AnyWordSpecLike
+    with Matchers
+    with ScalaFutures
+    with MockFactory
+    with BeforeAndAfterEach {
 
   val mockPadesSignService: PadesSignService = mock[PadesSignService]
 
@@ -151,7 +156,8 @@ class PDFCreatorImplSpec extends AnyWordSpecLike with Matchers with ScalaFutures
     setFinalStaticField(ApplicationConfiguration, "pagopaSignatureOnboardingEnabled", true)
   }
 
-  "An contract creation request" should {
+  /** For the WARNING: An illegal reflective access operation has occurred see @{link #setFinalStaticField} */
+  "A contract creation request" should {
     "be signed if configured" in {
       (mockPadesSignService
         .padesSign(_: File, _: File, _: SignatureInformation))
@@ -242,8 +248,7 @@ class PDFCreatorImplSpec extends AnyWordSpecLike with Matchers with ScalaFutures
 
   }
 
-
-  // To test global feature disabling, based on env vars, we have to change static final field! this will brought to a warning in JDK <= 11. Starting from JDK 12 this will not more work
+  /** To test global feature disabling, based on env vars, we have to change static final field! this will brought to a warning in JDK <= 11. Starting from JDK 12 this will not more work */
   private def setFinalStaticField(obj: Any, fieldName: String, value: Any): Unit = {
     val field                 = ApplicationConfiguration.getClass.getDeclaredField(fieldName)
     field.setAccessible(true)

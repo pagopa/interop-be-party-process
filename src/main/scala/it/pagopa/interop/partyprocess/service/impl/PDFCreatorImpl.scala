@@ -60,7 +60,7 @@ class PDFCreatorImpl(padesSignService: PadesSignService) extends PDFCreator with
   }
 
   private def signContract(institution: Institution, onboardingRequest: OnboardingSignedRequest, pdf: File)(implicit
-                                                                                                            contexts: Seq[(String, String)]
+    contexts: Seq[(String, String)]
   ): File = {
     if (ApplicationConfiguration.pagopaSignatureOnboardingEnabled && onboardingRequest.applyPagoPaSign)
       signPdf(pdf, buildSignatureReason(institution, onboardingRequest))

@@ -40,7 +40,7 @@ object Dependencies {
   private[this] object selfcare {
     lazy val namespace = "it.pagopa.selfcare"
 
-    lazy val selcArubaSigner = (namespace + ".soap") % "selc-commons-connector-soap-aruba-sign" % "2.4.1"
+    lazy val selcArubaSigner = (namespace + ".soap") % "selc-commons-connector-soap-aruba-sign" % "2.4.3"
   }
 
   private[this] object europa {
