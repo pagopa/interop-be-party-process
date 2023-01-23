@@ -66,7 +66,8 @@ object Main extends App with CORSSupport with Dependencies {
           onboardingInitMailTemplate,
           onboardingNotificationMailTemplate,
           onboardingRejectMailTemplate,
-          jwtReader
+          jwtReader,
+          pdfCreator(padesSignService())
         )
         public               = publicApi(
           partyManService,

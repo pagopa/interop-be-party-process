@@ -134,4 +134,20 @@ object ApplicationConfiguration {
   val confirmTokenTimeout: FiniteDuration =
     Duration.fromNanos(config.getDuration("party-process.confirm-token-timeout").toNanos)
 
+  val arubaServiceUrl: String        = config.getString("party-process.aruba.serviceUrl")
+  val arubaTypeOtpAuth: String       = config.getString("party-process.aruba.typeOtpAuth")
+  val arubaOtpPwd: String            = config.getString("party-process.aruba.otpPwd")
+  val arubaUser: String              = config.getString("party-process.aruba.user")
+  val arubaDelegatedUser: String     = config.getString("party-process.aruba.delegatedUser")
+  val arubaDelegatedPassword: String = config.getString("party-process.aruba.delegatedPassword")
+  val arubaDelegatedDomain: String   = config.getString("party-process.aruba.delegatedDomain")
+
+  val pagopaSignatureEnabled: Boolean = config.getBoolean("party-process.pagopaSignature.enabled")
+  val pagopaSigner: String            = config.getString("party-process.pagopaSignature.signer")
+  val pagopaSignerLocation: String    = config.getString("party-process.pagopaSignature.location")
+
+  val pagopaSignatureOnboardingEnabled: Boolean       =
+    config.getBoolean("party-process.pagopaSignature.apply.onboarding.enabled")
+  val pagopaSignatureOnboardingTemplateReason: String =
+    config.getString("party-process.pagopaSignature.apply.onboarding.templateReason")
 }

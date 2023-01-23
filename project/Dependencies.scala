@@ -37,6 +37,12 @@ object Dependencies {
 
   }
 
+  private[this] object selfcare {
+    lazy val namespace = "it.pagopa.selfcare"
+
+    lazy val selcArubaSigner = (namespace + ".soap") % "selc-commons-connector-soap-aruba-sign" % "2.4.3"
+  }
+
   private[this] object europa {
     lazy val namespace = "eu.europa.ec.joinup.sd-dss"
 
@@ -91,6 +97,7 @@ object Dependencies {
     lazy val `server`: Seq[ModuleID] = Seq(
       // For making Java 12 happy
       "javax.annotation"           % "javax.annotation-api" % "1.3.2" % "compile",
+      "javax.xml.bind"             % "jaxb-api"             % "2.3.1" % "compile",
       //
       akka.actor                   % Compile,
       akka.actorTyped              % Compile,
@@ -119,6 +126,7 @@ object Dependencies {
       pagopa.commonsMail           % Compile,
       pagopa.partyManagementClient % Compile,
       pagopa.partyProxyClient      % Compile,
+      selfcare.selcArubaSigner     % Compile,
       akka.testkit                 % Test,
       scalatest.core               % Test,
       scalamock.core               % Test

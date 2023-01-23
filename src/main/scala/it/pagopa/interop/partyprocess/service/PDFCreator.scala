@@ -15,5 +15,5 @@ trait PDFCreator {
     institution: Institution,
     onboardingRequest: OnboardingSignedRequest,
     geoTaxonomies: Seq[GeographicTaxonomy]
-  ): Future[File]
+  )(implicit contexts: Seq[(String, String)]): Future[File]
 }
