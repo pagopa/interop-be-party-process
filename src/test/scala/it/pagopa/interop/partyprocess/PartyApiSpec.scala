@@ -421,14 +421,23 @@ trait PartyApiSpec
       billing = Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
     )
 
-    (mockPdfCreator.createContract _)
+    (mockPdfCreator
+      .createContract(
+        _: String,
+        _: User,
+        _: Seq[User],
+        _: PartyManagementDependency.Institution,
+        _: OnboardingSignedRequest,
+        _: Seq[GeographicTaxonomy]
+      )(_: Seq[(String, String)]))
       .expects(
         *,
         *,
         *,
         *,
         OnboardingSignedRequest.fromApi(req),
-        Seq(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
+        Seq(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC")),
+        *
       )
       .returning(Future.successful(file))
       .once()
@@ -1575,14 +1584,23 @@ trait PartyApiSpec
         .returning(Future.successful(PartyManagementDependency.TokenText("token")))
         .once()
 
-      (mockPdfCreator.createContract _)
+      (mockPdfCreator
+        .createContract(
+          _: String,
+          _: User,
+          _: Seq[User],
+          _: PartyManagementDependency.Institution,
+          _: OnboardingSignedRequest,
+          _: Seq[GeographicTaxonomy]
+        )(_: Seq[(String, String)]))
         .expects(
           *,
           *,
           *,
           *,
           OnboardingSignedRequest.fromApi(req),
-          Seq(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))
+          Seq(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC")),
+          *
         )
         .returning(Future.successful(new File("src/test/resources/fake.file")))
         .once()
@@ -1616,8 +1634,16 @@ trait PartyApiSpec
         .expects(*, *, *, *, *, *)
         .never()
 
-      (mockPdfCreator.createContract _)
-        .expects(*, *, *, *, *, *)
+      (mockPdfCreator
+        .createContract(
+          _: String,
+          _: User,
+          _: Seq[User],
+          _: PartyManagementDependency.Institution,
+          _: OnboardingSignedRequest,
+          _: Seq[GeographicTaxonomy]
+        )(_: Seq[(String, String)]))
+        .expects(*, *, *, *, *, *, *)
         .never()
     }
 

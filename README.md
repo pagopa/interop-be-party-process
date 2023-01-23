@@ -183,7 +183,7 @@ To verify JWT a well-known url must be set.
 | **WELL_KNOWN_URL** | String | Define the Well-Known endpoint url used to verify incoming JWTs|
 
 ---
-### Signature configuration
+### Signature validation configuration
 Signature verification need to set these env vars:
 
 | Variable name | Variable type | Notes |
@@ -191,4 +191,27 @@ Signature verification need to set these env vars:
 | **EU_LIST_OF_TRUSTED_LISTS_URL** | String | URL of the european List Of Trusted List [see](https://esignature.ec.europa.eu/efda/tl-browser/#/screen/tl/EU)|
 | **EU_OFFICIAL_JOURNAL_URL** | String | URL of the Official Journal URL where the EU trusted certificates are listed [see](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv:OJ.C_.2019.276.01.0001.01.ENG)|
 
+---
+### PagoPA signature apply configuration
+Signature application need to set these env vars:
+
+| Variable name                                  | Variable type | Notes                                                                                                                                                                                                     |
+|------------------------------------------------|---------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| PAGOPA_SIGNATURE_ENABLED                       | Boolean       | To enable PagoPA signature apply                                                                                                                                                                          |
+| PAGOPA_SIGNATURE_SIGNER                        | String        | The name to write into signature                                                                                                                                                                          |
+| PAGOPA_SIGNATURE_LOCATION                      | String        | The location to write into signature                                                                                                                                                                      |
+| ARUBA_SIGN_SERVICE_BASE_URL                    | String        | The URL of the webService                                                                                                                                                                                 |
+| ARUBA_SIGN_SERVICE_IDENTITY_TYPE_OTP_AUTH      | String        | The string identifying the automatic signature domain indicated when ARSS is installed                                                                                                                    |
+| ARUBA_SIGN_SERVICE_IDENTITY_OTP_PWD            | String        | The string identifying the automatic signature transactions defined when the ARSS server is installed (it is normally known by the administrator of the IT infrastructure network on which users are working) |
+| ARUBA_SIGN_SERVICE_IDENTITY_USER               | String        | The string containing the signature user's username                                                                                                                                                       |
+| ARUBA_SIGN_SERVICE_IDENTITY_DELEGATED_USER     | String        | The string containing the username for the delegated user                                                                                                                                                 |
+| ARUBA_SIGN_SERVICE_IDENTITY_DELEGATED_PASSWORD | String        | The String containing the delegated user's password                                                                                                                                                       |
+| ARUBA_SIGN_SERVICE_IDENTITY_DELEGATED_DOMAIN   | String        | The delegated user's domain                                                                                                                                                                               |
+
+#### PagoPA signature reasons
+When applying the signature, it will be also write a reason:
+
+| Variable name                               | Variable type | Notes                                                                                                                                                                                                       |
+|---------------------------------------------|---------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| PAGOPA_SIGNATURE_ONBOARDING_REASON_TEMPLATE | String        | The template used when signing onboarding requests. It's possible to use the following placeholder:<br/><ul><li>${institutionName}: the name of the organization<li>${productName}: the name of the product |
 
