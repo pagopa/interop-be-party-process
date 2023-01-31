@@ -47,7 +47,25 @@ object Conversions {
       address = institutionUpdate.address,
       zipCode = institutionUpdate.zipCode,
       taxCode = institutionUpdate.taxCode,
-      geographicTaxonomyCodes = institutionUpdate.geographicTaxonomies.map(_.code)
+      paymentServiceProvider = institutionUpdate.paymentServiceProvider.map(p =>
+        PaymentServiceProvider(
+          abiCode = p.abiCode,
+          businessRegisterNumber = p.businessRegisterNumber,
+          legalRegisterName = p.legalRegisterName,
+          legalRegisterNumber = p.legalRegisterNumber,
+          vatNumberGroup = p.vatNumberGroup
+        )
+      ),
+      dataProtectionOfficer = institutionUpdate.dataProtectionOfficer.map(d =>
+        DataProtectionOfficer(address = d.address, email = d.email, pec = d.pec)
+      ),
+      geographicTaxonomyCodes = institutionUpdate.geographicTaxonomies.map(_.code),
+      rea = institutionUpdate.rea,
+      shareCapital = institutionUpdate.shareCapital,
+      businessRegisterPlace = institutionUpdate.businessRegisterPlace,
+      supportEmail = institutionUpdate.supportEmail,
+      supportPhone = institutionUpdate.supportPhone,
+      imported = institutionUpdate.imported
     )
   }
 
