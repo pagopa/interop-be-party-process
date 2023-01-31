@@ -19,7 +19,13 @@ object InstitutionConverter {
       attributes = institution.attributes.map(AttributeConverter.dependencyToApi),
       paymentServiceProvider = institution.paymentServiceProvider.map(PaymentServiceProviderConverter.dependencyToApi),
       dataProtectionOfficer = institution.dataProtectionOfficer.map(DataProtectionOfficerConverter.dependencyToApi),
-      geographicTaxonomies = institution.geographicTaxonomies.map(GeographicTaxonomyConverter.dependencyToApi)
+      geographicTaxonomies = institution.geographicTaxonomies.map(GeographicTaxonomyConverter.dependencyToApi),
+      rea = institution.rea,
+      shareCapital = institution.shareCapital,
+      businessRegisterPlace = institution.businessRegisterPlace,
+      supportEmail = institution.supportEmail,
+      supportPhone = institution.supportEmail,
+      imported = institution.imported
     )
   }
 }
