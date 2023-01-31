@@ -215,21 +215,16 @@ class PDFCreatorImpl(padesSignService: PadesSignService) extends PDFCreator with
         .map(if (_) "Y" else "N")
         .getOrElse(""),
       "institutionGeoTaxonomies"      -> geoTaxonomies.map(_.desc).mkString(", "),
-      "originIdLabelValue"            -> (if (institution.origin.equals("IPA"))
+      "originIdLabelValue"            -> (if (institution.institutionType.equals("PA"))
                                  s"""
                                     |<li class="c19 c39 li-bullet-0"><span class="c1">codice di iscrizione all&rsquo;Indice delle Pubbliche Amministrazioni e dei gestori di pubblici servizi (I.P.A.) <span class="c3">${institution.originId}</span> </span><span class="c1"></span></li>
                                     |""".stripMargin
                                else "").mkString,
-      "institutionRegisterLabelValue" -> institution.paymentServiceProvider
-        .flatMap(_.businessRegisterNumber)
-        .map(number =>
-          if (!number.isEmpty)
-            s"""
-               |<li class="c19 c39 li-bullet-0"><span class="c1">codice di iscrizione all&rsquo;Indice delle Pubbliche Amministrazioni e dei gestori di pubblici servizi (I.P.A.) <span class="c3">$number</span> </span><span class="c1"></span></li>
-               |""".stripMargin
-          else ""
-        )
-        .getOrElse(""),
+      "institutionRegisterLabelValue" -> (if (!institution.institutionType.equals("PA"))
+        s"""
+           |<li class="c19 c39 li-bullet-0"><span class="c1">n.	Iscrizione	registro	delle	imprese	di <span class="c3">${institution.businessRegisterPlace.getOrElse("")}</span> REA <span class="c3">${institution.rea.getOrElse("")}</span>  capitale sociale  <span class="c3">${institution.shareCapital.getOrElse("")}</span>  </span><span class="c1"></span></li>
+           |""".stripMargin
+      else "").mkString,
       "GPSinstitutionName"            -> (if (getInstitutionTypeCode(institution, onboardingRequest).equals("GSP"))
                                  getInstitutionName(institution, onboardingRequest)
                                else "_______________").mkString,
@@ -275,6 +270,7 @@ class PDFCreatorImpl(padesSignService: PadesSignService) extends PDFCreator with
            |<p class="c141"><span class="c6">Qualifica/Posizione: </span></p>
            |<p class="c141"><span class="c6">e-mail: ${delegate.email.getOrElse("")}&nbsp;</span></p>
            |<p class="c141"><span class="c6">PEC: &nbsp;</span></p>
+           |<br/>
            |""".stripMargin
       }
       .mkString("\n")
