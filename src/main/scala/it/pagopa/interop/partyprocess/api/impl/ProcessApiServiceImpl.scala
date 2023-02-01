@@ -270,10 +270,10 @@ class ProcessApiServiceImpl(
         productRoles = Seq.empty
       )(bearer)
       _                        <- notExistsAnOnboardedManager(institutionRelationships, onboardingRequest.productId)
-      currentManager = extractActiveManager(institutionRelationships, onboardingRequest.productId)
-      response <- performOnboardingWithSignature(
+      // currentManager = extractActiveManager(institutionRelationships, onboardingRequest.productId)
+      response                 <- performOnboardingWithSignature(
         OnboardingSignedRequest.fromApi(onboardingRequest),
-        currentManager,
+        None,
         institution,
         currentUser
       )(bearer, contexts)
