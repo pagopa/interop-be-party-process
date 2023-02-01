@@ -951,7 +951,12 @@ class ProcessApiServiceImpl(
       ),
       dataProtectionOfficer = institutionSeed.dataProtectionOfficer.map(d =>
         PartyManagementDependency.DataProtectionOfficer(address = d.address, email = d.email, pec = d.pec)
-      )
+      ),
+      rea = institutionSeed.rea,
+      shareCapital = institutionSeed.shareCapital,
+      businessRegisterPlace = institutionSeed.businessRegisterPlace,
+      supportEmail = institutionSeed.supportEmail,
+      supportPhone = institutionSeed.supportPhone
     )
 
     for {
