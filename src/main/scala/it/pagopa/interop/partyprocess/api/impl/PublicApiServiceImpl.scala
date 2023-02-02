@@ -9,8 +9,10 @@ import com.typesafe.scalalogging.Logger
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.interop.commons.mail.model.PersistedTemplate
+import it.pagopa.interop.commons.utils.AkkaUtils.{getFutureBearer}
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.{ResourceConflictError, ResourceNotFoundError}
+import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partymanagement.client.model.{PartyRole => PartyMgmtRole, Problem => _}
 import it.pagopa.interop.partyprocess.api.PublicApiService
 import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
@@ -63,15 +65,26 @@ class PublicApiServiceImpl(
     logger.info("Confirm onboarding of token identified with {}", tokenId)
 
     val result: Future[Unit] = for {
+      bearer      <- getFutureBearer(contexts)
       tokenIdUUID <- tokenId.toFutureUUID
       token       <- partyManagementService.verifyToken(tokenIdUUID)
       legalsRelationships = token.legals.filter(_.role == PartyMgmtRole.MANAGER)
-      legalUsers    <- Future.traverse(legalsRelationships)(legal =>
+      legalUsers               <- Future.traverse(legalsRelationships)(legal =>
         userRegistryManagementService.getUserWithEmailById(legal.partyId)
       )
-      institutionId <- Future.traverse(legalsRelationships)(legalUser =>
+      institutionId            <- Future.traverse(legalsRelationships)(legalUser =>
         partyManagementService.getInstitutionId(legalUser.relationshipId)
       )
+      institutionRelationships <- partyManagementService.retrieveRelationships(
+        from = None,
+        to = Some(institutionId.head.to),
+        roles = Seq.empty,
+        states = Seq.empty,
+        products = Seq.empty,
+        productRoles = Seq.empty
+      )(bearer)
+      _                        <- notExistsAnOnboardedManager(institutionRelationships, institutionId.head.product)
+
       institutionEmail =
         if (ApplicationConfiguration.sendEmailToInstitution) institutionId.headOption.map(_.digitalAddress)
         else Some(ApplicationConfiguration.institutionAlternativeEmail)
@@ -231,4 +244,29 @@ class PublicApiServiceImpl(
       destination
     }
   }
+
+  private def isAnOnboardedManager(product: String): PartyManagementDependency.Relationship => Boolean = relationship =>
+    {
+
+      relationship.role == PartyManagementDependency.PartyRole.MANAGER &&
+      relationship.product.id == product &&
+      (
+        relationship.state != PartyManagementDependency.RelationshipState.PENDING &&
+          relationship.state != PartyManagementDependency.RelationshipState.REJECTED &&
+          relationship.state != PartyManagementDependency.RelationshipState.TOBEVALIDATED
+      )
+
+    }
+  private def notExistsAnOnboardedManager(
+    relationships: PartyManagementDependency.Relationships,
+    product: String
+  ): Future[Unit] =
+    Future.fromTry {
+      Either
+        .cond(relationships.items.forall(isNotAnOnboardedManager(product)), (), ManagerFoundError)
+        .toTry
+    }
+
+  private def isNotAnOnboardedManager(product: String): PartyManagementDependency.Relationship => Boolean =
+    relationship => !isAnOnboardedManager(product)(relationship)
 }

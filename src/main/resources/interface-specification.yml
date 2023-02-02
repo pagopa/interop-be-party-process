@@ -965,7 +965,6 @@ paths:
                 $ref: '#/components/schemas/Problem'
   '/onboarding/complete/{tokenId}':
     post:
-      security: [{}]
       tags:
         - public
       summary: create an onboarding entry
@@ -1079,7 +1078,6 @@ paths:
                 $ref: '#/components/schemas/Problem'
   /tokens/{tokenId}/verify:
     post:
-      security: [{}]
       tags:
         - public
       summary: Verify if the token is already consumed
@@ -1354,6 +1352,23 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/GeographicTaxonomy'
+        rea:
+          description: The institution REA
+          type: string
+        shareCapital:
+          type: string
+          description: The institution share capital value
+          example: 10000
+        businessRegisterPlace:
+          type: string
+          description: The business register place
+          example: Rome
+        supportEmail:
+          type: string
+          description: The support email contact
+        supportPhone:
+          type: string
+          description: The support phone contact
       additionalProperties: false
       required:
         - id
