@@ -24,7 +24,7 @@ object InstitutionConverter {
       shareCapital = institution.shareCapital,
       businessRegisterPlace = institution.businessRegisterPlace,
       supportEmail = institution.supportEmail,
-      supportPhone = institution.supportEmail,
+      supportPhone = institution.supportPhone,
       imported = institution.imported
     )
   }
