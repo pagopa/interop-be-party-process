@@ -501,7 +501,7 @@ class ProcessApiServiceImpl(
         onboardingRequest.contract.version,
         onboardingRequest.contract.path
       )(bearer)
-      _ = logger.info("Digest {}", digest)
+      _ = logger.info(s"$token - Digest $digest")
 
       institutionType = onboardingRequest.institutionUpdate.flatMap(_.institutionType).getOrElse("")
 
@@ -701,7 +701,13 @@ class ProcessApiServiceImpl(
             dataProtectionOfficer = i.dataProtectionOfficer.map(d =>
               PartyManagementDependency.DataProtectionOfficer(address = d.address, email = d.email, pec = d.pec)
             ),
-            geographicTaxonomies = geoTaxonomies.map(GeographicTaxonomyConverter.dependencyFromApi)
+            geographicTaxonomies = geoTaxonomies.map(GeographicTaxonomyConverter.dependencyFromApi),
+            rea = i.rea,
+            shareCapital = i.shareCapital,
+            businessRegisterPlace = i.businessRegisterPlace,
+            supportEmail = i.supportEmail,
+            supportPhone = i.supportPhone,
+            imported = i.imported
           )
         ),
         billing = billing.map(b =>
