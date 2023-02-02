@@ -1078,7 +1078,6 @@ paths:
                 $ref: '#/components/schemas/Problem'
   /tokens/{tokenId}/verify:
     post:
-      security: [{}]
       tags:
         - public
       summary: Verify if the token is already consumed
