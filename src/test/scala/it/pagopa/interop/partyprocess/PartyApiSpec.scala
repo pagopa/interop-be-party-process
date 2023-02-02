@@ -2252,6 +2252,19 @@ trait PartyApiSpec
         .returning(Future.successful(new ByteArrayOutputStream()))
         .once()
 
+      (mockPartyManagementService
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String)(_: Seq[(String, String)]))
+        .expects(None, Some(institutionInternalId), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *, *)
+        .returning(Future.successful(PartyManagementDependency.Relationships(items = Seq.empty)))
+        .once()
+
       val formData =
         Multipart.FormData.fromPath(name = "contract", MediaTypes.`application/octet-stream`, file = path, 100000)
 
