@@ -276,11 +276,98 @@ class ProcessApiServiceImpl(
       )(bearer)
       _                        <- notExistsAnOnboardedManager(institutionRelationships, onboardingRequest.productId)
       currentManager = extractActiveManager(institutionRelationships, onboardingRequest.productId)
-      response                 <- performOnboardingWithSignature(
+      response <- performOnboardingWithSignature(
         OnboardingSignedRequest.fromApi(onboardingRequest),
         currentManager,
         institution,
         currentUser
+      )(bearer, contexts)
+    } yield response
+
+    onComplete(result) {
+      case Success(_)                            => onboardingInstitution204
+      case Failure(ex: ContractNotFound)         =>
+        logger.info(
+          "Error while onboarding institution {} onto {}",
+          onboardingRequest.institutionExternalId,
+          onboardingRequest.productId,
+          ex
+        )
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
+        onboardingInstitution404(errorResponse)
+      case Failure(ex: InstitutionNotFound)      =>
+        logger.error("Institution having externalId {} not found", onboardingRequest.institutionExternalId, ex)
+        val errorResponse: Problem = problemOf(StatusCodes.NotFound, ex)
+        onboardingInstitution404(errorResponse)
+      case Failure(ex: OnboardingInvalidUpdates) =>
+        logger.error(
+          "Invalid institution updates for Institution {} when onboarding onto {}",
+          onboardingRequest.institutionExternalId,
+          onboardingRequest.productId,
+          ex
+        )
+        val errorResponse: Problem = problemOf(StatusCodes.Conflict, ex)
+        onboardingInstitution409(errorResponse)
+      case Failure(ManagerFoundError)            =>
+        logger.error(
+          "Institution already onboarded {} onto {}",
+          onboardingRequest.institutionExternalId,
+          onboardingRequest.productId,
+          ManagerFoundError
+        )
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, ManagerFoundError)
+        onboardingInstitution400(errorResponse)
+      case Failure(ex: GeoTaxonomyCodeNotFound)  =>
+        logger.error(
+          s"Geographic taxonomy code ${ex.code} not found when onboarding institution ${onboardingRequest.institutionExternalId} onto ${onboardingRequest.productId}",
+          ex
+        )
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, ex)
+        onboardingInstitution400(errorResponse)
+      case Failure(ex)                           =>
+        logger.error(
+          "Error while onboarding institution {} ont {}",
+          onboardingRequest.institutionExternalId,
+          onboardingRequest.productId,
+          ex
+        )
+        val errorResponse: Problem = problemOf(StatusCodes.InternalServerError, OnboardingOperationError)
+        complete(StatusCodes.InternalServerError, errorResponse)
+    }
+
+  }
+
+  /** Code: 204, Message: successful operation
+    * Code: 404, Message: Not found, DataType: Problem
+    * Code: 400, Message: Invalid ID supplied, DataType: Problem
+    */
+  override def onboardingInstitutionComplete(
+    onboardingRequest: OnboardingInstitutionRequest
+  )(implicit toEntityMarshallerProblem: ToEntityMarshaller[Problem], contexts: Seq[(String, String)]): Route = {
+    logger.info("Onboarding institution having externalId {}", onboardingRequest.institutionExternalId)
+    val result: Future[Unit] = for {
+      bearer <- getFutureBearer(contexts)
+
+      institutionOption        <- getInstitutionByOptionIdAndOptionExternalId(
+        None,
+        Option(onboardingRequest.institutionExternalId)
+      )(bearer)
+      institution              <- institutionOption.toFuture(
+        InstitutionNotFound(None, Option(onboardingRequest.institutionExternalId))
+      )
+      institutionRelationships <- partyManagementService.retrieveRelationships(
+        from = None,
+        to = Some(institution.id),
+        roles = Seq.empty,
+        states = Seq.empty,
+        products = Seq.empty,
+        productRoles = Seq.empty
+      )(bearer)
+      _                        <- notExistsAnOnboardedManager(institutionRelationships, onboardingRequest.productId)
+      response                 <- performOnboardingWithoutContract(
+        OnboardingSignedRequest.fromApi(onboardingRequest),
+        None,
+        institution
       )(bearer, contexts)
     } yield response
 
@@ -529,6 +616,74 @@ class ProcessApiServiceImpl(
 
       }
       _ = logger.info(s"$token for institution: ${institution.id}")
+    } yield ()
+  }
+
+  private def performOnboardingWithoutContract(
+    onboardingRequest: OnboardingSignedRequest,
+    activeManager: Option[PartyManagementDependency.Relationship],
+    institution: PartyManagementDependency.Institution
+  )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Unit] = {
+    for {
+      _                  <- validateOverridingData(onboardingRequest, institution)
+      geoTaxonomies      <- geoTaxonomyService.getByCodes(
+        onboardingRequest.institutionUpdate.map(i => i.geographicTaxonomyCodes).getOrElse(Seq.empty)
+      )
+      validUsers         <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
+      validManager       <- getValidManager(activeManager, validUsers)
+      personIdsWithRoles <- Future.traverse(validUsers)(u => addUser(u, onboardingRequest.productId))
+      relationships      <- Future.traverse(personIdsWithRoles) { case (personId, role, product, productRole) =>
+        role match {
+          case PartyRole.MANAGER =>
+            createOrGetRelationship(
+              personId.id,
+              institution.id,
+              roleToDependency(role),
+              product,
+              productRole,
+              onboardingRequest.pricingPlan,
+              onboardingRequest.institutionUpdate,
+              geoTaxonomies,
+              onboardingRequest.billing,
+              institution.origin
+            )(bearer)
+          case _                 =>
+            createOrGetRelationship(
+              personId.id,
+              institution.id,
+              roleToDependency(role),
+              product,
+              productRole,
+              None,
+              None,
+              Seq.empty,
+              None,
+              institution.origin
+            )(bearer)
+        }
+      }
+      contractTemplate   <- getFileAsString(onboardingRequest.contract.path)
+      pdf                <- pdfCreator.createContract(
+        contractTemplate,
+        validManager,
+        validUsers,
+        institution,
+        onboardingRequest,
+        geoTaxonomies
+      )
+      digest             <- signatureService.createDigest(pdf)
+      token              <- partyManagementService.createToken(
+        PartyManagementDependency.Relationships(relationships),
+        digest,
+        onboardingRequest.contract.version,
+        onboardingRequest.contract.path
+      )(bearer)
+
+      tokenUUID = UUID.fromString(token.token)
+
+      _ <- partyManagementService.consumeTokenWithoutContract(tokenUUID)
+
+      _ = logger.info(s"$token - Digest $digest")
     } yield ()
   }
 

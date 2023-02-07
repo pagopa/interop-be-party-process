@@ -62,6 +62,8 @@ trait PartyManagementService {
 
   def consumeToken(tokenId: UUID, fileParts: (FileInfo, File))(implicit contexts: Seq[(String, String)]): Future[Unit]
 
+  def consumeTokenWithoutContract(tokenId: UUID)(implicit contexts: Seq[(String, String)]): Future[Unit]
+
   def invalidateToken(tokenId: UUID)(implicit contexts: Seq[(String, String)]): Future[Unit]
 
   def updateTokenDigest(tokenId: UUID, digest: String)(bearerToken: String)(implicit

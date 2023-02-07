@@ -134,6 +134,11 @@ final case class PartyManagementServiceImpl(
     invoke(request, s"Consuming token $tokenId", Some(tokenId.toString))
   }
 
+  override def consumeTokenWithoutContract(tokenId: UUID)(implicit contexts: Seq[(String, String)]): Future[Unit] = {
+    val request = publicApi.consumeTokenWithoutContract(tokenId)
+    invoke(request, s"Consuming token $tokenId Without Contract", Some(tokenId.toString))
+  }
+
   override def invalidateToken(tokenId: UUID)(implicit contexts: Seq[(String, String)]): Future[Unit] = {
     val request = publicApi.invalidateToken(tokenId)
     invoke(request, s"Invalidating token $tokenId", Some(tokenId.toString))
