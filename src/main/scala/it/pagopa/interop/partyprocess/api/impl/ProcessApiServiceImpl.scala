@@ -236,7 +236,12 @@ class ProcessApiServiceImpl(
         attributes =
           institution.attributes.map(attribute => Attribute(attribute.origin, attribute.code, attribute.description)),
         geographicTaxonomies =
-          institution.geographicTaxonomies.map(x => GeographicTaxonomy(code = x.code, desc = x.desc))
+          institution.geographicTaxonomies.map(x => GeographicTaxonomy(code = x.code, desc = x.desc)),
+        rea = institution.rea,
+        shareCapital = institution.shareCapital,
+        businessRegisterPlace = institution.businessRegisterPlace,
+        supportEmail = institution.supportEmail,
+        supportPhone = institution.supportPhone
       )
 
     }
@@ -270,10 +275,10 @@ class ProcessApiServiceImpl(
         productRoles = Seq.empty
       )(bearer)
       _                        <- notExistsAnOnboardedManager(institutionRelationships, onboardingRequest.productId)
-      currentManager = extractActiveManager(institutionRelationships, onboardingRequest.productId)
-      response <- performOnboardingWithSignature(
+      // currentManager = extractActiveManager(institutionRelationships, onboardingRequest.productId)
+      response                 <- performOnboardingWithSignature(
         OnboardingSignedRequest.fromApi(onboardingRequest),
-        currentManager,
+        None,
         institution,
         currentUser
       )(bearer, contexts)
@@ -501,7 +506,7 @@ class ProcessApiServiceImpl(
         onboardingRequest.contract.version,
         onboardingRequest.contract.path
       )(bearer)
-      _ = logger.info("Digest {}", digest)
+      _ = logger.info(s"$token - Digest $digest")
 
       institutionType = onboardingRequest.institutionUpdate.flatMap(_.institutionType).getOrElse("")
 
@@ -701,7 +706,13 @@ class ProcessApiServiceImpl(
             dataProtectionOfficer = i.dataProtectionOfficer.map(d =>
               PartyManagementDependency.DataProtectionOfficer(address = d.address, email = d.email, pec = d.pec)
             ),
-            geographicTaxonomies = geoTaxonomies.map(GeographicTaxonomyConverter.dependencyFromApi)
+            geographicTaxonomies = geoTaxonomies.map(GeographicTaxonomyConverter.dependencyFromApi),
+            rea = i.rea,
+            shareCapital = i.shareCapital,
+            businessRegisterPlace = i.businessRegisterPlace,
+            supportEmail = i.supportEmail,
+            supportPhone = i.supportPhone,
+            imported = i.imported
           )
         ),
         billing = billing.map(b =>
@@ -951,7 +962,12 @@ class ProcessApiServiceImpl(
       ),
       dataProtectionOfficer = institutionSeed.dataProtectionOfficer.map(d =>
         PartyManagementDependency.DataProtectionOfficer(address = d.address, email = d.email, pec = d.pec)
-      )
+      ),
+      rea = institutionSeed.rea,
+      shareCapital = institutionSeed.shareCapital,
+      businessRegisterPlace = institutionSeed.businessRegisterPlace,
+      supportEmail = institutionSeed.supportEmail,
+      supportPhone = institutionSeed.supportPhone
     )
 
     for {
