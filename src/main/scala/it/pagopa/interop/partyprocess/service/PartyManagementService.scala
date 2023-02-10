@@ -2,6 +2,7 @@ package it.pagopa.interop.partyprocess.service
 
 import akka.http.scaladsl.server.directives.FileInfo
 import it.pagopa.interop.partymanagement.client.model._
+import it.pagopa.interop.partyprocess.model.OnboardingContractStorage
 
 import java.io.File
 import java.util.UUID
@@ -62,7 +63,9 @@ trait PartyManagementService {
 
   def consumeToken(tokenId: UUID, fileParts: (FileInfo, File))(implicit contexts: Seq[(String, String)]): Future[Unit]
 
-  def consumeTokenWithoutContract(tokenId: UUID)(implicit contexts: Seq[(String, String)]): Future[Unit]
+  def consumeTokenWithoutContract(tokenId: UUID, onboardingContractStorage: OnboardingContractStorage)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[Unit]
 
   def invalidateToken(tokenId: UUID)(implicit contexts: Seq[(String, String)]): Future[Unit]
 

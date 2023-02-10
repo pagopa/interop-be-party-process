@@ -364,11 +364,10 @@ class ProcessApiServiceImpl(
         productRoles = Seq.empty
       )(bearer)
       _                        <- notExistsAnOnboardedManager(institutionRelationships, onboardingRequest.productId)
-      response                 <- performOnboardingWithoutContract(
-        OnboardingSignedRequest.fromApi(onboardingRequest),
-        None,
-        institution
-      )(bearer, contexts)
+      response <- performOnboardingWithoutContract(OnboardingSignedRequest.fromApi(onboardingRequest), institution)(
+        bearer,
+        contexts
+      )
     } yield response
 
     onComplete(result) {
@@ -621,7 +620,6 @@ class ProcessApiServiceImpl(
 
   private def performOnboardingWithoutContract(
     onboardingRequest: OnboardingSignedRequest,
-    activeManager: Option[PartyManagementDependency.Relationship],
     institution: PartyManagementDependency.Institution
   )(implicit bearer: String, contexts: Seq[(String, String)]): Future[Unit] = {
     for {
@@ -630,7 +628,6 @@ class ProcessApiServiceImpl(
         onboardingRequest.institutionUpdate.map(i => i.geographicTaxonomyCodes).getOrElse(Seq.empty)
       )
       validUsers         <- verifyUsersByRoles(onboardingRequest.users, Set(PartyRole.MANAGER, PartyRole.DELEGATE))
-      validManager       <- getValidManager(activeManager, validUsers)
       personIdsWithRoles <- Future.traverse(validUsers)(u => addUser(u, onboardingRequest.productId))
       relationships      <- Future.traverse(personIdsWithRoles) { case (personId, role, product, productRole) =>
         role match {
@@ -662,28 +659,25 @@ class ProcessApiServiceImpl(
             )(bearer)
         }
       }
-      contractTemplate   <- getFileAsString(onboardingRequest.contract.path)
-      pdf                <- pdfCreator.createContract(
-        contractTemplate,
-        validManager,
-        validUsers,
-        institution,
-        onboardingRequest,
-        geoTaxonomies
-      )
-      digest             <- signatureService.createDigest(pdf)
-      token              <- partyManagementService.createToken(
+
+      token <- partyManagementService.createToken(
         PartyManagementDependency.Relationships(relationships),
-        digest,
+        UUID.randomUUID().toString,
         onboardingRequest.contract.version,
         onboardingRequest.contract.path
       )(bearer)
 
       tokenUUID = UUID.fromString(token.token)
+      _         = logger.info(s"tokenUUID: $tokenUUID")
+      fileName  = onboardingRequest.contractImported.flatMap(_.fileName).getOrElse(onboardingRequest.contract.version)
+      filePath  = onboardingRequest.contractImported.flatMap(_.filePath).getOrElse(onboardingRequest.contract.path)
 
-      _ <- partyManagementService.consumeTokenWithoutContract(tokenUUID)
+      _ <- partyManagementService.consumeTokenWithoutContract(
+        tokenUUID,
+        OnboardingContractStorage.toOnboardingContract(fileName = fileName, filePath = filePath)
+      )
 
-      _ = logger.info(s"$token - Digest $digest")
+      _ = logger.info(s"$token for institution: ${institution.id}")
     } yield ()
   }
 

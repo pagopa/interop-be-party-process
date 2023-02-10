@@ -35,7 +35,7 @@ package object partyprocess extends SprayJsonSupport {
   implicit val onboardingContractFormat: RootJsonFormat[OnboardingContract] = jsonFormat2(OnboardingContract)
 
   implicit val onboardingInstitutionRequestFormat: RootJsonFormat[OnboardingInstitutionRequest] =
-    jsonFormat9(OnboardingInstitutionRequest)
+    jsonFormat10(OnboardingInstitutionRequest)
   implicit val onboardingLegalUsersRequestFormat: RootJsonFormat[OnboardingLegalUsersRequest]   =
     jsonFormat7(OnboardingLegalUsersRequest)
   implicit val onboardingUsersRequestFormat: RootJsonFormat[OnboardingUsersRequest]             =
