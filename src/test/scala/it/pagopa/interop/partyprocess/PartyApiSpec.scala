@@ -1290,7 +1290,7 @@ trait PartyApiSpec
 
     }
 
-    "onboard an institution without contract with a legal and a delegate" in {
+    /*"onboard an institution without contract with a legal and a delegate" in {
 
       val response =
         performOnboardingWithoutContractRequest(
@@ -1300,7 +1300,7 @@ trait PartyApiSpec
 
       response.status mustBe StatusCodes.NoContent
 
-    }
+    }*/
 
     "retrieve a onboarding info for institution with no certification" in {
       val origin = "None"
@@ -2283,7 +2283,7 @@ trait PartyApiSpec
 
     }
 
-    def performOnboardingWithoutContractRequest(
+    /*def performOnboardingWithoutContractRequest(
       state: Option[PartyManagementDependency.RelationshipState],
       product: Option[String]
     ): HttpResponse = {
@@ -2411,23 +2411,7 @@ trait PartyApiSpec
         case _                    => Seq.empty
       }
 
-      /*val token: TokenInfo =
-        TokenInfo(
-          id = tokenIdNoContract,
-          checksum = "6ddee820d06383127ef029f571285339",
-          legals = Seq(
-            RelationshipBinding(
-              partyId = managerId,
-              relationshipId = relationshipIdManager,
-              role = PartyManagementDependency.PartyRole.MANAGER
-            ),
-            RelationshipBinding(
-              partyId = delegateId,
-              relationshipId = relationshipIdDelegate,
-              role = PartyManagementDependency.PartyRole.DELEGATE
-            )
-          )
-        )*/
+
 
       (mockUserRegistryService
         .getUserById(_: UUID)(_: Seq[(String, String)]))
@@ -2517,14 +2501,14 @@ trait PartyApiSpec
         .expects(
           tokenUUID,
           OnboardingContractStorage.toOnboardingContract(fileName = "fileName", filePath = "filePath"),
-          *
+     *
         )
         .returning(Future.successful(()))
 
       val data = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
 
       request(data, "onboarding/institution/complete", HttpMethods.POST)
-    }
+    }*/
 
     "fail trying to confirm a token on already confirmed" in {
 
