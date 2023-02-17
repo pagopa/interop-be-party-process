@@ -33,6 +33,7 @@ import it.pagopa.interop.partyprocess.error.SignatureValidationError
 import it.pagopa.interop.partyprocess.model.PartyRole.{DELEGATE, MANAGER, OPERATOR, SUB_DELEGATE}
 import it.pagopa.interop.partyprocess.model.RelationshipState.ACTIVE
 import it.pagopa.interop.partyprocess.model.{Attribute, Billing, GeographicTaxonomy, Institution, InstitutionUpdate, _}
+import it.pagopa.interop.partyprocess.model.OnboardingContract
 import it.pagopa.interop.partyregistryproxy.client.{model => PartyProxyDependencies}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
@@ -1289,6 +1290,18 @@ trait PartyApiSpec
 
     }
 
+    /*"onboard an institution without contract with a legal and a delegate" in {
+
+      val response =
+        performOnboardingWithoutContractRequest(
+          Some(PartyManagementDependency.RelationshipState.PENDING),
+          Some("prod-id-x")
+        )
+
+      response.status mustBe StatusCodes.NoContent
+
+    }*/
+
     "retrieve a onboarding info for institution with no certification" in {
       val origin = "None"
 
@@ -2269,6 +2282,233 @@ trait PartyApiSpec
       response.status mustBe StatusCodes.NoContent
 
     }
+
+    /*def performOnboardingWithoutContractRequest(
+      state: Option[PartyManagementDependency.RelationshipState],
+      product: Option[String]
+    ): HttpResponse = {
+      val taxCode1          = "managerTaxCodeAuto"
+      val taxCode2          = "delegateTaxCodeAuto"
+      val originId          = UUID.randomUUID().toString
+      val externalId        = UUID.randomUUID().toString
+      val origin            = "ORIGIN"
+      val orgPartyId        = UUID.randomUUID()
+      val tokenUUID         = UUID.randomUUID()
+      val tokenIdNoContract = tokenUUID.toString
+
+      val institution1 = PartyManagementDependency.Institution(
+        id = orgPartyId,
+        externalId = externalId,
+        originId = originId,
+        description = "org1Auto",
+        digitalAddress = "digitalAddress1Auto",
+        attributes = Seq.empty,
+        taxCode = "123",
+        address = "addressAuto",
+        zipCode = "zipCodeAuto",
+        origin = origin,
+        institutionType = Option("PA"),
+        products = Map.empty,
+        geographicTaxonomies = Seq(PartyManagementDependency.GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
+      )
+
+      val managerId                    = UUID.randomUUID()
+      val delegateId                   = UUID.randomUUID()
+      val manager                      =
+        User(
+          id = managerId,
+          name = "managerAuto",
+          surname = "managerSurnameAuto",
+          taxCode = taxCode1,
+          role = PartyRole.MANAGER,
+          email = Option("manager@email.it"),
+          productRole = "admin"
+        )
+      val delegate                     =
+        User(
+          id = delegateId,
+          name = "delegateAuto",
+          surname = "delegateSurnameAuto",
+          taxCode = taxCode2,
+          role = PartyRole.DELEGATE,
+          email = Option("delegate@email.it"),
+          productRole = "admin"
+        )
+      val relationshipIdManager: UUID  = UUID.randomUUID()
+      val relationshipIdDelegate: UUID = UUID.randomUUID()
+
+      val relationships = (state, product) match {
+        case (Some(st), Some(pr)) =>
+          Seq(
+            PartyManagementDependency.Relationship(
+              id = relationshipIdManager,
+              from = UUID.randomUUID(),
+              to = UUID.randomUUID(),
+              filePath = None,
+              fileName = None,
+              contentType = None,
+              role = PartyManagementDependency.PartyRole.MANAGER,
+              product = PartyManagementDependency
+                .RelationshipProduct(id = pr, role = "admin", createdAt = OffsetDateTime.now()),
+              state = st,
+              createdAt = OffsetDateTime.now(),
+              updatedAt = None,
+              pricingPlan = Option("pricingPlan"),
+              institutionUpdate = Option(
+                PartyManagementDependency.InstitutionUpdate(
+                  institutionType = Option("OVERRIDE_institutionTypeAuto"),
+                  description = Option("OVERRIDE_descriptionAuto"),
+                  digitalAddress = Option("OVERRIDE_digitalAddressAuto"),
+                  address = Option("OVERRIDE_addressAuto"),
+                  zipCode = Option("OVERRIDE_zipCodeAuto"),
+                  taxCode = Option("OVERRIDE_taxCodeAuto"),
+                  geographicTaxonomies = Seq(
+                    PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC")
+                  )
+                )
+              ),
+              billing = Option(
+                PartyManagementDependency
+                  .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+              )
+            )
+          )
+        case (Some(st), None)     =>
+          Seq(
+            PartyManagementDependency.Relationship(
+              id = relationshipIdDelegate,
+              from = UUID.randomUUID(),
+              to = UUID.randomUUID(),
+              filePath = None,
+              fileName = None,
+              contentType = None,
+              role = PartyManagementDependency.PartyRole.MANAGER,
+              product = PartyManagementDependency
+                .RelationshipProduct(id = "product", role = "admin", createdAt = OffsetDateTime.now()),
+              state = st,
+              createdAt = OffsetDateTime.now(),
+              updatedAt = None,
+              pricingPlan = Option("pricingPlan"),
+              institutionUpdate = Option(
+                PartyManagementDependency.InstitutionUpdate(
+                  institutionType = Option("OVERRIDE_institutionTypeAuto"),
+                  description = Option("OVERRIDE_descriptionAuto"),
+                  digitalAddress = Option("OVERRIDE_digitalAddressAuto"),
+                  address = Option("OVERRIDE_addressAuto"),
+                  zipCode = Option("OVERRIDE_zipCodeAuto"),
+                  taxCode = Option("OVERRIDE_taxCodeAuto"),
+                  geographicTaxonomies = Seq(
+                    PartyManagementDependency.GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC")
+                  )
+                )
+              ),
+              billing = Option(
+                PartyManagementDependency
+                  .Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+              )
+            )
+          )
+        case _                    => Seq.empty
+      }
+
+
+
+      (mockUserRegistryService
+        .getUserById(_: UUID)(_: Seq[(String, String)]))
+        .expects(*, *)
+        .returning(
+          Future
+            .successful(
+              UserRegistryUser(id = UUID.randomUUID(), taxCode = Some(""), name = Some(""), surname = Some(""))
+            )
+        )
+        .once()
+
+      (mockPartyManagementService
+        .retrieveInstitutionByExternalId(_: String)(_: String)(_: Seq[(String, String)]))
+        .expects(externalId, *, *)
+        .returning(Future.successful(institution1))
+        .once()
+
+      (mockPartyManagementService
+        .retrieveRelationships(
+          _: Option[UUID],
+          _: Option[UUID],
+          _: Seq[PartyManagementDependency.PartyRole],
+          _: Seq[PartyManagementDependency.RelationshipState],
+          _: Seq[String],
+          _: Seq[String]
+        )(_: String)(_: Seq[(String, String)]))
+        .expects(None, Some(institution1.id), Seq.empty, Seq.empty, Seq.empty, Seq.empty, *, *)
+        .returning(Future.successful(PartyManagementDependency.Relationships(relationships)))
+        .once()
+
+      (mockPartyManagementService
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(PartyManagementDependency.PersonSeed(managerId), *, *)
+        .returning(Future.successful(PartyManagementDependency.Person(managerId)))
+        .once()
+
+      (mockPartyManagementService
+        .createPerson(_: PartyManagementDependency.PersonSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(PartyManagementDependency.PersonSeed(delegateId), *, *)
+        .returning(Future.successful(PartyManagementDependency.Person(delegateId)))
+        .once()
+
+      (mockPartyManagementService
+        .createRelationship(_: RelationshipSeed)(_: String)(_: Seq[(String, String)]))
+        .expects(*, *, *)
+        .returning(Future.successful(relationship))
+        .repeat(2)
+
+      (mockPartyManagementService
+        .createToken(_: PartyManagementDependency.Relationships, _: String, _: String, _: String)(_: String)(
+          _: Seq[(String, String)]
+        ))
+        .expects(*, *, *, *, *, *)
+        .returning(Future.successful(PartyManagementDependency.TokenText(tokenIdNoContract)))
+        .once()
+
+      (mockGeoTaxonomyService
+        .getByCodes(_: Seq[String])(_: Seq[(String, String)]))
+        .expects(Seq("OVERRIDE_GEOCODE"), *)
+        .returning(Future.successful(Seq(GeographicTaxonomy(code = "OVERRIDE_GEOCODE", desc = "OVERRIDE_GEODESC"))))
+        .once()
+
+      val req = OnboardingInstitutionRequest(
+        productId = "prod-id-x",
+        productName = "productNameX",
+        users = Seq(manager, delegate),
+        institutionExternalId = externalId,
+        contract = OnboardingContract("a", "b"),
+        pricingPlan = Option("pricingPlan"),
+        institutionUpdate = Option(
+          InstitutionUpdate(
+            institutionType = Option("OVERRIDE_institutionTypeAuto"),
+            description = Option("OVERRIDE_descriptionAuto"),
+            digitalAddress = Option("OVERRIDE_digitalAddressAuto"),
+            address = Option("OVERRIDE_addressAuto"),
+            zipCode = Option("OVERRIDE_zipCodeAuto"),
+            taxCode = Option("OVERRIDE_taxCodeAuto"),
+            geographicTaxonomyCodes = Seq("OVERRIDE_GEOCODE")
+          )
+        ),
+        billing = Billing(vatNumber = "VATNUMBER", recipientCode = "RECIPIENTCODE", publicServices = Option(true))
+      )
+
+      (mockPartyManagementService
+        .consumeTokenWithoutContract(_: UUID, _: OnboardingContractStorage)(_: Seq[(String, String)]))
+        .expects(
+          tokenUUID,
+          OnboardingContractStorage.toOnboardingContract(fileName = "fileName", filePath = "filePath"),
+     *
+        )
+        .returning(Future.successful(()))
+
+      val data = Marshal(req).to[MessageEntity].map(_.dataBytes).futureValue
+
+      request(data, "onboarding/institution/complete", HttpMethods.POST)
+    }*/
 
     "fail trying to confirm a token on already confirmed" in {
 

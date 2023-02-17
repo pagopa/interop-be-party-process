@@ -5,6 +5,7 @@ import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.{ResourceCo
 import it.pagopa.interop.partymanagement.client.api.{ExternalApi, PartyApi, PublicApi}
 import it.pagopa.interop.partymanagement.client.invoker.{ApiError, ApiRequest, BearerToken}
 import it.pagopa.interop.partymanagement.client.model._
+import it.pagopa.interop.partyprocess.model.OnboardingContractStorage
 import it.pagopa.interop.partyprocess.service.{PartyManagementInvoker, PartyManagementService, replacementEntityId}
 import com.typesafe.scalalogging.Logger
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
@@ -132,6 +133,16 @@ final case class PartyManagementServiceImpl(
   ): Future[Unit] = {
     val request = publicApi.consumeToken(tokenId, fileParts._2)
     invoke(request, s"Consuming token $tokenId", Some(tokenId.toString))
+  }
+
+  override def consumeTokenWithoutContract(tokenId: UUID, onboardingContractStorage: OnboardingContractStorage)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[Unit] = {
+    val request = publicApi.consumeTokenWithoutContract(
+      tokenId,
+      OnboardingContract(fileName = onboardingContractStorage.fileName, filePath = onboardingContractStorage.filePath)
+    )
+    invoke(request, s"Consuming token $tokenId Without Contract", Some(tokenId.toString))
   }
 
   override def invalidateToken(tokenId: UUID)(implicit contexts: Seq[(String, String)]): Future[Unit] = {

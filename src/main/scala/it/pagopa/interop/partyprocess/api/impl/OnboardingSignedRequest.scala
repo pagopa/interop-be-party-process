@@ -18,6 +18,7 @@ final case class OnboardingSignedRequest(
   pricingPlan: Option[String] = None,
   billing: Option[Billing],
   contract: OnboardingContract,
+  contractImported: Option[OnboardingImportContract] = None,
   applyPagoPaSign: Boolean
 )
 
@@ -31,6 +32,7 @@ object OnboardingSignedRequest {
       pricingPlan = onboardingRequest.pricingPlan,
       billing = Option(onboardingRequest.billing),
       contract = onboardingRequest.contract,
+      contractImported = onboardingRequest.contractImported,
       applyPagoPaSign = onboardingRequest.signContract.getOrElse(true)
     )
 
@@ -43,6 +45,7 @@ object OnboardingSignedRequest {
       pricingPlan = Option.empty,
       billing = Option.empty,
       contract = onboardingRequest.contract,
+      contractImported = Option.empty,
       applyPagoPaSign = onboardingRequest.signContract.getOrElse(true)
     )
 }
