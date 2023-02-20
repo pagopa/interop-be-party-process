@@ -1399,23 +1399,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/GeographicTaxonomy'
-        rea:
-          description: The institution REA
-          type: string
-        shareCapital:
-          type: string
-          description: The institution share capital value
-          example: 10000
-        businessRegisterPlace:
-          type: string
-          description: The business register place
-          example: Rome
-        supportEmail:
-          type: string
-          description: The support email contact
-        supportPhone:
-          type: string
-          description: The support phone contact
+        businessData:
+          $ref: '#/components/schemas/BusinessData'
+        supportContact:
+          $ref: '#/components/schemas/SupportContact'
       additionalProperties: false
       required:
         - id
@@ -1432,6 +1419,29 @@ components:
         - productInfo
         - attributes
         - geographicTaxonomies
+    BusinessData:
+      type: object
+      properties:
+        rea:
+          description: The institution REA
+          type: string
+        shareCapital:
+          type: string
+          description: The institution share capital value
+          example: 10000
+        businessRegisterPlace:
+          type: string
+          description: The business register place
+          example: Rome
+    SupportContact:
+      type: object
+      properties:
+        supportEmail:
+          type: string
+          description: The support email contact
+        supportPhone:
+          type: string
+          description: The support phone contact
     Attribute:
       type: object
       properties:

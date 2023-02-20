@@ -237,11 +237,15 @@ class ProcessApiServiceImpl(
           institution.attributes.map(attribute => Attribute(attribute.origin, attribute.code, attribute.description)),
         geographicTaxonomies =
           institution.geographicTaxonomies.map(x => GeographicTaxonomy(code = x.code, desc = x.desc)),
-        rea = institution.rea,
-        shareCapital = institution.shareCapital,
-        businessRegisterPlace = institution.businessRegisterPlace,
-        supportEmail = institution.supportEmail,
-        supportPhone = institution.supportPhone
+        businessData = Option(
+          BusinessData(
+            rea = institution.rea,
+            shareCapital = institution.shareCapital,
+            businessRegisterPlace = institution.businessRegisterPlace
+          )
+        ),
+        supportContact =
+          Option(SupportContact(supportEmail = institution.supportEmail, supportPhone = institution.supportPhone))
       )
 
     }
