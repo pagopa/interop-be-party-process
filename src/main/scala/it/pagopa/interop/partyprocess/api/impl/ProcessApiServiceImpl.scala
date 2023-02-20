@@ -16,7 +16,11 @@ import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.{ResourceCo
 import it.pagopa.interop.partymanagement.client.model.Relationship
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess.api.ProcessApiService
-import it.pagopa.interop.partyprocess.api.converters.partymanagement.{GeographicTaxonomyConverter, InstitutionConverter}
+import it.pagopa.interop.partyprocess.api.converters.partymanagement.{
+  GeographicTaxonomyConverter,
+  InstitutionConverter,
+  PaymentServiceProviderConverter
+}
 import it.pagopa.interop.partyprocess.api.impl.Conversions._
 import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.partyprocess.error.PartyProcessErrors._
@@ -237,6 +241,9 @@ class ProcessApiServiceImpl(
           institution.attributes.map(attribute => Attribute(attribute.origin, attribute.code, attribute.description)),
         geographicTaxonomies =
           institution.geographicTaxonomies.map(x => GeographicTaxonomy(code = x.code, desc = x.desc)),
+        paymentServiceProvider =
+          institution.paymentServiceProvider.map(PaymentServiceProviderConverter.dependencyToApi),
+        dataProtectionOfficer = institution.dataProtectionOfficer.map(DataProtectionOfficerConverter.dependencyToApi),
         businessData = Option(
           BusinessData(
             rea = institution.rea,
