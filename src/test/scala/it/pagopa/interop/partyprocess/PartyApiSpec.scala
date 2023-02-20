@@ -22,9 +22,10 @@ import it.pagopa.interop.partymanagement.client.model.{
   RelationshipState => _,
   _
 }
+import it.pagopa.interop.partyprocess.{model => PartyProcessDependency}
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess
-import it.pagopa.interop.partyprocess.api.converters.partymanagement.InstitutionConverter
+import it.pagopa.interop.partyprocess.api.converters.partymanagement.{InstitutionConverter}
 import it.pagopa.interop.partyprocess.api.impl.Conversions._
 import it.pagopa.interop.partyprocess.api.impl.{OnboardingSignedRequest, geographicTaxonomyExtFormat}
 import it.pagopa.interop.partyprocess.common.system.{classicActorSystem, executionContext}
@@ -1317,12 +1318,28 @@ trait PartyApiSpec
     "retrieve a onboarding info for institution with no certification" in {
       val origin = "None"
 
-      val externalId1 = UUID.randomUUID().toString
-      val originId1   = s"PSP_$externalId1"
-      val orgPartyId1 = UUID.randomUUID()
-      val attribute1  = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1", origin)
-      val attribute2  = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2", origin)
-      val attribute3  = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3", origin)
+      val externalId1             = UUID.randomUUID().toString
+      val originId1               = s"PSP_$externalId1"
+      val orgPartyId1             = UUID.randomUUID()
+      val attribute1              = partyprocess.model.Attribute(UUID.randomUUID().toString, "name1", origin)
+      val attribute2              = partyprocess.model.Attribute(UUID.randomUUID().toString, "name2", origin)
+      val attribute3              = partyprocess.model.Attribute(UUID.randomUUID().toString, "name3", origin)
+      val paymentServiceProvider1 = Option(
+        PartyManagementDependency.PaymentServiceProvider(
+          abiCode = Option("123"),
+          businessRegisterNumber = Option("12345"),
+          legalRegisterName = Option("Legal1"),
+          legalRegisterNumber = Option("123456"),
+          vatNumberGroup = Option(true)
+        )
+      )
+      val dataProtectionOfficer1  = Option(
+        PartyManagementDependency.DataProtectionOfficer(
+          address = Option("address1"),
+          email = Option("email1@where.com"),
+          pec = Option("pec1@where.com")
+        )
+      )
 
       val institution1 = PartyManagementDependency.Institution(
         id = orgPartyId1,
@@ -1341,22 +1358,8 @@ trait PartyApiSpec
         origin = origin,
         institutionType = Option("PA"),
         products = Map.empty,
-        paymentServiceProvider = Option(
-          PartyManagementDependency.PaymentServiceProvider(
-            abiCode = Option("123"),
-            businessRegisterNumber = Option("12345"),
-            legalRegisterName = Option("Legal1"),
-            legalRegisterNumber = Option("123456"),
-            vatNumberGroup = Option(true)
-          )
-        ),
-        dataProtectionOfficer = Option(
-          PartyManagementDependency.DataProtectionOfficer(
-            address = Option("address1"),
-            email = Option("email1@where.com"),
-            pec = Option("pec1@where.com")
-          )
-        ),
+        paymentServiceProvider = paymentServiceProvider1,
+        dataProtectionOfficer = dataProtectionOfficer1,
         geographicTaxonomies = Seq(PartyManagementDependency.GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
       )
 
@@ -1412,6 +1415,19 @@ trait PartyApiSpec
             billing = Option.empty,
             pricingPlan = Option.empty,
             geographicTaxonomies = Seq(GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC")),
+            paymentServiceProvider = paymentServiceProvider1.map(psp =>
+              PartyProcessDependency.PaymentServiceProvider(
+                abiCode = psp.abiCode,
+                businessRegisterNumber = psp.businessRegisterNumber,
+                legalRegisterName = psp.legalRegisterName,
+                legalRegisterNumber = psp.legalRegisterNumber,
+                vatNumberGroup = psp.vatNumberGroup
+              )
+            ),
+            dataProtectionOfficer = dataProtectionOfficer1.map(data =>
+              PartyProcessDependency
+                .DataProtectionOfficer(address = data.address, email = data.email, pec = data.pec)
+            ),
             businessData =
               Some(BusinessData(rea = Option.empty, shareCapital = Option.empty, businessRegisterPlace = Option.empty)),
             supportContact = Some(SupportContact(supportEmail = Option.empty, supportPhone = Option.empty))

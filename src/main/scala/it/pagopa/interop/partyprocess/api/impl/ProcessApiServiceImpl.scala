@@ -19,7 +19,8 @@ import it.pagopa.interop.partyprocess.api.ProcessApiService
 import it.pagopa.interop.partyprocess.api.converters.partymanagement.{
   GeographicTaxonomyConverter,
   InstitutionConverter,
-  PaymentServiceProviderConverter
+  PaymentServiceProviderConverter,
+  DataProtectionOfficerConverter
 }
 import it.pagopa.interop.partyprocess.api.impl.Conversions._
 import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
