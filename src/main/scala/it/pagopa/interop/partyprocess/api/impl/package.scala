@@ -69,7 +69,7 @@ package object impl extends DefaultJsonProtocol {
   implicit val productInfoDataFormat: RootJsonFormat[ProductInfo]       = jsonFormat3(ProductInfo)
   implicit val businessDataDataFormat: RootJsonFormat[BusinessData]     = jsonFormat3(BusinessData)
   implicit val supportContactDataFormat: RootJsonFormat[SupportContact] = jsonFormat2(SupportContact)
-  implicit val onboardingDataFormat: RootJsonFormat[OnboardingData]     = jsonFormat19(OnboardingData)
+  implicit val onboardingDataFormat: RootJsonFormat[OnboardingData]     = jsonFormat21(OnboardingData)
   implicit val onboardingInfoFormat: RootJsonFormat[OnboardingInfo]     = jsonFormat2(OnboardingInfo)
   implicit val relationshipInfoFormat: RootJsonFormat[RelationshipInfo] = jsonFormat11(RelationshipInfo)
   implicit val productFormat: RootJsonFormat[Product]                   = jsonFormat2(Product)

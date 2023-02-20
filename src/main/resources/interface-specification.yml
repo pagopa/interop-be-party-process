@@ -1403,6 +1403,10 @@ components:
           $ref: '#/components/schemas/BusinessData'
         supportContact:
           $ref: '#/components/schemas/SupportContact'
+        paymentServiceProvider:
+          $ref: '#/components/schemas/PaymentServiceProvider'
+        dataProtectionOfficer:
+          $ref: '#/components/schemas/DataProtectionOfficer'
       additionalProperties: false
       required:
         - id
