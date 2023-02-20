@@ -219,7 +219,8 @@ class PDFCreatorImpl(padesSignService: PadesSignService) extends PDFCreator with
       "institutionShareCapital"          -> institution.shareCapital.getOrElse("_________________"),
       "institutionBusinessRegisterPlace" -> institution.businessRegisterPlace.getOrElse("_________________"),
       "pricingPlanPremium"               -> (onboardingRequest.pricingPlan.getOrElse("") match {
-        case "C1" | "C2" | "C3" | "C4" | "C5" | "C6" | "C7" => onboardingRequest.pricingPlan.getOrElse("")
+        case "C1" | "C2" | "C3" | "C4" | "C5" | "C6" | "C7" =>
+          onboardingRequest.pricingPlan.getOrElse("").replace("C", "")
         case _                                              => ""
       }).mkString,
       "pricingPlanPremiumBase"           -> (onboardingRequest.pricingPlan.getOrElse("") match {

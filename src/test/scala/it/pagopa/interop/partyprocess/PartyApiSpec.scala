@@ -750,7 +750,10 @@ trait PartyApiSpec
             attributes = Seq(attribute1, attribute2, attribute3),
             billing = Option.empty,
             pricingPlan = Option.empty,
-            geographicTaxonomies = Seq(GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
+            geographicTaxonomies = Seq(GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC")),
+            businessData =
+              Some(BusinessData(rea = Option.empty, shareCapital = Option.empty, businessRegisterPlace = Option.empty)),
+            supportContact = Some(SupportContact(supportEmail = Option.empty, supportPhone = Option.empty))
           ),
           OnboardingData(
             id = institution2.id,
@@ -779,7 +782,10 @@ trait PartyApiSpec
               )
             ),
             pricingPlan = Option("INSTITUTIONSAVED_pricingPlan"),
-            geographicTaxonomies = Seq.empty
+            geographicTaxonomies = Seq.empty,
+            businessData =
+              Some(BusinessData(rea = Option.empty, shareCapital = Option.empty, businessRegisterPlace = Option.empty)),
+            supportContact = Some(SupportContact(supportEmail = Option.empty, supportPhone = Option.empty))
           )
         )
       )
@@ -890,7 +896,10 @@ trait PartyApiSpec
             billing = billing,
             pricingPlan = pricingPlan,
             geographicTaxonomies =
-              institution.geographicTaxonomies.map(x => GeographicTaxonomy(code = x.code, desc = x.desc))
+              institution.geographicTaxonomies.map(x => GeographicTaxonomy(code = x.code, desc = x.desc)),
+            businessData =
+              Some(BusinessData(rea = Option.empty, shareCapital = Option.empty, businessRegisterPlace = Option.empty)),
+            supportContact = Some(SupportContact(supportEmail = Option.empty, supportPhone = Option.empty))
           )
         )
       )
@@ -1155,7 +1164,10 @@ trait PartyApiSpec
             ),
             billing = None,
             pricingPlan = None,
-            geographicTaxonomies = Seq.empty
+            geographicTaxonomies = Seq.empty,
+            businessData =
+              Some(BusinessData(rea = Option.empty, shareCapital = Option.empty, businessRegisterPlace = Option.empty)),
+            supportContact = Some(SupportContact(supportEmail = Option.empty, supportPhone = Option.empty))
           )
         )
       )
@@ -1399,7 +1411,10 @@ trait PartyApiSpec
             attributes = Seq(attribute1, attribute2, attribute3),
             billing = Option.empty,
             pricingPlan = Option.empty,
-            geographicTaxonomies = Seq(GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC"))
+            geographicTaxonomies = Seq(GeographicTaxonomy(code = "GEOCODE", desc = "GEODESC")),
+            businessData =
+              Some(BusinessData(rea = Option.empty, shareCapital = Option.empty, businessRegisterPlace = Option.empty)),
+            supportContact = Some(SupportContact(supportEmail = Option.empty, supportPhone = Option.empty))
           )
         )
       )
