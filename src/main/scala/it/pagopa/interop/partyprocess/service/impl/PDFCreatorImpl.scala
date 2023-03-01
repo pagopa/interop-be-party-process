@@ -209,18 +209,38 @@ class PDFCreatorImpl(padesSignService: PadesSignService) extends PDFCreator with
         case _                                                    => "PREMIUM"
       }).mkString,
       "institutionVatNumber" -> onboardingRequest.billing.map(_.vatNumber).getOrElse(""),
-      "institutionRecipientCode"      -> onboardingRequest.billing.map(_.recipientCode).getOrElse(""),
-      "isPublicServicesManager"       -> onboardingRequest.billing
+      "institutionRecipientCode"         -> onboardingRequest.billing.map(_.recipientCode).getOrElse(""),
+      "isPublicServicesManager"          -> onboardingRequest.billing
         .flatMap(_.publicServices)
         .map(if (_) "Y" else "N")
         .getOrElse(""),
-      "institutionGeoTaxonomies"      -> geoTaxonomies.map(_.desc).mkString(", "),
-      "originIdLabelValue"            -> (if (institution.origin.equals("IPA"))
+      "institutionGeoTaxonomies"         -> geoTaxonomies.map(_.desc).mkString(", "),
+      "institutionREA"                   -> institution.rea.getOrElse("_________________"),
+      "institutionShareCapital"          -> institution.shareCapital.getOrElse("_________________"),
+      "institutionBusinessRegisterPlace" -> institution.businessRegisterPlace.getOrElse("_________________"),
+      "pricingPlanPremium"               -> (onboardingRequest.pricingPlan.getOrElse("") match {
+        case "C1" | "C2" | "C3" | "C4" | "C5" | "C6" | "C7" =>
+          onboardingRequest.pricingPlan.getOrElse("").replace("C", "")
+        case _                                              => ""
+      }).mkString,
+      "pricingPlanPremiumBase"           -> (onboardingRequest.pricingPlan.getOrElse("") match {
+        case "C0" => onboardingRequest.pricingPlan.getOrElse("")
+        case _    => ""
+      }).mkString,
+      "pricingPlanPremiumCheckbox"       -> (onboardingRequest.pricingPlan.getOrElse("") match {
+        case "C1" | "C2" | "C3" | "C4" | "C5" | "C6" | "C7" => "X"
+        case _                                              => ""
+      }).mkString,
+      "pricingPlanPremiumBaseCheckbox"   -> (onboardingRequest.pricingPlan.getOrElse("") match {
+        case "C0" => "X"
+        case _    => ""
+      }).mkString,
+      "originIdLabelValue"               -> (if (institution.origin.equals("IPA"))
                                  s"""
                                     |<li class="c19 c39 li-bullet-0"><span class="c1">codice di iscrizione all&rsquo;Indice delle Pubbliche Amministrazioni e dei gestori di pubblici servizi (I.P.A.) <span class="c3">${institution.originId}</span> </span><span class="c1"></span></li>
                                     |""".stripMargin
                                else "").mkString,
-      "institutionRegisterLabelValue" -> institution.paymentServiceProvider
+      "institutionRegisterLabelValue"    -> institution.paymentServiceProvider
         .flatMap(_.businessRegisterNumber)
         .map(number =>
           if (!number.isEmpty)
@@ -230,7 +250,7 @@ class PDFCreatorImpl(padesSignService: PadesSignService) extends PDFCreator with
           else ""
         )
         .getOrElse(""),
-      "GPSinstitutionName"            -> (if (getInstitutionTypeCode(institution, onboardingRequest).equals("GSP"))
+      "GPSinstitutionName"               -> (if (getInstitutionTypeCode(institution, onboardingRequest).equals("GSP"))
                                  getInstitutionName(institution, onboardingRequest)
                                else "_______________").mkString,
       "GPSmanagerName"    -> (if (getInstitutionTypeCode(institution, onboardingRequest).equals("GSP")) manager.name
