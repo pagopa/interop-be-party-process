@@ -17,10 +17,10 @@ import it.pagopa.interop.partymanagement.client.model.Relationship
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess.api.ProcessApiService
 import it.pagopa.interop.partyprocess.api.converters.partymanagement.{
+  DataProtectionOfficerConverter,
   GeographicTaxonomyConverter,
   InstitutionConverter,
-  PaymentServiceProviderConverter,
-  DataProtectionOfficerConverter
+  PaymentServiceProviderConverter
 }
 import it.pagopa.interop.partyprocess.api.impl.Conversions._
 import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
@@ -33,6 +33,7 @@ import it.pagopa.userreg.client.model.UserId
 import java.io.{File, FileOutputStream}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
+import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -654,7 +655,8 @@ class ProcessApiServiceImpl(
               onboardingRequest.institutionUpdate,
               geoTaxonomies,
               onboardingRequest.billing,
-              institution.origin
+              institution.origin,
+              onboardingRequest.contractImported.flatMap(_.createdAt)
             )(bearer)
           case _                 =>
             createOrGetRelationship(
@@ -838,7 +840,8 @@ class ProcessApiServiceImpl(
     institutionUpdate: Option[InstitutionUpdate],
     geoTaxonomies: Seq[GeographicTaxonomy],
     billing: Option[Billing],
-    institutionType: String
+    institutionType: String,
+    createdAt: Option[OffsetDateTime] = None
   )(bearer: String)(implicit contexts: Seq[(String, String)]): Future[PartyManagementDependency.Relationship] = {
     val relationshipSeed: PartyManagementDependency.RelationshipSeed =
       PartyManagementDependency.RelationshipSeed(
@@ -883,7 +886,8 @@ class ProcessApiServiceImpl(
         state = institutionType match {
           case IPA => Option(PartyManagementDependency.RelationshipState.PENDING)
           case _   => Option(PartyManagementDependency.RelationshipState.TOBEVALIDATED)
-        }
+        },
+        createdAt = createdAt
       )
 
     partyManagementService

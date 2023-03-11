@@ -52,7 +52,7 @@ package object impl extends DefaultJsonProtocol {
   implicit val problemFormat: RootJsonFormat[Problem]                             = jsonFormat5(Problem)
   implicit val userFormat: RootJsonFormat[User]                                   = jsonFormat7(User)
   implicit val onboardingContractFormat: RootJsonFormat[OnboardingContract]       = jsonFormat2(OnboardingContract)
-  implicit val onboardingImportContractFormat: RootJsonFormat[OnboardingImportContract] = jsonFormat3(
+  implicit val onboardingImportContractFormat: RootJsonFormat[OnboardingImportContract] = jsonFormat4(
     OnboardingImportContract
   )
 
