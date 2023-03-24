@@ -621,12 +621,12 @@ class ProcessApiServiceImpl(
             .getOrElse(
               Seq(onboardingRequest.institutionUpdate.flatMap(_.digitalAddress).getOrElse(institution.digitalAddress))
             )
-        case _  => Seq(ApplicationConfiguration.onboardingMailNotificationInstitutionAdminEmailAddress)
+        case _ => Seq(ApplicationConfiguration.onboardingMailNotificationInstitutionAdminEmailAddress)
       }
       _                        <- institutionType match {
         case PA | GSP if (institution.origin.equals(IPA) && onboardingRequest.productId.equals("prod-interop")) =>
           sendOnboardingMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
-        case _  =>
+        case _                                                                                                  =>
           sendOnboardingNotificationMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
 
       }

@@ -12,7 +12,7 @@ ThisBuild / githubOwner      := "pagopa"
 ThisBuild / githubRepository := "interop-be-party-process"
 ThisBuild / resolvers += Resolver.githubPackages("pagopa")
 ThisBuild / resolvers += "cefdigital" at s"https://ec.europa.eu/cefdigital/artifact/content/repositories/esignaturedss"
-ThisBuild / resolvers += "selfcare" at s"https://pkgs.dev.azure.com/pagopaspa/selfcare-projects/_packaging/selfcare/maven/v1"
+ThisBuild / resolvers += "selfcare" at s"https://pkgs.dev.azure.com/pagopaspa/selfcare-platform-app-projects/_packaging/selfcare-platform/maven"
 
 lazy val generateCode = taskKey[Unit]("A task for generating the code starting from the swagger definition")
 
