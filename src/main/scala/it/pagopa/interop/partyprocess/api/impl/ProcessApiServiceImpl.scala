@@ -60,6 +60,7 @@ class ProcessApiServiceImpl(
   private val SELC   = "SELC"
   private val IPA    = "IPA"
   private val PA     = "PA"
+  private val GSP    = "GSP"
 
   private final val validOnboardingStates: Seq[PartyManagementDependency.RelationshipState] =
     List(
@@ -610,11 +611,12 @@ class ProcessApiServiceImpl(
       institutionType = onboardingRequest.institutionUpdate.flatMap(_.institutionType).getOrElse("")
 
       onboardingMailParameters <- institutionType match {
-        case PA => getOnboardingMailParameters(token.token, currentUser, onboardingRequest, geoTaxonomies)
-        case _  => getOnboardingMailNotificationParameters(token.token, currentUser, onboardingRequest, geoTaxonomies)
+        case PA | GSP if (institution.origin.equals(IPA) && onboardingRequest.productId.equals("prod-interop")) =>
+          getOnboardingMailParameters(token.token, currentUser, onboardingRequest, geoTaxonomies)
+        case _ => getOnboardingMailNotificationParameters(token.token, currentUser, onboardingRequest, geoTaxonomies)
       }
       destinationMails = institutionType match {
-        case PA =>
+        case PA | GSP if (institution.origin.equals(IPA) && onboardingRequest.productId.equals("prod-interop")) =>
           ApplicationConfiguration.destinationMails
             .getOrElse(
               Seq(onboardingRequest.institutionUpdate.flatMap(_.digitalAddress).getOrElse(institution.digitalAddress))
@@ -622,7 +624,8 @@ class ProcessApiServiceImpl(
         case _  => Seq(ApplicationConfiguration.onboardingMailNotificationInstitutionAdminEmailAddress)
       }
       _                        <- institutionType match {
-        case PA => sendOnboardingMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
+        case PA | GSP if (institution.origin.equals(IPA) && onboardingRequest.productId.equals("prod-interop")) =>
+          sendOnboardingMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
         case _  =>
           sendOnboardingNotificationMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
 
@@ -709,7 +712,7 @@ class ProcessApiServiceImpl(
 
     Future
       .failed(OnboardingInvalidUpdates(institution.externalId))
-      .unlessA(institution.origin != "IPA" || areIpaDataMatching)
+      .unlessA(institution.origin != IPA || areIpaDataMatching)
   }
 
   private def getOnboardingMailNotificationParameters(
