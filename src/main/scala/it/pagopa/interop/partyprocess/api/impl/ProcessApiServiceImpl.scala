@@ -611,12 +611,19 @@ class ProcessApiServiceImpl(
       institutionType = onboardingRequest.institutionUpdate.flatMap(_.institutionType).getOrElse("")
 
       onboardingMailParameters <- institutionType match {
-        case PA | GSP if (institution.origin.equals(IPA) && onboardingRequest.productId.equals("prod-interop")) =>
+        case PA                                                                                            =>
+          getOnboardingMailParameters(token.token, currentUser, onboardingRequest, geoTaxonomies)
+        case GSP if (institution.origin.equals(IPA) && onboardingRequest.productId.equals("prod-interop")) =>
           getOnboardingMailParameters(token.token, currentUser, onboardingRequest, geoTaxonomies)
         case _ => getOnboardingMailNotificationParameters(token.token, currentUser, onboardingRequest, geoTaxonomies)
       }
       destinationMails = institutionType match {
-        case PA | GSP if (institution.origin.equals(IPA) && onboardingRequest.productId.equals("prod-interop")) =>
+        case PA                                                                                            =>
+          ApplicationConfiguration.destinationMails
+            .getOrElse(
+              Seq(onboardingRequest.institutionUpdate.flatMap(_.digitalAddress).getOrElse(institution.digitalAddress))
+            )
+        case GSP if (institution.origin.equals(IPA) && onboardingRequest.productId.equals("prod-interop")) =>
           ApplicationConfiguration.destinationMails
             .getOrElse(
               Seq(onboardingRequest.institutionUpdate.flatMap(_.digitalAddress).getOrElse(institution.digitalAddress))
@@ -624,9 +631,11 @@ class ProcessApiServiceImpl(
         case _ => Seq(ApplicationConfiguration.onboardingMailNotificationInstitutionAdminEmailAddress)
       }
       _                        <- institutionType match {
-        case PA | GSP if (institution.origin.equals(IPA) && onboardingRequest.productId.equals("prod-interop")) =>
+        case PA                                                                                            =>
           sendOnboardingMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
-        case _                                                                                                  =>
+        case GSP if (institution.origin.equals(IPA) && onboardingRequest.productId.equals("prod-interop")) =>
+          sendOnboardingMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
+        case _                                                                                             =>
           sendOnboardingNotificationMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
 
       }
