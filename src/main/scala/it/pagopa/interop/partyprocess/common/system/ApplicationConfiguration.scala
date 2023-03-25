@@ -127,6 +127,9 @@ object ApplicationConfiguration {
   val onboardingRejectMailOnboardingUrlValue: String       =
     config.getString("party-process.mail-template.onboarding-reject-mail-placeholders.onboardingUrlValue")
 
+  val onboardingAutoCompleteMailTemplatePath: String =
+    config.getString("party-process.mail-template.onboarding-auto-complete.path")
+
   val storageContainer: String = config.getString("party-process.storage.container")
 
   val jwtAudience: Set[String] = config.getString("party-process.jwt.audience").split(",").toSet.filter(_.nonEmpty)

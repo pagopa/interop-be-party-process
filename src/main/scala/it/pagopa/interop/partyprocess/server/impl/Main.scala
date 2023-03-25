@@ -43,6 +43,7 @@ object Main extends App with CORSSupport with Dependencies {
         onboardingCompleteMailTemplate     <- getOnboardingCompleteMailTemplate(fileManager)
         onboardingNotificationMailTemplate <- getOnboardingNotificationMailTemplate(fileManager)
         onboardingRejectMailTemplate       <- getOnboardingRejectMailTemplate(fileManager)
+        onboardingAutoCompleteMailTemplate <- getOnboardingAutoCompleteMailTemplate(fileManager)
         partyManService  = partyManagementService(blockingEc)
         relService       = relationshipService(partyManService)
         prodService      = productService(partyManService)
@@ -66,6 +67,7 @@ object Main extends App with CORSSupport with Dependencies {
           onboardingInitMailTemplate,
           onboardingNotificationMailTemplate,
           onboardingRejectMailTemplate,
+          onboardingAutoCompleteMailTemplate,
           jwtReader,
           pdfCreator(padesSignService())
         )

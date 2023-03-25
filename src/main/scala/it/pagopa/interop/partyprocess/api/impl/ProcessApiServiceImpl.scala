@@ -50,6 +50,7 @@ class ProcessApiServiceImpl(
   mailTemplate: PersistedTemplate,
   mailNotificationTemplate: PersistedTemplate,
   mailRejectTemplate: PersistedTemplate,
+  mailAutoCompleteTemplate: PersistedTemplate,
   relationshipService: RelationshipService,
   productService: ProductService,
   geoTaxonomyService: GeoTaxonomyService
@@ -101,6 +102,16 @@ class ProcessApiServiceImpl(
     implicit contexts: Seq[(String, String)]
   ): Future[Unit] = {
     mailer.sendMail(mailRejectTemplate)(emails, "pagopa-logo.png", logo, onboardingMailParameters)(
+      "onboarding-complete-email"
+    )
+  }
+
+  private def sendOnboardingAutoCompleteEmail(
+    emails: Seq[String],
+    onboardingMailParameters: Map[String, String],
+    logo: File
+  )(implicit contexts: Seq[(String, String)]): Future[Unit] = {
+    mailer.sendMail(mailAutoCompleteTemplate)(emails, "pagopa-logo.png", logo, onboardingMailParameters)(
       "onboarding-complete-email"
     )
   }
@@ -382,6 +393,17 @@ class ProcessApiServiceImpl(
         bearer,
         contexts
       )
+      destinationMails =
+        ApplicationConfiguration.destinationMails
+          .getOrElse(
+            Seq(onboardingRequest.institutionUpdate.flatMap(_.digitalAddress).getOrElse(institution.digitalAddress))
+          )
+      logo <- LogoUtils.getLogoFile(fileManager, ApplicationConfiguration.emailLogoPath)(ec)
+
+      _ <- onboardingRequest.institutionUpdate.flatMap(_.imported) match {
+        case true => sendOnboardingAutoCompleteEmail(destinationMails, Map(), logo)
+      }
+
     } yield response
 
     onComplete(result) {
