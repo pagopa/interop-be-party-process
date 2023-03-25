@@ -49,6 +49,7 @@ class PartyProcessSuites extends ExternalApiSpec with PartyApiSpec with BeforeAn
         mailTemplate = mockMailTemplate,
         mailNotificationTemplate = mockMailNotificationTemplate,
         mailRejectTemplate = mockMailRejectTemplate,
+        mailAutoCompleteTemplate = mockMailRejectTemplate,
         relationshipService = relationshipService,
         productService = productService,
         geoTaxonomyService = mockGeoTaxonomyService
