@@ -111,9 +111,13 @@ class ProcessApiServiceImpl(
     onboardingMailParameters: Map[String, String],
     logo: File
   )(implicit contexts: Seq[(String, String)]): Future[Unit] = {
-    mailer.sendMail(mailAutoCompleteTemplate)(emails, "pagopa-logo.png", logo, onboardingMailParameters)(
-      "onboarding-complete-email"
-    )
+    if (onboardingMailParameters.getOrElse("send", "false").equals("true")) {
+      mailer.sendMail(mailAutoCompleteTemplate)(emails, "pagopa-logo.png", logo, onboardingMailParameters)(
+        "onboarding-complete-email"
+      )
+    } else {
+      Future.successful(())
+    }
   }
 
   /** Code: 204, Message: successful operation
@@ -400,9 +404,9 @@ class ProcessApiServiceImpl(
           )
       logo <- LogoUtils.getLogoFile(fileManager, ApplicationConfiguration.emailLogoPath)(ec)
 
-      _ <- onboardingRequest.institutionUpdate.flatMap(_.imported) match {
-        case true => sendOnboardingAutoCompleteEmail(destinationMails, Map(), logo)
-      }
+      map <- getOnboardingAutoParameters(onboardingRequest)
+
+      _ <- sendOnboardingAutoCompleteEmail(destinationMails, map, logo)
 
     } yield response
 
@@ -799,6 +803,17 @@ class ProcessApiServiceImpl(
     )
 
     Future.successful(productParameters ++ onboardingUrlParameters)
+  }
+
+  private def getOnboardingAutoParameters(
+    onboardingRequest: OnboardingInstitutionRequest
+  ): Future[Map[String, String]] = {
+
+    val map: Map[String, String] = Map(
+      "send" -> onboardingRequest.institutionUpdate.map(i => i.imported.getOrElse(false)).get.toString
+    )
+
+    Future.successful(map)
   }
 
   private def getOnboardingMailParameters(
