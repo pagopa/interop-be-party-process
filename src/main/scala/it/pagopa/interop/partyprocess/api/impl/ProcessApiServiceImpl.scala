@@ -17,10 +17,10 @@ import it.pagopa.interop.partymanagement.client.model.Relationship
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.partyprocess.api.ProcessApiService
 import it.pagopa.interop.partyprocess.api.converters.partymanagement.{
+  DataProtectionOfficerConverter,
   GeographicTaxonomyConverter,
   InstitutionConverter,
-  PaymentServiceProviderConverter,
-  DataProtectionOfficerConverter
+  PaymentServiceProviderConverter
 }
 import it.pagopa.interop.partyprocess.api.impl.Conversions._
 import it.pagopa.interop.partyprocess.common.system.ApplicationConfiguration
@@ -33,6 +33,7 @@ import it.pagopa.userreg.client.model.UserId
 import java.io.{File, FileOutputStream}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
+import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -49,6 +50,7 @@ class ProcessApiServiceImpl(
   mailTemplate: PersistedTemplate,
   mailNotificationTemplate: PersistedTemplate,
   mailRejectTemplate: PersistedTemplate,
+  mailAutoCompleteTemplate: PersistedTemplate,
   relationshipService: RelationshipService,
   productService: ProductService,
   geoTaxonomyService: GeoTaxonomyService
@@ -59,6 +61,7 @@ class ProcessApiServiceImpl(
   private val SELC   = "SELC"
   private val IPA    = "IPA"
   private val PA     = "PA"
+  private val GSP    = "GSP"
 
   private final val validOnboardingStates: Seq[PartyManagementDependency.RelationshipState] =
     List(
@@ -101,6 +104,20 @@ class ProcessApiServiceImpl(
     mailer.sendMail(mailRejectTemplate)(emails, "pagopa-logo.png", logo, onboardingMailParameters)(
       "onboarding-complete-email"
     )
+  }
+
+  private def sendOnboardingAutoCompleteEmail(
+    emails: Seq[String],
+    onboardingMailParameters: Map[String, String],
+    logo: File
+  )(implicit contexts: Seq[(String, String)]): Future[Unit] = {
+    if (onboardingMailParameters.getOrElse("send", "false").equals("true")) {
+      mailer.sendMail(mailAutoCompleteTemplate)(emails, "pagopa-logo.png", logo, onboardingMailParameters)(
+        "onboarding-complete-email"
+      )
+    } else {
+      Future.successful(())
+    }
   }
 
   /** Code: 204, Message: successful operation
@@ -380,6 +397,17 @@ class ProcessApiServiceImpl(
         bearer,
         contexts
       )
+      destinationMails =
+        ApplicationConfiguration.destinationMails
+          .getOrElse(
+            Seq(onboardingRequest.institutionUpdate.flatMap(_.digitalAddress).getOrElse(institution.digitalAddress))
+          )
+      logo <- LogoUtils.getLogoFile(fileManager, ApplicationConfiguration.emailLogoPath)(ec)
+
+      map <- getOnboardingAutoParameters(onboardingRequest)
+
+      _ <- sendOnboardingAutoCompleteEmail(destinationMails, map, logo)
+
     } yield response
 
     onComplete(result) {
@@ -609,20 +637,31 @@ class ProcessApiServiceImpl(
       institutionType = onboardingRequest.institutionUpdate.flatMap(_.institutionType).getOrElse("")
 
       onboardingMailParameters <- institutionType match {
-        case PA => getOnboardingMailParameters(token.token, currentUser, onboardingRequest, geoTaxonomies)
-        case _  => getOnboardingMailNotificationParameters(token.token, currentUser, onboardingRequest, geoTaxonomies)
+        case PA                                                                                            =>
+          getOnboardingMailParameters(token.token, currentUser, onboardingRequest, geoTaxonomies)
+        case GSP if (institution.origin.equals(IPA) && onboardingRequest.productId.equals("prod-interop")) =>
+          getOnboardingMailParameters(token.token, currentUser, onboardingRequest, geoTaxonomies)
+        case _ => getOnboardingMailNotificationParameters(token.token, currentUser, onboardingRequest, geoTaxonomies)
       }
       destinationMails = institutionType match {
-        case PA =>
+        case PA                                                                                            =>
           ApplicationConfiguration.destinationMails
             .getOrElse(
               Seq(onboardingRequest.institutionUpdate.flatMap(_.digitalAddress).getOrElse(institution.digitalAddress))
             )
-        case _  => Seq(ApplicationConfiguration.onboardingMailNotificationInstitutionAdminEmailAddress)
+        case GSP if (institution.origin.equals(IPA) && onboardingRequest.productId.equals("prod-interop")) =>
+          ApplicationConfiguration.destinationMails
+            .getOrElse(
+              Seq(onboardingRequest.institutionUpdate.flatMap(_.digitalAddress).getOrElse(institution.digitalAddress))
+            )
+        case _ => Seq(ApplicationConfiguration.onboardingMailNotificationInstitutionAdminEmailAddress)
       }
       _                        <- institutionType match {
-        case PA => sendOnboardingMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
-        case _  =>
+        case PA                                                                                            =>
+          sendOnboardingMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
+        case GSP if (institution.origin.equals(IPA) && onboardingRequest.productId.equals("prod-interop")) =>
+          sendOnboardingMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
+        case _                                                                                             =>
           sendOnboardingNotificationMail(destinationMails, pdf, onboardingRequest.productName, onboardingMailParameters)
 
       }
@@ -654,7 +693,8 @@ class ProcessApiServiceImpl(
               onboardingRequest.institutionUpdate,
               geoTaxonomies,
               onboardingRequest.billing,
-              institution.origin
+              institution.origin,
+              onboardingRequest.contractImported.flatMap(_.createdAt)
             )(bearer)
           case _                 =>
             createOrGetRelationship(
@@ -707,7 +747,7 @@ class ProcessApiServiceImpl(
 
     Future
       .failed(OnboardingInvalidUpdates(institution.externalId))
-      .unlessA(institution.origin != "IPA" || areIpaDataMatching)
+      .unlessA(institution.origin != IPA || areIpaDataMatching)
   }
 
   private def getOnboardingMailNotificationParameters(
@@ -763,6 +803,17 @@ class ProcessApiServiceImpl(
     )
 
     Future.successful(productParameters ++ onboardingUrlParameters)
+  }
+
+  private def getOnboardingAutoParameters(
+    onboardingRequest: OnboardingInstitutionRequest
+  ): Future[Map[String, String]] = {
+
+    val map: Map[String, String] = Map(
+      "send" -> onboardingRequest.institutionUpdate.map(i => i.imported.getOrElse(false)).get.toString
+    )
+
+    Future.successful(map)
   }
 
   private def getOnboardingMailParameters(
@@ -838,7 +889,8 @@ class ProcessApiServiceImpl(
     institutionUpdate: Option[InstitutionUpdate],
     geoTaxonomies: Seq[GeographicTaxonomy],
     billing: Option[Billing],
-    institutionType: String
+    institutionType: String,
+    createdAt: Option[OffsetDateTime] = None
   )(bearer: String)(implicit contexts: Seq[(String, String)]): Future[PartyManagementDependency.Relationship] = {
     val relationshipSeed: PartyManagementDependency.RelationshipSeed =
       PartyManagementDependency.RelationshipSeed(
@@ -883,7 +935,8 @@ class ProcessApiServiceImpl(
         state = institutionType match {
           case IPA => Option(PartyManagementDependency.RelationshipState.PENDING)
           case _   => Option(PartyManagementDependency.RelationshipState.TOBEVALIDATED)
-        }
+        },
+        createdAt = createdAt
       )
 
     partyManagementService

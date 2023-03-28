@@ -1267,6 +1267,9 @@ components:
           type: string
         contractType:
           type: string
+        createdAt:
+          type: string
+          format: date-time
       additionalProperties: false
     RelationshipInfo:
       type: object

@@ -136,6 +136,7 @@ trait Dependencies {
     mailTemplate: PersistedTemplate,
     mailNotificationTemplate: PersistedTemplate,
     mailRejectTemplate: PersistedTemplate,
+    mailAutoCompleteTemplate: PersistedTemplate,
     jwtReader: JWTReader,
     pdfCreator: PDFCreator
   )(implicit ec: ExecutionContext): ProcessApi = new ProcessApi(
@@ -151,6 +152,7 @@ trait Dependencies {
       mailTemplate,
       mailNotificationTemplate,
       mailRejectTemplate,
+      mailAutoCompleteTemplate,
       relationshipService,
       productService,
       geoTaxonomy
@@ -222,6 +224,11 @@ trait Dependencies {
     ec: ExecutionContext
   ): Future[PersistedTemplate] =
     MailTemplate.get(ApplicationConfiguration.onboardingRejectMailTemplatePath, fileManager)
+
+  def getOnboardingAutoCompleteMailTemplate(fileManager: FileManager)(implicit
+    ec: ExecutionContext
+  ): Future[PersistedTemplate] =
+    MailTemplate.get(ApplicationConfiguration.onboardingAutoCompleteMailTemplatePath, fileManager)
 
   def getJwtValidator()(implicit ec: ExecutionContext): Future[JWTReader] = JWTConfiguration.jwtReader
     .loadKeyset()

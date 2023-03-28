@@ -4,7 +4,6 @@ import it.pagopa.interop.partyprocess.model._
 
 /**
  * @param users  for example: ''null''
- * @param institutionExternalId  for example: ''null''
  * @param institutionUpdate  for example: ''null''
  * @param pricingPlan pricing plan for example: ''null''
  * @param billing  for example: ''null''

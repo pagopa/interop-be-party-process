@@ -44,7 +44,7 @@ class PDFCreatorImpl(padesSignService: PadesSignService) extends PDFCreator with
         data <- onboardingRequest.productId match {
           case "prod-pagopa" if institution.institutionType.getOrElse("").equals("PSP") =>
             setupPSPData(manager, users, institution, onboardingRequest, geoTaxonomies)
-          case "prod-io" | "prod-io-premium"                                            =>
+          case "prod-io" | "prod-io-premium" | "prod-io-sign"                           =>
             setupProdIOData(manager, users, institution, onboardingRequest, geoTaxonomies)
           case _ => setupData(manager, users, institution, onboardingRequest, geoTaxonomies)
         }
